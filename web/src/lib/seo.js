@@ -18,7 +18,7 @@ const OG_IMAGE = `${SITE_URL}/og.png`
 
 const HOME_DESCRIPTION =
   "Blxr — a student in Athens doing the IB Diploma Programme, building backend and web tooling " +
-  'with Go, JavaScript and Python. Security tooling projects, experience and contact.'
+  'with Go, JavaScript and Python. Security tooling projects, skills and contact.'
 
 const PROJECTS_DESCRIPTION =
   'Everything I have built, with case studies, stacks and source.'

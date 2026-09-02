@@ -20,20 +20,8 @@ const CLUSTER_SIZE = 10;
 const HIGHLIGHT_SETTLE = 100;
 const PARALLAX_EASE = 0.05;
 
-function buildHandCells(image, columns, asciiChars) {
-  const rows = Math.max(
-    1,
-    Math.round(columns / (image.naturalWidth / image.naturalHeight || 1)),
-  );
-
-  const sampler = document.createElement("canvas");
-  sampler.width = columns;
-  sampler.height = rows;
-  const sampleCtx = sampler.getContext("2d");
+function sampleToCells(sampleCtx, columns, rows, asciiChars) {
   const cells = new Map();
-  if (!sampleCtx) return { rows, cells };
-
-  sampleCtx.drawImage(image, 0, 0, columns, rows);
   const pixels = sampleCtx.getImageData(0, 0, columns, rows).data;
 
   const brightnessAt = (offset) =>
@@ -79,7 +67,61 @@ function buildHandCells(image, columns, asciiChars) {
     }
   }
 
-  return { rows, cells };
+  return cells;
+}
+
+function buildHandCells(image, columns, asciiChars) {
+  const rows = Math.max(
+    1,
+    Math.round(columns / (image.naturalWidth / image.naturalHeight || 1)),
+  );
+
+  const sampler = document.createElement("canvas");
+  sampler.width = columns;
+  sampler.height = rows;
+  const sampleCtx = sampler.getContext("2d");
+  if (!sampleCtx) return { rows, cells: new Map() };
+
+  sampleCtx.drawImage(image, 0, 0, columns, rows);
+  return { rows, cells: sampleToCells(sampleCtx, columns, rows, asciiChars) };
+}
+
+function buildTextCells(text, columns, asciiChars, { align = "center", weight = 800 } = {}) {
+  const rows = columns;
+
+  const sampler = document.createElement("canvas");
+  sampler.width = columns;
+  sampler.height = rows;
+  const ctx = sampler.getContext("2d");
+  if (!ctx) return { rows, cells: new Map() };
+
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, columns, rows);
+  ctx.fillStyle = "#fff";
+  ctx.textBaseline = "middle";
+
+  const maxWidth = columns * 0.86;
+  const family = `${weight} 1px "Plus Jakarta Sans", system-ui, sans-serif`;
+  let fontSize = rows * 0.74;
+  ctx.font = family.replace("1px", `${fontSize}px`);
+  const naturalWidth = ctx.measureText(text).width;
+  if (naturalWidth > maxWidth) fontSize *= maxWidth / naturalWidth;
+  ctx.font = family.replace("1px", `${fontSize}px`);
+
+  let x;
+  if (align === "end") {
+    ctx.textAlign = "right";
+    x = columns * 0.94;
+  } else if (align === "start") {
+    ctx.textAlign = "left";
+    x = columns * 0.06;
+  } else {
+    ctx.textAlign = "center";
+    x = columns / 2;
+  }
+  ctx.fillText(text, x, rows / 2 + fontSize * 0.04);
+
+  return { rows, cells: sampleToCells(ctx, columns, rows, asciiChars) };
 }
 
 function highlightCluster(cells, startCell) {
@@ -110,8 +152,10 @@ function highlightCluster(cells, startCell) {
 
 export function AnimatedFooter({
   headingLines = ["VengeanceUI"],
-  leftImage = "/animated-footer/hand-left.webp",
-  rightImage = "/animated-footer/hand-right.webp",
+  leftText = "BL",
+  rightText = "XR",
+  leftImage,
+  rightImage,
   background,
   textColor,
   charColor,
@@ -159,6 +203,8 @@ export function AnimatedFooter({
   const sig = useMemo(
     () =>
       JSON.stringify({
+        leftText,
+        rightText,
         leftImage,
         rightImage,
         columns,
@@ -168,7 +214,18 @@ export function AnimatedFooter({
         revealOnScroll,
         headingLines,
       }),
-    [leftImage, rightImage, columns, cellSize, fontSize, asciiChars, revealOnScroll, headingLines],
+    [
+      leftText,
+      rightText,
+      leftImage,
+      rightImage,
+      columns,
+      cellSize,
+      fontSize,
+      asciiChars,
+      revealOnScroll,
+      headingLines,
+    ],
   );
 
   useEffect(() => {
@@ -181,11 +238,11 @@ export function AnimatedFooter({
     const wrappers = [leftWrap, rightWrap];
 
     const setupHand = (
-      image,
+      rows,
+      cells,
       canvas,
       direction,
     ) => {
-      const { rows, cells } = buildHandCells(image, columns, asciiChars);
       if (cells.size === 0) return;
 
       const dpr = 1;
@@ -219,26 +276,39 @@ export function AnimatedFooter({
       });
     };
 
-    const loadHand = (src, canvas, direction) => {
+    const loadImageHand = (src, canvas, direction) => {
       if (!src) return;
       const image = new Image();
       let initialized = false;
       const init = () => {
         if (initialized) return;
         initialized = true;
-        setupHand(image, canvas, direction);
+        const { rows, cells } = buildHandCells(image, columns, asciiChars);
+        setupHand(rows, cells, canvas, direction);
       };
       image.onload = init;
       image.src = src;
       if (image.complete && image.naturalWidth) init();
     };
 
+    const loadTextHand = (text, canvas, direction, align) => {
+      if (!text) return;
+      const build = () => {
+        const { rows, cells } = buildTextCells(text, columns, asciiChars, { align });
+        setupHand(rows, cells, canvas, direction);
+      };
+      if (document.fonts?.ready) document.fonts.ready.then(build);
+      else build();
+    };
+
     let built = false;
     const buildScene = () => {
       if (built) return;
       built = true;
-      loadHand(leftImage, leftCanvasRef.current, 1);
-      loadHand(rightImage, rightCanvasRef.current, -1);
+      if (leftImage) loadImageHand(leftImage, leftCanvasRef.current, 1);
+      else loadTextHand(leftText, leftCanvasRef.current, 1, "end");
+      if (rightImage) loadImageHand(rightImage, rightCanvasRef.current, -1);
+      else loadTextHand(rightText, rightCanvasRef.current, -1, "start");
     };
 
     const renderHand = (hand, now) => {
@@ -531,8 +601,9 @@ export function AnimatedFooter({
 
       {}
       <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 p-8">
-        <div className="flex items-end justify-center gap-4">
-        {headingLines.map((word, wi) => (
+        {headingLines.length > 0 && (
+          <div className="flex items-end justify-center gap-4">
+          {headingLines.map((word, wi) => (
           <h2
             key={`${word}-${wi}`}
             aria-label={word}
@@ -554,8 +625,9 @@ export function AnimatedFooter({
               </span>
             ))}
           </h2>
-        ))}
-        </div>
+          ))}
+          </div>
+        )}
         {children}
       </div>
     </footer>

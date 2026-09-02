@@ -6,7 +6,6 @@ import ProjectPage from './project-page'
 import LibraryPage from './library-page'
 import NotFoundPage from './not-found-page'
 import ProjectCover from './components/project-cover'
-import BannerCompare from './components/banner-compare'
 import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
 import CommandPaletteHost from './components/command-palette-host'
@@ -15,7 +14,7 @@ import { useTheme } from './lib/use-theme'
 import { useI18n } from './lib/i18n'
 import { projectsList, isVideoLink, URL_LABEL_KEY } from './lib/projects'
 import { trackPointerGlow, resetPointerTilt } from './lib/pointer-glow'
-import { imageProps, imageUrl, SIZES } from './lib/images'
+import { imageProps, SIZES } from './lib/images'
 import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH } from './lib/router'
 import { applyHead } from './lib/seo'
 import { recordHit } from './lib/api'
@@ -31,8 +30,6 @@ import {
   SOCIAL_ICON_PATHS
 } from './lib/profile'
 
-const FOOTER_HEADING = ["LET'S", "BUILD"]
-
 function App() {
 
   const path = useRoutePath()
@@ -44,11 +41,6 @@ function App() {
   const armSkillBadges = () => {
     if (!skillBadgesArmed) setSkillBadgesArmed(true)
   }
-
-  const [eduPanel, setEduPanel] = useState('overview')
-  const [eduPeek, setEduPeek] = useState(null)
-
-  const eduTabRefs = useRef({})
 
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
@@ -229,25 +221,6 @@ function App() {
     'z-[3] opacity-100 scale-100 rotate-0 translate-x-0 translate-y-0 group-hover:-translate-y-1'
   ]
 
-  const experienceEntries = [
-    {
-      period: `2025 – ${t('common.present')}`,
-      role: t('exp.async.role'),
-      org: t('exp.async.org'),
-      url: null,
-      description: t('exp.async.desc'),
-      stack: ['React', 'TailwindCSS', 'JavaScript', 'MySQL', 'Python', 'Go', 'Rust', 'C++']
-    },
-    {
-      period: `2023 – ${t('common.present')}`,
-      role: t('exp.free.role'),
-      org: t('exp.free.org'),
-      url: null,
-      description: t('exp.free.desc'),
-      stack: ['React', 'Next.js', 'TailwindCSS', 'JavaScript', 'Python']
-    }
-  ]
-
   const educationEntries = [
     {
       period: `2025 – ${t('common.present')}`,
@@ -262,73 +235,6 @@ function App() {
         t('edu.subj.web')
       ]
     }
-  ]
-
-  const ibSubjects = [
-    { name: 'Computer Science', level: 'HL' },
-    { name: 'Mathematics AA', level: 'HL' },
-    { name: 'English B', level: 'HL' },
-    { name: 'Business', level: 'SL' },
-    { name: 'Physics', level: 'SL' },
-    { name: 'Greek', level: 'SL' },
-  ]
-
-  const ibFacts = [
-    { label: 'Grading', value: 'Out of 45' },
-    { label: 'Structure', value: '3 HL · 3 SL' },
-    { label: 'Duration', value: 'Two years' },
-  ]
-
-  const csTopics = [
-    {
-      title: 'Programming',
-      points: [
-        'Writing and debugging programs (Java, Python, and similar)',
-        'Algorithms, functions, classes, and object-oriented programming',
-      ],
-    },
-    {
-      title: 'Computational thinking',
-      points: [
-        'Breaking problems down into smaller parts',
-        'Designing solutions with algorithms and flowcharts',
-        'Analysing how efficient a solution is',
-      ],
-    },
-    {
-      title: 'Data structures',
-      points: ['How computers organise data: arrays, lists, stacks, queues, trees'],
-    },
-    {
-      title: 'Computer systems',
-      points: [
-        'How hardware and software work together',
-        'Processors, memory, operating systems, and networks',
-      ],
-    },
-    {
-      title: 'Databases',
-      points: ['Storing and managing data with tables, queries, and relationships'],
-    },
-    {
-      title: 'Networks & cybersecurity',
-      points: ['How computers communicate', 'Security risks and how to protect against them'],
-    },
-  ]
-
-  const ibCore = [
-    {
-      title: 'Theory of Knowledge (TOK)',
-      desc: 'how we know what we know, in a 1,600-word essay and an exhibition',
-    },
-    {
-      title: 'Extended Essay (EE)',
-      desc: 'a self-directed 4,000-word research paper (~40 hours of work)',
-    },
-    {
-      title: 'CAS',
-      desc: 'Creativity, Activity & Service: a reflective portfolio across the two years',
-    },
   ]
 
   const certifications = [
@@ -462,7 +368,11 @@ function App() {
       >
         <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-3">
           {}
-          <div className="flex items-end gap-1.5 shrink-0">
+          <a
+            {...link(HOME_PATH, () => window.scrollTo({ top: 0, behavior: 'smooth' }))}
+            aria-label="blxr, back to top"
+            className="group flex items-end gap-1.5 shrink-0 cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/70 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+          >
             {}
             <img
 
@@ -471,10 +381,10 @@ function App() {
               width="111"
               height="50"
               draggable={false}
-              className="h-[42px] sm:h-[50px] w-auto select-none"
+              className="h-[42px] sm:h-[50px] w-auto select-none transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 motion-reduce:group-hover:scale-100"
             />
-            <span className="text-[10px] font-bold text-ink-strong tracking-tight leading-none mb-[12px]">dev</span>
-          </div>
+            <span className="text-[10px] font-bold text-ink-muted tracking-tight leading-none mb-[12px] transition-colors duration-200 group-hover:text-ink-strong">dev</span>
+          </a>
 
           <nav
             aria-label="Site links"
@@ -847,48 +757,6 @@ function App() {
           </div>
         </section>
 
-        <section id="experience" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12">
-          <h2 className="text-[20px] font-bold text-ink-strong tracking-tight mb-8">{t('home.experience')}</h2>
-
-          <div className="flex flex-col">
-
-            {experienceEntries.map((entry) => (
-              <div
-                key={`${entry.org}-${entry.period}`}
-                className="grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-1 sm:gap-6 py-4 border-b border-line last:border-b-0 text-left"
-              >
-                <div className="text-[12px] font-mono text-ink-subtle sm:pt-px">
-                  {entry.period}
-                </div>
-
-                <div>
-                  <h3 className="text-[14px] font-medium text-ink-strong">
-                    {entry.role}
-                    <span className="text-ink-subtle font-normal"> · </span>
-                    {entry.url ? (
-                      <a
-                        href={entry.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-normal text-ink-muted hover:text-purple-400 transition-colors duration-200"
-                      >
-                        {entry.org}
-                      </a>
-                    ) : (
-                      <span className="font-normal text-ink-muted">{entry.org}</span>
-                    )}
-                  </h3>
-
-                  <p className="text-ink-muted text-[12.5px] leading-relaxed font-light mt-1">
-                    {entry.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-
-          </div>
-        </section>
-
         <section id="skills" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
           <h2 className="text-[20px] font-bold text-ink-strong tracking-tight mb-8">
             {t('home.skills')}
@@ -992,213 +860,41 @@ function App() {
 
           {}
           <div className="flex flex-col">
-            {educationEntries.map((entry, idx) => {
-              const tabs = [
-                { id: 'overview', label: t('edu.tab.overview') },
-                { id: 'subjects', label: t('edu.tab.subjects') },
-                { id: 'syllabus', label: t('edu.tab.syllabus') },
-                { id: 'core', label: t('edu.tab.core') },
-              ]
-
-              const panel = eduPeek ?? eduPanel ?? 'overview'
-
-              const onTabKeyDown = (e) => {
-                const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key]
-                let next = null
-                if (step != null) {
-                  const at = tabs.findIndex((tb) => tb.id === panel)
-                  next = tabs[(at + step + tabs.length) % tabs.length]
-                } else if (e.key === 'Home') next = tabs[0]
-                else if (e.key === 'End') next = tabs[tabs.length - 1]
-                if (!next) return
-                e.preventDefault()
-                setEduPanel(next.id)
-                setEduPeek(null)
-                eduTabRefs.current[`${idx}-${next.id}`]?.focus()
-              }
-
-              return (
-                <div
-                  key={idx}
-                  className="grid grid-cols-1 gap-2 border-b border-line py-4 last:border-b-0 sm:grid-cols-[7.5rem_1fr] sm:gap-6"
-                >
-                  <div className="text-[12px] font-mono text-ink-subtle sm:pt-px">
-                    {entry.period}
-                  </div>
-
-                  <div className="min-w-0">
-                    {}
-                    <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] font-medium text-ink-strong">
-                      <span>
-                        {entry.degree}
-                        <span className="font-normal text-ink-subtle"> · </span>
-                        <span className="font-normal text-ink-muted">{entry.org}</span>
-                      </span>
-
-                      {}
-                      <span className="group/info relative inline-flex">
-                        <button
-                          type="button"
-                          aria-label={t('edu.ib.info')}
-                          className="inline-flex h-[15px] w-[15px] cursor-help items-center justify-center rounded-full border border-line text-[9.5px] font-semibold leading-none text-ink-subtle transition-colors duration-200 hover:border-line-strong hover:text-ink-strong focus-visible:border-line-strong focus-visible:text-ink-strong focus:outline-none"
-                        >
-                          i
-                        </button>
-                        <span
-                          role="tooltip"
-                          className="pointer-events-none absolute left-1/2 top-[calc(100%+10px)] z-40 w-[min(19rem,74vw)] -translate-x-1/2 translate-y-1 rounded-xl border border-line bg-bg/95 p-3.5 text-[12px] font-normal leading-relaxed tracking-normal text-ink-muted opacity-0 shadow-2xl shadow-[color:var(--shadow-cast)] backdrop-blur-md transition-all duration-200 group-hover/info:translate-y-0 group-hover/info:opacity-100 group-focus-within/info:translate-y-0 group-focus-within/info:opacity-100"
-                        >
-                          {t('edu.ib.info')}
-                        </span>
-                      </span>
-                    </h3>
-
-                    {}
-                    <div
-                      role="tablist"
-                      aria-label={entry.degree}
-                      onMouseLeave={() => setEduPeek(null)}
-                      onBlur={() => setEduPeek(null)}
-                      className="mt-4 flex items-center gap-5 border-b border-line sm:gap-7"
-                    >
-                      {tabs.map((tab) => {
-                        const active = panel === tab.id
-                        return (
-                          <button
-                            key={tab.id}
-                            ref={(el) => { eduTabRefs.current[`${idx}-${tab.id}`] = el }}
-                            type="button"
-                            role="tab"
-                            id={`edu-tab-${idx}-${tab.id}`}
-                            aria-selected={active}
-                            aria-controls={`edu-panel-${idx}`}
-
-                            tabIndex={eduPanel === tab.id ? 0 : -1}
-                            onKeyDown={onTabKeyDown}
-                            onMouseEnter={() => setEduPeek(tab.id)}
-                            onFocus={() => setEduPeek(tab.id)}
-                            onClick={() => { setEduPanel(tab.id); setEduPeek(null) }}
-                            className="group relative cursor-pointer pb-2.5 text-[12.5px] font-medium tracking-wide focus:outline-none"
-                          >
-                            <span
-                              className={`transition-colors duration-200 ${
-                                active ? 'text-ink-strong' : 'text-ink-subtle group-hover:text-ink-secondary group-focus-visible:text-ink-secondary'
-                              }`}
-                            >
-                              {tab.label}
-                            </span>
-                            <span
-                              aria-hidden="true"
-                              className={`absolute inset-x-0 -bottom-px h-px origin-left bg-ink-strong transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                                active ? 'scale-x-100' : 'scale-x-0'
-                              }`}
-                            />
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    {}
-                    <div
-                      id={`edu-panel-${idx}`}
-                      role="tabpanel"
-                      aria-labelledby={`edu-tab-${idx}-${panel}`}
-                      className="relative min-h-[10.5rem] pt-5 sm:min-h-[9rem]"
-                    >
-                      <div key={panel} className="animate-panel-in">
-                        {panel === 'overview' && (
-                          <div className="space-y-4">
-                            <p className="max-w-xl text-[13px] font-light leading-relaxed text-ink-muted">
-                              {entry.description}
-                            </p>
-                            {}
-                            <dl className="grid max-w-xl grid-cols-3 gap-px overflow-hidden rounded-xl border border-line bg-line">
-                              {ibFacts.map((fact) => (
-                                <div key={fact.label} className="bg-bg px-3 py-2.5 sm:px-3.5">
-                                  <dt className="font-mono text-[9px] uppercase tracking-[0.14em] text-ink-faint">
-                                    {fact.label}
-                                  </dt>
-                                  <dd className="mt-1 text-[12.5px] font-medium text-ink-secondary">
-                                    {fact.value}
-                                  </dd>
-                                </div>
-                              ))}
-                            </dl>
-                          </div>
-                        )}
-                        {panel === 'subjects' && (
-                          <ul className="grid max-w-xl gap-x-10 sm:grid-cols-2">
-                            {ibSubjects.map((s) => (
-                              <li
-                                key={s.name}
-                                className="flex items-center justify-between gap-3 border-b border-line py-2 text-[12.5px] last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0"
-                              >
-                                <span className="text-ink-secondary">{s.name}</span>
-                                {}
-                                <span
-                                  className={`shrink-0 rounded border px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.12em] ${
-                                    s.level === 'HL'
-                                      ? 'border-line-strong bg-surface-raised text-ink-secondary'
-                                      : 'border-line text-ink-faint'
-                                  }`}
-                                >
-                                  {s.level}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        {panel === 'syllabus' && (
-                          <div>
-                            {}
-                            <p className="mb-2 font-mono text-[9px] uppercase tracking-[0.14em] text-ink-faint">
-                              Computer Science HL · course content
-                            </p>
-                            <dl className="max-w-2xl">
-                              {csTopics.map((topic) => (
-                                <div
-                                  key={topic.title}
-                                  className="grid gap-0.5 border-b border-line py-2 last:border-b-0 sm:grid-cols-[11rem_1fr] sm:gap-4"
-                                >
-                                  <dt className="text-[12.5px] font-medium text-ink-secondary">
-                                    {topic.title}
-                                  </dt>
-                                  <dd className="text-[12.5px] font-light leading-relaxed text-ink-subtle">
-                                    {topic.points.join(' · ')}
-                                  </dd>
-                                </div>
-                              ))}
-                            </dl>
-                          </div>
-                        )}
-                        {panel === 'core' && (
-                          <div>
-                            <dl className="max-w-2xl">
-                              {ibCore.map((item) => (
-                                <div
-                                  key={item.title}
-                                  className="grid gap-0.5 border-b border-line py-2 last:border-b-0 sm:grid-cols-[11rem_1fr] sm:gap-4"
-                                >
-                                  <dt className="text-[12.5px] font-medium text-ink-secondary">
-                                    {item.title}
-                                  </dt>
-                                  <dd className="text-[12.5px] font-light leading-relaxed text-ink-subtle">
-                                    {item.desc}
-                                  </dd>
-                                </div>
-                              ))}
-                            </dl>
-                            <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.14em] text-ink-faint">
-                              TOK &amp; the Extended Essay add up to 3 points · CAS is pass/fail
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+            {educationEntries.map((entry, idx) => (
+              <div
+                key={idx}
+                className="grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-1 sm:gap-6 py-4 border-b border-line last:border-b-0 text-left"
+              >
+                <div className="text-[12px] font-mono text-ink-subtle sm:pt-px">
+                  {entry.period}
                 </div>
-              )
-            })}
+
+                <div>
+                  <h3 className="text-[14px] font-medium text-ink-strong">
+                    {entry.degree}
+                    <span className="text-ink-subtle font-normal"> · </span>
+                    <span className="font-normal text-ink-muted">{entry.org}</span>
+                  </h3>
+
+                  <p className="text-ink-muted text-[12.5px] leading-relaxed font-light mt-1 max-w-xl">
+                    {entry.description}
+                  </p>
+
+                  {entry.subjects?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3.5">
+                      {entry.subjects.map((subject) => (
+                        <span
+                          key={subject}
+                          className="px-2.5 py-1 rounded-md border border-line bg-surface-raised/60 text-[11.5px] text-ink-muted"
+                        >
+                          {subject}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
 
             {}
             <div className="grid grid-cols-1 gap-2 py-4 sm:grid-cols-[7.5rem_1fr] sm:gap-6">
@@ -1320,29 +1016,21 @@ function App() {
           </div>
         </section>
 
-        {}
-        <div className="w-full mt-16">
-          <BannerCompare />
-        </div>
-
-       <div className="relative h-[600px] w-full overflow-hidden">
+       <div className="relative h-[360px] sm:h-[400px] w-full overflow-hidden mt-8">
       <AnimatedFooter
-        headingLines={FOOTER_HEADING}
+        headingLines={[]}
 
         theme={theme}
 
-        leftImage={imageUrl('/hand-left.webp', 300)}
-        rightImage={imageUrl('/hand-right.webp', 300)}
+        leftText="BL"
+        rightText="XR"
 
-        headingClassName="italic font-serif"
-
-        charClassName="bg-gradient-to-b from-ink-strong via-ink-secondary to-ink-subtle bg-clip-text text-transparent"
       >
         <div className="w-full  font-normal not-italic pt-4 border-t border-dashed border-[var(--hairline-strong)] flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-ink-muted">
-          <span>{t('footer.copyright')}</span>
+          <span>© 2026 Blxr</span>
           <span className="flex items-center gap-4">
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="hover:text-ink-strong transition-colors duration-200">GitHub</a>
-            <span>/</span>
+            <span aria-hidden="true" className="text-ink-faint">·</span>
             <a href={DISCORD_URL} target="_blank" rel="noreferrer" className="hover:text-ink-strong transition-colors duration-200">Discord</a>
           </span>
         </div>

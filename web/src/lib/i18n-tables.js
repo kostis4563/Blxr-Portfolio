@@ -5,8 +5,8 @@ export const translations = {
     'nav.language': 'Language',
 
     'hero.greeting': "Hey, I'm Blxr",
-    'hero.bio1': 'Student in Athens, currently doing the IB Diploma Programme.',
-    'hero.bio2': 'Full-stack developer — backend, mobile and UI.',
+    'hero.bio1': 'IB Diploma student based in Athens.',
+    'hero.bio2': 'Full-stack developer specializing in backend systems, mobile apps and user interfaces.',
     'common.present': 'Present',
 
     'home.projects': 'Projects',
