@@ -1,0 +1,19 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: blxr-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, blxr-deploy]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: npm ci
+      - run: sudo bash "$GITHUB_WORKSPACE/deploy/deploy.sh"

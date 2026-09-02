@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon.png?v=2" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fafaf9" />
+
+    <title>Blxr Portfolio</title>
+
+    <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      (function () {
+        try {
+          var stored = null
+          try { stored = localStorage.getItem('blxr-theme') } catch (e) {}
+          var theme = stored === 'light' || stored === 'dark'
+            ? stored
+            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+          document.documentElement.dataset.theme = theme
+          document.documentElement.style.colorScheme = theme
+        } catch (e) {
+          document.documentElement.dataset.theme = 'dark'
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+# blxr.net
+#
+# Almost everything here is meant to be read: the site is thirteen public pages
+# in thirty-two languages and a search proxy, and the proxy answers nothing worth
+# crawling — /api/ is excluded to save it the pointless requests, not to hide it.
+#
+# /guide is the exception. It is the Essential Bots staff handbook, an internal
+# document that happens to be served from this vhost. It is not a route of the
+# app, nothing links to it, and it is absent from the sitemap below because the
+# sitemap only lists what the router knows about. This line and the noindex in
+# its <head> are what keep it out of results. Neither is access control: anyone
+# with the address can still read it.
+#
+# The sitemap is generated at build time by web/prerender.js from the same route
+# list the pages come from, so it cannot drift out of step with what exists. The
+# translations are listed there in full, and each page declares the other
+# thirty-one with hreflang, so none of this reads as duplicate content.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /guide
+
+Sitemap: https://blxr.net/sitemap.xml

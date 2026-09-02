@@ -1,0 +1,30 @@
+[Unit]
+Description=blxr music search proxy (keyless YouTube search + Apple top-chart)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/blxr-search.env
+ExecStart=/usr/bin/node /opt/blxr-search/server.mjs
+Restart=on-failure
+RestartSec=2
+User=www-data
+Group=www-data
+
+StateDirectory=blxr-search
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+MemoryDenyWriteExecute=false
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

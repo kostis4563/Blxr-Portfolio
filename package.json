@@ -1,0 +1,27 @@
+{
+  "name": "blxr",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Source for blxr.net — a personal site, plus a small proxy for the music widget.",
+  "license": "UNLICENSED",
+  "repository": "github:kostis4563/blxr",
+  "type": "module",
+  "workspaces": [
+    "web",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace web",
+    "build": "npm run build --workspace web",
+    "build:protected": "npm run build:protected --workspace web",
+    "preview": "npm run preview --workspace web",
+    "start:server": "npm start --workspace server",
+    "lint": "oxlint",
+    "deploy": "bash deploy/deploy.sh",
+    "deploy:web": "bash deploy/deploy.sh web",
+    "deploy:server": "bash deploy/deploy.sh server"
+  },
+  "devDependencies": {
+    "oxlint": "^1.71.0"
+  }
+}
