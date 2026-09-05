@@ -655,7 +655,7 @@ function App() {
 
       <header
         id="main-header"
-        className="w-full max-w-[768px] bg-bg backdrop-blur-none md:bg-bg/90 md:backdrop-blur-md text-ink h-[60px] fixed top-4 left-1/2 -translate-x-1/2 z-50 border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
+        className="w-full max-w-[768px] bg-bg backdrop-blur-none md:bg-bg/90 md:backdrop-blur-md text-ink h-[60px] fixed top-0 left-1/2 -translate-x-1/2 z-50 border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
       >
         <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-3">
           {}

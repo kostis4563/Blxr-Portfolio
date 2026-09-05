@@ -48,13 +48,7 @@ export default function ProjectPage({ projectId, theme, onToggleTheme }) {
       />
 
       {}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 h-4 bg-bg z-30"
-      />
-
-      {}
-      <header className="w-full max-w-[768px] bg-bg text-ink h-[52px] fixed left-1/2 -translate-x-1/2 z-40 border-b border-l border-dashed border-r border-line top-4 flex items-center px-6">
+      <header className="w-full max-w-[768px] bg-bg text-ink h-[52px] fixed left-1/2 -translate-x-1/2 z-40 border-b border-l border-dashed border-r border-line top-0 flex items-center px-6">
         <div className="w-full flex items-center justify-between">
           {}
           <a

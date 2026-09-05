@@ -45,7 +45,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
 
-      <header className="w-full max-w-[768px] bg-bg/90 backdrop-blur-md text-ink h-[52px] fixed left-1/2 -translate-x-1/2 z-40 border-b border-l border-dashed border-r border-line top-4 flex items-center px-6">
+      <header className="w-full max-w-[768px] bg-bg/90 backdrop-blur-md text-ink h-[52px] fixed left-1/2 -translate-x-1/2 z-40 border-b border-l border-dashed border-r border-line top-0 flex items-center px-6">
         <div className="w-full flex items-center justify-between">
           <a
             {...link('/', onBack)}

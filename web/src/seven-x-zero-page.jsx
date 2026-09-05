@@ -15,8 +15,7 @@ export default function SevenXZeroPage({ project, theme, onToggleTheme }) {
 
   return (
     <div className="min-h-screen bg-bg text-ink selection:bg-selection selection:text-ink-strong overflow-x-hidden antialiased font-sans animate-view-in">
-      <div aria-hidden="true" className="fixed inset-x-0 top-0 h-4 bg-bg z-30" />
-      <header className="w-full max-w-[1120px] bg-bg/95 backdrop-blur-xl h-[52px] fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed border-line top-4 flex items-center px-6">
+      <header className="w-full max-w-[1120px] bg-bg/95 backdrop-blur-xl h-[52px] fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed border-line top-0 flex items-center px-6">
         <div className="w-full flex items-center justify-between">
           <a {...link(PROJECTS_PATH)} className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors cursor-pointer">
             <span>←</span>

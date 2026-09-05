@@ -8,8 +8,7 @@ function Header({ theme, onToggleTheme, width = 'max-w-[1120px]', dark = false, 
   const { t } = useI18n()
   return (
     <>
-      <div aria-hidden="true" className={`fixed inset-x-0 top-0 h-4 z-30 ${dark ? 'bg-[#09090b]' : surface}`} />
-      <header className={`w-full ${width} ${dark ? 'bg-[#09090b]/95 border-white/10 text-white' : `${surface} border-line text-ink`} backdrop-blur-xl h-[52px] fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed top-4 flex items-center px-6`}>
+      <header className={`w-full ${width} ${dark ? 'bg-[#09090b]/95 border-white/10 text-white' : `${surface} border-line text-ink`} backdrop-blur-xl h-[52px] fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed top-0 flex items-center px-6`}>
         <div className="w-full flex items-center justify-between">
           <a {...link(PROJECTS_PATH)} className={`inline-flex items-center gap-2 text-[13px] font-medium transition-colors cursor-pointer ${dark ? 'text-white/55 hover:text-white' : 'text-ink-muted hover:text-ink-strong'}`}><span>←</span><span>{t('proj.archiveTitle')}</span></a>
           <div className="flex items-center gap-4"><CommandButton className={dark ? 'text-white/55 hover:text-white' : 'text-ink-muted hover:text-ink-strong'} /><ThemeToggle theme={theme} onToggle={onToggleTheme} className={dark ? 'text-white/55 hover:text-white' : 'text-ink-muted hover:text-ink-strong'} /></div>
