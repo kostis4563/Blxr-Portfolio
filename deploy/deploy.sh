@@ -5,6 +5,15 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET="${1:-all}"
 DRY_RUN="${DRY_RUN:-0}"
 
+# When invoked via sudo, hand the checkout back to the calling user on exit
+# (success or failure) so a build step run as root here doesn't leave
+# root-owned files that block the runner's next checkout.
+restore_ownership() {
+  [[ -n "${SUDO_UID:-}" && -n "${SUDO_GID:-}" ]] || return 0
+  chown -R "$SUDO_UID:$SUDO_GID" "$ROOT"
+}
+trap restore_ownership EXIT
+
 WEB_ROOT=/var/www/blxr
 SERVER_ROOT=/opt/blxr-search
 UNIT=/etc/systemd/system/blxr-search.service

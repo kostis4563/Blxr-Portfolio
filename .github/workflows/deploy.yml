@@ -17,5 +17,3 @@ jobs:
 
       - run: npm ci
       - run: sudo bash "$GITHUB_WORKSPACE/deploy/deploy.sh"
-      - run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
-        if: always()
