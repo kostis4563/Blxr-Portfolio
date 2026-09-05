@@ -177,7 +177,7 @@ export default function MusicWidget() {
         playerRef.current = new YT.Player(playerElRef.current, {
           width: '200',
           height: '80',
-          playerVars: { autoplay: 0, controls: 0, disablekb: 1, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3 },
+          playerVars: { autoplay: 0, controls: 0, disablekb: 1, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, origin: window.location.origin },
           events: {
             onReady: () => {
               if (unmountedRef.current) return

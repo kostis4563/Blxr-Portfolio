@@ -72,7 +72,7 @@ const linksOf = (pattern, format) =>
   [...templateHead.matchAll(pattern)].map(([, href]) => format(href))
 
 const hints = [
-  ...linksOf(/<link rel="stylesheet"[^>]*href="([^"]+)"/g, (href) => `<${href}>; rel=preload; as=style`),
+  ...linksOf(/<link rel="stylesheet"[^>]*href="([^"]+)"/g, (href) => `<${href}>; rel=preload; as=style; crossorigin`),
   ...linksOf(
     /<link rel="preload"[^>]*href="([^"]+\.woff2)"[^>]*>/g,
     (href) => `<${href}>; rel=preload; as=font; type="font/woff2"; crossorigin`,
