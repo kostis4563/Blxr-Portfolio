@@ -1497,8 +1497,7 @@ function App() {
         rightText="XR"
 
       >
-        <div className="w-full  font-normal not-italic pt-4 border-t border-dashed border-[var(--hairline-strong)] flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-ink-muted">
-          <span>© 2026 Blxr</span>
+        <div className="w-full  font-normal not-italic pt-4 border-t border-dashed border-[var(--hairline-strong)] flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-4 text-[12px] text-ink-muted">
           <span className="flex items-center gap-4">
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="hover:text-ink-strong transition-colors duration-200">GitHub</a>
             <span aria-hidden="true" className="text-ink-faint">·</span>
