@@ -214,19 +214,10 @@ body {
 
 .project-stack-card {
   z-index: var(--stack-z, 10);
-  opacity: var(--stack-opacity, 1);
-  transform:
-    translate3d(0, var(--stack-lift, 0), 0)
-    scale(var(--stack-scale, 1));
   transform-origin: 50% top;
 }
 
-.project-stack-body {
-  filter: blur(var(--stack-blur, 0px));
-}
-
-.project-stack-card::after {
-  content: '';
+.project-stack-scrim {
   position: absolute;
   inset: 0;
   z-index: 30;
@@ -234,12 +225,11 @@ body {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--stack-accent, #8b5cf6) 14%, transparent), transparent 22%),
     linear-gradient(180deg, color-mix(in srgb, var(--color-bg) 58%, transparent), transparent 42%);
-  opacity: var(--stack-depth, 0);
+  opacity: 0;
   pointer-events: none;
 }
 
-.project-stack-card::before {
-  content: '';
+.project-stack-edge {
   position: absolute;
   z-index: 31;
   top: 0;
@@ -247,14 +237,13 @@ body {
   right: 12%;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--stack-accent, #8b5cf6), transparent);
-  opacity: var(--stack-accent-opacity, 0.7);
-  transform: scaleX(var(--stack-accent-scale, 1));
+  opacity: 0.7;
   transform-origin: center;
   pointer-events: none;
 }
 
 .project-stack-media {
-  transform: translate3d(0, var(--stack-media-shift, 0), 0) scale(var(--stack-media-scale, 1.025));
+  transform: scale(1.025);
   transform-origin: center;
 }
 
@@ -312,12 +301,6 @@ body {
   top: var(--stack-top, 84px);
 }
 
-.project-stack-card:focus-within {
-  --stack-blur: 0px !important;
-  --stack-opacity: 1 !important;
-  --stack-depth: 0 !important;
-}
-
 @media (max-width: 767px) {
   .project-stack-card:not(:last-child) {
     position: relative;
@@ -325,15 +308,19 @@ body {
   }
 
   .project-stack-card {
-    opacity: 1;
-    transform: none;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .project-stack-media {
+    transform: scale(1.025) !important;
   }
 
   .project-stack-body {
-    filter: none;
+    filter: none !important;
   }
 
-  .project-stack-card::after {
+  .project-stack-scrim {
     display: none;
   }
 }
@@ -350,24 +337,24 @@ body {
     top: auto !important;
     opacity: 1 !important;
     transform: none !important;
-    will-change: auto;
+    will-change: auto !important;
   }
 
-  .project-stack-card::after {
+  .project-stack-scrim {
     display: none;
   }
 
-  .project-stack-card::before {
-    transform: none;
+  .project-stack-edge {
+    transform: none !important;
   }
 
   .project-stack-media {
-    transform: none;
-    will-change: auto;
+    transform: none !important;
+    will-change: auto !important;
   }
 
   .project-stack-body {
-    filter: none;
+    filter: none !important;
   }
 }
 

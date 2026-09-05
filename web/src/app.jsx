@@ -109,7 +109,7 @@ function App() {
       const topOffset = Math.max(0, 16 - window.scrollY)
       if (topOffset === last) return
       last = topOffset
-      header.style.top = `${topOffset}px`
+      header.style.transform = `translate3d(0, ${topOffset}px, 0)`
     }
 
     const handleScroll = () => {
@@ -135,53 +135,69 @@ function App() {
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     const compact = window.matchMedia('(max-width: 767px)')
-    const driven = [
-      '--stack-lift',
-      '--stack-scale',
-      '--stack-opacity',
-      '--stack-depth',
-      '--stack-blur',
-      '--stack-accent-opacity',
-      '--stack-accent-scale',
-      '--stack-media-shift',
-      '--stack-media-scale'
-    ]
     const EASE_MS = 110
     const EPSILON = 0.0008
+    const BLUR_MAX = 2.2
+    const BLUR_STEPS = 5
 
+    const parts = cards.map((card) => ({
+      card,
+      body: card.querySelector('.project-stack-body'),
+      media: card.querySelector('.project-stack-media'),
+      scrim: card.querySelector('.project-stack-scrim'),
+      edge: card.querySelector('.project-stack-edge'),
+      last: { transform: '', opacity: '', media: '', scrim: '', edge: '', edgeOpacity: '', blur: '' }
+    }))
+
+    let offsets = []
+    let heights = []
     let settleTops = []
-    let written = []
+    let isSticky = []
+
+    const measure = () => {
+      const gap = Number.parseFloat(window.getComputedStyle(stack).rowGap) || 0
+      let y = 0
+      offsets = []
+      heights = []
+      settleTops = []
+      isSticky = []
+      for (const card of cards) {
+        const style = window.getComputedStyle(card)
+        const height = card.offsetHeight
+        offsets.push(y)
+        heights.push(height)
+        settleTops.push(Number.parseFloat(style.top) || 96)
+        isSticky.push(style.position === 'sticky')
+        y += height + gap
+      }
+    }
+
     let frame = 0
     let lastTime = 0
     let animating = false
-
-    const readSettleTops = () => {
-      settleTops = cards.map((card) => (
-        Number.parseFloat(window.getComputedStyle(card).top) || 96
-      ))
-    }
+    let focused = -1
 
     const setAnimating = (next) => {
       if (animating === next) return
       animating = next
-      cards.forEach((card) => {
-        card.style.willChange = next ? 'transform, opacity' : 'auto'
-        const media = card.querySelector('.project-stack-media')
-        if (media) media.style.willChange = next ? 'transform' : 'auto'
-      })
+      for (const part of parts) {
+        part.card.style.willChange = next ? 'transform, opacity' : 'auto'
+        if (part.media) part.media.style.willChange = next ? 'transform' : 'auto'
+      }
     }
 
     const reset = () => {
       setAnimating(false)
-      written = []
-      cards.forEach((card) => driven.forEach((prop) => card.style.removeProperty(prop)))
-    }
-
-    const write = (card, index, prop, value) => {
-      const slot = written[index] || (written[index] = {})
-      if (slot[prop] === value) return
-      slot[prop] = value
-      card.style.setProperty(prop, value)
+      for (const part of parts) {
+        part.card.style.removeProperty('transform')
+        part.card.style.removeProperty('opacity')
+        part.body?.style.removeProperty('filter')
+        part.media?.style.removeProperty('transform')
+        part.scrim?.style.removeProperty('opacity')
+        part.edge?.style.removeProperty('opacity')
+        part.edge?.style.removeProperty('transform')
+        part.last = { transform: '', opacity: '', media: '', scrim: '', edge: '', edgeOpacity: '', blur: '' }
+      }
     }
 
     const clamp = (value) => Math.min(1, Math.max(0, value))
@@ -212,18 +228,25 @@ function App() {
       const entranceEnd = viewportHeight * 0.78
       const stackStart = viewportHeight * 0.82
       const entranceTravel = Math.max(1, entranceStart - entranceEnd)
-      const rects = cards.map((card) => card.getBoundingClientRect())
+
+      const tops = offsets.map((offset, index) => {
+        const natural = stackRect.top + offset
+        if (!isSticky[index]) return natural
+        const shift = Math.max(0, settleTops[index] - natural)
+        const room = Math.max(0, stackRect.bottom - (natural + heights[index]))
+        return natural + Math.min(shift, room)
+      })
 
       let moving = false
 
-      cards.forEach((card, index) => {
+      parts.forEach((part, index) => {
         const current = state[index]
-        const targetEntrance = clamp((entranceStart - rects[index].top) / entranceTravel)
+        const targetEntrance = clamp((entranceStart - tops[index]) / entranceTravel)
         let targetStack = 0
 
-        if (cards[index + 1]) {
+        if (index + 1 < tops.length) {
           const stackTravel = Math.max(1, stackStart - settleTops[index + 1])
-          targetStack = clamp((stackStart - rects[index + 1].top) / stackTravel)
+          targetStack = clamp((stackStart - tops[index + 1]) / stackTravel)
         }
 
         const step = current.primed ? chase : 1
@@ -239,20 +262,66 @@ function App() {
         }
 
         const entrance = smooth(current.entrance)
-        const stackProgress = smooth(current.stack)
+        const stackProgress = focused === index ? 0 : smooth(current.stack)
         const entranceScale = 0.965 + (0.035 * entrance)
         const stackedScale = 1 - (0.055 * stackProgress)
-        const opacity = (0.58 + (0.42 * entrance)) * (1 - (0.22 * stackProgress))
+        const opacity = focused === index
+          ? 1
+          : (0.58 + (0.42 * entrance)) * (1 - (0.22 * stackProgress))
 
-        write(card, index, '--stack-lift', `${((32 * (1 - entrance)) - (12 * stackProgress)).toFixed(2)}px`)
-        write(card, index, '--stack-scale', (entranceScale * stackedScale).toFixed(4))
-        write(card, index, '--stack-opacity', opacity.toFixed(3))
-        write(card, index, '--stack-depth', (0.44 * stackProgress).toFixed(3))
-        write(card, index, '--stack-blur', `${(2.2 * stackProgress).toFixed(2)}px`)
-        write(card, index, '--stack-accent-opacity', (0.22 + (0.48 * entrance)).toFixed(3))
-        write(card, index, '--stack-accent-scale', (0.52 + (0.48 * entrance)).toFixed(3))
-        write(card, index, '--stack-media-shift', `${((14 * (1 - entrance)) - (6 * stackProgress)).toFixed(2)}px`)
-        write(card, index, '--stack-media-scale', (1.025 + (0.012 * stackProgress)).toFixed(4))
+        const lift = (32 * (1 - entrance)) - (12 * stackProgress)
+        const transform = `translate3d(0,${lift.toFixed(2)}px,0) scale(${(entranceScale * stackedScale).toFixed(4)})`
+        const { last } = part
+
+        if (last.transform !== transform) {
+          last.transform = transform
+          part.card.style.transform = transform
+        }
+
+        const opacityText = opacity.toFixed(3)
+        if (last.opacity !== opacityText) {
+          last.opacity = opacityText
+          part.card.style.opacity = opacityText
+        }
+
+        if (part.body) {
+          const step = Math.round(stackProgress * BLUR_STEPS) / BLUR_STEPS
+          const blur = step ? `blur(${(BLUR_MAX * step).toFixed(2)}px)` : 'none'
+          if (last.blur !== blur) {
+            last.blur = blur
+            part.body.style.filter = blur
+          }
+        }
+
+        if (part.media) {
+          const shift = (14 * (1 - entrance)) - (6 * stackProgress)
+          const mediaTransform = `translate3d(0,${shift.toFixed(2)}px,0) scale(${(1.025 + (0.012 * stackProgress)).toFixed(4)})`
+          if (last.media !== mediaTransform) {
+            last.media = mediaTransform
+            part.media.style.transform = mediaTransform
+          }
+        }
+
+        if (part.scrim) {
+          const depth = (0.44 * stackProgress).toFixed(3)
+          if (last.scrim !== depth) {
+            last.scrim = depth
+            part.scrim.style.opacity = depth
+          }
+        }
+
+        if (part.edge) {
+          const edgeOpacity = (0.22 + (0.48 * entrance)).toFixed(3)
+          if (last.edgeOpacity !== edgeOpacity) {
+            last.edgeOpacity = edgeOpacity
+            part.edge.style.opacity = edgeOpacity
+          }
+          const edgeTransform = `scaleX(${(0.52 + (0.48 * entrance)).toFixed(3)})`
+          if (last.edge !== edgeTransform) {
+            last.edge = edgeTransform
+            part.edge.style.transform = edgeTransform
+          }
+        }
       })
 
       if (moving) frame = window.requestAnimationFrame(updateStack)
@@ -263,22 +332,45 @@ function App() {
     }
 
     const handleResize = () => {
-      readSettleTops()
+      measure()
       requestUpdate()
     }
 
-    readSettleTops()
+    const onFocusIn = (event) => {
+      const owner = event.target.closest?.('[data-project-stack-card]')
+      const next = owner ? cards.indexOf(owner) : -1
+      if (next === focused) return
+      focused = next
+      requestUpdate()
+    }
+
+    const onFocusOut = (event) => {
+      if (focused === -1 || stack.contains(event.relatedTarget)) return
+      focused = -1
+      requestUpdate()
+    }
+
+    measure()
     updateStack(0)
+
+    const resizeObserver = new ResizeObserver(handleResize)
+    for (const card of cards) resizeObserver.observe(card)
+
     window.addEventListener('scroll', requestUpdate, { passive: true })
     window.addEventListener('resize', handleResize)
+    stack.addEventListener('focusin', onFocusIn)
+    stack.addEventListener('focusout', onFocusOut)
     reduceMotion.addEventListener('change', handleResize)
     compact.addEventListener('change', handleResize)
 
     return () => {
       window.removeEventListener('scroll', requestUpdate)
       window.removeEventListener('resize', handleResize)
+      stack.removeEventListener('focusin', onFocusIn)
+      stack.removeEventListener('focusout', onFocusOut)
       reduceMotion.removeEventListener('change', handleResize)
       compact.removeEventListener('change', handleResize)
+      resizeObserver.disconnect()
       if (frame) window.cancelAnimationFrame(frame)
       reset()
     }
@@ -588,7 +680,7 @@ function App() {
       <header
         id="main-header"
         className="w-full max-w-[768px] bg-bg/90 backdrop-blur-md text-ink h-[60px] fixed left-1/2 -translate-x-1/2 z-50 border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
-        style={{ top: '16px' }}
+        style={{ top: 0, transform: 'translate3d(0, 16px, 0)' }}
       >
         <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-3">
           {}
@@ -744,15 +836,18 @@ function App() {
                   }}
                 />
 
+                <div className="project-stack-scrim" aria-hidden="true" />
+                <div className="project-stack-edge" aria-hidden="true" />
+
                 {}
                 <div className="project-stack-body relative bg-surface rounded-[31px] flex flex-col-reverse items-stretch w-full overflow-hidden">
 
                   <div
 
-                    className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-[50px] z-0"
+                    className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0"
                     style={{
                       '--glow-size': '700px',
-                      background: 'radial-gradient(circle closest-side, var(--glow-soft), transparent 80%)'
+                      background: 'radial-gradient(circle closest-side, var(--glow-soft), transparent 100%)'
                     }}
                   />
 
@@ -923,13 +1018,16 @@ function App() {
                 }}
               />
 
+              <div className="project-stack-scrim" aria-hidden="true" />
+              <div className="project-stack-edge" aria-hidden="true" />
+
               <div className="project-stack-body relative bg-surface rounded-[31px] flex flex-col md:flex-row items-stretch justify-between w-full overflow-hidden min-h-[300px]">
 
                 <div
-                  className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-[50px] z-0"
+                  className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0"
                   style={{
                     '--glow-size': '700px',
-                    background: 'radial-gradient(circle closest-side, var(--glow-soft), transparent 80%)'
+                    background: 'radial-gradient(circle closest-side, var(--glow-soft), transparent 100%)'
                   }}
                 />
 
