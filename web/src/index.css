@@ -212,9 +212,162 @@ body {
   will-change: transform;
 }
 
+.project-stack-card {
+  z-index: var(--stack-z, 10);
+  opacity: var(--stack-opacity, 1);
+  transform:
+    translate3d(0, var(--stack-lift, 0), 0)
+    scale(var(--stack-scale, 1));
+  transform-origin: 50% top;
+}
+
+.project-stack-body {
+  filter: blur(var(--stack-blur, 0px));
+}
+
+.project-stack-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--stack-accent, #8b5cf6) 14%, transparent), transparent 22%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-bg) 58%, transparent), transparent 42%);
+  opacity: var(--stack-depth, 0);
+  pointer-events: none;
+}
+
+.project-stack-card::before {
+  content: '';
+  position: absolute;
+  z-index: 31;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--stack-accent, #8b5cf6), transparent);
+  opacity: var(--stack-accent-opacity, 0.7);
+  transform: scaleX(var(--stack-accent-scale, 1));
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.project-stack-media {
+  transform: translate3d(0, var(--stack-media-shift, 0), 0) scale(var(--stack-media-scale, 1.025));
+  transform-origin: center;
+}
+
+.project-stack-media::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 40%;
+  z-index: 3;
+  background: linear-gradient(
+    to top,
+    var(--color-surface),
+    color-mix(in srgb, var(--color-surface) 45%, transparent) 45%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+.project-stack-count {
+  color: color-mix(in srgb, var(--stack-accent, #8b5cf6) 62%, var(--color-ink-subtle));
+  transition: color 250ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.project-stack-dot {
+  background: var(--stack-accent, #8b5cf6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--stack-accent, #8b5cf6) 18%, transparent);
+}
+
+.project-stack-logo {
+  box-shadow:
+    0 0 0 4px var(--color-surface),
+    0 14px 28px -16px var(--shadow-cast);
+}
+
+.project-stack-tag {
+  transition: color 250ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.project-stack-card:hover .project-stack-tag {
+  color: var(--color-ink-muted);
+}
+
+.project-stack-card:hover {
+  box-shadow:
+    0 28px 60px -32px color-mix(in srgb, var(--stack-accent, #8b5cf6) 60%, transparent),
+    0 12px 32px -22px var(--shadow-cast);
+}
+
+.project-stack-card:hover .project-stack-count {
+  color: color-mix(in srgb, var(--stack-accent, #8b5cf6) 82%, var(--color-ink-strong));
+}
+
+.project-stack-card:not(:last-child) {
+  position: sticky;
+  top: var(--stack-top, 84px);
+}
+
+.project-stack-card:focus-within {
+  --stack-blur: 0px !important;
+  --stack-opacity: 1 !important;
+  --stack-depth: 0 !important;
+}
+
+@media (max-width: 767px) {
+  .project-stack-card:not(:last-child) {
+    position: relative;
+    top: auto;
+  }
+
+  .project-stack-card {
+    opacity: 1;
+    transform: none;
+  }
+
+  .project-stack-body {
+    filter: none;
+  }
+
+  .project-stack-card::after {
+    display: none;
+  }
+}
+
 @media (hover: none) {
   .glow-follow {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-stack-card {
+    position: relative !important;
+    top: auto !important;
+    opacity: 1 !important;
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .project-stack-card::after {
+    display: none;
+  }
+
+  .project-stack-card::before {
+    transform: none;
+  }
+
+  .project-stack-media {
+    transform: none;
+    will-change: auto;
+  }
+
+  .project-stack-body {
+    filter: none;
   }
 }
 
@@ -338,6 +491,36 @@ body {
 }
 .animate-row-in {
   animation: row-in 0.26s cubic-bezier(0.34, 1.3, 0.5, 1) both;
+}
+
+.toolbox::details-content {
+  content-visibility: hidden;
+  transition: content-visibility 320ms allow-discrete;
+}
+
+.toolbox[open]::details-content {
+  content-visibility: visible;
+}
+
+.toolbox-panel {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px) scale(0.985);
+  transform-origin: top center;
+  transition:
+    opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toolbox[open] .toolbox-panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.toolbox[open] .toolbox-col {
+  animation: row-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--toolbox-delay, 0ms);
 }
 
 .panel-glass::before {

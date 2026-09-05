@@ -46,8 +46,10 @@ function App() {
   const { t } = useI18n()
 
   const homeScrollRef = useRef(0)
+  const projectsStackRef = useRef(null)
 
   const hasLeftHomeRef = useRef(false)
+  const toolboxRef = useRef(null)
 
   const openProject = (projectId) => {
     homeScrollRef.current = window.scrollY
@@ -73,6 +75,29 @@ function App() {
   const isReturningHome = hasLeftHomeRef.current
 
   useEffect(() => {
+    const el = toolboxRef.current
+    if (!el) return
+
+    const closeOnOutside = (e) => {
+      if (el.open && !el.contains(e.target)) el.open = false
+    }
+
+    const closeOnEscape = (e) => {
+      if (e.key !== 'Escape' || !el.open) return
+      const hadFocus = el.contains(document.activeElement)
+      el.open = false
+      if (hadFocus) el.querySelector('summary')?.focus()
+    }
+
+    document.addEventListener('pointerdown', closeOnOutside, true)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside, true)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [currentView])
+
+  useEffect(() => {
     const header = document.getElementById('main-header')
     if (!header) return
 
@@ -96,6 +121,166 @@ function App() {
     return () => {
       window.removeEventListener('scroll', handleScroll)
       if (frame) cancelAnimationFrame(frame)
+    }
+  }, [currentView])
+
+  useEffect(() => {
+    if (currentView !== 'home') return
+
+    const stack = projectsStackRef.current
+    if (!stack) return
+
+    const cards = Array.from(stack.querySelectorAll('[data-project-stack-card]'))
+    if (cards.length < 2) return
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const compact = window.matchMedia('(max-width: 767px)')
+    const driven = [
+      '--stack-lift',
+      '--stack-scale',
+      '--stack-opacity',
+      '--stack-depth',
+      '--stack-blur',
+      '--stack-accent-opacity',
+      '--stack-accent-scale',
+      '--stack-media-shift',
+      '--stack-media-scale'
+    ]
+    const EASE_MS = 110
+    const EPSILON = 0.0008
+
+    let settleTops = []
+    let written = []
+    let frame = 0
+    let lastTime = 0
+    let animating = false
+
+    const readSettleTops = () => {
+      settleTops = cards.map((card) => (
+        Number.parseFloat(window.getComputedStyle(card).top) || 96
+      ))
+    }
+
+    const setAnimating = (next) => {
+      if (animating === next) return
+      animating = next
+      cards.forEach((card) => {
+        card.style.willChange = next ? 'transform, opacity' : 'auto'
+        const media = card.querySelector('.project-stack-media')
+        if (media) media.style.willChange = next ? 'transform' : 'auto'
+      })
+    }
+
+    const reset = () => {
+      setAnimating(false)
+      written = []
+      cards.forEach((card) => driven.forEach((prop) => card.style.removeProperty(prop)))
+    }
+
+    const write = (card, index, prop, value) => {
+      const slot = written[index] || (written[index] = {})
+      if (slot[prop] === value) return
+      slot[prop] = value
+      card.style.setProperty(prop, value)
+    }
+
+    const clamp = (value) => Math.min(1, Math.max(0, value))
+    const smooth = (value) => value * value * (3 - (2 * value))
+
+    const state = cards.map(() => ({ entrance: 0, stack: 0, primed: false }))
+
+    const updateStack = (time) => {
+      frame = 0
+      if (reduceMotion.matches || compact.matches) {
+        reset()
+        return
+      }
+
+      const viewportHeight = window.innerHeight
+      const stackRect = stack.getBoundingClientRect()
+      if (stackRect.bottom < viewportHeight * -0.25 || stackRect.top > viewportHeight * 1.25) {
+        setAnimating(false)
+        return
+      }
+      setAnimating(true)
+
+      const delta = lastTime ? Math.min(64, time - lastTime) : 0
+      lastTime = time
+      const chase = delta ? 1 - Math.exp(-delta / EASE_MS) : 1
+
+      const entranceStart = viewportHeight * 1.02
+      const entranceEnd = viewportHeight * 0.78
+      const stackStart = viewportHeight * 0.82
+      const entranceTravel = Math.max(1, entranceStart - entranceEnd)
+      const rects = cards.map((card) => card.getBoundingClientRect())
+
+      let moving = false
+
+      cards.forEach((card, index) => {
+        const current = state[index]
+        const targetEntrance = clamp((entranceStart - rects[index].top) / entranceTravel)
+        let targetStack = 0
+
+        if (cards[index + 1]) {
+          const stackTravel = Math.max(1, stackStart - settleTops[index + 1])
+          targetStack = clamp((stackStart - rects[index + 1].top) / stackTravel)
+        }
+
+        const step = current.primed ? chase : 1
+        current.primed = true
+        current.entrance += (targetEntrance - current.entrance) * step
+        current.stack += (targetStack - current.stack) * step
+
+        if (Math.abs(targetEntrance - current.entrance) > EPSILON || Math.abs(targetStack - current.stack) > EPSILON) {
+          moving = true
+        } else {
+          current.entrance = targetEntrance
+          current.stack = targetStack
+        }
+
+        const entrance = smooth(current.entrance)
+        const stackProgress = smooth(current.stack)
+        const entranceScale = 0.965 + (0.035 * entrance)
+        const stackedScale = 1 - (0.055 * stackProgress)
+        const opacity = (0.58 + (0.42 * entrance)) * (1 - (0.22 * stackProgress))
+
+        write(card, index, '--stack-lift', `${((32 * (1 - entrance)) - (12 * stackProgress)).toFixed(2)}px`)
+        write(card, index, '--stack-scale', (entranceScale * stackedScale).toFixed(4))
+        write(card, index, '--stack-opacity', opacity.toFixed(3))
+        write(card, index, '--stack-depth', (0.44 * stackProgress).toFixed(3))
+        write(card, index, '--stack-blur', `${(2.2 * stackProgress).toFixed(2)}px`)
+        write(card, index, '--stack-accent-opacity', (0.22 + (0.48 * entrance)).toFixed(3))
+        write(card, index, '--stack-accent-scale', (0.52 + (0.48 * entrance)).toFixed(3))
+        write(card, index, '--stack-media-shift', `${((14 * (1 - entrance)) - (6 * stackProgress)).toFixed(2)}px`)
+        write(card, index, '--stack-media-scale', (1.025 + (0.012 * stackProgress)).toFixed(4))
+      })
+
+      if (moving) frame = window.requestAnimationFrame(updateStack)
+    }
+
+    const requestUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateStack)
+    }
+
+    const handleResize = () => {
+      readSettleTops()
+      requestUpdate()
+    }
+
+    readSettleTops()
+    updateStack(0)
+    window.addEventListener('scroll', requestUpdate, { passive: true })
+    window.addEventListener('resize', handleResize)
+    reduceMotion.addEventListener('change', handleResize)
+    compact.addEventListener('change', handleResize)
+
+    return () => {
+      window.removeEventListener('scroll', requestUpdate)
+      window.removeEventListener('resize', handleResize)
+      reduceMotion.removeEventListener('change', handleResize)
+      compact.removeEventListener('change', handleResize)
+      if (frame) window.cancelAnimationFrame(frame)
+      reset()
     }
   }, [currentView])
 
@@ -175,6 +360,7 @@ function App() {
       imagePosition: 'center',
 
       logo: '/amitista-logo.webp',
+      accent: '#8558e4',
       description: t('proj.amitista.short'),
       tags: ['React', 'Vite', 'Tailwind CSS']
     },
@@ -195,13 +381,16 @@ function App() {
       imagePosition: 'center 39%',
 
       logo: '/async-logo.webp',
+      accent: '#e45869',
 
       description: t('proj.async.short'),
       tags: ['C++17', 'Node.js', 'React']
     },
   ]
 
-  const archivePreviews = [...projectsList]
+  const featuredProjectIds = new Set(projectCards.map((project) => project.projectId))
+  const archivePreviews = projectsList
+    .filter((project) => !featuredProjectIds.has(project.id))
     .sort((a, b) => Number(Boolean(a.image)) - Number(Boolean(b.image)))
     .slice(0, 3)
 
@@ -262,7 +451,6 @@ function App() {
       bar: 'bg-sky-400',
       glow: 'shadow-[0_10px_24px_-10px_rgba(56,189,248,0.4),0_3px_12px_-6px_var(--shadow-cast)]'
     },
-
     basic: {
       label: t('level.basic'),
       rank: 2,
@@ -288,7 +476,9 @@ function App() {
     '/icons/mysql-icon-dark.svg': '/icons/mysql-icon-light.svg',
     '/icons/github_dark.svg': '/icons/github.svg',
     '/icons/json_dark.svg': '/icons/json.svg',
-    '/icons/komodo_dark.svg': '/icons/komodo.svg'
+    '/icons/komodo_dark.svg': '/icons/komodo.svg',
+    '/icons/cursor_dark.svg': '/icons/cursor.svg',
+    '/icons/devin_dark.png': '/icons/devin.png'
   }
   const themedIcon = (url) => (theme === 'light' ? LIGHT_THEME_ICONS[url] ?? url : url)
 
@@ -300,7 +490,6 @@ function App() {
         { name: 'Python', icon: '/icons/python.svg', level: 'comfortable' },
         { name: 'CSS', icon: '/icons/css.svg', level: 'advanced' },
         { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced' },
-        { name: 'Swift', icon: '/icons/swift.svg', level: 'basic' },
         { name: 'Java', icon: '/icons/java.svg', level: 'basic' }
       ]
     },
@@ -309,48 +498,83 @@ function App() {
       items: [
         { name: 'React', icon: '/icons/react_dark.svg', level: 'advanced' },
         { name: 'Next.js', icon: '/icons/nextjs_icon_dark.svg', level: 'basic' },
+        { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'advanced' },
         { name: 'discord.js', icon: '/icons/discordjs.svg', level: 'advanced' }
       ]
     },
     {
-      name: t('skills.other'),
+      name: t('skills.infrastructure'),
       items: [
-        { name: 'Git', icon: '/icons/git.svg', level: 'comfortable' },
+        { name: 'Node.js', icon: '/icons/nodejs.svg', level: 'comfortable' },
         { name: 'Docker', icon: '/icons/docker.svg', level: 'learning' },
-
-        { name: 'npm', icon: '/icons/npm.svg', level: 'comfortable' },
-        { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable' },
         { name: 'MySQL', icon: themedIcon('/icons/mysql-icon-dark.svg'), level: 'comfortable' },
-        { name: 'JSON', icon: themedIcon('/icons/json_dark.svg'), level: 'advanced' },
-        { name: 'GitHub', icon: themedIcon('/icons/github_dark.svg'), level: 'comfortable' },
-
+        { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable' },
         { name: 'VPS Admin', icon: '/icons/vps.svg', level: 'advanced' },
+        { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic' }
+      ]
+    }
+  ]
 
-        { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic' },
-        { name: 'Figma', icon: '/icons/figma.svg', level: 'comfortable' },
-        { name: 'Adobe', icon: '/icons/adobe.svg', level: 'comfortable' }
+  const toolCategories = [
+    {
+      name: t('tools.additional'),
+      wide: false,
+      items: [
+        { name: 'Swift', icon: '/icons/swift.svg' },
+        { name: 'JSON', icon: themedIcon('/icons/json_dark.svg') }
       ]
     },
-
+    {
+      name: t('tools.development'),
+      wide: false,
+      items: [
+        { name: 'Docker', icon: '/icons/docker.svg' },
+        { name: 'Git', icon: '/icons/git.svg' },
+        { name: 'GitHub', icon: themedIcon('/icons/github_dark.svg') },
+        { name: 'npm', icon: '/icons/npm.svg' },
+        { name: 'Vite', icon: '/icons/vite.svg' },
+        { name: 'Nginx', icon: '/icons/nginx.svg' }
+      ]
+    },
+    {
+      name: t('tools.design'),
+      wide: false,
+      items: [
+        { name: 'Figma', icon: '/icons/figma.svg' },
+        { name: 'Adobe', icon: '/icons/adobe.svg' },
+        { name: 'Photoshop', icon: '/icons/photoshop.svg' },
+        { name: 'Illustrator', icon: '/icons/illustrator.svg' },
+        { name: 'Canva', icon: '/icons/canva.svg' }
+      ]
+    },
     {
       name: t('skills.editors'),
+      wide: true,
       items: [
-        { name: 'VS Code', icon: '/icons/vscode.svg', level: null },
-        { name: 'Visual Studio', icon: '/icons/visual-studio.svg', level: null },
-        { name: 'Xcode', icon: '/icons/xcode.svg', level: null },
-        { name: 'PyCharm', icon: '/icons/pycharm.svg', level: null },
-        { name: 'Komodo', icon: themedIcon('/icons/komodo_dark.svg'), level: null }
+        { name: 'VS Code', icon: '/icons/vscode.svg' },
+        { name: 'Visual Studio', icon: '/icons/visual-studio.svg' },
+        { name: 'Xcode', icon: '/icons/xcode.svg' },
+        { name: 'PyCharm', icon: '/icons/pycharm.svg' },
+        { name: 'Komodo', icon: themedIcon('/icons/komodo_dark.svg') },
+        { name: 'Cursor', icon: themedIcon('/icons/cursor_dark.svg') },
+        { name: 'Devin', icon: themedIcon('/icons/devin_dark.png') }
       ]
     },
     {
       name: t('skills.systems'),
+      wide: true,
       items: [
-        { name: 'macOS', icon: themedIcon('/icons/apple_dark.svg'), level: null },
-        { name: 'Windows', icon: '/icons/windows.svg', level: null },
-        { name: 'Linux', icon: '/icons/linux.svg', level: null }
+        { name: 'macOS', icon: themedIcon('/icons/apple_dark.svg') },
+        { name: 'Linux', icon: '/icons/linux.svg' },
+        { name: 'Windows', icon: '/icons/windows.svg' }
       ]
     }
   ]
+
+  const toolboxPreview = ['Docker', 'Git', 'Figma', 'VS Code', 'macOS']
+    .map((name) => toolCategories.flatMap((category) => category.items).find((item) => item.name === name))
+    .filter(Boolean)
+  const toolboxCount = toolCategories.reduce((total, category) => total + category.items.length, 0)
 
   const navItemClass = 'h-9 w-9 flex items-center justify-center hover:text-ink-strong focus-visible:text-ink-strong aria-expanded:text-ink-strong transition-colors duration-200'
 
@@ -359,7 +583,7 @@ function App() {
   const navDivider = 'mx-1 h-full border-l border-dashed border-line'
 
   return (
-    <div className={`min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans ${isReturningHome ? '' : 'animate-view-in'}`}>
+    <div className={`min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-clip antialiased font-sans ${isReturningHome ? '' : 'animate-view-in'}`}>
 
       <header
         id="main-header"
@@ -496,14 +720,20 @@ function App() {
             </a>
           </div>
 
-          <div className="flex flex-col gap-8 w-full">
+          <div ref={projectsStackRef} className="project-stack flex flex-col gap-8 w-full">
             {projectCards.map((card, idx) => (
               <div
                 key={idx}
+                data-project-stack-card
+                style={{
+                  '--stack-top': `${84 + (idx * 14)}px`,
+                  '--stack-z': 10 + idx,
+                  '--stack-accent': card.accent
+                }}
                 onMouseMove={handleMouseMove}
 
                 onClick={() => openProject(card.projectId)}
-                className="relative p-[1px] rounded-[32px] bg-surface-hover hover:bg-surface-hover-strong group overflow-hidden w-full cursor-pointer transition-[background-color,transform,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:shadow-[color:var(--shadow-cast)] focus-within:bg-surface-hover-strong motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                className="project-stack-card relative p-[1px] rounded-[32px] bg-surface-hover hover:bg-surface-hover-strong group overflow-hidden w-full cursor-pointer transition-[background-color,box-shadow] duration-300 ease-out focus-within:bg-surface-hover-strong motion-reduce:transition-none"
               >
                 {}
                 <div
@@ -515,7 +745,7 @@ function App() {
                 />
 
                 {}
-                <div className="relative bg-surface rounded-[31px] flex flex-col-reverse items-stretch w-full overflow-hidden">
+                <div className="project-stack-body relative bg-surface rounded-[31px] flex flex-col-reverse items-stretch w-full overflow-hidden">
 
                   <div
 
@@ -526,25 +756,61 @@ function App() {
                     }}
                   />
 
-                  <div className="flex-1 flex flex-col items-start text-left relative z-20 w-full p-5 sm:p-7">
+                  <div className="flex-1 flex flex-col items-start text-left relative z-20 w-full p-6 sm:p-8">
                     {}
+                    {card.logo && (
+                      <div className="project-stack-logo -mt-[52px] sm:-mt-[60px] mb-4 w-14 h-14 rounded-2xl border border-line-strong bg-surface-raised flex items-center justify-center overflow-hidden">
+                        <img
+                          {...imageProps(card.logo, '56px')}
+                          alt=""
+                          aria-hidden="true"
+                          width="56"
+                          height="56"
+                          loading="lazy"
+                          decoding="async"
+                          className="w-9 h-9 object-contain"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2 mb-3.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
-                      {card.category && <span>{card.category}</span>}
+                      {card.category && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="project-stack-dot w-1.5 h-1.5 rounded-full shrink-0" aria-hidden="true" />
+                          {card.category}
+                        </span>
+                      )}
                       {card.category && card.year && (
                         <span className="w-[3px] h-[3px] rounded-full bg-ink-faint" />
                       )}
                       {card.year && <span>{card.year}</span>}
+                      <span className="project-stack-count ml-auto font-mono tracking-[0.08em] text-[10px]" aria-hidden="true">
+                        {String(idx + 1).padStart(2, '0')} / {String(projectCards.length + 1).padStart(2, '0')}
+                      </span>
                     </div>
 
                     {}
-                    <h3 className="text-[26px] leading-none font-bold text-ink-strong tracking-tight mb-2.5">
+                    <h3 className="text-[26px] leading-[1.1] font-bold text-ink-strong tracking-tight mb-2.5">
                       {card.title}
                     </h3>
 
                     {}
-                    <p className="text-ink-muted text-[14px] leading-relaxed mb-5 font-normal max-w-[540px]">
+                    <p className="text-ink-muted text-[14px] leading-relaxed mb-4 font-normal max-w-[540px]">
                       {card.description}
                     </p>
+
+                    {card.tags?.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 mb-5">
+                        {card.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="project-stack-tag inline-flex items-center rounded-full bg-surface-raised px-2.5 py-1 text-[11px] font-medium text-ink-subtle"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     {}
 
@@ -613,7 +879,7 @@ function App() {
                   </div>
 
                   {}
-                  <div className="relative z-10 w-full aspect-[2.6/1] shrink-0 overflow-hidden">
+                  <div className="project-stack-media relative z-10 w-full aspect-[2.6/1] shrink-0 overflow-hidden">
                     {}
                     <img
 
@@ -639,10 +905,15 @@ function App() {
 
             <a
               {...link(PROJECTS_PATH, () => openProject(null))}
+              data-project-stack-card
+              style={{
+                '--stack-z': 10 + projectCards.length,
+                '--stack-accent': '#8b5cf6'
+              }}
               onMouseMove={handleArchiveMouseMove}
               onMouseLeave={handleArchiveMouseLeave}
               aria-label={`Browse the full projects library, ${projectsList.length} projects`}
-              className="relative block p-[1px] rounded-[32px] bg-surface-hover hover:bg-surface-hover-strong transition-colors duration-300 group overflow-hidden w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+              className="project-stack-card relative block p-[1px] rounded-[32px] bg-surface-hover hover:bg-surface-hover-strong transition-colors duration-300 group overflow-hidden w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
               <div
                 className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -652,7 +923,7 @@ function App() {
                 }}
               />
 
-              <div className="relative bg-surface rounded-[31px] flex flex-col md:flex-row items-stretch justify-between w-full overflow-hidden min-h-[300px]">
+              <div className="project-stack-body relative bg-surface rounded-[31px] flex flex-col md:flex-row items-stretch justify-between w-full overflow-hidden min-h-[300px]">
 
                 <div
                   className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-[50px] z-0"
@@ -680,6 +951,9 @@ function App() {
                         <span className="normal-case tracking-normal">{archiveRangeLabel}</span>
                       </>
                     )}
+                    <span className="project-stack-count ml-auto font-mono tracking-[0.08em] text-[10px]" aria-hidden="true">
+                      {String(projectCards.length + 1).padStart(2, '0')} / {String(projectCards.length + 1).padStart(2, '0')}
+                    </span>
                   </div>
 
                   <h3 className="text-[26px] font-bold text-ink-strong tracking-tight mb-3">
@@ -696,7 +970,7 @@ function App() {
                     {archiveCategories.map((category) => (
                       <span
                         key={category}
-                        className="px-2.5 py-1 rounded-full border border-line bg-surface-raised text-[11.5px] text-ink-muted group-hover:border-line-strong group-hover:text-ink-secondary transition-colors duration-300"
+                        className="project-stack-tag px-2.5 py-1 rounded-full bg-surface-raised text-[11px] font-medium text-ink-subtle"
                       >
                         {}
                         {t(`cat.${category}`, null, category)}
@@ -762,9 +1036,8 @@ function App() {
             {t('home.skills')}
           </h2>
 
-          {}
           <div
-            className="flex flex-col gap-6 w-full text-[14px] group/skills"
+            className="flex flex-col gap-5 w-full text-[14px]"
             onPointerEnter={armSkillBadges}
             onFocusCapture={armSkillBadges}
             onTouchStart={armSkillBadges}
@@ -778,17 +1051,14 @@ function App() {
                   {category.name}
                 </span>
 
-                {}
-                <div className="sm:col-span-3 flex flex-wrap gap-x-5 gap-y-3 text-ink-secondary">
+                <div className="sm:col-span-3 flex flex-wrap gap-x-5 gap-y-3">
                   {category.items.map((skill, skillIdx) => {
-
                     const level = skill.level ? skillLevels[skill.level] : null
                     return (
                       <span
                         key={skillIdx}
                         tabIndex={level ? 0 : undefined}
-                        data-skill=""
-                        className="group/chip relative inline-flex outline-none group-has-[[data-skill]:hover]/skills:opacity-55 group-has-[[data-skill]:hover]/skills:blur-[2px] group-has-[[data-skill]:focus-visible]/skills:opacity-55 group-has-[[data-skill]:focus-visible]/skills:blur-[2px] hover:opacity-100! hover:blur-none! focus-visible:opacity-100! focus-visible:blur-none! transition-[opacity,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+                        className="group/chip relative inline-flex items-center gap-2 text-ink-muted text-[12.5px] font-medium cursor-default outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong"
                       >
                         {}
                         {level && skillBadgesArmed && (
@@ -829,21 +1099,18 @@ function App() {
                           </span>
                         )}
 
-                        {}
-                        <span className="inline-flex items-center gap-2 text-ink-muted text-[12.5px] font-medium cursor-default transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/chip:text-ink-strong group-hover/chip:-translate-y-[3px] group-focus-visible/chip:text-ink-strong group-focus-visible/chip:-translate-y-[3px] group-active/chip:translate-y-0 motion-reduce:transition-none motion-reduce:group-hover/chip:translate-y-0 motion-reduce:group-focus-visible/chip:translate-y-0">
-                          {}
-                          <img
-
-                            {...imageProps(skill.icon)}
-                            alt={`${skill.name} logo`}
-                            width="14"
-                            height="14"
-                            loading="lazy"
-                            decoding="async"
-                            className="w-3.5 h-3.5 object-contain opacity-85 group-hover/chip:opacity-100 group-hover/chip:scale-110 group-focus-visible/chip:opacity-100 group-focus-visible/chip:scale-110 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-                          />
-                          <span>{skill.name}</span>
-                        </span>
+                        <img
+                          {...imageProps(skill.icon)}
+                          alt=""
+                          aria-hidden="true"
+                          width="14"
+                          height="14"
+                          loading="lazy"
+                          decoding="async"
+                          className="w-3.5 h-3.5 object-contain opacity-70 transition-opacity duration-200 group-hover/chip:opacity-100 group-focus-visible/chip:opacity-100"
+                        />
+                        <span>{skill.name}</span>
+                        {level && <span className="sr-only">{level.label}</span>}
                       </span>
                     )
                   })}
@@ -851,6 +1118,112 @@ function App() {
               </div>
             ))}
           </div>
+
+          <details ref={toolboxRef} className="toolbox group/more relative z-30 mt-5 border-t border-dashed border-line pt-3.5">
+            <summary className="-mx-2 grid min-h-10 w-[calc(100%+1rem)] grid-cols-1 items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 list-none cursor-pointer outline-none transition-[background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:border-line hover:bg-surface-hover/60 active:scale-[0.995] focus-visible:border-line-strong focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg sm:grid-cols-4 sm:gap-6 motion-reduce:transition-none motion-reduce:active:scale-100 [&::-webkit-details-marker]:hidden">
+              <span className="text-ink-subtle font-medium select-none transition-colors duration-200 group-hover/more:text-ink-secondary group-open/more:text-ink-secondary">
+                {t('home.toolbox')}
+              </span>
+
+              <span className="sm:col-span-3 inline-flex min-w-0 items-center gap-2.5 text-[12.5px] font-medium text-ink-muted transition-colors duration-200 group-hover/more:text-ink-strong group-open/more:text-ink-strong">
+                <span className="flex shrink-0 -space-x-1" aria-hidden="true">
+                  {toolboxPreview.map((tool, toolIdx) => (
+                    <span
+                      key={tool.name}
+                      className="flex h-6 w-6 items-center justify-center rounded-[8px] border border-line bg-surface-raised shadow-[0_4px_10px_-7px_var(--shadow-cast)] transition-[transform,border-color] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover/more:-translate-y-0.5 group-hover/more:border-line-strong group-open/more:-translate-y-0.5 group-open/more:border-line-strong motion-reduce:transition-none motion-reduce:group-hover/more:translate-y-0 motion-reduce:group-open/more:translate-y-0"
+                      style={{ transitionDelay: `${toolIdx * 25}ms` }}
+                    >
+                      <img
+                        {...imageProps(tool.icon)}
+                        alt=""
+                        width="12"
+                        height="12"
+                        loading="lazy"
+                        decoding="async"
+                        className="h-3 w-3 object-contain opacity-80"
+                      />
+                    </span>
+                  ))}
+                </span>
+                <span className="truncate">{t('tools.collection')}</span>
+                <span className="shrink-0 rounded-md bg-surface-raised px-1.5 py-0.5 font-mono text-[9.5px] tabular-nums leading-none text-ink-subtle ring-1 ring-inset ring-line">
+                  {toolboxCount}
+                </span>
+                <span className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-raised text-ink-subtle ring-1 ring-inset ring-line transition-[background-color,color,transform] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover/more:bg-surface-hover-strong group-hover/more:text-ink-strong group-open/more:bg-surface-hover-strong group-open/more:text-ink-strong">
+                  <svg
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-open/more:rotate-180 motion-reduce:transition-none"
+                  >
+                    <path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </span>
+            </summary>
+
+            <div className="absolute left-0 right-0 top-full z-40 pt-2">
+              <aside className="toolbox-panel relative max-h-[min(60vh,430px)] overflow-y-auto overscroll-contain rounded-[18px] border border-line-strong bg-surface/95 p-4 shadow-[0_28px_72px_-30px_var(--shadow-cast),0_8px_24px_-18px_var(--shadow-cast-soft)] backdrop-blur-xl [scrollbar-width:thin] sm:p-5" aria-label={t('tools.collection')}>
+                <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-ink-faint/60 to-transparent" aria-hidden="true" />
+
+                <div className="mb-4 flex items-center gap-2.5 border-b border-dashed border-line pb-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-raised text-ink-secondary ring-1 ring-inset ring-line" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path d="M9.4 8.6V6.9A1.8 1.8 0 0 1 11.2 5.1h1.6A1.8 1.8 0 0 1 14.6 6.9v1.7" />
+                      <rect x="3" y="8.6" width="18" height="10.4" rx="2.3" />
+                      <path d="M3 13.4h18" />
+                    </svg>
+                  </span>
+                  <span className="text-[11.5px] font-semibold text-ink-secondary">{t('tools.collection')}</span>
+                  <span className="ml-auto font-mono text-[10px] tabular-nums text-ink-subtle">{toolboxCount}</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-6">
+                  {toolCategories.map((category, categoryIdx) => (
+                    <div
+                      key={category.name}
+                      className={`toolbox-col ${category.wide ? 'sm:col-span-3' : 'sm:col-span-2'}`}
+                      style={{ '--toolbox-delay': `${Math.min(categoryIdx, 5) * 28}ms` }}
+                    >
+                      <span className="mb-2.5 block border-t border-line pt-2.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
+                        {category.name}
+                      </span>
+
+                      <div className="flex flex-wrap gap-x-1 gap-y-1" role="list">
+                        {category.items.map((tool) => (
+                          <span
+                            key={tool.name}
+                            role="listitem"
+                            className="group/tool inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11.5px] font-medium text-ink-muted transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:-translate-y-px hover:bg-surface-hover hover:text-ink-strong motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                          >
+                            <img
+                              {...imageProps(tool.icon)}
+                              alt=""
+                              aria-hidden="true"
+                              width="13"
+                              height="13"
+                              loading="lazy"
+                              decoding="async"
+                              className="h-[13px] w-[13px] object-contain opacity-70 transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover/tool:scale-110 group-hover/tool:opacity-100 motion-reduce:transition-none motion-reduce:group-hover/tool:scale-100"
+                            />
+                            <span>{tool.name}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </aside>
+            </div>
+          </details>
         </section>
 
         <section id="education" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
