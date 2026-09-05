@@ -302,11 +302,6 @@ body {
 }
 
 @media (max-width: 767px) {
-  .project-stack-card:not(:last-child) {
-    position: relative;
-    top: auto;
-  }
-
   .project-stack-card {
     opacity: 1 !important;
     transform: none !important;

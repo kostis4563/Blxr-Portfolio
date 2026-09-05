@@ -98,33 +98,6 @@ function App() {
   }, [currentView])
 
   useEffect(() => {
-    const header = document.getElementById('main-header')
-    if (!header) return
-
-    let frame = 0
-    let last = -1
-
-    const apply = () => {
-      frame = 0
-      const topOffset = Math.max(0, 16 - window.scrollY)
-      if (topOffset === last) return
-      last = topOffset
-      header.style.transform = `translate3d(0, ${topOffset}px, 0)`
-    }
-
-    const handleScroll = () => {
-      if (!frame) frame = requestAnimationFrame(apply)
-    }
-
-    apply()
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      if (frame) cancelAnimationFrame(frame)
-    }
-  }, [currentView])
-
-  useEffect(() => {
     if (currentView !== 'home') return
 
     const stack = projectsStackRef.current
@@ -328,12 +301,14 @@ function App() {
     }
 
     const requestUpdate = () => {
+      if (reduceMotion.matches || compact.matches) return
       if (!frame) frame = window.requestAnimationFrame(updateStack)
     }
 
     const handleResize = () => {
       measure()
-      requestUpdate()
+      if (reduceMotion.matches || compact.matches) reset()
+      else requestUpdate()
     }
 
     const onFocusIn = (event) => {
@@ -351,7 +326,8 @@ function App() {
     }
 
     measure()
-    updateStack(0)
+    if (reduceMotion.matches || compact.matches) reset()
+    else updateStack(0)
 
     const resizeObserver = new ResizeObserver(handleResize)
     for (const card of cards) resizeObserver.observe(card)
@@ -679,8 +655,7 @@ function App() {
 
       <header
         id="main-header"
-        className="w-full max-w-[768px] bg-bg/90 backdrop-blur-md text-ink h-[60px] fixed left-1/2 -translate-x-1/2 z-50 border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
-        style={{ top: 0, transform: 'translate3d(0, 16px, 0)' }}
+        className="w-full max-w-[768px] bg-bg backdrop-blur-none md:bg-bg/90 md:backdrop-blur-md text-ink h-[60px] fixed top-4 left-1/2 -translate-x-1/2 z-50 border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
       >
         <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-3">
           {}
