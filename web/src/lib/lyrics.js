@@ -7,6 +7,24 @@ function cleanTitle(t) {
     .trim()
 }
 
+function stripDecorations(t) {
+  return (t || '')
+    .split('|')[0]
+    .replace(/\((?:\s*live\b[^)]*)\)/gi, '')
+    .replace(/\[(?:\s*live\b[^\]]*)\]/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+function splitArtistTitle(t) {
+  const m = (t || '').match(/^(.+?)\s+-\s+(.+)$/)
+  if (!m) return null
+  const artist = m[1].trim()
+  const track = m[2].trim()
+  if (!artist || !track) return null
+  return { artist, track }
+}
+
 function parseLrc(s) {
   if (!s) return null
   const out = []
@@ -34,10 +52,18 @@ export async function fetchLyrics({ title, artist, signal }) {
   const art = (artist || '').replace(/\s*-\s*topic$/i, '').trim()
   if (!track) return { synced: null, plain: null }
 
+  const bare = stripDecorations(track) || track
+  const split = splitArtistTitle(bare)
+
+  const get = (artistName, trackName) =>
+    `https://lrclib.net/api/get?artist_name=${encodeURIComponent(artistName)}&track_name=${encodeURIComponent(trackName)}`
+  const search = (q) => `https://lrclib.net/api/search?q=${encodeURIComponent(q)}`
+
   const urls = []
-  if (art) urls.push(`https://lrclib.net/api/get?artist_name=${encodeURIComponent(art)}&track_name=${encodeURIComponent(track)}`)
-  urls.push(`https://lrclib.net/api/search?q=${encodeURIComponent([track, art].filter(Boolean).join(' '))}`)
-  urls.push(`https://lrclib.net/api/search?q=${encodeURIComponent(track)}`)
+  if (split) urls.push(get(split.artist, split.track))
+  if (art) urls.push(get(art, bare))
+  urls.push(search([split ? split.track : bare, split ? split.artist : art].filter(Boolean).join(' ')))
+  urls.push(search(bare))
 
   for (const url of urls) {
     try {

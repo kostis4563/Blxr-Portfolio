@@ -530,9 +530,14 @@ const server = http.createServer(async (req, res) => {
       const key = `${country} ${limit}`
       const hit = topCache.get(key)
       if (hit && Date.now() - hit.at < TOP_CACHE_TTL_MS) return json(res, 200, hit.data)
-      const data = await fetchTop(country, limit)
-      if (data.items.length) topCache.set(key, { at: Date.now(), data })
-      return json(res, 200, data)
+      try {
+        const data = await fetchTop(country, limit)
+        if (data.items.length) topCache.set(key, { at: Date.now(), data })
+        return json(res, 200, data)
+      } catch (err) {
+        if (hit) return json(res, 200, hit.data)
+        throw err
+      }
     }
 
     if (url.pathname === '/api/music/search') {

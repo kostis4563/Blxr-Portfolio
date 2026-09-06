@@ -72,10 +72,15 @@ export function I18nProvider({ children }) {
 
   const urlLang = langOf(useRoutePath())
 
-  const [prefLang, setPrefLang] = useState(readInitialLang)
+  const [prefLang, setPrefLang] = useState(DEFAULT_LANG)
   const lang = urlLang !== DEFAULT_LANG ? urlLang : prefLang
 
   const [table, setTable] = useState(() => loaded[lang] || en)
+
+  useEffect(() => {
+    const preferred = readInitialLang()
+    if (preferred !== DEFAULT_LANG) setPrefLang(preferred)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
