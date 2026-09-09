@@ -557,27 +557,21 @@ function App() {
         { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable' },
         { name: 'Python', icon: '/icons/python.svg', level: 'comfortable' },
         { name: 'CSS', icon: '/icons/css.svg', level: 'advanced' },
-        { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced' },
-        { name: 'Java', icon: '/icons/java.svg', level: 'basic' }
+        { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced' }
       ]
     },
     {
       name: t('skills.frameworks'),
       items: [
         { name: 'React', icon: '/icons/react_dark.svg', level: 'advanced' },
-        { name: 'Next.js', icon: '/icons/nextjs_icon_dark.svg', level: 'basic' },
-        { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'advanced' },
         { name: 'discord.js', icon: '/icons/discordjs.svg', level: 'advanced' }
       ]
     },
     {
       name: t('skills.infrastructure'),
       items: [
-        { name: 'Node.js', icon: '/icons/nodejs.svg', level: 'comfortable' },
-        { name: 'Docker', icon: '/icons/docker.svg', level: 'learning' },
-        { name: 'MySQL', icon: themedIcon('/icons/mysql-icon-dark.svg'), level: 'comfortable' },
+        { name: 'MySQL', icon: themedIcon('/icons/mysql-icon-dark.svg'), level: 'basic' },
         { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable' },
-        { name: 'VPS Admin', icon: '/icons/vps.svg', level: 'advanced' },
         { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic' }
       ]
     }
@@ -585,23 +579,12 @@ function App() {
 
   const toolCategories = [
     {
-      name: t('tools.additional'),
-      wide: false,
-      items: [
-        { name: 'Swift', icon: '/icons/swift.svg' },
-        { name: 'JSON', icon: themedIcon('/icons/json_dark.svg') }
-      ]
-    },
-    {
       name: t('tools.development'),
       wide: false,
       items: [
-        { name: 'Docker', icon: '/icons/docker.svg' },
         { name: 'Git', icon: '/icons/git.svg' },
         { name: 'GitHub', icon: themedIcon('/icons/github_dark.svg') },
-        { name: 'npm', icon: '/icons/npm.svg' },
-        { name: 'Vite', icon: '/icons/vite.svg' },
-        { name: 'Nginx', icon: '/icons/nginx.svg' }
+        { name: 'npm', icon: '/icons/npm.svg' }
       ]
     },
     {
@@ -622,10 +605,7 @@ function App() {
         { name: 'VS Code', icon: '/icons/vscode.svg' },
         { name: 'Visual Studio', icon: '/icons/visual-studio.svg' },
         { name: 'Xcode', icon: '/icons/xcode.svg' },
-        { name: 'PyCharm', icon: '/icons/pycharm.svg' },
-        { name: 'Komodo', icon: themedIcon('/icons/komodo_dark.svg') },
-        { name: 'Cursor', icon: themedIcon('/icons/cursor_dark.svg') },
-        { name: 'Devin', icon: themedIcon('/icons/devin_dark.png') }
+        { name: 'Komodo', icon: themedIcon('/icons/komodo_dark.svg') }
       ]
     },
     {
@@ -633,13 +613,12 @@ function App() {
       wide: true,
       items: [
         { name: 'macOS', icon: themedIcon('/icons/apple_dark.svg') },
-        { name: 'Linux', icon: '/icons/linux.svg' },
         { name: 'Windows', icon: '/icons/windows.svg' }
       ]
     }
   ]
 
-  const toolboxPreview = ['Docker', 'Git', 'Figma', 'VS Code', 'macOS']
+  const toolboxPreview = ['Git', 'Figma', 'VS Code', 'macOS']
     .map((name) => toolCategories.flatMap((category) => category.items).find((item) => item.name === name))
     .filter(Boolean)
   const toolboxCount = toolCategories.reduce((total, category) => total + category.items.length, 0)
