@@ -414,6 +414,7 @@ export function AnimatedFooter({
 
     let scrubReveal = false;
     let lastProgress = -1;
+    let progressDirty = false;
 
     const updateProgress = () => {
       const rect = root.getBoundingClientRect();
@@ -429,6 +430,12 @@ export function AnimatedFooter({
       setCharsY(chars, 125 * (1 - progress));
     };
 
+    const onScrollOrResize = () => {
+      if (scrubReveal) progressDirty = true;
+    };
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize, { passive: true });
+
     let rafId = 0;
 
     const lastTransform = ["", ""];
@@ -442,8 +449,10 @@ export function AnimatedFooter({
 
       const now = Date.now();
       consumePointer();
-      if (scrubReveal)
+      if (scrubReveal && progressDirty) {
+        progressDirty = false;
         updateProgress();
+      }
 
       if (repaintRef.current !== paintedRevision) {
         paintedRevision = repaintRef.current;
@@ -556,6 +565,8 @@ export function AnimatedFooter({
       visibility.disconnect();
       preparer.disconnect();
       window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
 
       if (gsapPromise) gsapPromise.then((gsap) => gsap.killTweensOf([curtain, ...chars]));
     };
