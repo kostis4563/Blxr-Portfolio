@@ -503,41 +503,13 @@ function App() {
   ]
 
   const skillLevels = {
-    advanced: {
-      label: t('level.advanced'),
-      rank: 4,
-      text: 'text-emerald-200',
-      border: 'border-emerald-400/30',
-      bar: 'bg-emerald-400',
-      glow: 'shadow-[0_10px_24px_-10px_rgba(52,211,153,0.4),0_3px_12px_-6px_var(--shadow-cast)]'
-    },
-    comfortable: {
-      label: t('level.comfortable'),
-      rank: 3,
-      text: 'text-sky-200',
-      border: 'border-sky-400/30',
-      bar: 'bg-sky-400',
-      glow: 'shadow-[0_10px_24px_-10px_rgba(56,189,248,0.4),0_3px_12px_-6px_var(--shadow-cast)]'
-    },
-    basic: {
-      label: t('level.basic'),
-      rank: 2,
-      text: 'text-zinc-200',
-      border: 'border-zinc-400/30',
-      bar: 'bg-zinc-300',
-      glow: 'shadow-[0_10px_24px_-10px_rgba(161,161,170,0.35),0_3px_12px_-6px_var(--shadow-cast)]'
-    },
-    learning: {
-      label: t('level.learning'),
-      rank: 1,
-      text: 'text-amber-200',
-      border: 'border-amber-400/30',
-      bar: 'bg-amber-400',
-      glow: 'shadow-[0_10px_24px_-10px_rgba(251,191,36,0.4),0_3px_12px_-6px_var(--shadow-cast)]'
-    }
+    advanced: { label: t('level.advanced'), rank: 4, bar: 'bg-emerald-400' },
+    comfortable: { label: t('level.comfortable'), rank: 3, bar: 'bg-sky-400' },
+    basic: { label: t('level.basic'), rank: 2, bar: 'bg-zinc-300' },
+    learning: { label: t('level.learning'), rank: 1, bar: 'bg-amber-400' }
   }
 
-  const meterBars = ['h-[4px]', 'h-[6px]', 'h-[8px]', 'h-[10px]']
+  const meterSegments = [0, 1, 2, 3]
 
   const LIGHT_THEME_ICONS = {
     '/icons/apple_dark.svg': '/icons/apple.svg',
@@ -554,25 +526,25 @@ function App() {
     {
       name: t('skills.languages'),
       items: [
-        { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable' },
-        { name: 'Python', icon: '/icons/python.svg', level: 'comfortable' },
-        { name: 'CSS', icon: '/icons/css.svg', level: 'advanced' },
-        { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced' }
+        { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable', desc: 'Scripting language for the web' },
+        { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', desc: 'General-purpose scripting & automation' },
+        { name: 'CSS', icon: '/icons/css.svg', level: 'advanced', desc: 'Styling & layout for the web' },
+        { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced', desc: 'Markup that structures web pages' }
       ]
     },
     {
       name: t('skills.frameworks'),
       items: [
-        { name: 'React', icon: '/icons/react_dark.svg', level: 'advanced' },
-        { name: 'discord.js', icon: '/icons/discordjs.svg', level: 'advanced' }
+        { name: 'React', icon: '/icons/react_dark.svg', level: 'advanced', desc: 'UI library for building interfaces' },
+        { name: 'discord.js', icon: '/icons/discordjs.svg', level: 'advanced', desc: 'Node.js library for Discord bots' }
       ]
     },
     {
       name: t('skills.infrastructure'),
       items: [
-        { name: 'MySQL', icon: themedIcon('/icons/mysql-icon-dark.svg'), level: 'basic' },
-        { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable' },
-        { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic' }
+        { name: 'MySQL', icon: themedIcon('/icons/mysql-icon-dark.svg'), level: 'basic', desc: 'Relational database management' },
+        { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable', desc: 'Process manager for Node.js' },
+        { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', desc: 'CDN, DNS & edge security' }
       ]
     }
   ]
@@ -582,38 +554,38 @@ function App() {
       name: t('tools.development'),
       wide: false,
       items: [
-        { name: 'Git', icon: '/icons/git.svg' },
-        { name: 'GitHub', icon: themedIcon('/icons/github_dark.svg') },
-        { name: 'npm', icon: '/icons/npm.svg' }
+        { name: 'Git', icon: '/icons/git.svg', desc: 'Version control for code' },
+        { name: 'GitHub', icon: themedIcon('/icons/github_dark.svg'), desc: 'Code hosting & collaboration' },
+        { name: 'npm', icon: '/icons/npm.svg', desc: 'Package manager for Node.js' }
       ]
     },
     {
       name: t('tools.design'),
       wide: false,
       items: [
-        { name: 'Figma', icon: '/icons/figma.svg' },
-        { name: 'Adobe', icon: '/icons/adobe.svg' },
-        { name: 'Photoshop', icon: '/icons/photoshop.svg' },
-        { name: 'Illustrator', icon: '/icons/illustrator.svg' },
-        { name: 'Canva', icon: '/icons/canva.svg' }
+        { name: 'Figma', icon: '/icons/figma.svg', desc: 'Interface design & prototyping' },
+        { name: 'Adobe', icon: '/icons/adobe.svg', desc: 'Creative software suite' },
+        { name: 'Photoshop', icon: '/icons/photoshop.svg', desc: 'Image editing & compositing' },
+        { name: 'Illustrator', icon: '/icons/illustrator.svg', desc: 'Vector graphics & illustration' },
+        { name: 'Canva', icon: '/icons/canva.svg', desc: 'Quick graphic design' }
       ]
     },
     {
       name: t('skills.editors'),
       wide: true,
       items: [
-        { name: 'VS Code', icon: '/icons/vscode.svg' },
-        { name: 'Visual Studio', icon: '/icons/visual-studio.svg' },
-        { name: 'Xcode', icon: '/icons/xcode.svg' },
-        { name: 'Komodo', icon: themedIcon('/icons/komodo_dark.svg') }
+        { name: 'VS Code', icon: '/icons/vscode.svg', desc: 'Code editor' },
+        { name: 'Visual Studio', icon: '/icons/visual-studio.svg', desc: 'IDE for app development' },
+        { name: 'Xcode', icon: '/icons/xcode.svg', desc: "Apple's IDE for iOS & macOS" },
+        { name: 'Komodo', icon: themedIcon('/icons/komodo_dark.svg'), desc: 'Lightweight code editor' }
       ]
     },
     {
       name: t('skills.systems'),
       wide: true,
       items: [
-        { name: 'macOS', icon: themedIcon('/icons/apple_dark.svg') },
-        { name: 'Windows', icon: '/icons/windows.svg' }
+        { name: 'macOS', icon: themedIcon('/icons/apple_dark.svg'), desc: "Apple's desktop OS" },
+        { name: 'Windows', icon: '/icons/windows.svg', desc: "Microsoft's desktop OS" }
       ]
     }
   ]
@@ -1118,34 +1090,36 @@ function App() {
                             role="tooltip"
                             className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2.5 -translate-x-1/2 translate-y-1 origin-bottom scale-[0.94] opacity-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/chip:translate-y-0 group-hover/chip:scale-100 group-hover/chip:opacity-100 group-focus-visible/chip:translate-y-0 group-focus-visible/chip:scale-100 group-focus-visible/chip:opacity-100 motion-reduce:transition-none motion-reduce:scale-100"
                           >
-                            <span
-                              className={`relative flex items-center gap-2 whitespace-nowrap rounded-[10px] border bg-surface-inverted py-1 pl-2 pr-2.5 ${level.border} ${level.glow}`}
-                            >
-                              {}
-                              <span aria-hidden="true" className="flex items-end gap-[2px]">
-                                {meterBars.map((h, barIdx) => (
-                                  <span
-                                    key={barIdx}
-                                    className={`w-[3px] shrink-0 rounded-[1.5px] ${h} ${
-                                      barIdx < level.rank
-                                        ? `${level.bar} opacity-0 scale-y-0 origin-bottom group-hover/chip:opacity-100 group-hover/chip:scale-y-100 group-focus-visible/chip:opacity-100 group-focus-visible/chip:scale-y-100 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:opacity-100 motion-reduce:scale-y-100 motion-reduce:transition-none`
-                                        : 'bg-ink-on-inverted/15'
-                                    }`}
-                                    style={barIdx < level.rank ? { transitionDelay: `${120 + barIdx * 55}ms` } : undefined}
-                                  />
-                                ))}
+                            <span className="relative flex w-max max-w-[220px] flex-col rounded-lg border border-ink-on-inverted/10 bg-surface-inverted text-left shadow-[0_14px_32px_-16px_var(--shadow-cast)]">
+                              {skill.desc && (
+                                <span className="whitespace-normal px-3 pb-2 pt-2.5 text-[11.5px] font-medium leading-snug tracking-tight text-ink-on-inverted">
+                                  {skill.desc}
+                                </span>
+                              )}
+
+                              <span className="flex items-center justify-between gap-4 border-t border-dashed border-ink-on-inverted/10 px-3 py-2">
+                                <span aria-hidden="true" className="flex items-center gap-[3px]">
+                                  {meterSegments.map((segIdx) => (
+                                    <span
+                                      key={segIdx}
+                                      className={`h-[3px] w-3.5 origin-left rounded-full ${
+                                        segIdx < level.rank
+                                          ? `${level.bar} scale-x-0 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/chip:scale-x-100 group-focus-visible/chip:scale-x-100 motion-reduce:scale-x-100 motion-reduce:transition-none`
+                                          : 'bg-ink-on-inverted/12'
+                                      }`}
+                                      style={segIdx < level.rank ? { transitionDelay: `${140 + segIdx * 60}ms` } : undefined}
+                                    />
+                                  ))}
+                                </span>
+
+                                <span className="text-[9.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-on-inverted/55">
+                                  {level.label}
+                                </span>
                               </span>
 
-                              <span className="h-[11px] w-px shrink-0 bg-ink-on-inverted/12" />
-
-                              <span className={`text-[10.5px] font-semibold leading-none tracking-tight ${level.text}`}>
-                                {level.label}
-                              </span>
-
-                              {}
                               <span
                                 aria-hidden="true"
-                                className={`absolute left-1/2 top-full -mt-[4px] h-[7px] w-[7px] -translate-x-1/2 rotate-45 rounded-[1px] border-b border-r bg-surface-inverted ${level.border}`}
+                                className="absolute left-1/2 top-full -mt-[4px] h-[7px] w-[7px] -translate-x-1/2 rotate-45 rounded-[1px] border-b border-r border-ink-on-inverted/10 bg-surface-inverted"
                               />
                             </span>
                           </span>
@@ -1254,8 +1228,28 @@ function App() {
                           <span
                             key={tool.name}
                             role="listitem"
-                            className="group/tool inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11.5px] font-medium text-ink-muted transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:-translate-y-px hover:bg-surface-hover hover:text-ink-strong motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                            tabIndex={tool.desc ? 0 : undefined}
+                            className="group/tool relative inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11.5px] font-medium text-ink-muted outline-none transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:-translate-y-px hover:bg-surface-hover hover:text-ink-strong focus-visible:-translate-y-px focus-visible:bg-surface-hover focus-visible:text-ink-strong motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                           >
+                            {tool.desc && (
+                              <span
+                                role="tooltip"
+                                className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 origin-bottom-left translate-y-1 scale-[0.96] opacity-0 transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/tool:translate-y-0 group-hover/tool:scale-100 group-hover/tool:opacity-100 group-focus-visible/tool:translate-y-0 group-focus-visible/tool:scale-100 group-focus-visible/tool:opacity-100 motion-reduce:transition-none motion-reduce:scale-100"
+                              >
+                                <span className="relative flex w-max max-w-[210px] flex-col rounded-lg border border-ink-on-inverted/10 bg-surface-inverted text-left shadow-[0_14px_32px_-16px_var(--shadow-cast)]">
+                                  <span className="whitespace-normal px-2.5 pb-1.5 pt-2 text-[11.5px] font-medium leading-snug tracking-tight text-ink-on-inverted">
+                                    {tool.desc}
+                                  </span>
+                                  <span className="border-t border-dashed border-ink-on-inverted/10 px-2.5 py-1.5 text-[9.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-on-inverted/55">
+                                    {category.name}
+                                  </span>
+                                  <span
+                                    aria-hidden="true"
+                                    className="absolute left-3 top-full -mt-[4px] h-[7px] w-[7px] rotate-45 rounded-[1px] border-b border-r border-ink-on-inverted/10 bg-surface-inverted"
+                                  />
+                                </span>
+                              </span>
+                            )}
                             <img
                               {...imageProps(tool.icon)}
                               alt=""
