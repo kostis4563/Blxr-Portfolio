@@ -79,7 +79,7 @@ export const IMAGES = {
   '/library/supreme-restock.webp': { v: '98c1db8d', ext: '.webp', widths: [480, 768, 1200] },
   '/library/vehicle-interaction-menu.webp': { v: 'd2d5e560', ext: '.webp', widths: [480, 768, 1200] },
   '/og.png': { v: '7cdc12d5', ext: '.png', widths: [] },
-  '/pfp.webp': { v: 'b4a7c941', ext: '.webp', widths: [128, 192] },
+  '/pfp.webp': { v: 'ab22cc42', ext: '.webp', widths: [128, 192] },
   '/web-scanner.webp': { v: 'f48442ea', ext: '.webp', widths: [480, 768, 1200] },
   '/wordmark-nav.png': { v: '95fab63c', ext: '.png', widths: [] },
 }
