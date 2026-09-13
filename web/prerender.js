@@ -72,13 +72,22 @@ const linksOf = (pattern, format) =>
   [...templateHead.matchAll(pattern)].map(([, href]) => format(href))
 
 const hints = [
-  ...linksOf(/<link rel="stylesheet"[^>]*href="([^"]+)"/g, (href) => `<${href}>; rel=preload; as=style; crossorigin`),
+  ...linksOf(
+    /<link rel="stylesheet"[^>]*href="([^"]+)"/g,
+    (href) => `<${href}>; rel=preload; as=style; crossorigin=anonymous`,
+  ),
   ...linksOf(
     /<link rel="preload"[^>]*href="([^"]+\.woff2)"[^>]*>/g,
-    (href) => `<${href}>; rel=preload; as=font; type="font/woff2"; crossorigin`,
+    (href) => `<${href}>; rel=preload; as=font; type="font/woff2"; crossorigin=anonymous`,
   ),
-  ...linksOf(/<script type="module"[^>]*src="([^"]+)"/g, (href) => `<${href}>; rel=modulepreload; crossorigin`),
-  ...linksOf(/<link rel="modulepreload"[^>]*href="([^"]+)"/g, (href) => `<${href}>; rel=modulepreload; crossorigin`),
+  ...linksOf(
+    /<script type="module"[^>]*src="([^"]+)"/g,
+    (href) => `<${href}>; rel=modulepreload; crossorigin=anonymous`,
+  ),
+  ...linksOf(
+    /<link rel="modulepreload"[^>]*href="([^"]+)"/g,
+    (href) => `<${href}>; rel=modulepreload; crossorigin=anonymous`,
+  ),
 ]
 
 await writeFile(
@@ -110,12 +119,16 @@ const sitemap = [
 ].join('\n')
 await writeFile(join(dist, 'sitemap.xml'), sitemap)
 
+const EXECUTABLE_TYPE_RE = /^(module|(text|application)\/(javascript|ecmascript))?$/i
+
 const hashes = new Set()
 for (const name of await readdir(dist, { recursive: true })) {
   if (!name.endsWith('.html')) continue
   const html = await readFile(join(dist, name), 'utf8')
 
-  for (const [, body] of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
+  for (const [, attrs, body] of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)) {
+    const type = (/\btype\s*=\s*["']?([^"'\s>]*)/i.exec(attrs)?.[1] || '').trim()
+    if (!EXECUTABLE_TYPE_RE.test(type)) continue
     hashes.add(`'sha256-${createHash('sha256').update(body).digest('base64')}'`)
   }
 }

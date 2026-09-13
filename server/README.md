@@ -17,7 +17,8 @@ Listens on `127.0.0.1:8899`. No credentials needed — see `.env.example`.
 
 All routes `GET` except `/api/hit` and `POST /api/vitals`; `/api/vitals`
 answers both verbs. Anything else: `405`. Errors: `{ "error": "..." }` with
-`404` (unknown path) or `502` (every upstream failed).
+`404` (unknown path), `502` (every upstream failed) or `503` (`/api/music/top`
+still resolving a cold chart; `Retry-After: 15`).
 
 Consumed by `web/src/lib/api.js` (music/hit routes) and
 `web/src/lib/github.js` (contributions route, which also owns the
@@ -44,7 +45,12 @@ those files.
 ### `GET /api/music/top?country=<cc>&limit=<n>`
 `country` 2-letter code (default `us`), `limit` clamped 1-15 (default 10).
 Search shape plus chart fields, including `movement` for week-over-week
-arrows. Cached 6 hours.
+arrows. Cached 6 hours; the default chart (`us`, 10) is resolved at startup
+and re-resolved before it expires, so visitors normally never wait on it.
+An expired entry is served as-is while it refreshes in the background. A
+cold key (no entry at all) waits at most 12s — under nginx's 15s
+`proxy_read_timeout` — then answers `503` and keeps resolving. Mirrors that
+error are skipped for 5 minutes so one dead host can't stall every song.
 
 ### `POST /api/hit`
 Body `{ "path": "/projects" }`. Records one page view, answers `204` with no

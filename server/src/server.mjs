@@ -11,10 +11,14 @@ const CACHE_MAX = 200
 const PIPED = [
   'https://api.piped.private.coffee',
   'https://pipedapi.kavin.rocks',
-  'https://pipedapi.adminforge.de',
   'https://pipedapi.leptons.xyz',
 ]
 const INVIDIOUS = ['https://inv.nadeko.net', 'https://invidious.f5.si', 'https://yewtu.be']
+
+const MIRROR_COOLDOWN_MS = 5 * 60_000
+const mirrorDownUntil = new Map()
+const mirrorUp = (base) => (mirrorDownUntil.get(base) || 0) <= Date.now()
+const markMirrorDown = (base) => mirrorDownUntil.set(base, Date.now() + MIRROR_COOLDOWN_MS)
 
 const ID_RE = /^[A-Za-z0-9_-]{11}$/
 const thumb = (id) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`
@@ -92,17 +96,21 @@ async function fromInvidious(base, q, limit) {
 
 async function searchAll(q, limit, filter = 'music_songs') {
   for (const base of PIPED) {
+    if (!mirrorUp(base)) continue
     try {
       const items = await fromPiped(base, q, limit, filter)
       if (items.length) return items
     } catch {
+      markMirrorDown(base)
     }
   }
   for (const base of INVIDIOUS) {
+    if (!mirrorUp(base)) continue
     try {
       const items = await fromInvidious(base, q, limit)
       if (items.length) return items
     } catch {
+      markMirrorDown(base)
     }
   }
   return []
@@ -126,7 +134,10 @@ function cacheSet(key, items) {
 }
 
 const TOP_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+const TOP_RESPONSE_BUDGET_MS = 12_000
+const TOP_WARM_KEY = { country: 'us', limit: 10 }
 const topCache = new Map()
+const topInflight = new Map()
 
 const STATE_DIR = process.env.STATE_DIRECTORY || process.env.TMPDIR || '/tmp'
 const HISTORY_FILE = path.join(STATE_DIR, 'chart-history.json')
@@ -196,7 +207,7 @@ async function mapPool(items, concurrency, fn) {
 
 async function fetchTop(country, limit) {
   const pull = Math.min(25, limit + 8)
-  const url = `https://rss.applemarketingtools.com/api/v2/${country}/music/most-played/${pull}/songs.json`
+  const url = `https://rss.marketingtools.apple.com/api/v2/${country}/music/most-played/${pull}/songs.json`
   const res = await withTimeout((signal) => fetch(url, { signal, headers: { accept: 'application/json' } }))
   if (!res.ok) throw new Error(`rss ${res.status}`)
   const data = await res.json()
@@ -225,6 +236,24 @@ async function fetchTop(country, limit) {
   }
   recordSnapshot(country, currRanks, now)
   return { items, title: data?.feed?.title || 'Top Songs', updated: data?.feed?.updated || null }
+}
+
+function refreshTop(country, limit) {
+  const key = topKey(country, limit)
+  let inflight = topInflight.get(key)
+  if (inflight) return inflight
+  inflight = fetchTop(country, limit)
+    .then((data) => {
+      if (data.items.length) topCache.set(key, { at: Date.now(), data })
+      return data
+    })
+    .finally(() => topInflight.delete(key))
+  topInflight.set(key, inflight)
+  return inflight
+}
+
+function warmTop() {
+  refreshTop(TOP_WARM_KEY.country, TOP_WARM_KEY.limit).catch(() => {})
 }
 
 const HITS_FILE = path.join(STATE_DIR, 'hits.json')
@@ -527,16 +556,30 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/music/top') {
       const country = ((url.searchParams.get('country') || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us').slice(0, 2)
       const limit = Math.min(15, Math.max(1, Number(url.searchParams.get('limit')) || 10))
-      const key = `${country} ${limit}`
-      const hit = topCache.get(key)
+      const hit = topCache.get(topKey(country, limit))
       if (hit && Date.now() - hit.at < TOP_CACHE_TTL_MS) return json(res, 200, hit.data)
+
+      const refresh = refreshTop(country, limit)
+      if (hit) {
+        refresh.catch(() => {})
+        return json(res, 200, hit.data)
+      }
+      let timer
+      const budget = new Promise((resolve) => {
+        timer = setTimeout(() => resolve(null), TOP_RESPONSE_BUDGET_MS)
+      })
       try {
-        const data = await fetchTop(country, limit)
-        if (data.items.length) topCache.set(key, { at: Date.now(), data })
-        return json(res, 200, data)
-      } catch (err) {
-        if (hit) return json(res, 200, hit.data)
-        throw err
+        const data = await Promise.race([refresh, budget])
+        if (data) return json(res, 200, data)
+        refresh.catch(() => {})
+        res.writeHead(503, {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+          'retry-after': '15',
+        })
+        return res.end(JSON.stringify({ error: 'warming' }))
+      } finally {
+        clearTimeout(timer)
       }
     }
 
@@ -590,3 +633,6 @@ server.listen(PORT, HOST, () => {
 
   console.log(`blxr music search proxy on http://${HOST}:${PORT}`)
 })
+
+warmTop()
+setInterval(warmTop, TOP_CACHE_TTL_MS - 10 * 60_000).unref()

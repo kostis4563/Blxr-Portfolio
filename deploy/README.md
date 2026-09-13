@@ -35,7 +35,11 @@ DRY_RUN=1 npm run deploy  # show the plan, touch nothing
 - **CSP hashes are generated, not hand-written.**
   `blxr-security-headers.conf` has a `{{SCRIPT_HASHES}}` placeholder;
   `prerender.js` writes `web/csp-script-hashes.txt`, `deploy.sh` substitutes
-  it. `deploy.sh nginx` alone requires a prior `npm run build`.
+  it. `deploy.sh nginx` alone requires a prior `npm run build`. Only
+  executable inline scripts are hashed (today: the pre-paint theme script in
+  `index.html`); the per-page JSON-LD blocks never run and are skipped. A CSP
+  violation for a script that isn't in the repo is Cloudflare injecting one —
+  see the table below.
 - **Deploy web + nginx together.** `blxr.conf` 404s missing files;
   `try_files $uri $uri.html` only works once the build's pages exist.
   `npm run deploy` runs both in the right order.
@@ -80,6 +84,7 @@ Keep these **off** — they break this site:
 | Rocket Loader | Rewrites/injects inline `<script>`; CSP only allows inline scripts by sha256 hash. |
 | Auto Minify (HTML) | Changes the bytes of the inline theme script, breaking its CSP hash. |
 | Email Obfuscation | Same failure mode, different injected script. |
+| Bot Fight Mode / JavaScript Detections (Security -> Bots, Security -> Settings) | Injects an inline `window.__CF$cv$params` script carrying the request's ray ID, so no hash can ever match it; the console shows a CSP violation on every page load and the detection never runs anyway. |
 
 Brotli, Early Hints, edge caching: fine, worth having.
 
@@ -97,6 +102,13 @@ curl -sI --http2 https://blxr.net/ | head -1   # 103 before the 200
 
 If `deploy.sh web` warns the installed snippet names a different build: run
 `deploy.sh nginx`.
+
+The hints spell out `crossorigin=anonymous`. A bare `crossorigin` in a Link
+header is not reliably read as anonymous, and a preload whose CORS mode
+doesn't match the real fetch (the stylesheet `<link>` and `@font-face` both
+fetch in CORS mode) is never matched to it: Chrome logs "preloaded using link
+preload but not used" once for the 103 and once for the 200 Link header, and
+downloads the file again.
 
 Verify after any Cloudflare change:
 
