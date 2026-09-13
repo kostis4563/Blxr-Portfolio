@@ -487,7 +487,18 @@ function App() {
 
           {}
           <h1 className="hero-title text-[28px] sm:text-[34px] font-extrabold tracking-[-0.03em] leading-[1.15] mb-3 animate-fade-in-up">
-            {t('hero.greeting')}
+            {(() => {
+              const greeting = t('hero.greeting')
+              const at = greeting.indexOf('Blxr')
+              if (at === -1) return greeting
+              return (
+                <>
+                  <span className="font-vergilia font-normal">{greeting.slice(0, at)}</span>
+                  <span className="font-bagus font-normal">{greeting.slice(at, at + 4)}</span>
+                  <span className="font-vergilia font-normal">{greeting.slice(at + 4)}</span>
+                </>
+              )
+            })()}
           </h1>
 
           {}
@@ -541,7 +552,7 @@ function App() {
                   {String(featuredProjects.length).padStart(2, '0')}
                 </span>
               </span>
-              <h2 className="mt-3 text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink-strong sm:text-[32px]">
+              <h2 className="mt-3 text-[22px] leading-none tracking-[-0.02em] text-ink-strong sm:text-[26px] font-bagus">
                 {t('home.projects')}
               </h2>
             </div>
@@ -579,11 +590,6 @@ function App() {
                       aria-roledescription="slide"
                       aria-label={`${idx + 1} / ${featuredProjects.length}`}
                       className="project-slide"
-                      onClickCapture={active ? undefined : (event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        goToSlide(idx)
-                      }}
                     >
                       <div className="project-panel group relative grid grid-cols-1 gap-2 rounded-[20px] border border-line bg-surface p-2 sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
                         <div className="project-media relative aspect-[16/11] min-w-0 overflow-hidden rounded-[13px] bg-surface-raised sm:aspect-auto sm:min-h-[248px]">
@@ -703,7 +709,7 @@ function App() {
         </section>
 
         <section id="skills" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] font-bold text-ink-strong tracking-tight mb-8">
+          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-shake">
             {t('home.skills')}
           </h2>
 
@@ -920,7 +926,7 @@ function App() {
         </section>
 
         <section id="education" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] font-bold text-ink-strong tracking-tight mb-8">
+          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-watom">
             {t('home.education')}
           </h2>
 
@@ -964,7 +970,7 @@ function App() {
 
             {}
             <div className="grid grid-cols-1 gap-2 py-4 sm:grid-cols-[7.5rem_1fr] sm:gap-6">
-              <div className="text-[12px] font-mono text-ink-subtle sm:pt-px">
+              <div className="text-[12px] font-watom text-ink-subtle sm:pt-px">
                 {t('home.certifications')}
               </div>
 
@@ -1004,7 +1010,7 @@ function App() {
         </section>
 
         <section id="contact" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] font-bold text-ink-strong tracking-tight mb-8">
+          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-vergilia">
             {t('home.contact')}
           </h2>
 
@@ -1090,6 +1096,7 @@ function App() {
 
         leftText="BL"
         rightText="XR"
+        textFont='"Yang Bagus"'
 
       >
         <div className="w-full  font-normal not-italic pt-4 border-t border-dashed border-[var(--hairline-strong)] flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-4 text-[12px] text-ink-muted">

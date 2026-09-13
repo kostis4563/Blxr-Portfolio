@@ -5,6 +5,11 @@
 @theme {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-serif: 'Playfair Display', 'Georgia', serif;
+  --font-shake: 'Super Shake', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-bagus: 'Yang Bagus', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-vergilia: 'Vergilia', 'Playfair Display', serif;
+  --font-aquire: 'Aquire', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-watom: 'Watom', 'Plus Jakarta Sans', system-ui, sans-serif;
 
   --color-brand-purple: #8b5cf6;
   --color-brand-indigo: #6366f1;
@@ -255,7 +260,6 @@ body {
   transform: none;
 }
 .project-slide:not([data-active]) { cursor: pointer; }
-.project-slide:not([data-active]) .project-panel { pointer-events: none; }
 
 .project-panel {
   height: 100%;
@@ -269,6 +273,8 @@ body {
 .project-media-img {
   transform: scale(1.02);
   transition: filter 500ms ease;
+  backface-visibility: hidden;
+  will-change: transform;
 }
 .project-slide[data-active] .project-media-img {
   animation: project-drift var(--autoplay, 6000ms) linear both;
@@ -278,11 +284,11 @@ body {
 .project-panel:focus-within .project-media-img { filter: brightness(1); }
 @keyframes project-drift {
   from { transform: scale(1.02); }
-  to { transform: scale(1.09); }
+  to { transform: scale(1.06); }
 }
 
 .project-slide[data-active] .project-copy > * {
-  animation: project-copy-in 650ms var(--ease-out) both;
+  animation: project-copy-in 650ms var(--ease-out) backwards;
 }
 .project-slide[data-active] .project-copy > :nth-child(2) { animation-delay: 60ms; }
 .project-slide[data-active] .project-copy > :nth-child(3) { animation-delay: 120ms; }
@@ -307,6 +313,7 @@ body {
 
 .project-arrow {
   transition: transform 300ms var(--ease-out);
+  will-change: transform;
 }
 .project-panel:hover .project-arrow,
 .project-panel:focus-within .project-arrow,

@@ -86,7 +86,7 @@ function buildHandCells(image, columns, asciiChars) {
   return { rows, cells: sampleToCells(sampleCtx, columns, rows, asciiChars) };
 }
 
-function buildTextCells(text, columns, asciiChars, { align = "center", weight = 800 } = {}) {
+function buildTextCells(text, columns, asciiChars, { align = "center", weight = 800, family } = {}) {
   const rows = columns;
 
   const sampler = document.createElement("canvas");
@@ -101,12 +101,12 @@ function buildTextCells(text, columns, asciiChars, { align = "center", weight = 
   ctx.textBaseline = "middle";
 
   const maxWidth = columns * 0.86;
-  const family = `${weight} 1px "Plus Jakarta Sans", system-ui, sans-serif`;
+  const fontFamily = family ?? `"Plus Jakarta Sans", system-ui, sans-serif`;
   let fontSize = rows * 0.74;
-  ctx.font = family.replace("1px", `${fontSize}px`);
+  ctx.font = `${weight} ${fontSize}px ${fontFamily}`;
   const naturalWidth = ctx.measureText(text).width;
   if (naturalWidth > maxWidth) fontSize *= maxWidth / naturalWidth;
-  ctx.font = family.replace("1px", `${fontSize}px`);
+  ctx.font = `${weight} ${fontSize}px ${fontFamily}`;
 
   let x;
   if (align === "end") {
@@ -154,6 +154,7 @@ export function AnimatedFooter({
   headingLines = ["VengeanceUI"],
   leftText = "BL",
   rightText = "XR",
+  textFont,
   leftImage,
   rightImage,
   background,
@@ -205,6 +206,7 @@ export function AnimatedFooter({
       JSON.stringify({
         leftText,
         rightText,
+        textFont,
         leftImage,
         rightImage,
         columns,
@@ -217,6 +219,7 @@ export function AnimatedFooter({
     [
       leftText,
       rightText,
+      textFont,
       leftImage,
       rightImage,
       columns,
@@ -294,7 +297,7 @@ export function AnimatedFooter({
     const loadTextHand = (text, canvas, direction, align) => {
       if (!text) return;
       const build = () => {
-        const { rows, cells } = buildTextCells(text, columns, asciiChars, { align });
+        const { rows, cells } = buildTextCells(text, columns, asciiChars, { align, family: textFont });
         setupHand(rows, cells, canvas, direction);
       };
       if (document.fonts?.ready) document.fonts.ready.then(build);
