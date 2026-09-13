@@ -3,7 +3,9 @@
 Backend behind `/api/` on blxr.net. Fans search out across public mirrors,
 caches results, gives the frontend one stable shape.
 
-Zero npm dependencies — `node:http`, `node:fs`, `node:path` only.
+Zero npm dependencies — `node:http`, `node:fs`, `node:path`, `node:crypto` only.
+Two files: `server.mjs` (everything) and `moderation.mjs` (the review
+blocklist, see [Reviews](#reviews)).
 
 ## Running it
 
@@ -16,11 +18,12 @@ Listens on `127.0.0.1:8899`. No credentials needed — see `.env.example`.
 ## API
 
 All routes `GET` except `/api/hit` and `POST /api/vitals`; `/api/vitals`
-answers both verbs. Anything else: `405`. Errors: `{ "error": "..." }` with
-`404` (unknown path), `502` (every upstream failed) or `503` (`/api/music/top`
-still resolving a cold chart; `Retry-After: 15`).
+and `/api/reviews` answer both verbs. Anything else: `405`. Errors:
+`{ "error": "..." }` with `400` (bad review), `404` (unknown path), `429`
+(review rate limit), `502` (every upstream failed) or `503` (`/api/music/top`
+still resolving a cold chart, `Retry-After: 15`; or the review store is full).
 
-Consumed by `web/src/lib/api.js` (music/hit routes) and
+Consumed by `web/src/lib/api.js` (music/hit/reviews routes) and
 `web/src/lib/github.js` (contributions route, which also owns the
 third-party fallback). Change a param or response shape here and update
 those files.
@@ -87,6 +90,42 @@ Field data, default last 7 days (max 90).
 Aggregated only: each `(day, metric)` keeps a count, sum and the three
 verdict buckets. No per-visit rows.
 
+### `GET /api/reviews`
+Every published review, newest first. Never cached (`no-store`).
+
+```json
+{ "items": [ { "id": "k3j9x2ab", "name": "Maria Kosta", "role": "CTO, Delivo",
+               "rating": 5, "text": "…", "at": "2026-09-13T18:11:13.701Z" } ],
+  "total": 1 }
+```
+
+### `POST /api/reviews`
+Body `{ "name", "role"?, "rating", "text", "device"?, "website"? }`. Limits: `name`
+2–40 chars with at least one letter, `role` up to 60, `rating` integer 1–5,
+`text` 20–600. Control characters are stripped, whitespace collapsed, blank
+lines capped at one. Anything that looks like a link (`http://`, `www.`,
+`something.com`) in any field is refused. `website` is a honeypot: a
+non-empty value answers `201` with a plausible item and stores nothing.
+`device` is a 32-hex token the browser generates once and keeps in
+`localStorage`; anything else is ignored.
+
+A successful post also sets `blxr_rv`, an `HttpOnly; SameSite=Strict` cookie
+scoped to `/api/reviews`, valid 3 days.
+
+Answers `201 { "item": {…} }` or:
+
+| Status | `error` | Meaning |
+| --- | --- | --- |
+| `400` | `invalid` | `fields` lists what failed |
+| `400` | `link` | a URL in name, role or text |
+| `400` | `blocked` | matched `BLOCKED_TERMS` in `moderation.mjs` |
+| `429` | `rate_limited` | same network, device or cookie within 3 days (`Retry-After` set) |
+| `429` | `busy` | more than 30 reviews site-wide in the last hour |
+| `503` | `full` | 1000 reviews stored; nothing new until some are removed |
+
+Reviews are public the moment they're accepted. There is no approval queue
+and no admin panel, on purpose.
+
 ### `GET /api/github/contributions?user=<login>&y=last|YYYY`
 `user` must be a valid GitHub login (`400 bad_user` otherwise); `y` is
 `last` (rolling 12 months, default) or a four-digit year from 2008
@@ -102,6 +141,40 @@ Cached 30 minutes per `(user, year)`.
 **With `GITHUB_TOKEN` set**, reads GitHub's official GraphQL API (needs
 `read:user` for private contributions). Without it, proxies a public mirror.
 Token stays server-side. A GraphQL failure falls through to the mirror.
+
+## Reviews
+
+Stored in `$STATE_DIRECTORY/reviews.json`, same flush/prune cycle as the
+hit counter. Each record is the public shape plus up to three salted,
+truncated SHA-256 hashes (`REVIEW_SALT` in the env, a fixed default
+otherwise): `ipHash` of the submitting address, `deviceHash` of the
+browser's `localStorage` token, `cookieHash` of the `blxr_rv` cookie. A new
+submission is refused for **3 days** if *any* of the three matches a stored
+review, so one person gets one review per network, per device, per browser
+profile; clearing one signal isn't enough. The hashes are dropped from the
+record on the first save after the window. No raw IPs, tokens or other
+identifiers are kept.
+
+The address comes from `X-Forwarded-For`, which nginx overwrites with the
+real client address (`proxy_set_header X-Forwarded-For $remote_addr`, after
+the Cloudflare real-ip snippet). The server only listens on loopback, so the
+header can't be spoofed from outside.
+
+### Removing a review
+
+There is deliberately no UI for this. `src/moderation.mjs` is the whole
+control surface:
+
+1. Find the id. Every card on `/reviews` shows it as a faint `#xxxxxxxx`
+   chip (click copies it), and it's in the `mailto:` subject when someone
+   asks for their own review to be changed.
+2. Add it to `REMOVED_REVIEWS` in `server/src/moderation.mjs`, commit.
+3. `npm run deploy:server`. On restart the server drops matching records
+   from `reviews.json`, logs how many, and never issues that id again.
+
+`BLOCKED_TERMS` in the same file refuses new submissions containing any
+listed term (case- and accent-insensitive substring match). It does not
+retroactively remove anything.
 
 ## Hit counter
 
@@ -135,14 +208,15 @@ Chart-rank history: `$STATE_DIRECTORY/chart-history.json`
 (`/var/lib/blxr-search/` under systemd). Cold start has no baseline,
 `movement` is `null`.
 
-View counts in `hits.json`, Core Web Vitals histograms in `vitals.json`.
-Both flushed every 30s and on `SIGTERM`/`SIGINT`, pruned to last 90 days per
-write. Corrupt/missing file starts from zero.
+View counts in `hits.json`, Core Web Vitals histograms in `vitals.json`,
+reviews in `reviews.json`. All flushed every 30s and on `SIGTERM`/`SIGINT`;
+hits and vitals pruned to the last 90 days per write, reviews kept
+indefinitely. Corrupt/missing file starts from zero.
 
-Both saved from one signal handler (the first listener to call
+All saved from one signal handler (the first listener to call
 `process.exit()` ends the process, so a second handler for the same signal
 never runs). Anything added later that persists to disk goes in that same
-handler, next to `saveHits()` and `saveVitals()`.
+handler, next to `saveHits()`, `saveVitals()` and `saveReviews()`.
 
 ## Deploy
 

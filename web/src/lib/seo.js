@@ -26,6 +26,9 @@ const PROJECTS_DESCRIPTION =
 const LIBRARY_DESCRIPTION =
   'The UIs and scripts built for FiveM servers — interfaces, HUDs and standalone resources.'
 
+const REVIEWS_DESCRIPTION =
+  'What clients and collaborators say about working with Blxr. Worked with me? Leave a review.'
+
 export function metaFor(pathname) {
   const { lang, route: routePath } = splitLocale(pathname)
   const path = localizePath(routePath, lang)
@@ -71,6 +74,14 @@ export function metaFor(pathname) {
       title: `${pick('FiveM Library', 'lib.title')} — ${SITE_NAME}`,
       description: pick(LIBRARY_DESCRIPTION, 'lib.tagline'),
       noindex: libraryList.every((entry) => entry.placeholder),
+    }
+  }
+
+  if (route.name === 'reviews') {
+    return {
+      ...base,
+      title: `${pick('Reviews', 'rev.title')} — ${SITE_NAME}`,
+      description: pick(REVIEWS_DESCRIPTION, 'rev.tagline'),
     }
   }
 
@@ -181,6 +192,17 @@ function jsonLdFor(path) {
       codeRepository: item.github ?? undefined,
       isPartOf: { '@id': `${SITE_URL}/library#library` },
       author: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
+  if (route.name === 'reviews') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Reviews',
+      description: REVIEWS_DESCRIPTION,
+      url: `${SITE_URL}/reviews`,
+      about: { '@id': `${SITE_URL}/#blxr` },
     }
   }
 

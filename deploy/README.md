@@ -7,6 +7,7 @@ targets, not places to edit directly.
 repo                                  live box
 web/dist/                        ->   /var/www/blxr/            (nginx root)
 server/src/server.mjs            ->   /opt/blxr-search/server.mjs
+server/src/moderation.mjs        ->   /opt/blxr-search/moderation.mjs
 server/deploy/blxr-search.service -> /etc/systemd/system/blxr-search.service
 deploy/nginx/blxr.conf           ->   /etc/nginx/sites-available/blxr
 deploy/nginx/blxr-security-headers.conf -> /etc/nginx/snippets/...
@@ -52,7 +53,7 @@ DRY_RUN=1 npm run deploy  # show the plan, touch nothing
   curl -s https://blxr.net/de | grep -o '<html[^>]*>'
   curl -s https://blxr.net/ar | grep -o '<html[^>]*>'
   ```
-- **Build is ~1500 files** (13 routes x 32 languages, `.gz` + `.br` twins,
+- **Build is ~1500 files** (14 routes x 32 languages, `.gz` + `.br` twins,
   ~32 MB). First deploy after a routing change moves a lot more files than
   usual.
 - **`/api/` must outrank the catch-all** — true today because nginx matches

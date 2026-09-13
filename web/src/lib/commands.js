@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH } from './router'
+import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH } from './router'
 import { projectsList, SHORT_KEY } from './projects'
 import { libraryList } from './library'
 import { SECTIONS, jumpToSection } from './palette'
@@ -38,6 +38,16 @@ export function buildCommands({ t, theme, toggleTheme }) {
       href: LIBRARY_PATH,
       run: () => navigate(LIBRARY_PATH),
       keywords: 'fivem library ui script hud nui lua',
+    },
+    {
+      id: 'page-reviews',
+      group: jump,
+      label: t('rev.title'),
+      hint: t('rev.kicker'),
+      icon: 'star',
+      href: REVIEWS_PATH,
+      run: () => navigate(REVIEWS_PATH),
+      keywords: 'reviews testimonials feedback rating stars',
     },
 
     ...SECTIONS.map((section) => ({
@@ -82,6 +92,15 @@ export function buildCommands({ t, theme, toggleTheme }) {
       icon: theme === 'dark' ? 'sun' : 'moon',
       run: toggleTheme,
       keywords: 'theme dark light',
+    },
+    {
+      id: 'action-write-review',
+      group: actions,
+      label: t('rev.write'),
+      icon: 'star',
+      href: WRITE_REVIEW_PATH,
+      run: () => navigate(WRITE_REVIEW_PATH),
+      keywords: 'review testimonial feedback rate',
     },
     {
       id: 'action-copy-email',

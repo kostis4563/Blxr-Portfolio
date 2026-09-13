@@ -1,6 +1,8 @@
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
+import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
 
 const PORT = Number(process.env.PORT) || 8899
 const HOST = '127.0.0.1'
@@ -138,6 +140,7 @@ const TOP_RESPONSE_BUDGET_MS = 12_000
 const TOP_WARM_KEY = { country: 'us', limit: 10 }
 const topCache = new Map()
 const topInflight = new Map()
+const topKey = (country, limit) => `${country} ${limit}`
 
 const STATE_DIR = process.env.STATE_DIRECTORY || process.env.TMPDIR || '/tmp'
 const HISTORY_FILE = path.join(STATE_DIR, 'chart-history.json')
@@ -292,6 +295,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
   process.on(signal, () => {
     saveHits()
     saveVitals()
+    saveReviews()
     process.exit(0)
   })
 }
@@ -411,6 +415,164 @@ function readJsonBody(req, limit = 512) {
   })
 }
 
+const REVIEWS_FILE = path.join(STATE_DIR, 'reviews.json')
+const REVIEWS_MAX = 1000
+const REVIEW_LIMITS = { name: [2, 40], role: [0, 60], text: [20, 600] }
+const REVIEW_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
+const REVIEW_COOKIE = 'blxr_rv'
+const REVIEW_TOKEN_RE = /^[a-f0-9]{32}$/
+const REVIEW_GLOBAL_WINDOW_MS = 60 * 60 * 1000
+const REVIEW_GLOBAL_MAX = 30
+const REVIEW_SALT = process.env.REVIEW_SALT || 'blxr-reviews'
+const REVIEW_ID_RE = /^[a-z0-9]{8}$/
+const REVIEW_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
+
+const REVIEW_LINK_RE = /https?:\/\/|www\.|\S+\.(?:com|net|org|io|gg|xyz|me|app|dev|co)(?=[\s/,.;:!?)]|$)/i
+const CONTROL_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u2028-\u202E\uFEFF]/g
+
+const foldTerm = (s) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const blockedTerms = BLOCKED_TERMS.map(foldTerm).filter(Boolean)
+
+let reviews = []
+let reviewsDirty = false
+
+const isReviewRecord = (r) =>
+  r &&
+  typeof r === 'object' &&
+  REVIEW_ID_RE.test(r.id) &&
+  typeof r.name === 'string' &&
+  typeof r.text === 'string' &&
+  Number.isInteger(r.rating) &&
+  r.rating >= 1 &&
+  r.rating <= 5 &&
+  typeof r.at === 'string' &&
+  !Number.isNaN(Date.parse(r.at))
+
+try {
+  const parsed = JSON.parse(fs.readFileSync(REVIEWS_FILE, 'utf8'))
+  if (Array.isArray(parsed)) reviews = parsed.filter(isReviewRecord)
+} catch {
+  reviews = []
+}
+{
+  const kept = reviews.filter((r) => !REMOVED_REVIEWS.has(r.id))
+  if (kept.length !== reviews.length) {
+    console.log(`reviews: removed ${reviews.length - kept.length} via moderation.mjs`)
+    reviews = kept
+    reviewsDirty = true
+  }
+}
+
+const SUBMITTER_KEYS = ['ipHash', 'deviceHash', 'cookieHash']
+
+function saveReviews() {
+  if (!reviewsDirty) return
+  reviewsDirty = false
+  const cutoff = Date.now() - REVIEW_WINDOW_MS
+  for (const r of reviews) {
+    if (Date.parse(r.at) >= cutoff) continue
+    for (const key of SUBMITTER_KEYS) delete r[key]
+  }
+  try {
+    fs.writeFileSync(REVIEWS_FILE, JSON.stringify(reviews))
+  } catch {
+  }
+}
+setInterval(saveReviews, HITS_SAVE_DEBOUNCE_MS).unref()
+
+function newReviewId() {
+  for (;;) {
+    let id = ''
+    for (const b of crypto.randomBytes(8)) id += REVIEW_ID_ALPHABET[b % REVIEW_ID_ALPHABET.length]
+    if (!REMOVED_REVIEWS.has(id) && !reviews.some((r) => r.id === id)) return id
+  }
+}
+
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for']
+  const forwarded = typeof xff === 'string' ? xff.split(',').pop().trim() : ''
+  return forwarded || req.socket.remoteAddress || ''
+}
+
+const hashToken = (kind, value) =>
+  crypto.createHash('sha256').update(`${REVIEW_SALT}:${kind}:${value}`).digest('hex').slice(0, 16)
+
+function cookieToken(req) {
+  const header = req.headers.cookie
+  if (typeof header !== 'string') return null
+  for (const part of header.split(';')) {
+    const [name, ...rest] = part.trim().split('=')
+    if (name === REVIEW_COOKIE) {
+      const value = rest.join('=').trim()
+      return REVIEW_TOKEN_RE.test(value) ? value : null
+    }
+  }
+  return null
+}
+
+const deviceToken = (body) =>
+  typeof body?.device === 'string' && REVIEW_TOKEN_RE.test(body.device) ? body.device : null
+
+const publicReview = ({ id, name, role, rating, text, at }) => ({ id, name, role, rating, text, at })
+
+function cleanLine(value) {
+  if (typeof value !== 'string') return ''
+  return value.replace(CONTROL_RE, '').replace(/\s+/g, ' ').trim()
+}
+
+function cleanBlock(value) {
+  if (typeof value !== 'string') return ''
+  return value
+    .replace(CONTROL_RE, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ ?\n ?/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+const withinLimits = (s, [min, max]) => s.length >= min && s.length <= max
+const isBlocked = (s) => {
+  const folded = foldTerm(s)
+  return blockedTerms.some((term) => folded.includes(term))
+}
+
+function validateReview(body) {
+  const name = cleanLine(body?.name)
+  const role = cleanLine(body?.role)
+  const text = cleanBlock(body?.text)
+  const rating = Number(body?.rating)
+
+  const fields = []
+  if (!withinLimits(name, REVIEW_LIMITS.name) || !/\p{L}/u.test(name)) fields.push('name')
+  if (!withinLimits(role, REVIEW_LIMITS.role)) fields.push('role')
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) fields.push('rating')
+  if (!withinLimits(text, REVIEW_LIMITS.text)) fields.push('text')
+  if (fields.length) return { error: 'invalid', fields }
+
+  if ([name, role, text].some((s) => REVIEW_LINK_RE.test(s))) return { error: 'link', fields: ['text'] }
+  if (isBlocked(`${name}\n${role}\n${text}`)) return { error: 'blocked', fields: ['text'] }
+
+  return { review: { name, role, rating, text } }
+}
+
+function reviewRateLimit(submitter, now) {
+  let lastSeen = 0
+  let recentGlobal = 0
+  for (const r of reviews) {
+    const at = Date.parse(r.at)
+    const same = SUBMITTER_KEYS.some((key) => submitter[key] && r[key] === submitter[key])
+    if (same && at > lastSeen) lastSeen = at
+    if (now - at < REVIEW_GLOBAL_WINDOW_MS) recentGlobal += 1
+  }
+  if (lastSeen && now - lastSeen < REVIEW_WINDOW_MS) {
+    return { error: 'rate_limited', retryAfter: Math.ceil((REVIEW_WINDOW_MS - (now - lastSeen)) / 1000) }
+  }
+  if (recentGlobal >= REVIEW_GLOBAL_MAX) return { error: 'busy', retryAfter: 600 }
+  if (reviews.length >= REVIEWS_MAX) return { error: 'full', retryAfter: 86_400 }
+  return null
+}
+
 const GH_TOKEN = process.env.GITHUB_TOKEN || ''
 const GH_CACHE_TTL_MS = 30 * 60 * 1000
 const GH_CACHE_MAX = 50
@@ -502,13 +664,16 @@ async function fetchContributions(user, year) {
   return ghFromMirror(user, year)
 }
 
-function json(res, status, body) {
+function json(res, status, body, headers) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'public, max-age=60',
+    ...headers,
   })
   res.end(JSON.stringify(body))
 }
+
+const NO_STORE = { 'cache-control': 'no-store' }
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -531,6 +696,51 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(204, { 'cache-control': 'no-store' })
       return res.end()
+    }
+
+    if (url.pathname === '/api/reviews') {
+      if (req.method === 'GET') {
+        const items = reviews.map(publicReview).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+        return json(res, 200, { items, total: items.length }, NO_STORE)
+      }
+      if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+
+      const body = await readJsonBody(req, 4096)
+      if (!body || typeof body !== 'object') return json(res, 400, { error: 'invalid', fields: [] }, NO_STORE)
+
+      const checked = validateReview(body)
+      if (checked.error) return json(res, 400, checked, NO_STORE)
+
+      const now = Date.now()
+      const at = new Date(now).toISOString()
+
+      if (typeof body.website === 'string' && body.website.trim()) {
+        return json(res, 201, { item: { id: newReviewId(), ...checked.review, at } }, NO_STORE)
+      }
+
+      const cookie = cookieToken(req)
+      const device = deviceToken(body)
+      const submitter = {
+        ipHash: hashToken('ip', clientIp(req)),
+        deviceHash: device ? hashToken('device', device) : null,
+        cookieHash: cookie ? hashToken('cookie', cookie) : null,
+      }
+      const limited = reviewRateLimit(submitter, now)
+      if (limited) {
+        const status = limited.error === 'full' ? 503 : 429
+        return json(res, status, limited, { ...NO_STORE, 'retry-after': String(limited.retryAfter) })
+      }
+
+      const issued = cookie || crypto.randomBytes(16).toString('hex')
+      if (!cookie) submitter.cookieHash = hashToken('cookie', issued)
+      const record = { id: newReviewId(), ...checked.review, at, ...submitter }
+      if (!record.deviceHash) delete record.deviceHash
+      reviews.push(record)
+      reviewsDirty = true
+      return json(res, 201, { item: publicReview(record) }, {
+        ...NO_STORE,
+        'set-cookie': `${REVIEW_COOKIE}=${issued}; Path=/api/reviews; Max-Age=${Math.ceil(REVIEW_WINDOW_MS / 1000)}; HttpOnly; SameSite=Strict`,
+      })
     }
 
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' })

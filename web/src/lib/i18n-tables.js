@@ -5909,3 +5909,595 @@ const LIBRARY_LABELS = {
   }
 }
 mergeLabels(LIBRARY_LABELS)
+
+const REVIEW_LABELS = {
+  'rev.kicker': {
+    en: 'Feedback', es: 'Opiniones', fr: 'Avis', de: 'Feedback', it: 'Feedback', pt: 'Feedback',
+    el: 'Κριτικές', nl: 'Feedback', ru: 'Отзывы', ja: 'フィードバック', zh: '反馈', ar: 'آراء',
+    no: 'Tilbakemeldinger', hi: 'प्रतिक्रिया', id: 'Umpan balik', tr: 'Geri bildirim', ko: '피드백',
+    pl: 'Opinie', vi: 'Phản hồi', uk: 'Відгуки', sv: 'Omdömen', da: 'Feedback', fi: 'Palaute',
+    bg: 'Отзиви', ro: 'Păreri', sr: 'Утисци', cs: 'Ohlasy', th: 'ความคิดเห็น', bn: 'মতামত',
+    fa: 'بازخورد', he: 'משוב', hu: 'Visszajelzés'
+  },
+  'rev.title': {
+    en: 'Reviews', es: 'Reseñas', fr: 'Avis', de: 'Bewertungen', it: 'Recensioni', pt: 'Avaliações',
+    el: 'Κριτικές', nl: 'Beoordelingen', ru: 'Отзывы', ja: 'レビュー', zh: '评价', ar: 'التقييمات',
+    no: 'Anmeldelser', hi: 'समीक्षाएँ', id: 'Ulasan', tr: 'Yorumlar', ko: '리뷰', pl: 'Recenzje',
+    vi: 'Đánh giá', uk: 'Відгуки', sv: 'Recensioner', da: 'Anmeldelser', fi: 'Arviot', bg: 'Отзиви',
+    ro: 'Recenzii', sr: 'Рецензије', cs: 'Recenze', th: 'รีวิว', bn: 'রিভিউ', fa: 'نظرات', he: 'ביקורות',
+    hu: 'Vélemények'
+  },
+  'rev.tagline': {
+    en: 'Worked with me on something? Leave a few words. Reviews go live right away and stay exactly as written.',
+    es: '¿Hemos trabajado juntos en algo? Deja unas palabras. Las reseñas se publican al instante y se quedan tal cual.',
+    fr: 'On a travaillé ensemble ? Laissez quelques mots. Les avis sont publiés immédiatement et restent tels quels.',
+    de: 'Haben wir zusammen an etwas gearbeitet? Schreib ein paar Worte. Bewertungen gehen sofort online und bleiben genau so stehen.',
+    it: 'Abbiamo lavorato insieme a qualcosa? Lascia qualche parola. Le recensioni vanno online subito e restano esattamente così.',
+    pt: 'Trabalhámos juntos em algo? Deixa umas palavras. As avaliações ficam online de imediato e permanecem tal como foram escritas.',
+    el: 'Δουλέψαμε μαζί σε κάτι; Άφησε δύο λόγια. Οι κριτικές δημοσιεύονται αμέσως και μένουν όπως ακριβώς γράφτηκαν.',
+    nl: 'Samen aan iets gewerkt? Laat een paar woorden achter. Beoordelingen gaan direct online en blijven precies zoals geschreven.',
+    ru: 'Мы работали вместе? Оставьте пару слов. Отзывы публикуются сразу и остаются в точности как написаны.',
+    ja: '一緒に何か作りましたか？ひと言お願いします。レビューはすぐに公開され、書かれたままの形で残ります。',
+    zh: '和我合作过？留下几句话吧。评价会立即发布，并原样保留。',
+    ar: 'هل عملنا معًا على شيء؟ اترك بضع كلمات. تُنشر التقييمات فورًا وتبقى كما كُتبت تمامًا.',
+    no: 'Har vi jobbet sammen om noe? Legg igjen noen ord. Anmeldelser publiseres umiddelbart og blir stående akkurat som skrevet.',
+    hi: 'मेरे साथ किसी चीज़ पर काम किया है? कुछ शब्द लिखें। समीक्षाएँ तुरंत प्रकाशित होती हैं और जैसी लिखी गई हों वैसी ही रहती हैं।',
+    id: 'Pernah bekerja sama dengan saya? Tinggalkan beberapa kata. Ulasan langsung tayang dan tetap seperti yang ditulis.',
+    tr: 'Birlikte bir şey üzerinde çalıştık mı? Birkaç kelime bırak. Yorumlar hemen yayınlanır ve yazıldığı gibi kalır.',
+    ko: '함께 작업한 적이 있나요? 몇 마디 남겨 주세요. 리뷰는 바로 공개되며 작성한 그대로 유지됩니다.',
+    pl: 'Pracowaliśmy razem nad czymś? Zostaw kilka słów. Recenzje pojawiają się od razu i zostają dokładnie takie, jak zostały napisane.',
+    vi: 'Đã làm việc cùng tôi? Hãy để lại vài lời. Đánh giá được đăng ngay lập tức và giữ nguyên như đã viết.',
+    uk: 'Ми працювали разом? Залиште кілька слів. Відгуки публікуються одразу й залишаються саме такими, як написані.',
+    sv: 'Har vi jobbat ihop med något? Lämna några ord. Recensioner publiceras direkt och står kvar precis som de skrevs.',
+    da: 'Har vi arbejdet sammen om noget? Skriv et par ord. Anmeldelser går live med det samme og bliver stående præcis som skrevet.',
+    fi: 'Olemmeko tehneet jotain yhdessä? Jätä pari sanaa. Arviot julkaistaan heti ja pysyvät juuri sellaisina kuin ne kirjoitettiin.',
+    bg: 'Работили сме заедно по нещо? Оставете няколко думи. Отзивите се публикуват веднага и остават точно както са написани.',
+    ro: 'Am lucrat împreună la ceva? Lasă câteva cuvinte. Recenziile apar imediat și rămân exact așa cum au fost scrise.',
+    sr: 'Радили смо заједно на нечему? Оставите пар речи. Рецензије се објављују одмах и остају тачно онакве какве су написане.',
+    cs: 'Pracovali jsme spolu na něčem? Zanechte pár slov. Recenze jdou online okamžitě a zůstávají přesně tak, jak byly napsány.',
+    th: 'เคยร่วมงานกับผมไหม? ฝากคำพูดสักสองสามคำ รีวิวจะขึ้นทันทีและคงอยู่ตามที่เขียนไว้ทุกตัวอักษร',
+    bn: 'আমার সাথে কোনো কাজ করেছেন? কয়েকটি কথা লিখে যান। রিভিউ সাথে সাথেই প্রকাশিত হয় এবং যেমন লেখা হয়েছে তেমনই থাকে।',
+    fa: 'با من روی چیزی کار کرده‌اید؟ چند کلمه بنویسید. نظرات فوراً منتشر می‌شوند و دقیقاً همان‌طور که نوشته شده‌اند می‌مانند.',
+    he: 'עבדנו יחד על משהו? השאירו כמה מילים. ביקורות מתפרסמות מיד ונשארות בדיוק כפי שנכתבו.',
+    hu: 'Dolgoztunk együtt valamin? Írj pár szót. A vélemények azonnal megjelennek, és pontosan úgy maradnak, ahogy megírták őket.'
+  },
+  'rev.count': {
+    en: '{n} reviews', es: '{n} reseñas', fr: '{n} avis', de: '{n} Bewertungen', it: '{n} recensioni',
+    pt: '{n} avaliações', el: '{n} κριτικές', nl: '{n} beoordelingen', ru: '{n} отзывов', ja: '{n} 件のレビュー',
+    zh: '{n} 条评价', ar: '{n} تقييمًا', no: '{n} anmeldelser', hi: '{n} समीक्षाएँ', id: '{n} ulasan',
+    tr: '{n} yorum', ko: '리뷰 {n}개', pl: '{n} recenzji', vi: '{n} đánh giá', uk: '{n} відгуків',
+    sv: '{n} recensioner', da: '{n} anmeldelser', fi: '{n} arviota', bg: '{n} отзива', ro: '{n} de recenzii',
+    sr: '{n} рецензија', cs: '{n} recenzí', th: '{n} รีวิว', bn: '{n}টি রিভিউ', fa: '{n} نظر', he: '{n} ביקורות',
+    hu: '{n} vélemény'
+  },
+  'rev.basedOn': {
+    en: 'based on {n} reviews', es: 'según {n} reseñas', fr: 'sur {n} avis', de: 'aus {n} Bewertungen',
+    it: 'su {n} recensioni', pt: 'com base em {n} avaliações', el: 'από {n} κριτικές', nl: 'op basis van {n} beoordelingen',
+    ru: 'на основе {n} отзывов', ja: '{n} 件のレビューに基づく', zh: '基于 {n} 条评价', ar: 'استنادًا إلى {n} تقييمًا',
+    no: 'basert på {n} anmeldelser', hi: '{n} समीक्षाओं के आधार पर', id: 'berdasarkan {n} ulasan', tr: '{n} yoruma göre',
+    ko: '리뷰 {n}개 기준', pl: 'na podstawie {n} recenzji', vi: 'dựa trên {n} đánh giá', uk: 'на основі {n} відгуків',
+    sv: 'baserat på {n} recensioner', da: 'baseret på {n} anmeldelser', fi: '{n} arvion perusteella', bg: 'на база {n} отзива',
+    ro: 'din {n} de recenzii', sr: 'на основу {n} рецензија', cs: 'na základě {n} recenzí', th: 'จาก {n} รีวิว',
+    bn: '{n}টি রিভিউর ভিত্তিতে', fa: 'بر اساس {n} نظر', he: 'על בסיס {n} ביקורות', hu: '{n} vélemény alapján'
+  },
+  'rev.breakdown': {
+    en: 'Rating breakdown', es: 'Desglose de valoraciones', fr: 'Répartition des notes', de: 'Verteilung der Bewertungen',
+    it: 'Distribuzione dei voti', pt: 'Distribuição das classificações', el: 'Ανάλυση βαθμολογιών', nl: 'Verdeling van de scores',
+    ru: 'Распределение оценок', ja: '評価の内訳', zh: '评分分布', ar: 'توزيع التقييمات', no: 'Fordeling av vurderinger',
+    hi: 'रेटिंग का विवरण', id: 'Rincian penilaian', tr: 'Puan dağılımı', ko: '평점 분포', pl: 'Rozkład ocen',
+    vi: 'Phân bố điểm', uk: 'Розподіл оцінок', sv: 'Fördelning av betyg', da: 'Fordeling af vurderinger', fi: 'Arvosanojen jakauma',
+    bg: 'Разпределение на оценките', ro: 'Distribuția notelor', sr: 'Расподела оцена', cs: 'Rozložení hodnocení',
+    th: 'สัดส่วนคะแนน', bn: 'রেটিং বিভাজন', fa: 'توزیع امتیازها', he: 'פילוח דירוגים', hu: 'Értékelések megoszlása'
+  },
+  'rev.onlyStars': {
+    en: 'Only {n} star reviews', es: 'Solo reseñas de {n} estrellas', fr: 'Uniquement les avis {n} étoiles',
+    de: 'Nur Bewertungen mit {n} Sternen', it: 'Solo recensioni a {n} stelle', pt: 'Só avaliações de {n} estrelas',
+    el: 'Μόνο κριτικές {n} αστέρων', nl: 'Alleen beoordelingen met {n} sterren', ru: 'Только отзывы на {n} звёзд',
+    ja: '星 {n} のレビューのみ', zh: '仅 {n} 星评价', ar: 'تقييمات {n} نجوم فقط', no: 'Bare anmeldelser med {n} stjerner',
+    hi: 'केवल {n} स्टार समीक्षाएँ', id: 'Hanya ulasan {n} bintang', tr: 'Sadece {n} yıldızlı yorumlar', ko: '{n}점 리뷰만',
+    pl: 'Tylko recenzje z {n} gwiazdkami', vi: 'Chỉ đánh giá {n} sao', uk: 'Лише відгуки на {n} зірок',
+    sv: 'Bara recensioner med {n} stjärnor', da: 'Kun anmeldelser med {n} stjerner', fi: 'Vain {n} tähden arviot',
+    bg: 'Само отзиви с {n} звезди', ro: 'Doar recenzii de {n} stele', sr: 'Само рецензије са {n} звездица',
+    cs: 'Jen recenze s {n} hvězdičkami', th: 'เฉพาะรีวิว {n} ดาว', bn: 'শুধু {n} তারার রিভিউ', fa: 'فقط نظرات {n} ستاره',
+    he: 'רק ביקורות של {n} כוכבים', hu: 'Csak {n} csillagos vélemények'
+  },
+  'rev.sortBy': {
+    en: 'Sort', es: 'Ordenar', fr: 'Trier', de: 'Sortieren', it: 'Ordina', pt: 'Ordenar', el: 'Ταξινόμηση',
+    nl: 'Sorteren', ru: 'Сортировка', ja: '並べ替え', zh: '排序', ar: 'ترتيب', no: 'Sorter', hi: 'क्रमबद्ध करें',
+    id: 'Urutkan', tr: 'Sırala', ko: '정렬', pl: 'Sortuj', vi: 'Sắp xếp', uk: 'Сортування', sv: 'Sortera',
+    da: 'Sortér', fi: 'Järjestä', bg: 'Подреждане', ro: 'Sortare', sr: 'Сортирај', cs: 'Seřadit', th: 'เรียงลำดับ',
+    bn: 'সাজান', fa: 'مرتب‌سازی', he: 'סידור', hu: 'Rendezés'
+  },
+  'rev.sort.newest': {
+    en: 'Newest', es: 'Más recientes', fr: 'Plus récents', de: 'Neueste', it: 'Più recenti', pt: 'Mais recentes',
+    el: 'Νεότερες', nl: 'Nieuwste', ru: 'Новые', ja: '新しい順', zh: '最新', ar: 'الأحدث', no: 'Nyeste', hi: 'नवीनतम',
+    id: 'Terbaru', tr: 'En yeni', ko: '최신순', pl: 'Najnowsze', vi: 'Mới nhất', uk: 'Найновіші', sv: 'Nyaste',
+    da: 'Nyeste', fi: 'Uusimmat', bg: 'Най нови', ro: 'Cele mai noi', sr: 'Најновије', cs: 'Nejnovější', th: 'ใหม่ล่าสุด',
+    bn: 'নতুন প্রথমে', fa: 'جدیدترین', he: 'החדשות ביותר', hu: 'Legújabb'
+  },
+  'rev.sort.highest': {
+    en: 'Highest rated', es: 'Mejor valoradas', fr: 'Mieux notés', de: 'Beste Bewertung', it: 'Voto più alto',
+    pt: 'Melhor classificadas', el: 'Υψηλότερη βαθμολογία', nl: 'Hoogste score', ru: 'Высокая оценка', ja: '評価が高い順',
+    zh: '评分最高', ar: 'الأعلى تقييمًا', no: 'Høyest vurdert', hi: 'सर्वोच्च रेटिंग', id: 'Nilai tertinggi', tr: 'En yüksek puan',
+    ko: '평점 높은순', pl: 'Najwyżej oceniane', vi: 'Điểm cao nhất', uk: 'Найвища оцінка', sv: 'Högst betyg', da: 'Højest vurderet',
+    fi: 'Parhaat arvosanat', bg: 'Най висока оценка', ro: 'Cele mai bine notate', sr: 'Најбоље оцењене', cs: 'Nejlépe hodnocené',
+    th: 'คะแนนสูงสุด', bn: 'সর্বোচ্চ রেটিং', fa: 'بالاترین امتیاز', he: 'הדירוג הגבוה ביותר', hu: 'Legjobb értékelés'
+  },
+  'rev.sort.lowest': {
+    en: 'Lowest rated', es: 'Peor valoradas', fr: 'Moins bien notés', de: 'Niedrigste Bewertung', it: 'Voto più basso',
+    pt: 'Pior classificadas', el: 'Χαμηλότερη βαθμολογία', nl: 'Laagste score', ru: 'Низкая оценка', ja: '評価が低い順',
+    zh: '评分最低', ar: 'الأدنى تقييمًا', no: 'Lavest vurdert', hi: 'न्यूनतम रेटिंग', id: 'Nilai terendah', tr: 'En düşük puan',
+    ko: '평점 낮은순', pl: 'Najniżej oceniane', vi: 'Điểm thấp nhất', uk: 'Найнижча оцінка', sv: 'Lägst betyg', da: 'Lavest vurderet',
+    fi: 'Heikoimmat arvosanat', bg: 'Най ниска оценка', ro: 'Cele mai slab notate', sr: 'Најслабије оцењене', cs: 'Nejhůře hodnocené',
+    th: 'คะแนนต่ำสุด', bn: 'সর্বনিম্ন রেটিং', fa: 'پایین‌ترین امتیاز', he: 'הדירוג הנמוך ביותר', hu: 'Leggyengébb értékelés'
+  },
+  'rev.stars': {
+    en: '{n} out of 5 stars', es: '{n} de 5 estrellas', fr: '{n} étoiles sur 5', de: '{n} von 5 Sternen', it: '{n} stelle su 5',
+    pt: '{n} de 5 estrelas', el: '{n} στα 5 αστέρια', nl: '{n} van 5 sterren', ru: '{n} из 5 звёзд', ja: '5 つ星のうち {n}',
+    zh: '{n} / 5 星', ar: '{n} من 5 نجوم', no: '{n} av 5 stjerner', hi: '5 में से {n} स्टार', id: '{n} dari 5 bintang',
+    tr: '5 üzerinden {n} yıldız', ko: '5점 만점에 {n}점', pl: '{n} na 5 gwiazdek', vi: '{n} trên 5 sao', uk: '{n} з 5 зірок',
+    sv: '{n} av 5 stjärnor', da: '{n} af 5 stjerner', fi: '{n}/5 tähteä', bg: '{n} от 5 звезди', ro: '{n} din 5 stele',
+    sr: '{n} од 5 звездица', cs: '{n} z 5 hvězdiček', th: '{n} จาก 5 ดาว', bn: '৫ এর মধ্যে {n} তারা', fa: '{n} از ۵ ستاره',
+    he: '{n} מתוך 5 כוכבים', hu: '{n} az 5 csillagból'
+  },
+  'rev.showMore': {
+    en: 'Show more', es: 'Mostrar más', fr: 'Afficher plus', de: 'Mehr anzeigen', it: 'Mostra altre', pt: 'Mostrar mais',
+    el: 'Περισσότερες', nl: 'Meer tonen', ru: 'Показать ещё', ja: 'もっと見る', zh: '显示更多', ar: 'عرض المزيد', no: 'Vis flere',
+    hi: 'और दिखाएँ', id: 'Tampilkan lebih banyak', tr: 'Daha fazla göster', ko: '더 보기', pl: 'Pokaż więcej', vi: 'Xem thêm',
+    uk: 'Показати ще', sv: 'Visa fler', da: 'Vis flere', fi: 'Näytä lisää', bg: 'Покажи още', ro: 'Arată mai multe',
+    sr: 'Прикажи још', cs: 'Zobrazit další', th: 'แสดงเพิ่มเติม', bn: 'আরও দেখুন', fa: 'نمایش بیشتر', he: 'הצגת עוד', hu: 'Több mutatása'
+  },
+  'rev.write': {
+    en: 'Write a review', es: 'Escribir una reseña', fr: 'Écrire un avis', de: 'Bewertung schreiben', it: 'Scrivi una recensione',
+    pt: 'Escrever uma avaliação', el: 'Γράψε μια κριτική', nl: 'Schrijf een beoordeling', ru: 'Написать отзыв', ja: 'レビューを書く',
+    zh: '写评价', ar: 'اكتب تقييمًا', no: 'Skriv en anmeldelse', hi: 'समीक्षा लिखें', id: 'Tulis ulasan', tr: 'Yorum yaz',
+    ko: '리뷰 작성', pl: 'Napisz recenzję', vi: 'Viết đánh giá', uk: 'Написати відгук', sv: 'Skriv en recension',
+    da: 'Skriv en anmeldelse', fi: 'Kirjoita arvio', bg: 'Напиши отзив', ro: 'Scrie o recenzie', sr: 'Напиши рецензију',
+    cs: 'Napsat recenzi', th: 'เขียนรีวิว', bn: 'রিভিউ লিখুন', fa: 'نوشتن نظر', he: 'כתיבת ביקורת', hu: 'Vélemény írása'
+  },
+  'rev.empty': {
+    en: 'No reviews yet.', es: 'Aún no hay reseñas.', fr: 'Pas encore d’avis.', de: 'Noch keine Bewertungen.',
+    it: 'Ancora nessuna recensione.', pt: 'Ainda não há avaliações.', el: 'Δεν υπάρχουν κριτικές ακόμα.', nl: 'Nog geen beoordelingen.',
+    ru: 'Отзывов пока нет.', ja: 'まだレビューはありません。', zh: '还没有评价。', ar: 'لا توجد تقييمات بعد.', no: 'Ingen anmeldelser enda.',
+    hi: 'अभी कोई समीक्षा नहीं है।', id: 'Belum ada ulasan.', tr: 'Henüz yorum yok.', ko: '아직 리뷰가 없습니다.', pl: 'Nie ma jeszcze recenzji.',
+    vi: 'Chưa có đánh giá nào.', uk: 'Відгуків поки немає.', sv: 'Inga recensioner än.', da: 'Ingen anmeldelser endnu.',
+    fi: 'Ei vielä arvioita.', bg: 'Още няма отзиви.', ro: 'Nicio recenzie încă.', sr: 'Још нема рецензија.', cs: 'Zatím žádné recenze.',
+    th: 'ยังไม่มีรีวิว', bn: 'এখনও কোনো রিভিউ নেই।', fa: 'هنوز نظری ثبت نشده است.', he: 'אין עדיין ביקורות.', hu: 'Még nincs vélemény.'
+  },
+  'rev.emptyHint': {
+    en: 'The first one sets the tone.', es: 'La primera marca el tono.', fr: 'Le premier donne le ton.', de: 'Die erste gibt den Ton an.',
+    it: 'La prima dà il tono.', pt: 'A primeira dá o tom.', el: 'Η πρώτη δίνει τον τόνο.', nl: 'De eerste zet de toon.',
+    ru: 'Первый задаёт тон.', ja: '最初の一件が流れを決めます。', zh: '第一条定下基调。', ar: 'الأول يحدد النغمة.', no: 'Den første setter tonen.',
+    hi: 'पहली समीक्षा ही माहौल बनाती है।', id: 'Yang pertama menentukan nadanya.', tr: 'İlk yorum havayı belirler.', ko: '첫 리뷰가 분위기를 정합니다.',
+    pl: 'Pierwsza nadaje ton.', vi: 'Đánh giá đầu tiên định hình mọi thứ.', uk: 'Перший задає тон.', sv: 'Den första sätter tonen.',
+    da: 'Den første sætter tonen.', fi: 'Ensimmäinen antaa suunnan.', bg: 'Първият задава тона.', ro: 'Prima dă tonul.',
+    sr: 'Прва даје тон.', cs: 'První udává tón.', th: 'รีวิวแรกเป็นตัวกำหนดบรรยากาศ', bn: 'প্রথমটাই সুর বেঁধে দেয়।',
+    fa: 'اولین نظر لحن را مشخص می‌کند.', he: 'הראשונה קובעת את הטון.', hu: 'Az első adja meg az alaphangot.'
+  },
+  'rev.you': {
+    en: 'You', es: 'Tú', fr: 'Vous', de: 'Du', it: 'Tu', pt: 'Tu', el: 'Εσύ', nl: 'Jij', ru: 'Вы', ja: 'あなた', zh: '你',
+    ar: 'أنت', no: 'Du', hi: 'आप', id: 'Anda', tr: 'Sen', ko: '나', pl: 'Ty', vi: 'Bạn', uk: 'Ви', sv: 'Du', da: 'Dig',
+    fi: 'Sinä', bg: 'Вие', ro: 'Tu', sr: 'Ви', cs: 'Vy', th: 'คุณ', bn: 'আপনি', fa: 'شما', he: 'את/ה', hu: 'Te'
+  },
+  'rev.copyId': {
+    en: 'Copy review id'
+  },
+  'rev.form.intro': {
+    en: 'Name, a rating and a few honest sentences. No account, no email, nothing to verify.',
+    es: 'Tu nombre, una valoración y unas frases sinceras. Sin cuenta, sin correo, nada que verificar.',
+    fr: 'Un nom, une note et quelques phrases sincères. Pas de compte, pas d’e mail, rien à vérifier.',
+    de: 'Name, eine Bewertung und ein paar ehrliche Sätze. Kein Konto, keine E Mail, nichts zu bestätigen.',
+    it: 'Nome, un voto e qualche frase sincera. Nessun account, nessuna email, niente da verificare.',
+    pt: 'Nome, uma classificação e umas frases sinceras. Sem conta, sem email, nada para verificar.',
+    el: 'Όνομα, βαθμολογία και λίγες ειλικρινείς προτάσεις. Χωρίς λογαριασμό, χωρίς email, τίποτα να επαληθεύσεις.',
+    nl: 'Naam, een score en een paar eerlijke zinnen. Geen account, geen e mail, niets te verifiëren.',
+    ru: 'Имя, оценка и пара честных предложений. Без аккаунта, без почты, ничего подтверждать не нужно.',
+    ja: '名前と評価、そして率直な数行。アカウントもメールも認証も不要です。',
+    zh: '名字、评分和几句真心话。无需账号，无需邮箱，无需验证。',
+    ar: 'اسمك وتقييم وبضع جمل صادقة. لا حساب، لا بريد، لا شيء للتحقق منه.',
+    no: 'Navn, en vurdering og noen ærlige setninger. Ingen konto, ingen e post, ingenting å bekrefte.',
+    hi: 'नाम, एक रेटिंग और कुछ ईमानदार वाक्य। कोई खाता नहीं, कोई ईमेल नहीं, कुछ भी सत्यापित करने की ज़रूरत नहीं।',
+    id: 'Nama, penilaian, dan beberapa kalimat jujur. Tanpa akun, tanpa email, tanpa verifikasi.',
+    tr: 'İsim, bir puan ve birkaç dürüst cümle. Hesap yok, e posta yok, doğrulanacak bir şey yok.',
+    ko: '이름, 평점, 그리고 솔직한 몇 문장. 계정도 이메일도 인증도 필요 없습니다.',
+    pl: 'Imię, ocena i kilka szczerych zdań. Bez konta, bez e maila, bez weryfikacji.',
+    vi: 'Tên, một điểm đánh giá và vài câu chân thành. Không cần tài khoản, không email, không xác minh.',
+    uk: 'Ім’я, оцінка й кілька щирих речень. Без акаунта, без пошти, нічого підтверджувати.',
+    sv: 'Namn, ett betyg och några ärliga meningar. Inget konto, ingen e post, inget att verifiera.',
+    da: 'Navn, en vurdering og et par ærlige sætninger. Ingen konto, ingen e mail, intet at bekræfte.',
+    fi: 'Nimi, arvosana ja muutama rehellinen lause. Ei tiliä, ei sähköpostia, ei vahvistuksia.',
+    bg: 'Име, оценка и няколко честни изречения. Без акаунт, без имейл, нищо за потвърждаване.',
+    ro: 'Nume, o notă și câteva propoziții sincere. Fără cont, fără email, nimic de verificat.',
+    sr: 'Име, оцена и пар искрених реченица. Без налога, без имејла, ништа за потврду.',
+    cs: 'Jméno, hodnocení a pár upřímných vět. Bez účtu, bez e mailu, nic k ověřování.',
+    th: 'ชื่อ คะแนน และประโยคจริงใจสักสองสามประโยค ไม่ต้องมีบัญชี ไม่ต้องใช้อีเมล ไม่ต้องยืนยันอะไร',
+    bn: 'নাম, একটি রেটিং আর কয়েকটি সৎ বাক্য। কোনো অ্যাকাউন্ট নেই, ইমেইল নেই, যাচাইয়ের কিছু নেই।',
+    fa: 'نام، یک امتیاز و چند جملهٔ صادقانه. بدون حساب، بدون ایمیل، بدون تأیید.',
+    he: 'שם, דירוג וכמה משפטים כנים. בלי חשבון, בלי אימייל, בלי אימות.',
+    hu: 'Név, egy értékelés és pár őszinte mondat. Nincs fiók, nincs e mail, nincs mit igazolni.'
+  },
+  'rev.form.name': {
+    en: 'Your name', es: 'Tu nombre', fr: 'Votre nom', de: 'Dein Name', it: 'Il tuo nome', pt: 'O teu nome', el: 'Το όνομά σου',
+    nl: 'Je naam', ru: 'Ваше имя', ja: 'お名前', zh: '你的名字', ar: 'اسمك', no: 'Navnet ditt', hi: 'आपका नाम', id: 'Nama Anda',
+    tr: 'Adın', ko: '이름', pl: 'Twoje imię', vi: 'Tên của bạn', uk: 'Ваше ім’я', sv: 'Ditt namn', da: 'Dit navn', fi: 'Nimesi',
+    bg: 'Вашето име', ro: 'Numele tău', sr: 'Ваше име', cs: 'Vaše jméno', th: 'ชื่อของคุณ', bn: 'আপনার নাম', fa: 'نام شما',
+    he: 'השם שלך', hu: 'A neved'
+  },
+  'rev.form.role': {
+    en: 'Role or company', es: 'Cargo o empresa', fr: 'Poste ou entreprise', de: 'Rolle oder Firma', it: 'Ruolo o azienda',
+    pt: 'Cargo ou empresa', el: 'Ρόλος ή εταιρεία', nl: 'Functie of bedrijf', ru: 'Должность или компания', ja: '役職または会社名',
+    zh: '职位或公司', ar: 'المنصب أو الشركة', no: 'Rolle eller firma', hi: 'पद या कंपनी', id: 'Jabatan atau perusahaan',
+    tr: 'Unvan veya şirket', ko: '직함 또는 회사', pl: 'Stanowisko lub firma', vi: 'Vai trò hoặc công ty', uk: 'Посада або компанія',
+    sv: 'Roll eller företag', da: 'Rolle eller firma', fi: 'Rooli tai yritys', bg: 'Роля или фирма', ro: 'Rol sau companie',
+    sr: 'Улога или фирма', cs: 'Role nebo firma', th: 'ตำแหน่งหรือบริษัท', bn: 'পদ বা প্রতিষ্ঠান', fa: 'نقش یا شرکت',
+    he: 'תפקיד או חברה', hu: 'Szerep vagy cég'
+  },
+  'rev.form.optional': {
+    en: 'optional', es: 'opcional', fr: 'facultatif', de: 'optional', it: 'facoltativo', pt: 'opcional', el: 'προαιρετικό',
+    nl: 'optioneel', ru: 'необязательно', ja: '任意', zh: '可选', ar: 'اختياري', no: 'valgfritt', hi: 'वैकल्पिक', id: 'opsional',
+    tr: 'isteğe bağlı', ko: '선택', pl: 'opcjonalnie', vi: 'không bắt buộc', uk: 'необов’язково', sv: 'valfritt', da: 'valgfrit',
+    fi: 'valinnainen', bg: 'по избор', ro: 'opțional', sr: 'опционо', cs: 'nepovinné', th: 'ไม่บังคับ', bn: 'ঐচ্ছিক',
+    fa: 'اختیاری', he: 'לא חובה', hu: 'nem kötelező'
+  },
+  'rev.form.rating': {
+    en: 'Your rating', es: 'Tu valoración', fr: 'Votre note', de: 'Deine Bewertung', it: 'Il tuo voto', pt: 'A tua classificação',
+    el: 'Η βαθμολογία σου', nl: 'Je score', ru: 'Ваша оценка', ja: '評価', zh: '你的评分', ar: 'تقييمك', no: 'Din vurdering',
+    hi: 'आपकी रेटिंग', id: 'Penilaian Anda', tr: 'Puanın', ko: '평점', pl: 'Twoja ocena', vi: 'Điểm của bạn', uk: 'Ваша оцінка',
+    sv: 'Ditt betyg', da: 'Din vurdering', fi: 'Arvosanasi', bg: 'Вашата оценка', ro: 'Nota ta', sr: 'Ваша оцена',
+    cs: 'Vaše hodnocení', th: 'คะแนนของคุณ', bn: 'আপনার রেটিং', fa: 'امتیاز شما', he: 'הדירוג שלך', hu: 'Az értékelésed'
+  },
+  'rev.form.pickRating': {
+    en: 'Pick a rating', es: 'Elige una valoración', fr: 'Choisissez une note', de: 'Wähle eine Bewertung', it: 'Scegli un voto',
+    pt: 'Escolhe uma classificação', el: 'Διάλεξε βαθμολογία', nl: 'Kies een score', ru: 'Выберите оценку', ja: '評価を選択',
+    zh: '选择评分', ar: 'اختر تقييمًا', no: 'Velg en vurdering', hi: 'रेटिंग चुनें', id: 'Pilih penilaian', tr: 'Bir puan seç',
+    ko: '평점을 선택하세요', pl: 'Wybierz ocenę', vi: 'Chọn điểm', uk: 'Виберіть оцінку', sv: 'Välj ett betyg', da: 'Vælg en vurdering',
+    fi: 'Valitse arvosana', bg: 'Изберете оценка', ro: 'Alege o notă', sr: 'Изаберите оцену', cs: 'Vyberte hodnocení',
+    th: 'เลือกคะแนน', bn: 'একটি রেটিং বেছে নিন', fa: 'یک امتیاز انتخاب کنید', he: 'בחרו דירוג', hu: 'Válassz értékelést'
+  },
+  'rev.rating.1': {
+    en: 'Poor', es: 'Malo', fr: 'Mauvais', de: 'Schlecht', it: 'Scarso', pt: 'Fraco', el: 'Κακό', nl: 'Slecht', ru: 'Плохо',
+    ja: '不満', zh: '差', ar: 'ضعيف', no: 'Dårlig', hi: 'खराब', id: 'Buruk', tr: 'Kötü', ko: '나쁨', pl: 'Słabo', vi: 'Kém',
+    uk: 'Погано', sv: 'Dåligt', da: 'Dårligt', fi: 'Heikko', bg: 'Слабо', ro: 'Slab', sr: 'Лоше', cs: 'Špatné', th: 'แย่',
+    bn: 'খারাপ', fa: 'ضعیف', he: 'גרוע', hu: 'Gyenge'
+  },
+  'rev.rating.2': {
+    en: 'Fair', es: 'Regular', fr: 'Passable', de: 'Mäßig', it: 'Mediocre', pt: 'Razoável', el: 'Μέτριο', nl: 'Matig',
+    ru: 'Так себе', ja: 'やや不満', zh: '一般', ar: 'مقبول', no: 'Middels', hi: 'ठीक ठाक', id: 'Cukup', tr: 'İdare eder', ko: '보통 이하',
+    pl: 'Przeciętnie', vi: 'Tạm', uk: 'Посередньо', sv: 'Okej', da: 'Middel', fi: 'Kohtalainen', bg: 'Средно', ro: 'Acceptabil',
+    sr: 'Осредње', cs: 'Průměrné', th: 'พอใช้', bn: 'মোটামুটি', fa: 'متوسط', he: 'בינוני', hu: 'Közepes'
+  },
+  'rev.rating.3': {
+    en: 'Good', es: 'Bueno', fr: 'Bien', de: 'Gut', it: 'Buono', pt: 'Bom', el: 'Καλό', nl: 'Goed', ru: 'Хорошо', ja: '良い',
+    zh: '好', ar: 'جيد', no: 'Bra', hi: 'अच्छा', id: 'Baik', tr: 'İyi', ko: '좋음', pl: 'Dobrze', vi: 'Tốt', uk: 'Добре',
+    sv: 'Bra', da: 'Godt', fi: 'Hyvä', bg: 'Добро', ro: 'Bun', sr: 'Добро', cs: 'Dobré', th: 'ดี', bn: 'ভালো', fa: 'خوب',
+    he: 'טוב', hu: 'Jó'
+  },
+  'rev.rating.4': {
+    en: 'Very good', es: 'Muy bueno', fr: 'Très bien', de: 'Sehr gut', it: 'Molto buono', pt: 'Muito bom', el: 'Πολύ καλό',
+    nl: 'Erg goed', ru: 'Очень хорошо', ja: 'とても良い', zh: '很好', ar: 'جيد جدًا', no: 'Veldig bra', hi: 'बहुत अच्छा',
+    id: 'Sangat baik', tr: 'Çok iyi', ko: '매우 좋음', pl: 'Bardzo dobrze', vi: 'Rất tốt', uk: 'Дуже добре', sv: 'Mycket bra',
+    da: 'Meget godt', fi: 'Erittäin hyvä', bg: 'Много добро', ro: 'Foarte bun', sr: 'Веома добро', cs: 'Velmi dobré',
+    th: 'ดีมาก', bn: 'খুব ভালো', fa: 'خیلی خوب', he: 'טוב מאוד', hu: 'Nagyon jó'
+  },
+  'rev.rating.5': {
+    en: 'Excellent', es: 'Excelente', fr: 'Excellent', de: 'Ausgezeichnet', it: 'Eccellente', pt: 'Excelente', el: 'Εξαιρετικό',
+    nl: 'Uitstekend', ru: 'Отлично', ja: '最高', zh: '极好', ar: 'ممتاز', no: 'Utmerket', hi: 'उत्कृष्ट', id: 'Luar biasa',
+    tr: 'Mükemmel', ko: '최고', pl: 'Doskonale', vi: 'Xuất sắc', uk: 'Відмінно', sv: 'Utmärkt', da: 'Fremragende', fi: 'Erinomainen',
+    bg: 'Отлично', ro: 'Excelent', sr: 'Одлично', cs: 'Vynikající', th: 'ยอดเยี่ยม', bn: 'চমৎকার', fa: 'عالی', he: 'מעולה', hu: 'Kiváló'
+  },
+  'rev.form.text': {
+    en: 'Your review', es: 'Tu reseña', fr: 'Votre avis', de: 'Deine Bewertung', it: 'La tua recensione', pt: 'A tua avaliação',
+    el: 'Η κριτική σου', nl: 'Je beoordeling', ru: 'Ваш отзыв', ja: 'レビュー本文', zh: '你的评价', ar: 'تقييمك', no: 'Din anmeldelse',
+    hi: 'आपकी समीक्षा', id: 'Ulasan Anda', tr: 'Yorumun', ko: '리뷰 내용', pl: 'Twoja recenzja', vi: 'Đánh giá của bạn', uk: 'Ваш відгук',
+    sv: 'Din recension', da: 'Din anmeldelse', fi: 'Arviosi', bg: 'Вашият отзив', ro: 'Recenzia ta', sr: 'Ваша рецензија',
+    cs: 'Vaše recenze', th: 'รีวิวของคุณ', bn: 'আপনার রিভিউ', fa: 'نظر شما', he: 'הביקורת שלך', hu: 'A véleményed'
+  },
+  'rev.form.textPlaceholder': {
+    en: 'What did we work on, and how did it go?', es: '¿En qué trabajamos y cómo fue?', fr: 'Sur quoi avons nous travaillé, et comment ça s’est passé ?',
+    de: 'Woran haben wir gearbeitet, und wie lief es?', it: 'A cosa abbiamo lavorato e com’è andata?', pt: 'Em que trabalhámos e como correu?',
+    el: 'Σε τι δουλέψαμε και πώς πήγε;', nl: 'Waar hebben we aan gewerkt en hoe ging het?', ru: 'Над чем мы работали и как всё прошло?',
+    ja: '何を一緒に作り、どうでしたか？', zh: '我们做了什么，过程怎么样？', ar: 'على ماذا عملنا، وكيف سارت الأمور؟',
+    no: 'Hva jobbet vi med, og hvordan gikk det?', hi: 'हमने किस पर काम किया और कैसा रहा?', id: 'Apa yang kita kerjakan, dan bagaimana hasilnya?',
+    tr: 'Ne üzerinde çalıştık ve nasıl gitti?', ko: '어떤 작업을 함께했고, 어땠나요?', pl: 'Nad czym pracowaliśmy i jak poszło?',
+    vi: 'Chúng ta đã làm gì, và mọi thứ diễn ra thế nào?', uk: 'Над чим ми працювали і як усе минуло?', sv: 'Vad jobbade vi med, och hur gick det?',
+    da: 'Hvad arbejdede vi på, og hvordan gik det?', fi: 'Mitä teimme yhdessä, ja miten se sujui?', bg: 'По какво работихме и как мина?',
+    ro: 'La ce am lucrat și cum a mers?', sr: 'На чему смо радили и како је прошло?', cs: 'Na čem jsme pracovali a jak to šlo?',
+    th: 'เราทำอะไรด้วยกัน แล้วเป็นอย่างไรบ้าง?', bn: 'আমরা কী নিয়ে কাজ করেছি, আর কেমন হলো?', fa: 'روی چه چیزی کار کردیم و چطور پیش رفت؟',
+    he: 'על מה עבדנו, ואיך זה הלך?', hu: 'Min dolgoztunk, és hogy ment?'
+  },
+  'rev.form.submit': {
+    en: 'Publish review', es: 'Publicar reseña', fr: 'Publier l’avis', de: 'Bewertung veröffentlichen', it: 'Pubblica recensione',
+    pt: 'Publicar avaliação', el: 'Δημοσίευση κριτικής', nl: 'Beoordeling plaatsen', ru: 'Опубликовать отзыв', ja: 'レビューを公開',
+    zh: '发布评价', ar: 'نشر التقييم', no: 'Publiser anmeldelse', hi: 'समीक्षा प्रकाशित करें', id: 'Terbitkan ulasan', tr: 'Yorumu yayınla',
+    ko: '리뷰 게시', pl: 'Opublikuj recenzję', vi: 'Đăng đánh giá', uk: 'Опублікувати відгук', sv: 'Publicera recension',
+    da: 'Udgiv anmeldelse', fi: 'Julkaise arvio', bg: 'Публикувай отзива', ro: 'Publică recenzia', sr: 'Објави рецензију',
+    cs: 'Zveřejnit recenzi', th: 'เผยแพร่รีวิว', bn: 'রিভিউ প্রকাশ করুন', fa: 'انتشار نظر', he: 'פרסום הביקורת', hu: 'Vélemény közzététele'
+  },
+  'rev.form.submitting': {
+    en: 'Publishing…', es: 'Publicando…', fr: 'Publication…', de: 'Wird veröffentlicht…', it: 'Pubblicazione…', pt: 'A publicar…',
+    el: 'Δημοσίευση…', nl: 'Plaatsen…', ru: 'Публикуем…', ja: '公開中…', zh: '发布中…', ar: 'جارٍ النشر…', no: 'Publiserer…',
+    hi: 'प्रकाशित हो रहा है…', id: 'Menerbitkan…', tr: 'Yayınlanıyor…', ko: '게시 중…', pl: 'Publikowanie…', vi: 'Đang đăng…',
+    uk: 'Публікуємо…', sv: 'Publicerar…', da: 'Udgiver…', fi: 'Julkaistaan…', bg: 'Публикуване…', ro: 'Se publică…',
+    sr: 'Објављивање…', cs: 'Zveřejňuje se…', th: 'กำลังเผยแพร่…', bn: 'প্রকাশ হচ্ছে…', fa: 'در حال انتشار…', he: 'מפרסם…', hu: 'Közzététel…'
+  },
+  'rev.form.notice': {
+    en: 'Published instantly. Your name, rating and text are public; nothing else is stored.',
+    es: 'Se publica al instante. Tu nombre, valoración y texto son públicos; no se guarda nada más.',
+    fr: 'Publié instantanément. Votre nom, votre note et votre texte sont publics ; rien d’autre n’est conservé.',
+    de: 'Wird sofort veröffentlicht. Name, Bewertung und Text sind öffentlich; sonst wird nichts gespeichert.',
+    it: 'Pubblicata all’istante. Nome, voto e testo sono pubblici; non viene salvato nient’altro.',
+    pt: 'Publicado de imediato. O teu nome, classificação e texto são públicos; nada mais é guardado.',
+    el: 'Δημοσιεύεται αμέσως. Το όνομα, η βαθμολογία και το κείμενο είναι δημόσια· δεν αποθηκεύεται τίποτα άλλο.',
+    nl: 'Direct gepubliceerd. Je naam, score en tekst zijn openbaar; verder wordt niets opgeslagen.',
+    ru: 'Публикуется сразу. Имя, оценка и текст видны всем; больше ничего не сохраняется.',
+    ja: '即時に公開されます。名前、評価、本文は公開情報です。それ以外は保存しません。',
+    zh: '即时发布。你的名字、评分和文字是公开的；不会存储其他任何内容。',
+    ar: 'يُنشر فورًا. اسمك وتقييمك ونصك عامة؛ ولا يُخزَّن أي شيء آخر.',
+    no: 'Publiseres umiddelbart. Navn, vurdering og tekst er offentlige; ingenting annet lagres.',
+    hi: 'तुरंत प्रकाशित होता है। आपका नाम, रेटिंग और टेक्स्ट सार्वजनिक हैं; इसके अलावा कुछ भी संग्रहीत नहीं होता।',
+    id: 'Langsung tayang. Nama, penilaian, dan teks Anda bersifat publik; tidak ada yang lain disimpan.',
+    tr: 'Anında yayınlanır. Adın, puanın ve metnin herkese açıktır; başka hiçbir şey saklanmaz.',
+    ko: '즉시 공개됩니다. 이름, 평점, 내용은 공개되며 그 외에는 아무것도 저장하지 않습니다.',
+    pl: 'Publikowane od razu. Imię, ocena i tekst są publiczne; nic innego nie jest zapisywane.',
+    vi: 'Đăng ngay lập tức. Tên, điểm và nội dung của bạn là công khai; không lưu gì khác.',
+    uk: 'Публікується миттєво. Ім’я, оцінка й текст відкриті для всіх; більше нічого не зберігається.',
+    sv: 'Publiceras direkt. Namn, betyg och text är offentliga; inget annat sparas.',
+    da: 'Udgives straks. Navn, vurdering og tekst er offentlige; intet andet gemmes.',
+    fi: 'Julkaistaan heti. Nimi, arvosana ja teksti ovat julkisia; mitään muuta ei tallenneta.',
+    bg: 'Публикува се веднага. Името, оценката и текстът са публични; нищо друго не се съхранява.',
+    ro: 'Publicat instant. Numele, nota și textul sunt publice; nimic altceva nu este stocat.',
+    sr: 'Објављује се одмах. Име, оцена и текст су јавни; ништа друго се не чува.',
+    cs: 'Zveřejní se okamžitě. Jméno, hodnocení a text jsou veřejné; nic jiného se neukládá.',
+    th: 'เผยแพร่ทันที ชื่อ คะแนน และข้อความของคุณเป็นสาธารณะ ไม่มีการเก็บข้อมูลอื่นใด',
+    bn: 'সাথে সাথেই প্রকাশিত হয়। আপনার নাম, রেটিং আর লেখা সবার জন্য দৃশ্যমান; আর কিছুই সংরক্ষণ করা হয় না।',
+    fa: 'فوراً منتشر می‌شود. نام، امتیاز و متن شما عمومی است؛ چیز دیگری ذخیره نمی‌شود.',
+    he: 'מתפרסם מיד. השם, הדירוג והטקסט שלך פומביים; שום דבר אחר לא נשמר.',
+    hu: 'Azonnal megjelenik. A neved, az értékelésed és a szöveg nyilvános; semmi mást nem tárolunk.'
+  },
+  'rev.success.title': {
+    en: 'Thank you, {name}.', es: 'Gracias, {name}.', fr: 'Merci, {name}.', de: 'Danke, {name}.', it: 'Grazie, {name}.',
+    pt: 'Obrigado, {name}.', el: 'Ευχαριστώ, {name}.', nl: 'Bedankt, {name}.', ru: 'Спасибо, {name}.', ja: '{name} さん、ありがとうございます。',
+    zh: '谢谢你，{name}。', ar: 'شكرًا لك، {name}.', no: 'Takk, {name}.', hi: 'धन्यवाद, {name}।', id: 'Terima kasih, {name}.',
+    tr: 'Teşekkürler, {name}.', ko: '{name} 님, 감사합니다.', pl: 'Dziękuję, {name}.', vi: 'Cảm ơn, {name}.', uk: 'Дякую, {name}.',
+    sv: 'Tack, {name}.', da: 'Tak, {name}.', fi: 'Kiitos, {name}.', bg: 'Благодаря, {name}.', ro: 'Mulțumesc, {name}.',
+    sr: 'Хвала, {name}.', cs: 'Děkuji, {name}.', th: 'ขอบคุณครับ {name}', bn: 'ধন্যবাদ, {name}।', fa: 'متشکرم، {name}.',
+    he: 'תודה, {name}.', hu: 'Köszönöm, {name}.'
+  },
+  'rev.success.body': {
+    en: 'Your review is live.', es: 'Tu reseña ya está publicada.', fr: 'Votre avis est en ligne.', de: 'Deine Bewertung ist online.',
+    it: 'La tua recensione è online.', pt: 'A tua avaliação já está online.', el: 'Η κριτική σου είναι online.', nl: 'Je beoordeling staat online.',
+    ru: 'Ваш отзыв опубликован.', ja: 'レビューが公開されました。', zh: '你的评价已发布。', ar: 'تقييمك منشور الآن.', no: 'Anmeldelsen din er publisert.',
+    hi: 'आपकी समीक्षा प्रकाशित हो गई है।', id: 'Ulasan Anda sudah tayang.', tr: 'Yorumun yayında.', ko: '리뷰가 공개되었습니다.',
+    pl: 'Twoja recenzja jest już widoczna.', vi: 'Đánh giá của bạn đã được đăng.', uk: 'Ваш відгук опубліковано.', sv: 'Din recension är publicerad.',
+    da: 'Din anmeldelse er live.', fi: 'Arviosi on julkaistu.', bg: 'Отзивът ви е публикуван.', ro: 'Recenzia ta este publicată.',
+    sr: 'Ваша рецензија је објављена.', cs: 'Vaše recenze je zveřejněná.', th: 'รีวิวของคุณเผยแพร่แล้ว', bn: 'আপনার রিভিউ প্রকাশিত হয়েছে।',
+    fa: 'نظر شما منتشر شد.', he: 'הביקורת שלך פורסמה.', hu: 'A véleményed megjelent.'
+  },
+  'rev.success.view': {
+    en: 'See it', es: 'Verla', fr: 'Le voir', de: 'Ansehen', it: 'Vedila', pt: 'Ver', el: 'Δες την', nl: 'Bekijken', ru: 'Посмотреть',
+    ja: '見る', zh: '查看', ar: 'عرض', no: 'Se den', hi: 'देखें', id: 'Lihat', tr: 'Gör', ko: '보기', pl: 'Zobacz', vi: 'Xem',
+    uk: 'Переглянути', sv: 'Visa', da: 'Se den', fi: 'Katso', bg: 'Виж го', ro: 'Vezi', sr: 'Погледај', cs: 'Zobrazit', th: 'ดู',
+    bn: 'দেখুন', fa: 'مشاهده', he: 'הצגה', hu: 'Megnézem'
+  },
+  'rev.own.title': {
+    en: 'You already left a review.', es: 'Ya has dejado una reseña.', fr: 'Vous avez déjà laissé un avis.', de: 'Du hast schon eine Bewertung hinterlassen.',
+    it: 'Hai già lasciato una recensione.', pt: 'Já deixaste uma avaliação.', el: 'Έχεις ήδη αφήσει κριτική.', nl: 'Je hebt al een beoordeling achtergelaten.',
+    ru: 'Вы уже оставили отзыв.', ja: 'すでにレビューを投稿済みです。', zh: '你已经留下过评价。', ar: 'لقد تركت تقييمًا بالفعل.', no: 'Du har allerede lagt igjen en anmeldelse.',
+    hi: 'आप पहले ही समीक्षा दे चुके हैं।', id: 'Anda sudah meninggalkan ulasan.', tr: 'Zaten bir yorum bıraktın.', ko: '이미 리뷰를 남기셨습니다.',
+    pl: 'Już zostawiłeś recenzję.', vi: 'Bạn đã để lại đánh giá rồi.', uk: 'Ви вже залишили відгук.', sv: 'Du har redan lämnat en recension.',
+    da: 'Du har allerede skrevet en anmeldelse.', fi: 'Olet jo jättänyt arvion.', bg: 'Вече сте оставили отзив.', ro: 'Ai lăsat deja o recenzie.',
+    sr: 'Већ сте оставили рецензију.', cs: 'Recenzi už jste zanechali.', th: 'คุณเขียนรีวิวไว้แล้ว', bn: 'আপনি আগেই একটি রিভিউ দিয়েছেন।',
+    fa: 'شما قبلاً نظری ثبت کرده‌اید.', he: 'כבר השארת ביקורת.', hu: 'Már írtál véleményt.'
+  },
+  'rev.own.body': {
+    en: 'To change or remove it, send me an email. There is no account to log into, on purpose.',
+    es: 'Para cambiarla o eliminarla, envíame un correo. No hay ninguna cuenta a la que entrar, a propósito.',
+    fr: 'Pour le modifier ou le supprimer, envoyez moi un e mail. Il n’y a aucun compte où se connecter, c’est voulu.',
+    de: 'Zum Ändern oder Entfernen schreib mir eine E Mail. Es gibt absichtlich kein Konto zum Einloggen.',
+    it: 'Per modificarla o rimuoverla, scrivimi un’email. Non c’è nessun account a cui accedere, di proposito.',
+    pt: 'Para a alterar ou remover, envia me um email. Não há conta para entrar, de propósito.',
+    el: 'Για να την αλλάξεις ή να την αφαιρέσεις, στείλε μου ένα email. Δεν υπάρχει λογαριασμός για σύνδεση, επίτηδες.',
+    nl: 'Wil je hem aanpassen of verwijderen, stuur me dan een e mail. Er is bewust geen account om op in te loggen.',
+    ru: 'Чтобы изменить или удалить его, напишите мне на почту. Аккаунта для входа нет, и это намеренно.',
+    ja: '変更や削除はメールでご連絡ください。ログインできるアカウントは、あえて用意していません。',
+    zh: '如需修改或删除，请给我发邮件。这里故意没有可登录的账号。',
+    ar: 'لتغييره أو حذفه، أرسل لي بريدًا إلكترونيًا. لا يوجد حساب لتسجيل الدخول، وهذا مقصود.',
+    no: 'Send meg en e post for å endre eller fjerne den. Det finnes med hensikt ingen konto å logge inn på.',
+    hi: 'इसे बदलने या हटाने के लिए मुझे ईमेल करें। लॉग इन करने के लिए कोई खाता नहीं है, और यह जानबूझकर है।',
+    id: 'Untuk mengubah atau menghapusnya, kirimi saya email. Memang sengaja tidak ada akun untuk masuk.',
+    tr: 'Değiştirmek veya kaldırmak için bana e posta gönder. Bilerek giriş yapılacak bir hesap yok.',
+    ko: '수정이나 삭제를 원하시면 이메일을 보내 주세요. 로그인할 계정은 의도적으로 두지 않았습니다.',
+    pl: 'Aby ją zmienić lub usunąć, napisz do mnie e mail. Celowo nie ma tu konta, na które można się zalogować.',
+    vi: 'Để chỉnh sửa hoặc xóa, hãy gửi email cho tôi. Ở đây cố ý không có tài khoản để đăng nhập.',
+    uk: 'Щоб змінити або видалити його, напишіть мені на пошту. Акаунта для входу немає, і це навмисно.',
+    sv: 'Skicka mig ett mejl för att ändra eller ta bort den. Det finns avsiktligt inget konto att logga in på.',
+    da: 'Send mig en e mail for at ændre eller fjerne den. Der er med vilje ingen konto at logge ind på.',
+    fi: 'Jos haluat muuttaa tai poistaa sen, lähetä minulle sähköpostia. Kirjautumistiliä ei ole, tarkoituksella.',
+    bg: 'За да го промените или премахнете, пишете ми имейл. Нарочно няма акаунт, в който да влезете.',
+    ro: 'Pentru a o modifica sau șterge, trimite mi un email. Nu există niciun cont în care să te loghezi, intenționat.',
+    sr: 'Да бисте је изменили или уклонили, пошаљите ми имејл. Намерно не постоји налог за пријаву.',
+    cs: 'Pro změnu nebo odstranění mi napište e mail. Účet k přihlášení tu záměrně není.',
+    th: 'หากต้องการแก้ไขหรือลบ ส่งอีเมลหาผมได้เลย ที่นี่ตั้งใจไม่มีบัญชีให้ล็อกอิน',
+    bn: 'পরিবর্তন বা মুছে ফেলতে আমাকে ইমেইল করুন। ইচ্ছে করেই এখানে লগইন করার কোনো অ্যাকাউন্ট রাখা হয়নি।',
+    fa: 'برای تغییر یا حذف آن، به من ایمیل بزنید. عمداً هیچ حسابی برای ورود وجود ندارد.',
+    he: 'כדי לשנות או להסיר אותה, שלחו לי אימייל. בכוונה אין כאן חשבון להתחבר אליו.',
+    hu: 'Ha módosítanád vagy törölnéd, írj nekem egy e mailt. Szándékosan nincs fiók, amibe be lehetne lépni.'
+  },
+  'rev.error.length': {
+    en: 'Use {min}–{max} characters.', es: 'Usa entre {min} y {max} caracteres.', fr: 'Utilisez {min} à {max} caractères.',
+    de: 'Verwende {min}–{max} Zeichen.', it: 'Usa da {min} a {max} caratteri.', pt: 'Usa entre {min} e {max} caracteres.',
+    el: 'Χρησιμοποίησε {min}–{max} χαρακτήρες.', nl: 'Gebruik {min}–{max} tekens.', ru: 'От {min} до {max} символов.',
+    ja: '{min}～{max} 文字で入力してください。', zh: '请输入 {min}–{max} 个字符。', ar: 'استخدم من {min} إلى {max} حرفًا.',
+    no: 'Bruk {min}–{max} tegn.', hi: '{min}–{max} अक्षर लिखें।', id: 'Gunakan {min}–{max} karakter.', tr: '{min}–{max} karakter kullan.',
+    ko: '{min}~{max}자로 입력해 주세요.', pl: 'Użyj od {min} do {max} znaków.', vi: 'Dùng {min}–{max} ký tự.', uk: 'Від {min} до {max} символів.',
+    sv: 'Använd {min}–{max} tecken.', da: 'Brug {min}–{max} tegn.', fi: 'Käytä {min}–{max} merkkiä.', bg: 'Използвайте {min}–{max} знака.',
+    ro: 'Folosește {min}–{max} caractere.', sr: 'Користите {min}–{max} знакова.', cs: 'Použijte {min}–{max} znaků.',
+    th: 'ใช้ {min}–{max} ตัวอักษร', bn: '{min}–{max} অক্ষর লিখুন।', fa: 'بین {min} تا {max} نویسه وارد کنید.',
+    he: 'השתמשו ב {min}–{max} תווים.', hu: 'Használj {min}–{max} karaktert.'
+  },
+  'rev.error.max': {
+    en: 'Up to {max} characters.', es: 'Máximo {max} caracteres.', fr: '{max} caractères maximum.', de: 'Höchstens {max} Zeichen.',
+    it: 'Massimo {max} caratteri.', pt: 'Até {max} caracteres.', el: 'Έως {max} χαρακτήρες.', nl: 'Maximaal {max} tekens.',
+    ru: 'Не более {max} символов.', ja: '{max} 文字以内で入力してください。', zh: '最多 {max} 个字符。', ar: 'حتى {max} حرفًا.',
+    no: 'Maks {max} tegn.', hi: 'अधिकतम {max} अक्षर।', id: 'Maksimal {max} karakter.', tr: 'En fazla {max} karakter.',
+    ko: '최대 {max}자까지 가능합니다.', pl: 'Maksymalnie {max} znaków.', vi: 'Tối đa {max} ký tự.', uk: 'До {max} символів.',
+    sv: 'Högst {max} tecken.', da: 'Højst {max} tegn.', fi: 'Enintään {max} merkkiä.', bg: 'До {max} знака.', ro: 'Maximum {max} caractere.',
+    sr: 'Највише {max} знакова.', cs: 'Nejvýše {max} znaků.', th: 'สูงสุด {max} ตัวอักษร', bn: 'সর্বোচ্চ {max} অক্ষর।',
+    fa: 'حداکثر {max} نویسه.', he: 'עד {max} תווים.', hu: 'Legfeljebb {max} karakter.'
+  },
+  'rev.error.link': {
+    en: 'Links aren’t allowed in reviews.', es: 'No se permiten enlaces en las reseñas.', fr: 'Les liens ne sont pas autorisés dans les avis.',
+    de: 'Links sind in Bewertungen nicht erlaubt.', it: 'I link non sono ammessi nelle recensioni.', pt: 'Não são permitidos links nas avaliações.',
+    el: 'Δεν επιτρέπονται σύνδεσμοι στις κριτικές.', nl: 'Links zijn niet toegestaan in beoordelingen.', ru: 'Ссылки в отзывах запрещены.',
+    ja: 'レビューにリンクは含められません。', zh: '评价中不允许包含链接。', ar: 'الروابط غير مسموح بها في التقييمات.', no: 'Lenker er ikke tillatt i anmeldelser.',
+    hi: 'समीक्षाओं में लिंक की अनुमति नहीं है।', id: 'Tautan tidak diperbolehkan dalam ulasan.', tr: 'Yorumlarda bağlantıya izin verilmez.',
+    ko: '리뷰에는 링크를 넣을 수 없습니다.', pl: 'Linki w recenzjach są niedozwolone.', vi: 'Không được chèn liên kết trong đánh giá.',
+    uk: 'Посилання у відгуках заборонені.', sv: 'Länkar är inte tillåtna i recensioner.', da: 'Links er ikke tilladt i anmeldelser.',
+    fi: 'Linkit eivät ole sallittuja arvioissa.', bg: 'Линкове не са разрешени в отзивите.', ro: 'Linkurile nu sunt permise în recenzii.',
+    sr: 'Линкови нису дозвољени у рецензијама.', cs: 'Odkazy nejsou v recenzích povoleny.', th: 'ไม่อนุญาตให้ใส่ลิงก์ในรีวิว',
+    bn: 'রিভিউতে লিংক দেওয়া যাবে না।', fa: 'درج لینک در نظرات مجاز نیست.', he: 'אין להוסיף קישורים בביקורות.', hu: 'A véleményekben nem lehet link.'
+  },
+  'rev.error.blocked': {
+    en: 'That wording can’t be published here.', es: 'Esa redacción no se puede publicar aquí.', fr: 'Cette formulation ne peut pas être publiée ici.',
+    de: 'Diese Formulierung kann hier nicht veröffentlicht werden.', it: 'Questa formulazione non può essere pubblicata qui.',
+    pt: 'Essa formulação não pode ser publicada aqui.', el: 'Αυτή η διατύπωση δεν μπορεί να δημοσιευτεί εδώ.', nl: 'Die formulering kan hier niet geplaatst worden.',
+    ru: 'Такую формулировку здесь опубликовать нельзя.', ja: 'この表現はここでは公開できません。', zh: '这样的措辞无法在此发布。',
+    ar: 'لا يمكن نشر هذه الصياغة هنا.', no: 'Den formuleringen kan ikke publiseres her.', hi: 'यह शब्दावली यहाँ प्रकाशित नहीं की जा सकती।',
+    id: 'Kata kata itu tidak bisa diterbitkan di sini.', tr: 'Bu ifade burada yayınlanamaz.', ko: '해당 표현은 여기에 게시할 수 없습니다.',
+    pl: 'Takie sformułowanie nie może zostać tu opublikowane.', vi: 'Cách diễn đạt này không thể đăng ở đây.', uk: 'Таке формулювання тут опублікувати не можна.',
+    sv: 'Den formuleringen kan inte publiceras här.', da: 'Den formulering kan ikke udgives her.', fi: 'Tuota sanamuotoa ei voi julkaista tässä.',
+    bg: 'Тази формулировка не може да бъде публикувана тук.', ro: 'Formularea aceea nu poate fi publicată aici.', sr: 'Та формулација не може бити објављена овде.',
+    cs: 'Tuto formulaci tu nelze zveřejnit.', th: 'ถ้อยคำนี้ไม่สามารถเผยแพร่ที่นี่ได้', bn: 'এই ভাষা এখানে প্রকাশ করা যাবে না।',
+    fa: 'این عبارت را نمی‌توان اینجا منتشر کرد.', he: 'לא ניתן לפרסם כאן את הניסוח הזה.', hu: 'Ez a megfogalmazás itt nem tehető közzé.'
+  },
+  'rev.error.invalid': {
+    en: 'Please check the highlighted fields.', es: 'Revisa los campos marcados.', fr: 'Vérifiez les champs signalés.', de: 'Bitte prüfe die markierten Felder.',
+    it: 'Controlla i campi evidenziati.', pt: 'Verifica os campos assinalados.', el: 'Έλεγξε τα επισημασμένα πεδία.', nl: 'Controleer de gemarkeerde velden.',
+    ru: 'Проверьте выделенные поля.', ja: 'ハイライトされた項目を確認してください。', zh: '请检查标出的字段。', ar: 'يرجى مراجعة الحقول المحددة.',
+    no: 'Sjekk de markerte feltene.', hi: 'हाइलाइट किए गए फ़ील्ड जाँचें।', id: 'Periksa kolom yang ditandai.', tr: 'Lütfen işaretli alanları kontrol et.',
+    ko: '표시된 항목을 확인해 주세요.', pl: 'Sprawdź zaznaczone pola.', vi: 'Vui lòng kiểm tra các trường được đánh dấu.', uk: 'Перевірте виділені поля.',
+    sv: 'Kontrollera de markerade fälten.', da: 'Tjek de markerede felter.', fi: 'Tarkista korostetut kentät.', bg: 'Проверете отбелязаните полета.',
+    ro: 'Verifică câmpurile evidențiate.', sr: 'Проверите означена поља.', cs: 'Zkontrolujte zvýrazněná pole.', th: 'กรุณาตรวจสอบช่องที่ไฮไลต์ไว้',
+    bn: 'চিহ্নিত ঘরগুলো দেখে নিন।', fa: 'فیلدهای مشخص‌شده را بررسی کنید.', he: 'בדקו את השדות המסומנים.', hu: 'Ellenőrizd a kiemelt mezőket.'
+  },
+  'rev.error.rateLimited': {
+    en: 'You sent a review recently. Try again {when}.', es: 'Has enviado una reseña hace poco. Inténtalo de nuevo {when}.',
+    fr: 'Vous avez envoyé un avis récemment. Réessayez {when}.', de: 'Du hast kürzlich eine Bewertung gesendet. Versuch es {when} noch einmal.',
+    it: 'Hai inviato una recensione di recente. Riprova {when}.', pt: 'Enviaste uma avaliação há pouco. Tenta outra vez {when}.',
+    el: 'Έστειλες κριτική πρόσφατα. Δοκίμασε ξανά {when}.', nl: 'Je hebt kort geleden een beoordeling gestuurd. Probeer het {when} opnieuw.',
+    ru: 'Вы недавно отправляли отзыв. Попробуйте снова {when}.', ja: '最近レビューを送信しました。{when}にもう一度お試しください。',
+    zh: '你最近刚发过评价。请{when}再试。', ar: 'أرسلت تقييمًا مؤخرًا. حاول مرة أخرى {when}.', no: 'Du sendte en anmeldelse nylig. Prøv igjen {when}.',
+    hi: 'आपने हाल ही में एक समीक्षा भेजी है। {when} फिर कोशिश करें।', id: 'Anda baru saja mengirim ulasan. Coba lagi {when}.',
+    tr: 'Kısa süre önce bir yorum gönderdin. {when} tekrar dene.', ko: '최근에 리뷰를 보내셨습니다. {when} 다시 시도해 주세요.',
+    pl: 'Niedawno wysłałeś recenzję. Spróbuj ponownie {when}.', vi: 'Bạn vừa gửi một đánh giá gần đây. Hãy thử lại {when}.',
+    uk: 'Ви недавно надсилали відгук. Спробуйте ще раз {when}.', sv: 'Du skickade nyss en recension. Försök igen {when}.',
+    da: 'Du har lige sendt en anmeldelse. Prøv igen {when}.', fi: 'Lähetit arvion äskettäin. Yritä uudelleen {when}.',
+    bg: 'Наскоро изпратихте отзив. Опитайте отново {when}.', ro: 'Ai trimis o recenzie recent. Încearcă din nou {when}.',
+    sr: 'Недавно сте послали рецензију. Покушајте поново {when}.', cs: 'Nedávno jste odeslali recenzi. Zkuste to znovu {when}.',
+    th: 'คุณเพิ่งส่งรีวิวไปเมื่อไม่นานนี้ ลองใหม่{when}', bn: 'আপনি সম্প্রতি একটি রিভিউ পাঠিয়েছেন। {when} আবার চেষ্টা করুন।',
+    fa: 'شما به‌تازگی نظری ارسال کرده‌اید. {when} دوباره تلاش کنید.', he: 'שלחת ביקורת לא מזמן. נסו שוב {when}.',
+    hu: 'Nemrég küldtél véleményt. Próbáld újra {when}.'
+  },
+  'rev.error.later': {
+    en: 'Not taking new reviews right now. Try again later.', es: 'Ahora mismo no se aceptan reseñas nuevas. Inténtalo más tarde.',
+    fr: 'Impossible d’accepter de nouveaux avis pour le moment. Réessayez plus tard.', de: 'Gerade werden keine neuen Bewertungen angenommen. Versuch es später noch einmal.',
+    it: 'Al momento non si accettano nuove recensioni. Riprova più tardi.', pt: 'De momento não aceitamos novas avaliações. Tenta mais tarde.',
+    el: 'Δεν γίνονται δεκτές νέες κριτικές αυτή τη στιγμή. Δοκίμασε αργότερα.', nl: 'Er worden nu even geen nieuwe beoordelingen aangenomen. Probeer het later opnieuw.',
+    ru: 'Сейчас новые отзывы не принимаются. Попробуйте позже.', ja: '現在、新しいレビューを受け付けていません。後でもう一度お試しください。',
+    zh: '目前暂不接受新评价。请稍后再试。', ar: 'لا نستقبل تقييمات جديدة الآن. حاول لاحقًا.', no: 'Tar ikke imot nye anmeldelser akkurat nå. Prøv igjen senere.',
+    hi: 'अभी नई समीक्षाएँ स्वीकार नहीं की जा रही हैं। बाद में फिर कोशिश करें।', id: 'Saat ini tidak menerima ulasan baru. Coba lagi nanti.',
+    tr: 'Şu anda yeni yorum alınmıyor. Daha sonra tekrar dene.', ko: '지금은 새 리뷰를 받지 않습니다. 나중에 다시 시도해 주세요.',
+    pl: 'Obecnie nie przyjmujemy nowych recenzji. Spróbuj później.', vi: 'Hiện không nhận đánh giá mới. Hãy thử lại sau.',
+    uk: 'Зараз нові відгуки не приймаються. Спробуйте пізніше.', sv: 'Tar inte emot nya recensioner just nu. Försök igen senare.',
+    da: 'Tager ikke imod nye anmeldelser lige nu. Prøv igen senere.', fi: 'Uusia arvioita ei oteta vastaan juuri nyt. Yritä myöhemmin uudelleen.',
+    bg: 'В момента не се приемат нови отзиви. Опитайте по късно.', ro: 'Nu se acceptă recenzii noi momentan. Încearcă mai târziu.',
+    sr: 'Тренутно се не примају нове рецензије. Покушајте касније.', cs: 'Nové recenze se teď nepřijímají. Zkuste to později.',
+    th: 'ขณะนี้ยังไม่รับรีวิวใหม่ ลองใหม่ภายหลัง', bn: 'এখন নতুন রিভিউ নেওয়া হচ্ছে না। পরে আবার চেষ্টা করুন।',
+    fa: 'در حال حاضر نظر جدیدی پذیرفته نمی‌شود. بعداً دوباره تلاش کنید.', he: 'לא מקבלים ביקורות חדשות כרגע. נסו שוב מאוחר יותר.',
+    hu: 'Most nem fogadunk új véleményeket. Próbáld újra később.'
+  },
+  'rev.error.generic': {
+    en: 'Something went wrong. Please try again.', es: 'Algo ha fallado. Inténtalo de nuevo.', fr: 'Une erreur s’est produite. Réessayez.',
+    de: 'Etwas ist schiefgelaufen. Bitte versuch es noch einmal.', it: 'Qualcosa è andato storto. Riprova.', pt: 'Algo correu mal. Tenta outra vez.',
+    el: 'Κάτι πήγε στραβά. Δοκίμασε ξανά.', nl: 'Er ging iets mis. Probeer het opnieuw.', ru: 'Что то пошло не так. Попробуйте ещё раз.',
+    ja: '問題が発生しました。もう一度お試しください。', zh: '出了点问题。请重试。', ar: 'حدث خطأ ما. يرجى المحاولة مرة أخرى.', no: 'Noe gikk galt. Prøv igjen.',
+    hi: 'कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।', id: 'Terjadi kesalahan. Silakan coba lagi.', tr: 'Bir şeyler ters gitti. Lütfen tekrar dene.',
+    ko: '문제가 발생했습니다. 다시 시도해 주세요.', pl: 'Coś poszło nie tak. Spróbuj ponownie.', vi: 'Đã xảy ra lỗi. Vui lòng thử lại.',
+    uk: 'Щось пішло не так. Спробуйте ще раз.', sv: 'Något gick fel. Försök igen.', da: 'Noget gik galt. Prøv igen.', fi: 'Jotain meni pieleen. Yritä uudelleen.',
+    bg: 'Нещо се обърка. Опитайте отново.', ro: 'Ceva nu a mers. Încearcă din nou.', sr: 'Нешто је пошло наопако. Покушајте поново.',
+    cs: 'Něco se pokazilo. Zkuste to znovu.', th: 'เกิดข้อผิดพลาด กรุณาลองใหม่', bn: 'কিছু একটা ভুল হয়েছে। আবার চেষ্টা করুন।',
+    fa: 'مشکلی پیش آمد. دوباره تلاش کنید.', he: 'משהו השתבש. נסו שוב.', hu: 'Valami hiba történt. Próbáld újra.'
+  },
+  'rev.error.load': {
+    en: 'Reviews couldn’t be loaded.', es: 'No se han podido cargar las reseñas.', fr: 'Impossible de charger les avis.', de: 'Die Bewertungen konnten nicht geladen werden.',
+    it: 'Impossibile caricare le recensioni.', pt: 'Não foi possível carregar as avaliações.', el: 'Δεν ήταν δυνατή η φόρτωση των κριτικών.',
+    nl: 'Beoordelingen konden niet worden geladen.', ru: 'Не удалось загрузить отзывы.', ja: 'レビューを読み込めませんでした。', zh: '无法加载评价。',
+    ar: 'تعذّر تحميل التقييمات.', no: 'Kunne ikke laste anmeldelsene.', hi: 'समीक्षाएँ लोड नहीं हो सकीं।', id: 'Ulasan tidak dapat dimuat.',
+    tr: 'Yorumlar yüklenemedi.', ko: '리뷰를 불러올 수 없습니다.', pl: 'Nie udało się wczytać recenzji.', vi: 'Không thể tải đánh giá.',
+    uk: 'Не вдалося завантажити відгуки.', sv: 'Recensionerna kunde inte laddas.', da: 'Anmeldelserne kunne ikke indlæses.', fi: 'Arvioita ei voitu ladata.',
+    bg: 'Отзивите не можаха да се заредят.', ro: 'Recenziile nu au putut fi încărcate.', sr: 'Рецензије није било могуће учитати.',
+    cs: 'Recenze se nepodařilo načíst.', th: 'ไม่สามารถโหลดรีวิวได้', bn: 'রিভিউ লোড করা যায়নি।', fa: 'بارگذاری نظرات ممکن نشد.',
+    he: 'לא ניתן היה לטעון את הביקורות.', hu: 'A véleményeket nem sikerült betölteni.'
+  },
+  'rev.retry': {
+    en: 'Retry', es: 'Reintentar', fr: 'Réessayer', de: 'Erneut versuchen', it: 'Riprova', pt: 'Tentar de novo', el: 'Δοκίμασε ξανά',
+    nl: 'Opnieuw', ru: 'Повторить', ja: '再試行', zh: '重试', ar: 'إعادة المحاولة', no: 'Prøv igjen', hi: 'फिर कोशिश करें', id: 'Coba lagi',
+    tr: 'Tekrar dene', ko: '다시 시도', pl: 'Spróbuj ponownie', vi: 'Thử lại', uk: 'Повторити', sv: 'Försök igen', da: 'Prøv igen',
+    fi: 'Yritä uudelleen', bg: 'Опитай отново', ro: 'Reîncearcă', sr: 'Покушај поново', cs: 'Zkusit znovu', th: 'ลองใหม่', bn: 'আবার চেষ্টা করুন',
+    fa: 'تلاش دوباره', he: 'ניסיון חוזר', hu: 'Újra'
+  },
+  'rev.cta': {
+    en: 'Worked with me? Leave a review', es: '¿Hemos trabajado juntos? Deja una reseña', fr: 'On a travaillé ensemble ? Laissez un avis',
+    de: 'Haben wir zusammengearbeitet? Hinterlass eine Bewertung', it: 'Abbiamo lavorato insieme? Lascia una recensione',
+    pt: 'Trabalhámos juntos? Deixa uma avaliação', el: 'Δουλέψαμε μαζί; Άφησε μια κριτική', nl: 'Samengewerkt? Laat een beoordeling achter',
+    ru: 'Работали со мной? Оставьте отзыв', ja: '一緒に仕事をしましたか？レビューを残す', zh: '和我合作过？留下评价', ar: 'عملت معي؟ اترك تقييمًا',
+    no: 'Har vi jobbet sammen? Legg igjen en anmeldelse', hi: 'मेरे साथ काम किया है? समीक्षा दें', id: 'Pernah bekerja sama? Tinggalkan ulasan',
+    tr: 'Birlikte çalıştık mı? Bir yorum bırak', ko: '함께 작업하셨나요? 리뷰를 남겨 주세요', pl: 'Pracowaliśmy razem? Zostaw recenzję',
+    vi: 'Đã làm việc cùng tôi? Để lại đánh giá', uk: 'Працювали зі мною? Залиште відгук', sv: 'Har vi jobbat ihop? Lämna en recension',
+    da: 'Har vi arbejdet sammen? Skriv en anmeldelse', fi: 'Teimmekö yhteistyötä? Jätä arvio', bg: 'Работили сме заедно? Оставете отзив',
+    ro: 'Am lucrat împreună? Lasă o recenzie', sr: 'Радили смо заједно? Оставите рецензију', cs: 'Pracovali jsme spolu? Zanechte recenzi',
+    th: 'เคยร่วมงานกับผม? ฝากรีวิวไว้ได้เลย', bn: 'আমার সাথে কাজ করেছেন? একটি রিভিউ দিন', fa: 'با من کار کرده‌اید؟ نظر بدهید',
+    he: 'עבדנו יחד? השאירו ביקורת', hu: 'Dolgoztunk együtt? Írj véleményt'
+  }
+}
+mergeLabels(REVIEW_LABELS)
+
+const REVIEW_PLURALS = {
+  'rev.count': {
+    one: {
+      en: '{n} review', es: '{n} reseña', fr: '{n} avis', de: '{n} Bewertung', it: '{n} recensione', pt: '{n} avaliação',
+      el: '{n} κριτική', nl: '{n} beoordeling', ru: '{n} отзыв', ja: '{n} 件のレビュー', zh: '{n} 条评价', ar: 'تقييم واحد',
+      no: '{n} anmeldelse', hi: '{n} समीक्षा', id: '{n} ulasan', tr: '{n} yorum', ko: '리뷰 {n}개', pl: '{n} recenzja',
+      vi: '{n} đánh giá', uk: '{n} відгук', sv: '{n} recension', da: '{n} anmeldelse', fi: '{n} arvio', bg: '{n} отзив',
+      ro: '{n} recenzie', sr: '{n} рецензија', cs: '{n} recenze', th: '{n} รีวิว', bn: '{n}টি রিভিউ', fa: '{n} نظر',
+      he: 'ביקורת אחת', hu: '{n} vélemény'
+    },
+    two: { ar: 'تقييمان', he: 'שתי ביקורות' },
+    few: {
+      ru: '{n} отзыва', uk: '{n} відгуки', pl: '{n} recenzje', cs: '{n} recenze', sr: '{n} рецензије',
+      ro: '{n} recenzii', ar: '{n} تقييمات'
+    }
+  },
+  'rev.basedOn': {
+    one: {
+      en: 'based on {n} review', es: 'según {n} reseña', fr: 'sur {n} avis', de: 'aus {n} Bewertung', it: 'su {n} recensione',
+      pt: 'com base em {n} avaliação', el: 'από {n} κριτική', nl: 'op basis van {n} beoordeling', ru: 'на основе {n} отзыва',
+      ja: '{n} 件のレビューに基づく', zh: '基于 {n} 条评价', ar: 'استنادًا إلى تقييم واحد', no: 'basert på {n} anmeldelse',
+      hi: '{n} समीक्षा के आधार पर', id: 'berdasarkan {n} ulasan', tr: '{n} yoruma göre', ko: '리뷰 {n}개 기준',
+      pl: 'na podstawie {n} recenzji', vi: 'dựa trên {n} đánh giá', uk: 'на основі {n} відгуку', sv: 'baserat på {n} recension',
+      da: 'baseret på {n} anmeldelse', fi: '{n} arvion perusteella', bg: 'на база {n} отзив', ro: 'din {n} recenzie',
+      sr: 'на основу {n} рецензије', cs: 'na základě {n} recenze', th: 'จาก {n} รีวิว', bn: '{n}টি রিভিউর ভিত্তিতে',
+      fa: 'بر اساس {n} نظر', he: 'על בסיס ביקורת אחת', hu: '{n} vélemény alapján'
+    },
+    two: { ar: 'استنادًا إلى تقييمين', he: 'על בסיס שתי ביקורות' },
+    few: {
+      ru: 'на основе {n} отзывов', uk: 'на основі {n} відгуків', pl: 'na podstawie {n} recenzji', cs: 'na základě {n} recenzí',
+      sr: 'на основу {n} рецензије', ro: 'din {n} recenzii', ar: 'استنادًا إلى {n} تقييمات'
+    }
+  }
+}
+for (const [key, forms] of Object.entries(REVIEW_PLURALS)) {
+  for (const [form, byLang] of Object.entries(forms)) {
+    for (const [code, value] of Object.entries(byLang)) translations[code][`${key}.${form}`] = value
+  }
+}

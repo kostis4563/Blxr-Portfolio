@@ -35,6 +35,7 @@ export function parseRoute(path) {
   if (p === '/') return { name: 'home' }
   if (p === '/projects') return { name: 'projects', projectId: null }
   if (p === '/library') return { name: 'library', itemId: null }
+  if (p === '/reviews') return { name: 'reviews' }
 
   const match = /^\/projects\/([^/]+)$/.exec(p)
   if (match) {
@@ -91,12 +92,15 @@ export const PROJECTS_PATH = '/projects'
 export const projectPath = (id) => `${PROJECTS_PATH}#${encodeURIComponent(id)}`
 export const LIBRARY_PATH = '/library'
 export const libraryPath = (id) => `/library/${encodeURIComponent(id)}`
+export const REVIEWS_PATH = '/reviews'
+export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
 
 export const staticPaths = () => [
   HOME_PATH,
   PROJECTS_PATH,
   LIBRARY_PATH,
   ...libraryList.map((entry) => libraryPath(entry.id)),
+  REVIEWS_PATH,
 ]
 
 export const localizedPaths = () =>

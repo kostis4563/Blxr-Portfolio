@@ -5,6 +5,7 @@ import GitHubContributions from './components/github-contribution'
 import AnimatedFooter from './components/animated-footer'
 import ProjectsPage from './projects-page'
 import LibraryPage from './library-page'
+import ReviewsPage from './reviews-page'
 import NotFoundPage from './not-found-page'
 import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
@@ -14,7 +15,7 @@ import { useTheme } from './lib/use-theme'
 import { useI18n } from './lib/i18n'
 import { projectsList, SHORT_KEY, METRIC_KEY, METRIC_VALUE_KEY } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
-import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH } from './lib/router'
+import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, REVIEWS_PATH } from './lib/router'
 import { applyHead } from './lib/seo'
 import { recordHit } from './lib/api'
 import { rememberVisit } from './lib/recent'
@@ -401,6 +402,15 @@ function App() {
           theme={theme}
           onToggleTheme={toggleTheme}
         />
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'reviews') {
+    return (
+      <>
+        <ReviewsPage theme={theme} onToggleTheme={toggleTheme} />
         {palette}
       </>
     )
@@ -1081,6 +1091,14 @@ function App() {
                 )
               })}
             </div>
+
+            <a
+              {...link(REVIEWS_PATH)}
+              className="group inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
+            >
+              <span>{t('rev.cta')}</span>
+              <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+            </a>
 
             <p className="text-[11.5px] text-ink-faint">
               {t('contact.based')}
