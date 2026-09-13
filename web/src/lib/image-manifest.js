@@ -1,7 +1,8 @@
 export const IMAGES = {
-  '/7x0-site-dashboard.webp': { v: 'ac0801b0', ext: '.webp', widths: [] },
+  '/7x0-logo.webp': { v: '83e46891', ext: '.webp', widths: [160, 272] },
+  '/7x0-site-dashboard.webp': { v: 'ac0801b0', ext: '.webp', widths: [480, 768, 1200] },
   '/7x0-site-landing.webp': { v: '3b5d7d26', ext: '.webp', widths: [] },
-  '/7x0-site-tos.webp': { v: 'a33bc46a', ext: '.webp', widths: [] },
+  '/7x0-site.webp': { v: 'b5727be6', ext: '.webp', widths: [480, 768, 1200] },
   '/amitista-logo.webp': { v: 'd34ba8b0', ext: '.webp', widths: [48, 96] },
   '/amitista.webp': { v: 'd4db3b46', ext: '.webp', widths: [480, 768, 1200] },
   '/apple-touch-icon.png': { v: 'c6caf3c4', ext: '.png', widths: [] },
@@ -79,5 +80,6 @@ export const IMAGES = {
   '/library/vehicle-interaction-menu.webp': { v: 'd2d5e560', ext: '.webp', widths: [480, 768, 1200] },
   '/og.png': { v: '7cdc12d5', ext: '.png', widths: [] },
   '/pfp.webp': { v: 'b4a7c941', ext: '.webp', widths: [128, 192] },
+  '/web-scanner.webp': { v: 'f48442ea', ext: '.webp', widths: [480, 768, 1200] },
   '/wordmark-nav.png': { v: '95fab63c', ext: '.png', widths: [] },
 }

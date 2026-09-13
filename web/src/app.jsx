@@ -1,19 +1,18 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react'
+
+const AUTOPLAY_MS = 6000
 import GitHubContributions from './components/github-contribution'
 import AnimatedFooter from './components/animated-footer'
 import ProjectsPage from './projects-page'
-import ProjectPage from './project-page'
 import LibraryPage from './library-page'
 import NotFoundPage from './not-found-page'
-import ProjectCover from './components/project-cover'
 import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
 import CommandPaletteHost from './components/command-palette-host'
 import { CommandButton } from './components/command-button'
 import { useTheme } from './lib/use-theme'
 import { useI18n } from './lib/i18n'
-import { projectsList, isVideoLink, URL_LABEL_KEY } from './lib/projects'
-import { trackPointerGlow, resetPointerTilt } from './lib/pointer-glow'
+import { projectsList, SHORT_KEY, METRIC_KEY, METRIC_VALUE_KEY } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
 import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH } from './lib/router'
 import { applyHead } from './lib/seo'
@@ -46,9 +45,17 @@ function App() {
   const { t } = useI18n()
 
   const homeScrollRef = useRef(0)
-  const projectsStackRef = useRef(null)
 
   const hasLeftHomeRef = useRef(false)
+  const projectsRef = useRef(null)
+  const carouselRef = useRef(null)
+  const carouselRafRef = useRef(0)
+  const autoplayRemainingRef = useRef(null)
+  const autoplaySlideRef = useRef(0)
+  const [carouselPaused, setCarouselPaused] = useState(false)
+  const [carouselVisible, setCarouselVisible] = useState(false)
+  const [autoplayTick, setAutoplayTick] = useState(0)
+  const [activeSlide, setActiveSlide] = useState(0)
   const toolboxRef = useRef(null)
 
   const openProject = (projectId) => {
@@ -65,6 +72,10 @@ function App() {
   useEffect(() => {
     applyHead(path)
   }, [path, t])
+
+  useEffect(() => {
+    if (route.redirect) navigate(route.redirect, { replace: true })
+  }, [route.redirect])
 
   useEffect(() => {
     recordHit(path)
@@ -99,303 +110,33 @@ function App() {
 
   useEffect(() => {
     if (currentView !== 'home') return
+    const root = projectsRef.current
+    if (!root || typeof IntersectionObserver === 'undefined') return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-    const stack = projectsStackRef.current
-    if (!stack) return
+    const items = Array.from(root.querySelectorAll('[data-reveal]'))
+    const pending = items.filter((el) => el.getBoundingClientRect().top > window.innerHeight * 0.92)
+    if (!pending.length) return
 
-    const cards = Array.from(stack.querySelectorAll('[data-project-stack-card]'))
-    if (cards.length < 2) return
+    for (const el of pending) el.classList.add('reveal-pending')
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const compact = window.matchMedia('(max-width: 767px)')
-    const EASE_MS = 110
-    const EPSILON = 0.0008
-    const BLUR_MAX = 2.2
-    const BLUR_STEPS = 5
-
-    const parts = cards.map((card) => ({
-      card,
-      body: card.querySelector('.project-stack-body'),
-      media: card.querySelector('.project-stack-media'),
-      scrim: card.querySelector('.project-stack-scrim'),
-      edge: card.querySelector('.project-stack-edge'),
-      last: { transform: '', opacity: '', media: '', scrim: '', edge: '', edgeOpacity: '', blur: '' }
-    }))
-
-    let offsets = []
-    let heights = []
-    let settleTops = []
-    let isSticky = []
-
-    const measure = () => {
-      const gap = Number.parseFloat(window.getComputedStyle(stack).rowGap) || 0
-      let y = 0
-      offsets = []
-      heights = []
-      settleTops = []
-      isSticky = []
-      for (const card of cards) {
-        const style = window.getComputedStyle(card)
-        const height = card.offsetHeight
-        offsets.push(y)
-        heights.push(height)
-        settleTops.push(Number.parseFloat(style.top) || 96)
-        isSticky.push(style.position === 'sticky')
-        y += height + gap
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        entry.target.classList.add('reveal-in')
+        observer.unobserve(entry.target)
       }
-    }
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 })
 
-    let frame = 0
-    let lastTime = 0
-    let animating = false
-    let focused = -1
-
-    const setAnimating = (next) => {
-      if (animating === next) return
-      animating = next
-      for (const part of parts) {
-        part.card.style.willChange = next ? 'transform, opacity' : 'auto'
-        if (part.media) part.media.style.willChange = next ? 'transform' : 'auto'
-      }
-    }
-
-    const reset = () => {
-      setAnimating(false)
-      for (const part of parts) {
-        part.card.style.removeProperty('transform')
-        part.card.style.removeProperty('opacity')
-        part.body?.style.removeProperty('filter')
-        part.media?.style.removeProperty('transform')
-        part.scrim?.style.removeProperty('opacity')
-        part.edge?.style.removeProperty('opacity')
-        part.edge?.style.removeProperty('transform')
-        part.last = { transform: '', opacity: '', media: '', scrim: '', edge: '', edgeOpacity: '', blur: '' }
-      }
-    }
-
-    const clamp = (value) => Math.min(1, Math.max(0, value))
-    const smooth = (value) => value * value * (3 - (2 * value))
-
-    const state = cards.map(() => ({ entrance: 0, stack: 0, primed: false }))
-
-    const updateStack = (time) => {
-      frame = 0
-      if (reduceMotion.matches || compact.matches) {
-        reset()
-        return
-      }
-
-      const viewportHeight = window.innerHeight
-      const stackRect = stack.getBoundingClientRect()
-      if (stackRect.bottom < viewportHeight * -0.25 || stackRect.top > viewportHeight * 1.25) {
-        setAnimating(false)
-        return
-      }
-      setAnimating(true)
-
-      const delta = lastTime ? Math.min(64, time - lastTime) : 0
-      lastTime = time
-      const chase = delta ? 1 - Math.exp(-delta / EASE_MS) : 1
-
-      const entranceStart = viewportHeight * 1.02
-      const entranceEnd = viewportHeight * 0.78
-      const stackStart = viewportHeight * 0.82
-      const entranceTravel = Math.max(1, entranceStart - entranceEnd)
-
-      const tops = offsets.map((offset, index) => {
-        const natural = stackRect.top + offset
-        if (!isSticky[index]) return natural
-        const shift = Math.max(0, settleTops[index] - natural)
-        const room = Math.max(0, stackRect.bottom - (natural + heights[index]))
-        return natural + Math.min(shift, room)
-      })
-
-      let moving = false
-
-      parts.forEach((part, index) => {
-        const current = state[index]
-        const targetEntrance = clamp((entranceStart - tops[index]) / entranceTravel)
-        let targetStack = 0
-
-        if (index + 1 < tops.length) {
-          const stackTravel = Math.max(1, stackStart - settleTops[index + 1])
-          targetStack = clamp((stackStart - tops[index + 1]) / stackTravel)
-        }
-
-        const step = current.primed ? chase : 1
-        current.primed = true
-        current.entrance += (targetEntrance - current.entrance) * step
-        current.stack += (targetStack - current.stack) * step
-
-        if (Math.abs(targetEntrance - current.entrance) > EPSILON || Math.abs(targetStack - current.stack) > EPSILON) {
-          moving = true
-        } else {
-          current.entrance = targetEntrance
-          current.stack = targetStack
-        }
-
-        const entrance = smooth(current.entrance)
-        const stackProgress = focused === index ? 0 : smooth(current.stack)
-        const entranceScale = 0.965 + (0.035 * entrance)
-        const stackedScale = 1 - (0.055 * stackProgress)
-        const opacity = focused === index
-          ? 1
-          : (0.58 + (0.42 * entrance)) * (1 - (0.22 * stackProgress))
-
-        const lift = (32 * (1 - entrance)) - (12 * stackProgress)
-        const transform = `translate3d(0,${lift.toFixed(2)}px,0) scale(${(entranceScale * stackedScale).toFixed(4)})`
-        const { last } = part
-
-        if (last.transform !== transform) {
-          last.transform = transform
-          part.card.style.transform = transform
-        }
-
-        const opacityText = opacity.toFixed(3)
-        if (last.opacity !== opacityText) {
-          last.opacity = opacityText
-          part.card.style.opacity = opacityText
-        }
-
-        if (part.body) {
-          const step = Math.round(stackProgress * BLUR_STEPS) / BLUR_STEPS
-          const blur = step ? `blur(${(BLUR_MAX * step).toFixed(2)}px)` : 'none'
-          if (last.blur !== blur) {
-            last.blur = blur
-            part.body.style.filter = blur
-          }
-        }
-
-        if (part.media) {
-          const shift = (14 * (1 - entrance)) - (6 * stackProgress)
-          const mediaTransform = `translate3d(0,${shift.toFixed(2)}px,0) scale(${(1.025 + (0.012 * stackProgress)).toFixed(4)})`
-          if (last.media !== mediaTransform) {
-            last.media = mediaTransform
-            part.media.style.transform = mediaTransform
-          }
-        }
-
-        if (part.scrim) {
-          const depth = (0.44 * stackProgress).toFixed(3)
-          if (last.scrim !== depth) {
-            last.scrim = depth
-            part.scrim.style.opacity = depth
-          }
-        }
-
-        if (part.edge) {
-          const edgeOpacity = (0.22 + (0.48 * entrance)).toFixed(3)
-          if (last.edgeOpacity !== edgeOpacity) {
-            last.edgeOpacity = edgeOpacity
-            part.edge.style.opacity = edgeOpacity
-          }
-          const edgeTransform = `scaleX(${(0.52 + (0.48 * entrance)).toFixed(3)})`
-          if (last.edge !== edgeTransform) {
-            last.edge = edgeTransform
-            part.edge.style.transform = edgeTransform
-          }
-        }
-      })
-
-      if (moving) frame = window.requestAnimationFrame(updateStack)
-    }
-
-    const requestUpdate = () => {
-      if (reduceMotion.matches || compact.matches) return
-      if (!frame) frame = window.requestAnimationFrame(updateStack)
-    }
-
-    const handleResize = () => {
-      measure()
-      if (reduceMotion.matches || compact.matches) reset()
-      else requestUpdate()
-    }
-
-    const onFocusIn = (event) => {
-      const owner = event.target.closest?.('[data-project-stack-card]')
-      const next = owner ? cards.indexOf(owner) : -1
-      if (next === focused) return
-      focused = next
-      requestUpdate()
-    }
-
-    const onFocusOut = (event) => {
-      if (focused === -1 || stack.contains(event.relatedTarget)) return
-      focused = -1
-      requestUpdate()
-    }
-
-    measure()
-    if (reduceMotion.matches || compact.matches) reset()
-    else updateStack(0)
-
-    const resizeObserver = new ResizeObserver(handleResize)
-    for (const card of cards) resizeObserver.observe(card)
-
-    window.addEventListener('scroll', requestUpdate, { passive: true })
-    window.addEventListener('resize', handleResize)
-    stack.addEventListener('focusin', onFocusIn)
-    stack.addEventListener('focusout', onFocusOut)
-    reduceMotion.addEventListener('change', handleResize)
-    compact.addEventListener('change', handleResize)
+    for (const el of pending) observer.observe(el)
 
     return () => {
-      window.removeEventListener('scroll', requestUpdate)
-      window.removeEventListener('resize', handleResize)
-      stack.removeEventListener('focusin', onFocusIn)
-      stack.removeEventListener('focusout', onFocusOut)
-      reduceMotion.removeEventListener('change', handleResize)
-      compact.removeEventListener('change', handleResize)
-      resizeObserver.disconnect()
-      if (frame) window.cancelAnimationFrame(frame)
-      reset()
+      observer.disconnect()
+      for (const el of items) el.classList.remove('reveal-pending', 'reveal-in')
     }
   }, [currentView])
 
   const palette = <CommandPaletteHost theme={theme} onToggleTheme={toggleTheme} />
-
-  if (currentView === 'notFound') {
-    return (
-      <>
-        <NotFoundPage theme={theme} onToggleTheme={toggleTheme} />
-        {palette}
-      </>
-    )
-  }
-
-  if (currentView === 'projects') {
-    return (
-      <>
-        {route.projectId ? (
-          <ProjectPage
-            projectId={route.projectId}
-            theme={theme}
-            onToggleTheme={toggleTheme}
-          />
-        ) : (
-          <ProjectsPage
-            onBack={() => navigate(HOME_PATH)}
-            theme={theme}
-            onToggleTheme={toggleTheme}
-          />
-        )}
-        {palette}
-      </>
-    )
-  }
-
-  if (currentView === 'library') {
-    return (
-      <>
-        <LibraryPage
-          openItemId={route.itemId}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
-        {palette}
-      </>
-    )
-  }
 
   const handleCopyEmail = async () => {
     try {
@@ -406,77 +147,106 @@ function App() {
     }
   }
 
-  const handleMouseMove = (e) => trackPointerGlow(e)
+  const FEATURED_ORDER = ['amitista', 'async', '7x0-site']
+  const featuredProjects = FEATURED_ORDER
+    .map((id) => projectsList.find((project) => project.id === id))
+    .filter(Boolean)
+    .map((project) => ({
+      ...project,
+      categoryLabel: t(`cat.${project.category}`, null, project.category),
+      description: t(SHORT_KEY[project.id], null, project.shortDescription),
+      metrics: (project.metrics ?? [])
+        .map((metric) => ({
+          label: t(METRIC_KEY[metric.label], null, metric.label),
+          value: t(METRIC_VALUE_KEY[metric.value], null, metric.value)
+        }))
+        .filter((metric) => metric.value.length <= 18)
+        .slice(0, 2)
+    }))
 
-  const handleArchiveMouseMove = (e) => trackPointerGlow(e, { tilt: true })
-  const handleArchiveMouseLeave = resetPointerTilt
+  const goToSlide = (index, behavior) => {
+    const track = carouselRef.current
+    if (!track) return
+    const count = featuredProjects.length
+    const next = ((index % count) + count) % count
+    const slide = track.children[next]
+    if (!slide) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    track.scrollTo({
+      left: slide.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2,
+      behavior: behavior ?? (reduce ? 'auto' : 'smooth')
+    })
+  }
 
-  const projectCards = [
-    {
+  const handleCarouselScroll = () => {
+    const track = carouselRef.current
+    if (!track) return
+    if (carouselRafRef.current) return
+    carouselRafRef.current = requestAnimationFrame(() => {
+      carouselRafRef.current = 0
+      const center = track.scrollLeft + track.clientWidth / 2
+      let best = 0
+      let bestDist = Infinity
+      for (let i = 0; i < track.children.length; i++) {
+        const el = track.children[i]
+        const dist = Math.abs(el.offsetLeft + el.offsetWidth / 2 - center)
+        if (dist < bestDist) { bestDist = dist; best = i }
+      }
+      setActiveSlide((prev) => (prev === best ? prev : best))
+    })
+  }
 
-      projectId: 'amitista',
-      title: 'Amitista Studio',
-      category: t('cat.Studio'),
-      year: '2026',
-      url: 'https://amitista.com',
-      urlLabel: 'Visit site',
+  const handleCarouselKeyDown = (event) => {
+    if (event.key === 'ArrowRight') { event.preventDefault(); goToSlide(activeSlide + 1) }
+    else if (event.key === 'ArrowLeft') { event.preventDefault(); goToSlide(activeSlide - 1) }
+  }
 
-      github: null,
-      image: '/amitista.webp',
-      imageAlt: 'Amitista Studio logo',
+  const autoplayEnabled = currentView === 'home' && carouselVisible && !carouselPaused && featuredProjects.length > 1
 
-      imagePosition: 'center',
+  useEffect(() => {
+    if (currentView !== 'home') return
+    const root = carouselRef.current
+    if (!root || typeof IntersectionObserver === 'undefined') return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-      logo: '/amitista-logo.webp',
-      accent: '#8558e4',
-      description: t('proj.amitista.short'),
-      tags: ['React', 'Vite', 'Tailwind CSS']
-    },
-    {
+    let intersecting = false
+    const sync = () => setCarouselVisible(intersecting && document.visibilityState === 'visible')
+    const observer = new IntersectionObserver(([entry]) => {
+      intersecting = entry.isIntersecting
+      sync()
+    }, { threshold: 0.5 })
+    observer.observe(root)
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      observer.disconnect()
+      document.removeEventListener('visibilitychange', sync)
+      setCarouselVisible(false)
+    }
+  }, [currentView])
 
-      projectId: 'async',
+  useEffect(() => {
+    if (!autoplayEnabled) return
+    if (autoplaySlideRef.current !== activeSlide) {
+      autoplaySlideRef.current = activeSlide
+      autoplayRemainingRef.current = null
+    }
+    const duration = autoplayRemainingRef.current ?? AUTOPLAY_MS
+    const started = Date.now()
+    let fired = false
+    const id = setTimeout(() => {
+      fired = true
+      autoplayRemainingRef.current = null
+      goToSlide(activeSlide + 1)
+      setAutoplayTick((tick) => tick + 1)
+    }, duration)
+    return () => {
+      clearTimeout(id)
+      autoplayRemainingRef.current = fired ? null : Math.max(0, duration - (Date.now() - started))
+    }
+  }, [autoplayEnabled, activeSlide, autoplayTick])
 
-      title: 'Async',
-      category: t('cat.Security Tooling'),
-      year: '2026',
-
-      url: 'https://www.youtube.com/watch?v=X0A3AmD4fZY',
-      urlLabel: 'Watch showcase',
-      github: 'https://github.com/kostis4563/async-anticheat',
-      image: '/async.webp',
-      imageAlt: 'The async platform dashboard',
-
-      imagePosition: 'center 39%',
-
-      logo: '/async-logo.webp',
-      accent: '#e45869',
-
-      description: t('proj.async.short'),
-      tags: ['C++17', 'Node.js', 'React']
-    },
-  ]
-
-  const featuredProjectIds = new Set(projectCards.map((project) => project.projectId))
-  const archivePreviews = projectsList
-    .filter((project) => !featuredProjectIds.has(project.id))
-    .sort((a, b) => Number(Boolean(a.image)) - Number(Boolean(b.image)))
-    .slice(0, 3)
-
-  const archiveCategories = [...new Set(projectsList.map((p) => p.category).filter(Boolean))]
-
-  const archiveYears = projectsList.map((p) => Number(p.date)).filter(Number.isFinite)
-  const archiveRange = archiveYears.length
-    ? [Math.min(...archiveYears), Math.max(...archiveYears)]
-    : null
-  const archiveRangeLabel = archiveRange
-    ? (archiveRange[0] === archiveRange[1] ? `${archiveRange[0]}` : `${archiveRange[0]} – ${archiveRange[1]}`)
-    : null
-
-  const archiveLayers = [
-    'z-[1] opacity-50 scale-[0.88] -rotate-6 -translate-x-9 -translate-y-14 group-hover:-translate-x-10 group-hover:-translate-y-[4.5rem] group-hover:-rotate-[7deg]',
-    'z-[2] opacity-75 scale-94 -rotate-3 -translate-x-4 -translate-y-7 group-hover:-translate-x-5 group-hover:-translate-y-9 group-hover:-rotate-[3.5deg]',
-    'z-[3] opacity-100 scale-100 rotate-0 translate-x-0 translate-y-0 group-hover:-translate-y-1'
-  ]
+  const pauseCarousel = () => setCarouselPaused(true)
+  const resumeCarousel = () => setCarouselPaused(false)
 
   const educationEntries = [
     {
@@ -600,6 +370,41 @@ function App() {
   const navPillClass = 'h-9 px-2 sm:ps-2 sm:pe-1.5 flex items-center gap-1.5 rounded-lg hover:text-ink-strong hover:bg-surface-hover focus-visible:text-ink-strong aria-expanded:text-ink-strong aria-expanded:bg-surface-hover transition-colors duration-200'
 
   const navDivider = 'mx-1 h-full border-l border-dashed border-line'
+
+  if (currentView === 'notFound') {
+    return (
+      <>
+        <NotFoundPage theme={theme} onToggleTheme={toggleTheme} />
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'projects') {
+    return (
+      <>
+        <ProjectsPage
+          onBack={() => navigate(HOME_PATH)}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'library') {
+    return (
+      <>
+        <LibraryPage
+          openItemId={route.itemId}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+        {palette}
+      </>
+    )
+  }
 
   return (
     <div className={`min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-clip antialiased font-sans ${isReturningHome ? '' : 'animate-view-in'}`}>
@@ -725,332 +530,174 @@ function App() {
           </div>
         </section>
 
-        <section id="projects" className="scroll-mt-28 w-full mt-12">
+        <section id="projects" className="scroll-mt-28 w-full mt-14">
 
-          <div className="flex items-center justify-between w-full mb-6">
-            <h2 className="text-[20px] font-bold text-ink-strong tracking-tight">{t('home.projects')}</h2>
-            <a
-              {...link(PROJECTS_PATH, () => openProject(null))}
-              className="text-[13px] font-medium text-ink-muted hover:text-ink-strong flex items-center gap-1 transition-colors duration-200 cursor-pointer"
-            >
-              <span>{t('home.more')}</span>
-              <span>→</span>
-            </a>
-          </div>
+          <div ref={projectsRef} className="flex flex-col items-center w-full">
+            <div data-reveal className="flex flex-col items-center text-center">
+              <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink-subtle">
+                <span className="tabular-nums" aria-live="polite">
+                  {String(activeSlide + 1).padStart(2, '0')}
+                  <span className="mx-1.5 text-ink-faint">/</span>
+                  {String(featuredProjects.length).padStart(2, '0')}
+                </span>
+              </span>
+              <h2 className="mt-3 text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink-strong sm:text-[32px]">
+                {t('home.projects')}
+              </h2>
+            </div>
 
-          <div ref={projectsStackRef} className="project-stack flex flex-col gap-8 w-full">
-            {projectCards.map((card, idx) => (
-              <div
-                key={idx}
-                data-project-stack-card
-                style={{
-                  '--stack-top': `${84 + (idx * 14)}px`,
-                  '--stack-z': 10 + idx,
-                  '--stack-accent': card.accent
-                }}
-                onMouseMove={handleMouseMove}
-
-                onClick={() => openProject(card.projectId)}
-                className="project-stack-card relative p-[1px] rounded-[32px] bg-surface-hover hover:bg-surface-hover-strong group overflow-hidden w-full cursor-pointer transition-[background-color,box-shadow] duration-300 ease-out focus-within:bg-surface-hover-strong motion-reduce:transition-none"
-              >
-                {}
-                <div
-                  className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    '--glow-size': '300px',
-                    background: 'radial-gradient(circle closest-side, var(--glow-strong) 0%, var(--glow-soft) 60%, transparent 100%)'
-                  }}
-                />
-
-                <div className="project-stack-scrim" aria-hidden="true" />
-                <div className="project-stack-edge" aria-hidden="true" />
-
-                {}
-                <div className="project-stack-body relative bg-surface rounded-[31px] flex flex-col-reverse items-stretch w-full overflow-hidden">
-
-                  <div
-
-                    className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0"
-                    style={{
-                      '--glow-size': '700px',
-                      background: 'radial-gradient(circle closest-side, var(--glow-soft), transparent 100%)'
-                    }}
-                  />
-
-                  <div className="flex-1 flex flex-col items-start text-left relative z-20 w-full p-6 sm:p-8">
-                    {}
-                    {card.logo && (
-                      <div className="project-stack-logo -mt-[52px] sm:-mt-[60px] mb-4 w-14 h-14 rounded-2xl border border-line-strong bg-surface-raised flex items-center justify-center overflow-hidden">
-                        <img
-                          {...imageProps(card.logo, '56px')}
-                          alt=""
-                          aria-hidden="true"
-                          width="56"
-                          height="56"
-                          loading="lazy"
-                          decoding="async"
-                          className="w-9 h-9 object-contain"
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 mb-3.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
-                      {card.category && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="project-stack-dot w-1.5 h-1.5 rounded-full shrink-0" aria-hidden="true" />
-                          {card.category}
-                        </span>
-                      )}
-                      {card.category && card.year && (
-                        <span className="w-[3px] h-[3px] rounded-full bg-ink-faint" />
-                      )}
-                      {card.year && <span>{card.year}</span>}
-                      <span className="project-stack-count ml-auto font-mono tracking-[0.08em] text-[10px]" aria-hidden="true">
-                        {String(idx + 1).padStart(2, '0')} / {String(projectCards.length + 1).padStart(2, '0')}
-                      </span>
-                    </div>
-
-                    {}
-                    <h3 className="text-[26px] leading-[1.1] font-bold text-ink-strong tracking-tight mb-2.5">
-                      {card.title}
-                    </h3>
-
-                    {}
-                    <p className="text-ink-muted text-[14px] leading-relaxed mb-4 font-normal max-w-[540px]">
-                      {card.description}
-                    </p>
-
-                    {card.tags?.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1.5 mb-5">
-                        {card.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="project-stack-tag inline-flex items-center rounded-full bg-surface-raised px-2.5 py-1 text-[11px] font-medium text-ink-subtle"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {}
-
-                    <div className="flex items-center gap-3 mt-auto w-full">
-                      {}
-                      <a
-                        {...link(projectPath(card.projectId), () => openProject(card.projectId))}
-                        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-muted group-hover:text-ink-strong cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/70 focus-visible:ring-offset-4 focus-visible:ring-offset-surface transition-colors duration-200"
-                      >
-                        <span>{t('home.viewDetails')}</span>
-                        <span className="transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none">→</span>
-                      </a>
-
-                      {}
-                      <div className="flex items-center gap-1.5 ml-auto">
-                        {card.url && (
-                          <a
-                            href={card.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-
-                            aria-label={
-                              isVideoLink(card.url)
-                                ? `Watch the ${card.title} showcase on YouTube`
-                                : `Visit the ${card.title} website`
-                            }
-                            title={
-                              card.urlLabel
-                                ? t(URL_LABEL_KEY[card.urlLabel], null, card.urlLabel)
-                                : t('proj.liveDemo')
-                            }
-
-                            className="w-8 h-8 rounded-lg text-ink-faint hover:text-ink-strong flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/70 transition-colors duration-200"
-                          >
-                            {isVideoLink(card.url) ? (
-                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.5A3.02 3.02 0 0 0 .5 6.2C0 8.07 0 12 0 12s0 3.93.5 5.81a3.02 3.02 0 0 0 2.12 2.14c1.88.5 9.38.5 9.38.5s7.5 0 9.38-.5a3.02 3.02 0 0 0 2.12-2.14C24 15.93 24 12 24 12s0-3.93-.5-5.81ZM9.55 15.57V8.43L15.82 12l-6.27 3.57Z" />
-                              </svg>
-                            ) : (
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16L16 8m0 0H9.5m6.5 0v6.5" />
-                              </svg>
-                            )}
-                          </a>
-                        )}
-
-                        {card.github && (
-                          <a
-                            href={card.github}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label={`View ${card.title} source on GitHub`}
-                            title="View source"
-
-                            className="w-8 h-8 rounded-lg text-ink-faint hover:text-ink-strong flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/70 transition-colors duration-200"
-                          >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                              <path d={SOCIAL_ICON_PATHS.GitHub} />
-                            </svg>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {}
-                  <div className="project-stack-media relative z-10 w-full aspect-[2.6/1] shrink-0 overflow-hidden">
-                    {}
-                    <img
-
-                      {...imageProps(card.image, SIZES.contentColumn)}
-
-                      alt={card.imageAlt ?? `${card.title} cover`}
-
-                      loading={idx === 0 ? 'eager' : 'lazy'}
-                      fetchPriority={idx === 0 ? 'high' : undefined}
-                      decoding="async"
-                      width="1200"
-                      height="675"
-
-                      style={{ objectPosition: card.imagePosition ?? 'center' }}
-                      className={`w-full h-full object-cover group-hover:brightness-100 group-hover:scale-[1.04] transition-[transform,filter] duration-700 ease-out motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${theme === 'light' ? '' : 'brightness-[0.82]'}`}
-                    />
-                    {}
-                  </div>
-
-                </div>
-              </div>
-            ))}
-
-            <a
-              {...link(PROJECTS_PATH, () => openProject(null))}
-              data-project-stack-card
-              style={{
-                '--stack-z': 10 + projectCards.length,
-                '--stack-accent': '#8b5cf6'
+            <div
+              data-reveal
+              style={{ '--reveal-delay': '90ms' }}
+              data-paused={autoplayEnabled ? undefined : ''}
+              style={{ '--autoplay': `${AUTOPLAY_MS}ms` }}
+              className="project-carousel relative mt-8 w-[calc(100%+3rem)] -mx-6"
+              onKeyDown={handleCarouselKeyDown}
+              onMouseEnter={pauseCarousel}
+              onMouseLeave={resumeCarousel}
+              onPointerDown={(event) => { if (event.pointerType !== 'mouse') pauseCarousel() }}
+              onPointerUp={(event) => { if (event.pointerType !== 'mouse') resumeCarousel() }}
+              onPointerCancel={(event) => { if (event.pointerType !== 'mouse') resumeCarousel() }}
+              onFocusCapture={(event) => { if (event.target.matches?.(':focus-visible')) pauseCarousel() }}
+              onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(':hover')) resumeCarousel()
               }}
-              onMouseMove={handleArchiveMouseMove}
-              onMouseLeave={handleArchiveMouseLeave}
-              aria-label={`Browse the full projects library, ${projectsList.length} projects`}
-              className="project-stack-card relative block p-[1px] rounded-[32px] bg-surface-hover hover:bg-surface-hover-strong transition-colors duration-300 group overflow-hidden w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
               <div
-                className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{
-                  '--glow-size': '300px',
-                  background: 'radial-gradient(circle closest-side, var(--glow-strong) 0%, var(--glow-soft) 60%, transparent 100%)'
-                }}
-              />
+                ref={carouselRef}
+                className="project-track"
+                onScroll={handleCarouselScroll}
+                aria-roledescription="carousel"
+                aria-label={t('home.projects')}
+              >
+                {featuredProjects.map((project, idx) => {
+                  const active = idx === activeSlide
+                  return (
+                    <article
+                      key={project.id}
+                      data-active={active ? '' : undefined}
+                      aria-roledescription="slide"
+                      aria-label={`${idx + 1} / ${featuredProjects.length}`}
+                      className="project-slide"
+                      onClickCapture={active ? undefined : (event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        goToSlide(idx)
+                      }}
+                    >
+                      <div className="project-panel group relative grid grid-cols-1 gap-2 rounded-[20px] border border-line bg-surface p-2 sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+                        <div className="project-media relative aspect-[16/11] min-w-0 overflow-hidden rounded-[13px] bg-surface-raised sm:aspect-auto sm:min-h-[248px]">
+                          <img
+                            {...imageProps(project.image, '(min-width: 768px) 320px, calc(100vw - 48px)')}
+                            alt={project.imageAlt ?? `${project.title} cover`}
+                            loading={idx === 0 ? 'eager' : 'lazy'}
+                            fetchPriority={idx === 0 ? 'high' : undefined}
+                            decoding="async"
+                            width="1200"
+                            height="825"
+                            style={{ objectPosition: project.imagePosition ?? 'center' }}
+                            className={`project-media-img absolute inset-0 h-full w-full object-cover ${theme === 'light' ? '' : 'brightness-[0.92]'}`}
+                          />
+                        </div>
 
-              <div className="project-stack-scrim" aria-hidden="true" />
-              <div className="project-stack-edge" aria-hidden="true" />
+                        <div className="project-copy flex min-w-0 flex-col px-3 pb-3 pt-3 sm:px-6 sm:py-5">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            {project.logo && !project.logoInCover && (
+                              <img
+                                {...imageProps(project.logo, project.logoWide ? '72px' : '20px')}
+                                alt=""
+                                width={project.logoWide ? 72 : 20}
+                                height={project.logoWide ? 18 : 20}
+                                loading="lazy"
+                                decoding="async"
+                                className={`shrink-0 object-contain ${project.logoWide ? 'h-[18px] w-auto' : 'h-5 w-5'}`}
+                              />
+                            )}
+                            <span className="min-w-0 truncate font-mono text-[11px] text-ink-subtle">
+                              {project.categoryLabel}
+                              {project.date && <> · {project.date}</>}
+                            </span>
+                          </div>
 
-              <div className="project-stack-body relative bg-surface rounded-[31px] flex flex-col md:flex-row items-stretch justify-between w-full overflow-hidden min-h-[300px]">
+                          <h3 className="mt-4 text-[19px] font-semibold leading-tight tracking-tight text-ink-strong sm:text-[20px]">
+                            <a
+                              {...link(projectPath(project.id), () => openProject(project.id))}
+                              tabIndex={active ? 0 : -1}
+                              className="outline-none after:absolute after:inset-0 after:z-10 after:rounded-[20px] focus-visible:after:ring-2 focus-visible:after:ring-ink-strong/60"
+                            >
+                              {project.title}
+                            </a>
+                          </h3>
+                          <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed text-ink-muted">{project.description}</p>
 
-                <div
-                  className="glow-follow opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0"
-                  style={{
-                    '--glow-size': '700px',
-                    background: 'radial-gradient(circle closest-side, var(--glow-soft), transparent 100%)'
-                  }}
-                />
-
-                <div className="flex-1 flex flex-col items-start text-left relative z-10 w-full p-6 sm:p-8 md:pb-8 pb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-surface-raised flex items-center justify-center border border-line-strong shadow-sm mb-6">
-                    <svg className="w-6 h-6 text-ink-strong" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.5L3.5 8l8.5 4.5L20.5 8 12 3.5z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 12.5L12 17l8.5-4.5M3.5 16.5L12 21l8.5-4.5" />
-                    </svg>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 text-[11px] font-mono uppercase tracking-[0.14em] text-ink-subtle">
-                    <span>{t('home.archive')}</span>
-                    <span className="w-1 h-1 shrink-0 rounded-full bg-ink-faint" />
-                    <span>{t('home.projectsCount', { n: projectsList.length })}</span>
-                    {archiveRangeLabel && (
-                      <>
-                        <span className="w-1 h-1 shrink-0 rounded-full bg-ink-faint" />
-                        <span className="normal-case tracking-normal">{archiveRangeLabel}</span>
-                      </>
-                    )}
-                    <span className="project-stack-count ml-auto font-mono tracking-[0.08em] text-[10px]" aria-hidden="true">
-                      {String(projectCards.length + 1).padStart(2, '0')} / {String(projectCards.length + 1).padStart(2, '0')}
-                    </span>
-                  </div>
-
-                  <h3 className="text-[26px] font-bold text-ink-strong tracking-tight mb-3">
-                    {t('home.projectsLibrary')}
-                  </h3>
-
-                  <p className="text-ink-muted text-[15px] leading-relaxed mb-5 font-normal max-w-[420px]">
-                    {t('home.libraryTagline')}
-                  </p>
-
-                  {}
-                  {archiveCategories.length > 1 && (
-                  <div className="flex flex-wrap items-center gap-1.5 mb-6 max-w-[420px]">
-                    {archiveCategories.map((category) => (
-                      <span
-                        key={category}
-                        className="project-stack-tag px-2.5 py-1 rounded-full bg-surface-raised text-[11px] font-medium text-ink-subtle"
-                      >
-                        {}
-                        {t(`cat.${category}`, null, category)}
-                      </span>
-                    ))}
-                  </div>
-                  )}
-
-                  <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-line-strong bg-surface-raised group-hover:bg-surface-hover-strong group-hover:border-line-strong text-ink-secondary group-hover:text-ink-strong font-semibold text-[13.5px] transition-all duration-200 mt-auto">
-                    <span>{t('home.browseAll')}</span>
-                    <span className="inline-block group-hover:translate-x-1 transition-transform duration-200">→</span>
-                  </span>
-                </div>
-
-                <div className="flex items-end justify-end self-stretch md:self-end w-full md:w-auto relative z-10 pl-6 md:pl-0">
-                  <div className="w-[90%] md:w-[360px] aspect-[1.35] relative">
-                    {archivePreviews.map((project, i) => (
-                      <div
-                        key={project.id}
-                        className="absolute inset-0 transition-transform duration-300 ease-out motion-reduce:transition-none"
-                        style={{
-
-                          transform: `translate3d(calc(var(--tilt-x, 0) * ${(i + 1) * 6}px), calc(var(--tilt-y, 0) * ${(i + 1) * 5}px), 0)`
-                        }}
-                      >
-                        <div
-
-                          className={`absolute inset-0 rounded-tl-2xl overflow-hidden border-t border-l border-line bg-surface-raised shadow-2xl origin-bottom-right transition-all duration-500 ease-out motion-reduce:transition-none ${archiveLayers.slice(-archivePreviews.length)[i]}`}
-                        >
-                          {}
-                          {project.image ? (
-                            <img
-
-                              {...imageProps(project.image, '(min-width: 768px) 360px, 50vw')}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                              width="1200"
-                              height="675"
-                              className="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-700 ease-out motion-reduce:transition-none"
-                            />
-                          ) : (
-                            <ProjectCover project={project} />
-                          )}
-                          <div className="absolute inset-0 bg-black/45 group-hover:bg-black/15 transition-colors duration-500" />
-                          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
-                          <span className="absolute bottom-3 left-4 text-[12px] font-semibold text-white/90 tracking-tight capitalize">
-                            {project.title}
+                          <span className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-strong">
+                            <span className="project-underline">{t('proj.view')}</span>
+                            <span className="project-arrow inline-block" aria-hidden="true">→</span>
                           </span>
+
+                          {project.metrics.length > 0 && (
+                            <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3 border-t border-dashed border-line pt-4 sm:mt-auto">
+                              {project.metrics.map((metric) => (
+                                <div key={metric.label} className="min-w-0">
+                                  <dd className="whitespace-nowrap text-[14px] font-semibold leading-snug tracking-tight text-ink-strong">{metric.value}</dd>
+                                  <dt className="mt-0.5 whitespace-nowrap text-[10.5px] text-ink-subtle">{metric.label}</dt>
+                                </div>
+                              ))}
+                            </dl>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
+                    </article>
+                  )
+                })}
               </div>
+
+              <button
+                type="button"
+                onClick={() => goToSlide(activeSlide - 1)}
+                aria-label="Previous project"
+                className="project-nav left-4 hidden sm:flex"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => goToSlide(activeSlide + 1)}
+                aria-label="Next project"
+                className="project-nav right-4 hidden sm:flex"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+              </button>
+            </div>
+
+            <div data-reveal style={{ '--reveal-delay': '160ms' }} className="mt-5 flex items-center gap-1.5" role="tablist" aria-label="Choose project">
+              {featuredProjects.map((project, idx) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={idx === activeSlide}
+                  aria-label={project.title}
+                  onClick={() => goToSlide(idx)}
+                  className="project-dot"
+                >
+                  <span className="project-dot-fill">
+                    {idx === activeSlide && (
+                      <span key={`${activeSlide}-${autoplayTick}`} className="project-dot-progress" />
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <a
+              {...link(PROJECTS_PATH, () => openProject(null))}
+              data-reveal
+              style={{ '--reveal-delay': '220ms' }}
+              className="project-cta group relative mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-surface-inverted pl-5 pr-4 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+            >
+              <span>{t('home.browseAll')}</span>
+              <span className="project-arrow inline-block" aria-hidden="true">→</span>
             </a>
           </div>
         </section>

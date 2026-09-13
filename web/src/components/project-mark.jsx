@@ -7,6 +7,26 @@ export default function ProjectMark({ project, size = 'sm' }) {
 
   const glyphPx = size === 'lg' ? 24 : 20
 
+  if (project.logo && project.logoWide) {
+    const wide = size === 'lg' ? 'h-9 px-2.5 rounded-xl' : 'h-7 px-2 rounded-lg'
+    const mark = size === 'lg' ? 'h-4' : 'h-3'
+    return (
+      <div
+        className={`${wide} bg-surface-inverted border border-line-strong flex items-center justify-center shrink-0 overflow-hidden`}
+      >
+        <img
+          {...imageProps(project.logo, '56px')}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          width={size === 'lg' ? 62 : 47}
+          height={size === 'lg' ? 16 : 12}
+          className={`${mark} w-auto object-contain`}
+        />
+      </div>
+    )
+  }
+
   if (project.logo) {
     return (
       <div

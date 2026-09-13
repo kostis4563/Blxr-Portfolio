@@ -1,6 +1,6 @@
 import { LANG_CODES, LOCALE_TAGS, DEFAULT_LANG } from './languages'
 import { translate } from './i18n'
-import { projectsList, findProject, SHORT_KEY } from './projects'
+import { projectsList } from './projects'
 import { libraryList, findLibraryItem } from './library'
 import {
   alternatesFor,
@@ -43,16 +43,6 @@ export function metaFor(pathname) {
         lang === DEFAULT_LANG
           ? HOME_DESCRIPTION
           : `${translate(lang, 'hero.bio1')} ${translate(lang, 'hero.bio2')}`,
-    }
-  }
-
-  if (route.name === 'projects' && route.projectId) {
-    const project = findProject(route.projectId)
-    return {
-      ...base,
-
-      title: `${project.title} — ${SITE_NAME}`,
-      description: pick(project.shortDescription, SHORT_KEY[project.id]),
     }
   }
 
@@ -105,23 +95,31 @@ const osFor = (p) => {
 
 const isOrganization = (p) => p.category === 'Studio'
 
-const projectNode = (p) =>
-  isOrganization(p)
-    ? {
-        '@type': 'Organization',
-        name: p.title,
-        description: p.shortDescription,
-        url: `${SITE_URL}${projectPath(p.id)}`,
-        sameAs: p.url ? [p.url] : undefined,
-        member: { '@id': `${SITE_URL}/#blxr` },
-      }
-    : {
-        '@type': 'SoftwareApplication',
-        name: p.title,
-        applicationCategory: appCategoryFor(p),
-        description: p.shortDescription,
-        url: `${SITE_URL}${projectPath(p.id)}`,
-      }
+const projectNode = (p) => {
+  const url = `${SITE_URL}${projectPath(p.id)}`
+  if (isOrganization(p)) {
+    return {
+      '@type': 'Organization',
+      name: p.title,
+      description: p.shortDescription,
+      url,
+      sameAs: p.url ? [p.url] : undefined,
+      member: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+  const license = p.metrics.find((m) => m.label === 'License')?.value
+  return {
+    '@type': 'SoftwareApplication',
+    name: p.title,
+    applicationCategory: appCategoryFor(p),
+    operatingSystem: osFor(p),
+    description: p.shortDescription,
+    url,
+    codeRepository: p.github ?? undefined,
+    ...(license && license !== 'Proprietary' ? { license } : {}),
+    author: { '@id': `${SITE_URL}/#blxr` },
+  }
+}
 
 function jsonLdFor(path) {
   const route = parseRoute(path)
@@ -152,23 +150,6 @@ function jsonLdFor(path) {
           author: { '@id': `${SITE_URL}/#blxr` },
         },
       ],
-    }
-  }
-
-  if (route.name === 'projects' && route.projectId) {
-    const project = findProject(route.projectId)
-
-    const license = project.metrics.find((m) => m.label === 'License')?.value
-    if (isOrganization(project)) {
-      return { '@context': 'https://schema.org', ...projectNode(project) }
-    }
-    return {
-      '@context': 'https://schema.org',
-      ...projectNode(project),
-      operatingSystem: osFor(project),
-      codeRepository: project.github ?? undefined,
-      ...(license && license !== 'Proprietary' ? { license } : {}),
-      author: { '@id': `${SITE_URL}/#blxr` },
     }
   }
 

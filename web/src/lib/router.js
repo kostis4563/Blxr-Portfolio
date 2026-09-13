@@ -31,7 +31,7 @@ export function localizePath(path, lang) {
 }
 
 export function parseRoute(path) {
-  const p = routeOf(path)
+  const p = routeOf(path).split('#')[0]
   if (p === '/') return { name: 'home' }
   if (p === '/projects') return { name: 'projects', projectId: null }
   if (p === '/library') return { name: 'library', itemId: null }
@@ -40,7 +40,7 @@ export function parseRoute(path) {
   if (match) {
     const id = decodeURIComponent(match[1])
     if (projectsList.some((project) => project.id === id)) {
-      return { name: 'projects', projectId: id }
+      return { name: 'projects', projectId: id, redirect: projectPath(id) }
     }
   }
 
@@ -58,9 +58,9 @@ export function parseRoute(path) {
 const warmed = new Set()
 
 function heroImageFor(route) {
-  if (route.name === 'projects' && route.projectId) {
-    const src = projectsList.find((project) => project.id === route.projectId)?.image
-    return src ? { src, sizes: '(min-width: 768px) 768px, 100vw' } : null
+  if (route.name === 'projects') {
+    const src = projectsList[0]?.image
+    return src ? { src, sizes: SIZES.archiveCover } : null
   }
   if (route.name === 'library' && route.itemId) {
     const src = libraryList.find((entry) => entry.id === route.itemId)?.image
@@ -88,14 +88,13 @@ export function warmRoute(to) {
 
 export const HOME_PATH = '/'
 export const PROJECTS_PATH = '/projects'
-export const projectPath = (id) => `/projects/${encodeURIComponent(id)}`
+export const projectPath = (id) => `${PROJECTS_PATH}#${encodeURIComponent(id)}`
 export const LIBRARY_PATH = '/library'
 export const libraryPath = (id) => `/library/${encodeURIComponent(id)}`
 
 export const staticPaths = () => [
   HOME_PATH,
   PROJECTS_PATH,
-  ...projectsList.map((p) => projectPath(p.id)),
   LIBRARY_PATH,
   ...libraryList.map((entry) => libraryPath(entry.id)),
 ]
@@ -119,6 +118,8 @@ export const setServerPath = (path) => { ssrPath = normalizePath(path) }
 const getSnapshot = () =>
   typeof window === 'undefined' ? ssrPath : normalizePath(window.location.pathname)
 
+const getHash = () => (typeof window === 'undefined' ? '' : window.location.hash)
+
 export const currentLang = () => langOf(getSnapshot())
 
 let ownEntries = 0
@@ -130,15 +131,20 @@ if (typeof window !== 'undefined') {
     ownEntries = Math.max(0, ownEntries - 1)
     emit()
   })
+  window.addEventListener('hashchange', emit)
 }
 
 export function useRoutePath() {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
+export function useRouteHash() {
+  return useSyncExternalStore(subscribe, getHash, () => '')
+}
+
 export function navigate(to, { replace = false, lang = currentLang() } = {}) {
   const path = localizePath(to, lang)
-  if (path === getSnapshot()) return
+  if (path === getSnapshot() + getHash()) return
   if (replace) {
     window.history.replaceState(null, '', path)
   } else {

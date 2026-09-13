@@ -12,7 +12,9 @@ const LOGO_Q = 82
 
 const TARGETS = [
 
-  { glob: /^(async|amitista|delivo)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
+  { glob: /^(async|amitista|delivo|7x0-site|web-scanner)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
+
+  { glob: /^7x0-site-(dashboard|landing)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
   { dir: 'library', glob: /\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
 
   { glob: /^banner-(chrome|crystal)\.webp$/, widths: [480, 768, 1600], quality: COVER_Q },
@@ -20,6 +22,8 @@ const TARGETS = [
   { glob: /^pfp\.webp$/, widths: [128, 192], quality: LOGO_Q },
 
   { glob: /^(async|amitista|delivo)-logo\.webp$/, widths: [48, 96], quality: LOGO_Q },
+
+  { glob: /^7x0-logo\.webp$/, widths: [160, 272], quality: LOGO_Q },
 
   { glob: /^hand-(left|right)\.webp$/, widths: [300], quality: 80 },
 ]
