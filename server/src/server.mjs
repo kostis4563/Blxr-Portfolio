@@ -660,6 +660,8 @@ const inviteStatus = (invite, now) =>
 const publicInvite = (invite, now) => ({
   name: invite.name,
   role: invite.role,
+  rating: Number.isInteger(invite.rating) && invite.rating >= 1 && invite.rating <= 5 ? invite.rating : 5,
+  text: invite.text || INVITE_DEFAULT_TEXT,
   status: inviteStatus(invite, now),
   expiresAt: invite.expiresAt,
 })

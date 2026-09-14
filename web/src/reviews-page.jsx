@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { Stars, StarPicker } from './components/star-rating'
@@ -304,6 +305,98 @@ function InviteNote({ invite, t }) {
   )
 }
 
+function InviteDialog({ invite, busy, error, onSubmit, onEdit, onClose }) {
+  const { t } = useI18n()
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !busy) {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [busy, onClose])
+
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [])
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm animate-overlay-in sm:items-center sm:p-6"
+      onClick={() => !busy && onClose()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invite-dialog-title"
+        onClick={(e) => e.stopPropagation()}
+        className="relative flex w-full max-w-[560px] flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-2xl animate-panel-in sm:rounded-2xl"
+      >
+        <div className="flex items-start gap-3 border-b border-line px-6 py-5">
+          <div className="min-w-0">
+            <h2 id="invite-dialog-title" className="text-[17px] font-bold tracking-tight text-ink-strong">
+              {t('rev.invite.hello', { name: invite.name })}
+            </h2>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">{t('rev.invite.ready')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            aria-label={t('rev.edit.cancel')}
+            className="ms-auto flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="px-6 py-5">
+          <div className="rounded-2xl border border-line bg-surface-raised/40 p-5">
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <span className="text-[14.5px] font-semibold tracking-tight text-ink-strong">{invite.name}</span>
+              {invite.role && <span className="text-[12.5px] text-ink-subtle">{invite.role}</span>}
+              <Stars value={invite.rating} size={12} className="ms-auto" />
+            </div>
+            <p className="mt-3 whitespace-pre-line text-[13.5px] leading-relaxed text-ink-secondary">{invite.text}</p>
+          </div>
+          {error && <p role="alert" className="mt-4 text-[12.5px] text-red-500">{error}</p>}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line px-6 py-4">
+          <button type="button" disabled={busy} onClick={onSubmit} className={CTA}>
+            <span>{busy ? t('rev.form.submitting') : t('rev.form.submit')}</span>
+            {!busy && <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onEdit}
+            className="cursor-pointer text-[13px] font-medium text-ink-secondary transition-colors hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {t('rev.edit')}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+            className="cursor-pointer text-[13px] font-medium text-ink-muted transition-colors hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {t('rev.edit.cancel')}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 function retryPhrase(seconds, lang) {
   try {
     const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'always' })
@@ -323,7 +416,7 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
     editing
       ? { name: editing.name, role: editing.role || '', rating: editing.rating, text: editing.text, website: '' }
       : invite?.status === 'pending'
-        ? { ...EMPTY_DRAFT, name: invite.name, role: invite.role || '' }
+        ? { ...EMPTY_DRAFT, name: invite.name, role: invite.role || '', rating: invite.rating || 0, text: invite.text || '' }
         : EMPTY_DRAFT,
   )
   const [touched, setTouched] = useState({})
@@ -552,6 +645,10 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
   const [savedEdit, setSavedEdit] = useState(null)
   const [justPublished, setJustPublished] = useState(false)
   const [invite, setInvite] = useState(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteBusy, setInviteBusy] = useState(false)
+  const [inviteError, setInviteError] = useState(null)
+  const [invitePublished, setInvitePublished] = useState(null)
   const [now, setNow] = useState(() => Date.now())
 
   const nameRef = useRef(null)
@@ -587,7 +684,7 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
         .then((found) => {
           if (!found) return
           setInvite({ ...found, token })
-          if (found.status === 'pending') focusForm()
+          if (found.status === 'pending') setInviteOpen(true)
         })
         .catch(() => {})
     }
@@ -650,6 +747,52 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
 
   const viewReview = (id) => {
     document.getElementById(`review-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  const submitInvite = async () => {
+    if (!invite || inviteBusy) return
+    setInviteBusy(true)
+    setInviteError(null)
+    try {
+      const item = await submitReview({
+        name: invite.name,
+        role: invite.role || '',
+        rating: invite.rating,
+        text: invite.text,
+        website: '',
+        device: deviceToken(),
+        invite: invite.token,
+      })
+      const result = item || {
+        id: '',
+        name: invite.name,
+        role: invite.role || '',
+        rating: invite.rating,
+        text: invite.text,
+        at: new Date().toISOString(),
+        pending: true,
+      }
+      setInviteOpen(false)
+      setInvitePublished(result)
+      onPublished(result)
+      window.setTimeout(() => (result.id ? viewReview(result.id) : focusForm()), 80)
+    } catch (err) {
+      const code = err?.code
+      setInviteError(
+        code === 'invite_used' || code === 'invite_auto'
+          ? t('rev.invite.used')
+          : code === 'invite_expired' || code === 'invite_not_found'
+            ? t('rev.invite.expired')
+            : t('rev.invite.failed'),
+      )
+    } finally {
+      setInviteBusy(false)
+    }
+  }
+
+  const editInvite = () => {
+    setInviteOpen(false)
+    focusForm()
   }
 
   const copyId = (id) => {
@@ -821,6 +964,8 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
           {invite && !editing && !savedEdit && !justPublished && <InviteNote invite={invite} t={t} />}
           {savedEdit ? (
             <SuccessNote published={savedEdit} edited onView={() => viewReview(savedEdit.id)} t={t} />
+          ) : invitePublished ? (
+            <SuccessNote published={invitePublished} onView={() => viewReview(invitePublished.id)} t={t} />
           ) : (
             <ReviewForm
               key={editing ? `edit-${editing.id}` : invite ? `invite-${invite.token}` : 'new'}
@@ -838,6 +983,17 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
         </section>
 
       </main>
+
+      {inviteOpen && invite?.status === 'pending' && (
+        <InviteDialog
+          invite={invite}
+          busy={inviteBusy}
+          error={inviteError}
+          onSubmit={submitInvite}
+          onEdit={editInvite}
+          onClose={() => setInviteOpen(false)}
+        />
+      )}
     </div>
   )
 }

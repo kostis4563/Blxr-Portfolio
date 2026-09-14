@@ -38,6 +38,15 @@ const STATUS_CHIP = {
   expired: 'text-ink-faint border-line',
 }
 
+const FIELD_ERRORS = {
+  name: `Name has to be ${REVIEW_LIMITS.name.min}–${REVIEW_LIMITS.name.max} characters.`,
+  role: `Role has to be ${REVIEW_LIMITS.role.max} characters or fewer.`,
+  text: `Fallback text has to be at least ${REVIEW_LIMITS.text.min} characters, or left empty.`,
+  rating: 'Pick a rating between 1 and 5.',
+}
+
+const fieldError = (fields) => fields.map((f) => FIELD_ERRORS[f] || `Check: ${f}.`).join(' ')
+
 function flagsOf(r) {
   const flags = []
   if (r.pending) flags.push(['pending', 'text-amber-500 border-amber-500/30'])
@@ -273,7 +282,7 @@ function ReviewDialog({ item, list, lang, busy, onPatch, onDelete, onOpen, onClo
       if (closeAfter) onClose()
       else setSaved(true)
     } catch (err) {
-      setError(err?.code === 'invalid' ? `Check: ${err.fields.join(', ')}.` : err?.code === 'link' ? 'Links are not allowed.' : err?.code === 'blocked' ? 'Contains a blocked term.' : 'Could not save.')
+      setError(err?.code === 'invalid' ? fieldError(err.fields) : err?.code === 'link' ? 'Links are not allowed.' : err?.code === 'blocked' ? 'Contains a blocked term.' : 'Could not save.')
     }
   }
 
@@ -417,15 +426,22 @@ function Invites({ invites, lang, busy, onCreate, onRevoke, onCopy, copied }) {
   const [created, setCreated] = useState(null)
   const [error, setError] = useState(null)
 
+  const textLength = draft.text.trim().length
+  const textTooShort = textLength > 0 && textLength < REVIEW_LIMITS.text.min
+
   const submit = async (event) => {
     event.preventDefault()
     setError(null)
+    if (textTooShort) {
+      setError(FIELD_ERRORS.text)
+      return
+    }
     try {
       const invite = await onCreate(draft)
       setCreated(invite)
       setDraft({ name: '', role: '', text: '', rating: 5, days: INVITE_DAYS })
     } catch (err) {
-      setError(err?.code === 'invalid' ? `Check: ${err.fields.join(', ')}.` : err?.code === 'link' ? 'Links are not allowed.' : 'Could not create the link.')
+      setError(err?.code === 'invalid' ? fieldError(err.fields) : err?.code === 'link' ? 'Links are not allowed.' : 'Could not create the link.')
     }
   }
 
@@ -445,8 +461,13 @@ function Invites({ invites, lang, busy, onCreate, onRevoke, onCopy, copied }) {
           <input className={INPUT} value={draft.role} maxLength={REVIEW_LIMITS.role.max} onChange={(e) => setDraft({ ...draft, role: e.target.value })} />
         </label>
         <label className="flex flex-col gap-2 sm:col-span-2">
-          <span className={LABEL}>Fallback text <span className="font-normal normal-case tracking-normal text-ink-faint">· optional, only used for the automatic review</span></span>
-          <textarea className={`${INPUT} min-h-[80px] resize-y`} rows={3} value={draft.text} maxLength={REVIEW_LIMITS.text.max} placeholder="Rated without leaving a written review." onChange={(e) => setDraft({ ...draft, text: e.target.value })} />
+          <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <span className={LABEL}>Fallback text <span className="font-normal normal-case tracking-normal text-ink-faint">· optional, only used for the automatic review</span></span>
+            <span className={`font-mono text-[10.5px] tabular-nums ${textTooShort ? 'text-red-500' : 'text-ink-faint'}`}>
+              {textLength === 0 ? `${REVIEW_LIMITS.text.min} characters minimum if used` : `${textLength} / ${textTooShort ? REVIEW_LIMITS.text.min : REVIEW_LIMITS.text.max}`}
+            </span>
+          </span>
+          <textarea className={`${INPUT} min-h-[80px] resize-y ${textTooShort ? 'border-red-500/50' : ''}`} rows={3} value={draft.text} maxLength={REVIEW_LIMITS.text.max} placeholder="Rated without leaving a written review." onChange={(e) => setDraft({ ...draft, text: e.target.value })} />
         </label>
         <label className="flex flex-col gap-2">
           <span className={LABEL}>Automatic rating</span>
