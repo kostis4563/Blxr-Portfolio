@@ -4,7 +4,7 @@ import { CommandButton } from './components/command-button'
 import { Stars, StarPicker } from './components/star-rating'
 import { useI18n } from './lib/i18n'
 import { link, useRouteHash, HOME_PATH } from './lib/router'
-import { fetchReviews, submitReview } from './lib/api'
+import { fetchReviews, submitReview, editReview, fetchInvite } from './lib/api'
 import { CONTACT_EMAIL } from './lib/profile'
 import {
   REVIEW_LIMITS,
@@ -21,6 +21,8 @@ import {
   readOwnReview,
   rememberOwnReview,
   forgetOwnReview,
+  editMinutesLeft,
+  TOKEN_RE,
 } from './lib/reviews'
 
 const LABEL = 'text-[11px] font-mono font-semibold text-ink-subtle uppercase tracking-wider'
@@ -148,7 +150,7 @@ function Summary({ summary, filter, onFilter, t, plural }) {
   )
 }
 
-function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, t }) {
+function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, editMinutes = 0, onEdit, t }) {
   return (
     <article id={`review-${item.id}`} className={`border-b border-line py-6 ${highlighted ? 'animate-rise-in' : ''}`}>
       <div className="flex items-start gap-3.5">
@@ -161,9 +163,19 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, t }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <h3 className="max-w-full truncate text-[14.5px] font-semibold tracking-tight text-ink-strong">{item.name}</h3>
+            {item.pinned && (
+              <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-px font-mono text-[10px] uppercase tracking-wider text-amber-500">
+                {t('rev.featured')}
+              </span>
+            )}
             {isOwn && (
               <span className="rounded-md border border-line bg-surface-raised px-1.5 py-px font-mono text-[10px] uppercase tracking-wider text-ink-muted">
                 {t('rev.you')}
+              </span>
+            )}
+            {item.pending && (
+              <span className="rounded-md border border-dashed border-line-strong px-1.5 py-px font-mono text-[10px] uppercase tracking-wider text-ink-subtle">
+                {t('rev.pending')}
               </span>
             )}
             <time
@@ -172,6 +184,7 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, t }) {
               className="ms-auto whitespace-nowrap font-mono text-[11px] text-ink-subtle"
             >
               {relativeTime(item.at, lang)}
+              {item.editedAt && <span className="text-ink-faint"> · {t('rev.edited')}</span>}
             </time>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -183,7 +196,17 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, t }) {
 
       <p className="mt-3.5 whitespace-pre-line text-[13.5px] leading-relaxed text-ink-secondary sm:ps-[52px]">{item.text}</p>
 
-      <div className="mt-3 sm:ps-[52px]">
+      {item.reply && (
+        <div className="mt-4 rounded-xl border border-line bg-surface-raised/40 px-4 py-3 sm:ms-[52px]">
+          <p className="font-mono text-[10.5px] uppercase tracking-wider text-ink-subtle">
+            {t('rev.reply')}
+            <span className="ms-2 normal-case tracking-normal text-ink-faint">{relativeTime(item.reply.at, lang)}</span>
+          </p>
+          <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-ink-secondary">{item.reply.text}</p>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 sm:ps-[52px]">
         <button
           type="button"
           onClick={() => onCopyId(item.id)}
@@ -193,29 +216,51 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, t }) {
         >
           {copied ? t('contact.copied') : `#${item.id}`}
         </button>
+        {isOwn && editMinutes > 0 && (
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="inline-flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-ink-muted transition-colors hover:text-ink-strong"
+          >
+            <span>{t('rev.edit')}</span>
+            <span className="font-mono text-[10.5px] text-ink-faint">{t('rev.edit.left', { n: editMinutes })}</span>
+          </button>
+        )}
       </div>
     </article>
   )
 }
 
-function OwnNote({ own, t }) {
+function OwnNote({ own, editMinutes = 0, onEdit, t }) {
   const subject = encodeURIComponent(`Review #${own.id}`)
   return (
     <div className="rounded-2xl border border-dashed border-line-strong p-6 sm:p-7">
       <p className="text-[14.5px] font-semibold tracking-tight text-ink-strong">{t('rev.own.title')}</p>
       <p className="mt-1.5 max-w-[52ch] text-[13px] leading-relaxed text-ink-muted">{t('rev.own.body')}</p>
-      <a
-        href={`mailto:${CONTACT_EMAIL}?subject=${subject}`}
-        className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-secondary transition-colors hover:text-ink-strong"
-      >
-        <span>{t('cmd.sendEmail')}</span>
-        <span aria-hidden="true">→</span>
-      </a>
+      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+        {editMinutes > 0 && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex cursor-pointer items-center gap-1.5 text-[12.5px] font-medium text-ink-strong transition-colors hover:text-ink-muted"
+          >
+            <span>{t('rev.edit')}</span>
+            <span className="font-mono text-[10.5px] text-ink-faint">{t('rev.edit.left', { n: editMinutes })}</span>
+          </button>
+        )}
+        <a
+          href={`mailto:${CONTACT_EMAIL}?subject=${subject}`}
+          className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-secondary transition-colors hover:text-ink-strong"
+        >
+          <span>{t('cmd.sendEmail')}</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
     </div>
   )
 }
 
-function SuccessNote({ published, onView, t }) {
+function SuccessNote({ published, onView, edited = false, t }) {
   return (
     <div className="animate-rise-in rounded-2xl border border-line bg-surface-raised/40 p-6 sm:p-7">
       <div className="flex items-start gap-3.5">
@@ -225,8 +270,10 @@ function SuccessNote({ published, onView, t }) {
           </svg>
         </span>
         <div className="min-w-0">
-          <p className="text-[16px] font-semibold tracking-tight text-ink-strong">{t('rev.success.title', { name: published.name })}</p>
-          <p className="mt-1 text-[13px] text-ink-muted">{t('rev.success.body')}</p>
+          <p className="text-[16px] font-semibold tracking-tight text-ink-strong">
+            {edited ? t('rev.edit.saved') : t('rev.success.title', { name: published.name })}
+          </p>
+          {!edited && <p className="mt-1 text-[13px] text-ink-muted">{published.pending ? t('rev.success.pending') : t('rev.success.body')}</p>}
           <button
             type="button"
             onClick={onView}
@@ -238,6 +285,22 @@ function SuccessNote({ published, onView, t }) {
         </div>
       </div>
     </div>
+  )
+}
+
+function InviteNote({ invite, t }) {
+  if (invite.status === 'pending') {
+    return (
+      <div className="mb-6 rounded-2xl border border-line bg-surface-raised/40 p-5 sm:p-6">
+        <p className="text-[14.5px] font-semibold tracking-tight text-ink-strong">{t('rev.invite.hello', { name: invite.name })}</p>
+        <p className="mt-1.5 max-w-[56ch] text-[13px] leading-relaxed text-ink-muted">{t('rev.invite.body')}</p>
+      </div>
+    )
+  }
+  return (
+    <p className="mb-6 rounded-xl border border-dashed border-line-strong px-4 py-3 text-[12.5px] text-ink-muted">
+      {invite.status === 'used' ? t('rev.invite.used') : t('rev.invite.expired')}
+    </p>
   )
 }
 
@@ -254,9 +317,15 @@ function retryPhrase(seconds, lang) {
 
 const EMPTY_DRAFT = { name: '', role: '', rating: 0, text: '', website: '' }
 
-function ReviewForm({ own, nameRef, onPublished, onView }) {
+function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, onView, editing = null, onCancelEdit, invite = null }) {
   const { t, lang } = useI18n()
-  const [draft, setDraft] = useState(EMPTY_DRAFT)
+  const [draft, setDraft] = useState(() =>
+    editing
+      ? { name: editing.name, role: editing.role || '', rating: editing.rating, text: editing.text, website: '' }
+      : invite?.status === 'pending'
+        ? { ...EMPTY_DRAFT, name: invite.name, role: invite.role || '' }
+        : EMPTY_DRAFT,
+  )
   const [touched, setTouched] = useState({})
   const [attempted, setAttempted] = useState(false)
   const [status, setStatus] = useState('idle')
@@ -298,14 +367,16 @@ function ReviewForm({ own, nameRef, onPublished, onView }) {
     setStatus('sending')
     setServerError(null)
     try {
-      const item = await submitReview({
+      const payload = {
         name: draft.name.trim(),
         role: draft.role.trim(),
         rating: draft.rating,
         text: draft.text.trim(),
         website: draft.website,
         device: deviceToken(),
-      })
+      }
+      if (invite?.status === 'pending') payload.invite = invite.token
+      const item = editing ? await editReview(editing.id, payload) : await submitReview(payload)
       const result = item || {
         id: '',
         name: draft.name.trim(),
@@ -326,16 +397,20 @@ function ReviewForm({ own, nameRef, onPublished, onView }) {
         setServerError({ code })
       } else if (code === 'rate_limited') {
         setServerError({ code, when: retryPhrase(err.retryAfter || 3 * 86_400, lang) })
-      } else if (code === 'busy' || code === 'full') {
+      } else if (code === 'busy' || code === 'full' || code === 'paused') {
         setServerError({ code: 'later' })
+      } else if (code === 'edit_window' || code === 'not_yours') {
+        setServerError({ code: 'editWindow' })
+      } else if (code === 'invite_used' || code === 'invite_expired' || code === 'invite_not_found' || code === 'invite_auto') {
+        setServerError({ code: code === 'invite_used' ? 'inviteUsed' : 'inviteExpired' })
       } else {
         setServerError({ code: 'generic' })
       }
     }
   }
 
-  if (status === 'done' && published) return <SuccessNote published={published} onView={() => onView(published.id)} t={t} />
-  if (own) return <OwnNote own={own} t={t} />
+  if (status === 'done' && published) return <SuccessNote published={published} edited={Boolean(editing)} onView={() => onView(published.id)} t={t} />
+  if (own && !editing && invite?.status !== 'pending') return <OwnNote own={own} editMinutes={ownEditMinutes} onEdit={onEditOwn} t={t} />
 
   const textLength = draft.text.trim().length
   const sending = status === 'sending'
@@ -347,6 +422,9 @@ function ReviewForm({ own, nameRef, onPublished, onView }) {
       blocked: t('rev.error.blocked'),
       rate_limited: t('rev.error.rateLimited', { when: serverError.when }),
       later: t('rev.error.later'),
+      editWindow: t('rev.error.editWindow'),
+      inviteUsed: t('rev.invite.used'),
+      inviteExpired: t('rev.invite.expired'),
       generic: t('rev.error.generic'),
     }[serverError.code]
 
@@ -422,10 +500,17 @@ function ReviewForm({ own, nameRef, onPublished, onView }) {
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <button type="submit" disabled={sending} className={CTA}>
-          <span>{sending ? t('rev.form.submitting') : t('rev.form.submit')}</span>
-          {!sending && <span className="inline-block transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>}
-        </button>
+        <div className="flex items-center gap-4">
+          <button type="submit" disabled={sending} className={CTA}>
+            <span>{sending ? t('rev.form.submitting') : editing ? t('rev.edit.save') : t('rev.form.submit')}</span>
+            {!sending && <span className="inline-block transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>}
+          </button>
+          {editing && (
+            <button type="button" onClick={onCancelEdit} className="cursor-pointer text-[12.5px] font-medium text-ink-muted transition-colors hover:text-ink-strong">
+              {t('rev.edit.cancel')}
+            </button>
+          )}
+        </div>
         <p className="max-w-[44ch] text-[11.5px] leading-relaxed text-ink-faint">{t('rev.form.notice')}</p>
       </div>
 
@@ -463,9 +548,19 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
   const [own, setOwn] = useState(null)
   const [highlight, setHighlight] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
+  const [editing, setEditing] = useState(null)
+  const [savedEdit, setSavedEdit] = useState(null)
+  const [justPublished, setJustPublished] = useState(false)
+  const [invite, setInvite] = useState(null)
+  const [now, setNow] = useState(() => Date.now())
 
   const nameRef = useRef(null)
   const formRef = useRef(null)
+
+  const focusForm = useCallback(() => {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.setTimeout(() => nameRef.current?.focus({ preventScroll: true }), 350)
+  }, [])
 
   const load = useCallback(async () => {
     try {
@@ -484,12 +579,28 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
   useEffect(() => {
     if (window.location.hash !== '#write') window.scrollTo(0, 0)
     load()
-  }, [load])
 
-  const focusForm = useCallback(() => {
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    window.setTimeout(() => nameRef.current?.focus({ preventScroll: true }), 350)
-  }, [])
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('invite')
+    if (token && TOKEN_RE.test(token)) {
+      fetchInvite(token)
+        .then((found) => {
+          if (!found) return
+          setInvite({ ...found, token })
+          if (found.status === 'pending') focusForm()
+        })
+        .catch(() => {})
+    }
+  }, [load, focusForm])
+
+  const ownItem = own ? items.find((item) => item.id === own.id) : null
+  const editMinutes = ownItem ? editMinutesLeft(ownItem, now) : 0
+
+  useEffect(() => {
+    if (!editMinutes) return
+    const timer = window.setInterval(() => setNow(Date.now()), 20_000)
+    return () => window.clearInterval(timer)
+  }, [editMinutes])
 
   useEffect(() => {
     if (hash === '#write') focusForm()
@@ -511,14 +622,31 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
 
   const onPublished = (item) => {
     if (item.id) {
-      setItems((prev) => [item, ...prev.filter((r) => r.id !== item.id)])
+      setItems((prev) => (editing ? prev.map((r) => (r.id === item.id ? item : r)) : [item, ...prev.filter((r) => r.id !== item.id)]))
       rememberOwnReview(item)
       setOwn({ id: item.id, at: item.at })
       setHighlight(item.id)
+      setNow(Date.now())
     }
-    setSort('newest')
-    setFilter(null)
+    if (invite?.status === 'pending') {
+      setInvite({ ...invite, status: 'used' })
+      setJustPublished(true)
+    }
+    if (editing) {
+      setEditing(null)
+      setSavedEdit(item)
+    } else {
+      setSort('newest')
+      setFilter(null)
+    }
   }
+
+  const startEdit = (item) => {
+    setSavedEdit(null)
+    setEditing(item)
+    focusForm()
+  }
+
 
   const viewReview = (id) => {
     document.getElementById(`review-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -657,6 +785,8 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
                     highlighted={highlight === item.id}
                     copied={copiedId === item.id}
                     onCopyId={copyId}
+                    editMinutes={own?.id === item.id ? editMinutes : 0}
+                    onEdit={startEdit}
                     t={t}
                   />
                 </li>
@@ -683,10 +813,28 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
           className="mt-16 w-full scroll-mt-24 border-t border-dashed border-line pt-10"
         >
           <div className="mb-7 max-w-[560px]">
-            <h2 id="write-heading" className="text-[22px] font-bold tracking-tight text-ink-strong">{t('rev.write')}</h2>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">{t('rev.form.intro')}</p>
+            <h2 id="write-heading" className="text-[22px] font-bold tracking-tight text-ink-strong">
+              {editing || savedEdit ? t('rev.edit.title') : t('rev.write')}
+            </h2>
+            {!editing && !savedEdit && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">{t('rev.form.intro')}</p>}
           </div>
-          <ReviewForm own={own} nameRef={nameRef} onPublished={onPublished} onView={viewReview} />
+          {invite && !editing && !savedEdit && !justPublished && <InviteNote invite={invite} t={t} />}
+          {savedEdit ? (
+            <SuccessNote published={savedEdit} edited onView={() => viewReview(savedEdit.id)} t={t} />
+          ) : (
+            <ReviewForm
+              key={editing ? `edit-${editing.id}` : invite ? `invite-${invite.token}` : 'new'}
+              own={own}
+              ownEditMinutes={editMinutes}
+              onEditOwn={() => ownItem && startEdit(ownItem)}
+              nameRef={nameRef}
+              onPublished={onPublished}
+              onView={viewReview}
+              editing={editing}
+              onCancelEdit={() => setEditing(null)}
+              invite={invite}
+            />
+          )}
         </section>
 
       </main>

@@ -20,5 +20,6 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /guide
+Disallow: /reviewpanel
 
 Sitemap: https://blxr.net/sitemap.xml

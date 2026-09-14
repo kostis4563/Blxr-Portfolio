@@ -6,6 +6,7 @@ import AnimatedFooter from './components/animated-footer'
 import ProjectsPage from './projects-page'
 import LibraryPage from './library-page'
 import ReviewsPage from './reviews-page'
+import ReviewPanelPage from './review-panel-page'
 import NotFoundPage from './not-found-page'
 import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
@@ -414,6 +415,10 @@ function App() {
         {palette}
       </>
     )
+  }
+
+  if (currentView === 'reviewpanel') {
+    return <ReviewPanelPage theme={theme} onToggleTheme={toggleTheme} />
   }
 
   return (

@@ -18,10 +18,14 @@ Listens on `127.0.0.1:8899`. No credentials needed — see `.env.example`.
 ## API
 
 All routes `GET` except `/api/hit` and `POST /api/vitals`; `/api/vitals`
-and `/api/reviews` answer both verbs. Anything else: `405`. Errors:
-`{ "error": "..." }` with `400` (bad review), `404` (unknown path), `429`
-(review rate limit), `502` (every upstream failed) or `503` (`/api/music/top`
-still resolving a cold chart, `Retry-After: 15`; or the review store is full).
+and `/api/reviews` answer both verbs, `/api/reviews/<id>` takes `PATCH`, and
+the owner routes under `/api/reviews/panel` and `/api/reviews/invites` take
+what the [panel](#review-panel) section lists. Anything else: `405`. Errors:
+`{ "error": "..." }` with `400` (bad review), `401` (no panel session),
+`403` (not your review, edit window over), `404` (unknown path), `410` (invite
+link used or expired), `429` (review rate limit, panel login lockout), `502`
+(every upstream failed) or `503` (`/api/music/top` still resolving a cold
+chart, `Retry-After: 15`; reviews paused; or the review store is full).
 
 Consumed by `web/src/lib/api.js` (music/hit/reviews routes) and
 `web/src/lib/github.js` (contributions route, which also owns the
@@ -121,10 +125,64 @@ Answers `201 { "item": {…} }` or:
 | `400` | `blocked` | matched `BLOCKED_TERMS` in `moderation.mjs` |
 | `429` | `rate_limited` | same network, device or cookie within 3 days (`Retry-After` set) |
 | `429` | `busy` | more than 30 reviews site-wide in the last hour |
+| `503` | `paused` | submissions paused from the panel |
 | `503` | `full` | 1000 reviews stored; nothing new until some are removed |
 
-Reviews are public the moment they're accepted. There is no approval queue
-and no admin panel, on purpose.
+Reviews are public the moment they're accepted unless **Require approval** is
+on in the panel, in which case they're stored `pending` and only the writer
+(matched by cookie) sees their own card until it's approved.
+
+With `invite` (a token from an invite link, below) the rate limit is skipped
+and the invite is marked used; a used, expired or unknown token answers
+`410 invite_used` / `invite_expired` / `invite_not_found`.
+
+### `PATCH /api/reviews/<id>`
+Same body and validation as `POST`. Allowed only from the browser that
+posted the review (the `blxr_rv` cookie or the `device` token must match)
+and only within **15 minutes** of `at`; otherwise `403 not_yours` /
+`403 edit_window`. Answers `200 { "item": {…} }` with `editedAt` set.
+
+### Review panel — `/api/reviews/panel…`
+Backs the owner page at `blxr.net/reviewpanel`. The password is
+`REVIEW_OWNER_KEY` from the env file on the box and nowhere else: it is never
+in the repo, and while it is unset the panel answers `503 panel_disabled`.
+Passwords shorter than 16 characters are rejected outright. Five wrong
+attempts from one address lock it for 15 minutes.
+
+- `POST /panel/login` `{ "password" }` → `204` and an `HttpOnly; SameSite=Strict`
+  session cookie scoped to `/api/reviews`, valid 12 hours (sessions live in
+  memory, so a server restart signs everyone out).
+- `POST /panel/logout`, `GET /panel/session` (`204` or `401`).
+- `GET /panel` → `{ reviews, invites, settings, stats }`. `reviews` is every
+  record including hidden and pending ones, minus the hashes.
+- `PATCH /panel/reviews/<id>` with any of `name`, `role`, `rating`, `text`
+  (validated like a submission, sets `editedAt`), `hidden`, `pinned`,
+  `pending: false` (approve), `reply` (string; empty removes it).
+- `DELETE /panel/reviews/<id>` → `204`, permanent.
+- `PUT /panel/settings` `{ paused, approval, blockedTerms: [] }`, stored in
+  `$STATE_DIRECTORY/review-settings.json`. Blocked terms merge with
+  `BLOCKED_TERMS` from `moderation.mjs`.
+
+Scripts can skip the login and send the password as `X-Review-Key` instead.
+
+### Invite links — `/api/reviews/invites`
+Same session as the panel (or `X-Review-Key`).
+
+- `POST` `{ "name", "role"?, "text"?, "rating"?, "days"? }` → `201 { "invite" }`
+  with a 32-hex `token`. The link is `https://blxr.net/reviews?invite=<token>`.
+  `rating` (1–5, default 5) and `days` (1–30, default 4) shape the automatic
+  review.
+- `GET` → every invite with `status`: `pending`, `used` (`reviewId` set),
+  `auto` or `expired`.
+- `DELETE /api/reviews/invites/<token>` → `204`, or `409 already_used`.
+- `GET /api/reviews/invites/<token>` is **public** and returns only
+  `{ name, role, status, expiresAt }`; the page uses it to prefill the form.
+
+If an invite hasn't been used when it expires, the hourly sweep (also run at
+startup) posts a review under the invite's `name` and `role` with the chosen
+`rating`, using `text` if set or "Rated without leaving a written review."
+otherwise, flagged `auto: true` in the API. Invited submissions skip approval
+and the rate limit.
 
 ### `GET /api/github/contributions?user=<login>&y=last|YYYY`
 `user` must be a valid GitHub login (`400 bad_user` otherwise); `y` is
@@ -162,8 +220,8 @@ header can't be spoofed from outside.
 
 ### Removing a review
 
-There is deliberately no UI for this. `src/moderation.mjs` is the whole
-control surface:
+The panel at `/reviewpanel` hides, deletes, pins, edits and replies. Removing
+by source still works and survives anything the panel does:
 
 1. Find the id. Every card on `/reviews` shows it as a faint `#xxxxxxxx`
    chip (click copies it), and it's in the `mailto:` subject when someone
@@ -209,14 +267,15 @@ Chart-rank history: `$STATE_DIRECTORY/chart-history.json`
 `movement` is `null`.
 
 View counts in `hits.json`, Core Web Vitals histograms in `vitals.json`,
-reviews in `reviews.json`. All flushed every 30s and on `SIGTERM`/`SIGINT`;
+reviews in `reviews.json`, invite links in `review-invites.json`. All flushed every 30s and on `SIGTERM`/`SIGINT`;
 hits and vitals pruned to the last 90 days per write, reviews kept
 indefinitely. Corrupt/missing file starts from zero.
 
 All saved from one signal handler (the first listener to call
 `process.exit()` ends the process, so a second handler for the same signal
 never runs). Anything added later that persists to disk goes in that same
-handler, next to `saveHits()`, `saveVitals()` and `saveReviews()`.
+handler, next to `saveHits()`, `saveVitals()`, `saveReviews()` and
+`saveInvites()`.
 
 ## Deploy
 

@@ -85,6 +85,15 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'reviewpanel') {
+    return {
+      ...base,
+      title: `Review panel — ${SITE_NAME}`,
+      description: 'Owner tools for blxr.net reviews.',
+      noindex: true,
+    }
+  }
+
   return {
     ...base,
     title: `${pick('Not found', 'nf.title')} — ${SITE_NAME}`,

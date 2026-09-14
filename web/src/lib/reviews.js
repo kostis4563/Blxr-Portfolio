@@ -12,6 +12,10 @@ export const PAGE_SIZE = 8
 
 export const LINK_RE = /https?:\/\/|www\.|\S+\.(?:com|net|org|io|gg|xyz|me|app|dev|co)(?=[\s/,.;:!?)]|$)/i
 
+export const EDIT_WINDOW_MS = 15 * 60 * 1000
+export const INVITE_DAYS = 4
+export const TOKEN_RE = /^[a-f0-9]{32}$/
+
 const OWN_KEY = 'blxr-review'
 const DEVICE_KEY = 'blxr-device'
 
@@ -29,10 +33,11 @@ export function summarize(items) {
 
 export function sortReviews(items, sort) {
   const byDate = (a, b) => Date.parse(b.at) - Date.parse(a.at)
+  const byPin = (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)
   const copy = [...items]
-  if (sort === 'highest') return copy.sort((a, b) => b.rating - a.rating || byDate(a, b))
-  if (sort === 'lowest') return copy.sort((a, b) => a.rating - b.rating || byDate(a, b))
-  return copy.sort(byDate)
+  if (sort === 'highest') return copy.sort((a, b) => byPin(a, b) || b.rating - a.rating || byDate(a, b))
+  if (sort === 'lowest') return copy.sort((a, b) => byPin(a, b) || a.rating - b.rating || byDate(a, b))
+  return copy.sort((a, b) => byPin(a, b) || byDate(a, b))
 }
 
 export function initials(name) {
@@ -123,4 +128,13 @@ export function forgetOwnReview() {
     localStorage.removeItem(OWN_KEY)
   } catch {
   }
+}
+
+export function editMinutesLeft(item, now = Date.now()) {
+  const left = EDIT_WINDOW_MS - (now - Date.parse(item.at))
+  return left > 0 ? Math.ceil(left / 60_000) : 0
+}
+
+export function inviteLink(token) {
+  return `${window.location.origin}/reviews?invite=${token}`
 }

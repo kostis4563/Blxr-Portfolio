@@ -78,6 +78,84 @@ export async function submitReview(review, { signal } = {}) {
   return data?.item ?? null
 }
 
+async function reviewRequest(path, { method = 'GET', body, key, signal } = {}) {
+  const headers = {}
+  if (body !== undefined) headers['content-type'] = 'application/json'
+  if (key) headers['x-review-key'] = key
+  const res = await fetch(`${REVIEWS}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    credentials: 'same-origin',
+    cache: 'no-store',
+    signal,
+  })
+  if (res.status === 204) return null
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    throw new ReviewError(data?.error || 'failed', {
+      fields: Array.isArray(data?.fields) ? data.fields : [],
+      retryAfter: Number(res.headers.get('retry-after')) || Number(data?.retryAfter) || 0,
+      status: res.status,
+    })
+  }
+  return data
+}
+
+export async function editReview(id, review, { signal } = {}) {
+  const data = await reviewRequest(`/${encodeURIComponent(id)}`, { method: 'PATCH', body: review, signal })
+  return data?.item ?? null
+}
+
+export async function fetchInvite(token, { signal } = {}) {
+  const data = await reviewRequest(`/invites/${encodeURIComponent(token)}`, { signal })
+  return data?.invite ?? null
+}
+
+export async function createInvite(invite, { signal } = {}) {
+  const data = await reviewRequest('/invites', { method: 'POST', body: invite, signal })
+  return data?.invite ?? null
+}
+
+export function deleteInvite(token, { signal } = {}) {
+  return reviewRequest(`/invites/${encodeURIComponent(token)}`, { method: 'DELETE', signal })
+}
+
+export function panelLogin(password, { signal } = {}) {
+  return reviewRequest('/panel/login', { method: 'POST', body: { password }, signal })
+}
+
+export function panelLogout({ signal } = {}) {
+  return reviewRequest('/panel/logout', { method: 'POST', signal })
+}
+
+export async function panelSession({ signal } = {}) {
+  try {
+    await reviewRequest('/panel/session', { signal })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function fetchPanel({ signal } = {}) {
+  return reviewRequest('/panel', { signal })
+}
+
+export async function panelUpdateReview(id, patch, { signal } = {}) {
+  const data = await reviewRequest(`/panel/reviews/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch, signal })
+  return data?.item ?? null
+}
+
+export function panelDeleteReview(id, { signal } = {}) {
+  return reviewRequest(`/panel/reviews/${encodeURIComponent(id)}`, { method: 'DELETE', signal })
+}
+
+export async function panelSaveSettings(settings, { signal } = {}) {
+  const data = await reviewRequest('/panel/settings', { method: 'PUT', body: settings, signal })
+  return data?.settings ?? null
+}
+
 export async function checkHealth({ signal } = {}) {
   try {
     const data = await getJson('/health', signal)

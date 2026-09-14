@@ -17,7 +17,7 @@ const HTML_RE = /<html[^>]*>/
 const EMAIL_OFF = '<!--email_off-->'
 const EMAIL_ON = '<!--email_on-->'
 
-const { render, localizedPaths, metaFor, NOT_FOUND_PATH } = await import(
+const { render, localizedPaths, metaFor, NOT_FOUND_PATH, REVIEW_PANEL_PATH } = await import(
   pathToFileURL(ssrEntry).href
 )
 
@@ -50,7 +50,7 @@ function localePreloadFor(lang) {
   return href ? `<link rel="modulepreload" crossorigin href="${href}">` : ''
 }
 
-const pages = [...localizedPaths(), NOT_FOUND_PATH]
+const pages = [...localizedPaths(), NOT_FOUND_PATH, REVIEW_PANEL_PATH]
 const written = []
 
 for (const path of pages) {

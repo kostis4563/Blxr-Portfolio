@@ -36,6 +36,7 @@ export function parseRoute(path) {
   if (p === '/projects') return { name: 'projects', projectId: null }
   if (p === '/library') return { name: 'library', itemId: null }
   if (p === '/reviews') return { name: 'reviews' }
+  if (p === '/reviewpanel') return { name: 'reviewpanel' }
 
   const match = /^\/projects\/([^/]+)$/.exec(p)
   if (match) {
@@ -94,6 +95,7 @@ export const LIBRARY_PATH = '/library'
 export const libraryPath = (id) => `/library/${encodeURIComponent(id)}`
 export const REVIEWS_PATH = '/reviews'
 export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
+export const REVIEW_PANEL_PATH = '/reviewpanel'
 
 export const staticPaths = () => [
   HOME_PATH,

@@ -6501,3 +6501,179 @@ for (const [key, forms] of Object.entries(REVIEW_PLURALS)) {
     for (const [code, value] of Object.entries(byLang)) translations[code][`${key}.${form}`] = value
   }
 }
+
+const REVIEW_EDIT_LABELS = {
+  'rev.edit': {
+    en: 'Edit', es: 'Editar', fr: 'Modifier', de: 'Bearbeiten', it: 'Modifica', pt: 'Editar', el: 'Επεξεργασία',
+    nl: 'Bewerken', ru: 'Изменить', ja: '編集', zh: '编辑', ar: 'تعديل', no: 'Rediger', hi: 'संपादित करें', id: 'Ubah',
+    tr: 'Düzenle', ko: '수정', pl: 'Edytuj', vi: 'Sửa', uk: 'Змінити', sv: 'Redigera', da: 'Redigér', fi: 'Muokkaa',
+    bg: 'Редакция', ro: 'Editează', sr: 'Измени', cs: 'Upravit', th: 'แก้ไข', bn: 'সম্পাদনা', fa: 'ویرایش', he: 'עריכה', hu: 'Szerkesztés'
+  },
+  'rev.edit.left': {
+    en: '{n} min left', es: 'quedan {n} min', fr: '{n} min restantes', de: 'noch {n} Min.', it: '{n} min rimasti', pt: 'faltam {n} min',
+    el: '{n} λεπτά ακόμα', nl: 'nog {n} min', ru: 'осталось {n} мин', ja: '残り {n} 分', zh: '剩余 {n} 分钟', ar: 'متبقٍ {n} دقيقة',
+    no: '{n} min igjen', hi: '{n} मिनट बाकी', id: '{n} menit lagi', tr: '{n} dk kaldı', ko: '{n}분 남음', pl: 'zostało {n} min',
+    vi: 'còn {n} phút', uk: 'залишилось {n} хв', sv: '{n} min kvar', da: '{n} min tilbage', fi: '{n} min jäljellä', bg: 'остават {n} мин',
+    ro: '{n} min rămase', sr: 'још {n} мин', cs: 'zbývá {n} min', th: 'เหลือ {n} นาที', bn: '{n} মিনিট বাকি', fa: '{n} دقیقه مانده',
+    he: 'נותרו {n} דק׳', hu: '{n} perc maradt'
+  },
+  'rev.edit.title': {
+    en: 'Edit your review', es: 'Editar tu reseña', fr: 'Modifier votre avis', de: 'Deine Bewertung bearbeiten', it: 'Modifica la tua recensione',
+    pt: 'Editar a tua avaliação', el: 'Επεξεργασία της κριτικής σου', nl: 'Je beoordeling bewerken', ru: 'Изменить отзыв', ja: 'レビューを編集',
+    zh: '编辑你的评价', ar: 'تعديل تقييمك', no: 'Rediger anmeldelsen din', hi: 'अपनी समीक्षा संपादित करें', id: 'Ubah ulasan Anda', tr: 'Yorumunu düzenle',
+    ko: '리뷰 수정', pl: 'Edytuj swoją recenzję', vi: 'Sửa đánh giá của bạn', uk: 'Змінити відгук', sv: 'Redigera din recension', da: 'Redigér din anmeldelse',
+    fi: 'Muokkaa arviotasi', bg: 'Редактирайте отзива си', ro: 'Editează recenzia ta', sr: 'Измените своју рецензију', cs: 'Upravit recenzi',
+    th: 'แก้ไขรีวิวของคุณ', bn: 'আপনার রিভিউ সম্পাদনা করুন', fa: 'ویرایش نظر شما', he: 'עריכת הביקורת שלך', hu: 'Véleményed szerkesztése'
+  },
+  'rev.edit.save': {
+    en: 'Save changes', es: 'Guardar cambios', fr: 'Enregistrer', de: 'Änderungen speichern', it: 'Salva le modifiche', pt: 'Guardar alterações',
+    el: 'Αποθήκευση αλλαγών', nl: 'Wijzigingen opslaan', ru: 'Сохранить', ja: '変更を保存', zh: '保存更改', ar: 'حفظ التغييرات', no: 'Lagre endringer',
+    hi: 'बदलाव सहेजें', id: 'Simpan perubahan', tr: 'Değişiklikleri kaydet', ko: '변경 사항 저장', pl: 'Zapisz zmiany', vi: 'Lưu thay đổi',
+    uk: 'Зберегти', sv: 'Spara ändringar', da: 'Gem ændringer', fi: 'Tallenna muutokset', bg: 'Запази промените', ro: 'Salvează modificările',
+    sr: 'Сачувај измене', cs: 'Uložit změny', th: 'บันทึกการเปลี่ยนแปลง', bn: 'পরিবর্তন সংরক্ষণ করুন', fa: 'ذخیرهٔ تغییرات', he: 'שמירת השינויים', hu: 'Módosítások mentése'
+  },
+  'rev.edit.cancel': {
+    en: 'Cancel', es: 'Cancelar', fr: 'Annuler', de: 'Abbrechen', it: 'Annulla', pt: 'Cancelar', el: 'Ακύρωση', nl: 'Annuleren', ru: 'Отмена',
+    ja: 'キャンセル', zh: '取消', ar: 'إلغاء', no: 'Avbryt', hi: 'रद्द करें', id: 'Batal', tr: 'Vazgeç', ko: '취소', pl: 'Anuluj', vi: 'Hủy',
+    uk: 'Скасувати', sv: 'Avbryt', da: 'Annullér', fi: 'Peruuta', bg: 'Отказ', ro: 'Anulează', sr: 'Откажи', cs: 'Zrušit', th: 'ยกเลิก',
+    bn: 'বাতিল', fa: 'انصراف', he: 'ביטול', hu: 'Mégse'
+  },
+  'rev.edit.saved': {
+    en: 'Saved. Your changes are live.', es: 'Guardado. Los cambios ya están publicados.', fr: 'Enregistré. Vos modifications sont en ligne.',
+    de: 'Gespeichert. Deine Änderungen sind online.', it: 'Salvato. Le modifiche sono online.', pt: 'Guardado. As alterações já estão online.',
+    el: 'Αποθηκεύτηκε. Οι αλλαγές σου είναι online.', nl: 'Opgeslagen. Je wijzigingen staan online.', ru: 'Сохранено. Изменения опубликованы.',
+    ja: '保存しました。変更は公開されています。', zh: '已保存，更改已生效。', ar: 'تم الحفظ. تغييراتك منشورة الآن.', no: 'Lagret. Endringene dine er publisert.',
+    hi: 'सहेज लिया गया। आपके बदलाव प्रकाशित हैं।', id: 'Tersimpan. Perubahan Anda sudah tayang.', tr: 'Kaydedildi. Değişikliklerin yayında.',
+    ko: '저장되었습니다. 변경 사항이 반영되었습니다.', pl: 'Zapisano. Zmiany są już widoczne.', vi: 'Đã lưu. Thay đổi của bạn đã được đăng.',
+    uk: 'Збережено. Зміни опубліковано.', sv: 'Sparat. Dina ändringar är publicerade.', da: 'Gemt. Dine ændringer er live.',
+    fi: 'Tallennettu. Muutoksesi ovat julkaistu.', bg: 'Запазено. Промените са публикувани.', ro: 'Salvat. Modificările tale sunt publicate.',
+    sr: 'Сачувано. Ваше измене су објављене.', cs: 'Uloženo. Vaše změny jsou zveřejněné.', th: 'บันทึกแล้ว การเปลี่ยนแปลงของคุณเผยแพร่แล้ว',
+    bn: 'সংরক্ষিত। আপনার পরিবর্তন প্রকাশিত হয়েছে।', fa: 'ذخیره شد. تغییرات شما منتشر شد.', he: 'נשמר. השינויים שלך פורסמו.', hu: 'Mentve. A módosításaid megjelentek.'
+  },
+  'rev.edited': {
+    en: 'edited', es: 'editada', fr: 'modifié', de: 'bearbeitet', it: 'modificata', pt: 'editada', el: 'επεξεργασμένη', nl: 'bewerkt', ru: 'изменён',
+    ja: '編集済み', zh: '已编辑', ar: 'مُعدَّل', no: 'redigert', hi: 'संपादित', id: 'diubah', tr: 'düzenlendi', ko: '수정됨', pl: 'edytowana',
+    vi: 'đã sửa', uk: 'змінено', sv: 'redigerad', da: 'redigeret', fi: 'muokattu', bg: 'редактиран', ro: 'editată', sr: 'измењено', cs: 'upraveno',
+    th: 'แก้ไขแล้ว', bn: 'সম্পাদিত', fa: 'ویرایش‌شده', he: 'נערך', hu: 'szerkesztve'
+  },
+  'rev.invite.hello': {
+    en: 'Hi {name}, this link is yours.', es: 'Hola {name}, este enlace es tuyo.', fr: 'Bonjour {name}, ce lien est pour vous.', de: 'Hallo {name}, dieser Link gehört dir.',
+    it: 'Ciao {name}, questo link è tuo.', pt: 'Olá {name}, este link é teu.', el: 'Γεια σου {name}, αυτός ο σύνδεσμος είναι δικός σου.', nl: 'Hoi {name}, deze link is voor jou.',
+    ru: 'Привет, {name}! Эта ссылка для вас.', ja: '{name} さん、このリンクはあなた専用です。', zh: '你好 {name}，这个链接是给你的。', ar: 'مرحبًا {name}، هذا الرابط لك.',
+    no: 'Hei {name}, denne lenken er din.', hi: 'नमस्ते {name}, यह लिंक आपके लिए है।', id: 'Hai {name}, tautan ini untuk Anda.', tr: 'Merhaba {name}, bu bağlantı sana ait.',
+    ko: '{name} 님, 이 링크는 회원님 전용입니다.', pl: 'Cześć {name}, ten link jest dla Ciebie.', vi: 'Chào {name}, liên kết này dành cho bạn.', uk: 'Привіт, {name}! Це посилання для вас.',
+    sv: 'Hej {name}, den här länken är din.', da: 'Hej {name}, dette link er dit.', fi: 'Hei {name}, tämä linkki on sinulle.', bg: 'Здравей, {name}, този линк е за теб.',
+    ro: 'Salut {name}, acest link este al tău.', sr: 'Здраво {name}, овај линк је ваш.', cs: 'Ahoj {name}, tento odkaz je váš.', th: 'สวัสดี {name} ลิงก์นี้เป็นของคุณ',
+    bn: 'হ্যালো {name}, এই লিংকটি আপনার জন্য।', fa: 'سلام {name}، این لینک مخصوص شماست.', he: 'שלום {name}, הקישור הזה שלך.', hu: 'Szia {name}, ez a link a tiéd.'
+  },
+  'rev.invite.body': {
+    en: 'Your name is already filled in. Add a rating and a few words. It takes a minute.',
+    es: 'Tu nombre ya está puesto. Añade una valoración y unas palabras. Es cosa de un minuto.',
+    fr: 'Votre nom est déjà renseigné. Ajoutez une note et quelques mots. Ça prend une minute.',
+    de: 'Dein Name ist schon eingetragen. Füge eine Bewertung und ein paar Worte hinzu. Dauert eine Minute.',
+    it: 'Il tuo nome è già inserito. Aggiungi un voto e qualche parola. Ci vuole un minuto.',
+    pt: 'O teu nome já está preenchido. Junta uma classificação e umas palavras. Demora um minuto.',
+    el: 'Το όνομά σου είναι ήδη συμπληρωμένο. Πρόσθεσε βαθμολογία και δύο λόγια. Παίρνει ένα λεπτό.',
+    nl: 'Je naam is al ingevuld. Voeg een score en een paar woorden toe. Het kost een minuut.',
+    ru: 'Имя уже заполнено. Поставьте оценку и напишите пару слов. Это займёт минуту.',
+    ja: 'お名前は入力済みです。評価とひと言を追加してください。1 分で終わります。',
+    zh: '你的名字已经填好了。加上评分和几句话，一分钟就够。',
+    ar: 'اسمك مُدخل بالفعل. أضف تقييمًا وبضع كلمات. يستغرق الأمر دقيقة.',
+    no: 'Navnet ditt er fylt inn. Legg til en vurdering og noen ord. Det tar et minutt.',
+    hi: 'आपका नाम पहले से भरा है। एक रेटिंग और कुछ शब्द जोड़ें। बस एक मिनट लगेगा।',
+    id: 'Nama Anda sudah terisi. Tambahkan penilaian dan beberapa kata. Hanya butuh semenit.',
+    tr: 'Adın zaten yazılı. Bir puan ve birkaç kelime ekle. Bir dakika sürer.',
+    ko: '이름은 이미 입력되어 있습니다. 평점과 몇 마디만 남겨 주세요. 1분이면 됩니다.',
+    pl: 'Twoje imię jest już wpisane. Dodaj ocenę i kilka słów. To zajmie minutę.',
+    vi: 'Tên của bạn đã được điền sẵn. Thêm điểm và vài lời. Chỉ mất một phút.',
+    uk: 'Ім’я вже заповнено. Поставте оцінку й напишіть кілька слів. Це займе хвилину.',
+    sv: 'Ditt namn är redan ifyllt. Lägg till ett betyg och några ord. Det tar en minut.',
+    da: 'Dit navn er allerede udfyldt. Tilføj en vurdering og et par ord. Det tager et minut.',
+    fi: 'Nimesi on jo täytetty. Lisää arvosana ja muutama sana. Se vie minuutin.',
+    bg: 'Името ти вече е попълнено. Добави оценка и няколко думи. Отнема минута.',
+    ro: 'Numele tău e deja completat. Adaugă o notă și câteva cuvinte. Durează un minut.',
+    sr: 'Ваше име је већ уписано. Додајте оцену и пар речи. Траје један минут.',
+    cs: 'Vaše jméno je už vyplněné. Přidejte hodnocení a pár slov. Zabere to minutu.',
+    th: 'ชื่อของคุณถูกกรอกไว้แล้ว เพิ่มคะแนนและคำพูดสักสองสามคำ ใช้เวลาแค่นาทีเดียว',
+    bn: 'আপনার নাম আগেই দেওয়া আছে। একটি রেটিং আর কয়েকটি কথা যোগ করুন। এক মিনিটই লাগবে।',
+    fa: 'نام شما از قبل وارد شده است. یک امتیاز و چند کلمه اضافه کنید. یک دقیقه طول می‌کشد.',
+    he: 'השם שלך כבר מולא. הוסיפו דירוג וכמה מילים. זה לוקח דקה.',
+    hu: 'A neved már ki van töltve. Adj hozzá egy értékelést és pár szót. Egy perc az egész.'
+  },
+  'rev.invite.used': {
+    en: 'This invite link has already been used.', es: 'Este enlace de invitación ya se ha usado.', fr: 'Ce lien d’invitation a déjà été utilisé.',
+    de: 'Dieser Einladungslink wurde schon verwendet.', it: 'Questo link di invito è già stato usato.', pt: 'Este link de convite já foi usado.',
+    el: 'Αυτός ο σύνδεσμος πρόσκλησης έχει ήδη χρησιμοποιηθεί.', nl: 'Deze uitnodigingslink is al gebruikt.', ru: 'Эта ссылка приглашения уже использована.',
+    ja: 'この招待リンクはすでに使用されています。', zh: '此邀请链接已被使用。', ar: 'رابط الدعوة هذا مُستخدم بالفعل.', no: 'Denne invitasjonslenken er allerede brukt.',
+    hi: 'यह आमंत्रण लिंक पहले ही इस्तेमाल हो चुका है।', id: 'Tautan undangan ini sudah dipakai.', tr: 'Bu davet bağlantısı zaten kullanılmış.',
+    ko: '이 초대 링크는 이미 사용되었습니다.', pl: 'Ten link z zaproszeniem został już wykorzystany.', vi: 'Liên kết mời này đã được sử dụng.',
+    uk: 'Це посилання запрошення вже використано.', sv: 'Den här inbjudningslänken har redan använts.', da: 'Dette invitationslink er allerede brugt.',
+    fi: 'Tämä kutsulinkki on jo käytetty.', bg: 'Този линк за покана вече е използван.', ro: 'Acest link de invitație a fost deja folosit.',
+    sr: 'Овај позивни линк је већ искоришћен.', cs: 'Tento odkaz s pozvánkou už byl použit.', th: 'ลิงก์เชิญนี้ถูกใช้ไปแล้ว',
+    bn: 'এই আমন্ত্রণ লিংকটি আগেই ব্যবহার হয়ে গেছে।', fa: 'این لینک دعوت قبلاً استفاده شده است.', he: 'קישור ההזמנה הזה כבר נוצל.', hu: 'Ezt a meghívó linket már felhasználták.'
+  },
+  'rev.invite.expired': {
+    en: 'This invite link has expired.', es: 'Este enlace de invitación ha caducado.', fr: 'Ce lien d’invitation a expiré.', de: 'Dieser Einladungslink ist abgelaufen.',
+    it: 'Questo link di invito è scaduto.', pt: 'Este link de convite expirou.', el: 'Αυτός ο σύνδεσμος πρόσκλησης έχει λήξει.', nl: 'Deze uitnodigingslink is verlopen.',
+    ru: 'Срок действия этой ссылки истёк.', ja: 'この招待リンクは期限切れです。', zh: '此邀请链接已过期。', ar: 'انتهت صلاحية رابط الدعوة هذا.', no: 'Denne invitasjonslenken har utløpt.',
+    hi: 'यह आमंत्रण लिंक समाप्त हो गया है।', id: 'Tautan undangan ini sudah kedaluwarsa.', tr: 'Bu davet bağlantısının süresi dolmuş.', ko: '이 초대 링크는 만료되었습니다.',
+    pl: 'Ten link z zaproszeniem wygasł.', vi: 'Liên kết mời này đã hết hạn.', uk: 'Термін дії цього посилання минув.', sv: 'Den här inbjudningslänken har gått ut.',
+    da: 'Dette invitationslink er udløbet.', fi: 'Tämä kutsulinkki on vanhentunut.', bg: 'Този линк за покана е изтекъл.', ro: 'Acest link de invitație a expirat.',
+    sr: 'Овај позивни линк је истекао.', cs: 'Platnost tohoto odkazu s pozvánkou vypršela.', th: 'ลิงก์เชิญนี้หมดอายุแล้ว', bn: 'এই আমন্ত্রণ লিংকের মেয়াদ শেষ।',
+    fa: 'این لینک دعوت منقضی شده است.', he: 'תוקף קישור ההזמנה הזה פג.', hu: 'Ez a meghívó link lejárt.'
+  },
+  'rev.error.editWindow': {
+    en: 'Reviews can only be edited within 15 minutes of posting.', es: 'Las reseñas solo se pueden editar durante los 15 minutos posteriores a publicarlas.',
+    fr: 'Un avis ne peut être modifié que dans les 15 minutes suivant sa publication.', de: 'Bewertungen können nur innerhalb von 15 Minuten nach dem Absenden bearbeitet werden.',
+    it: 'Le recensioni si possono modificare solo entro 15 minuti dalla pubblicazione.', pt: 'As avaliações só podem ser editadas até 15 minutos depois de publicadas.',
+    el: 'Οι κριτικές μπορούν να αλλάξουν μόνο μέσα σε 15 λεπτά από τη δημοσίευση.', nl: 'Beoordelingen kunnen alleen binnen 15 minuten na plaatsing worden bewerkt.',
+    ru: 'Отзыв можно изменить только в течение 15 минут после публикации.', ja: 'レビューは投稿から 15 分以内のみ編集できます。', zh: '评价只能在发布后 15 分钟内编辑。',
+    ar: 'لا يمكن تعديل التقييم إلا خلال 15 دقيقة من نشره.', no: 'Anmeldelser kan bare redigeres innen 15 minutter etter publisering.',
+    hi: 'समीक्षाएँ पोस्ट करने के 15 मिनट के भीतर ही संपादित की जा सकती हैं।', id: 'Ulasan hanya bisa diubah dalam 15 menit setelah diterbitkan.',
+    tr: 'Yorumlar yalnızca gönderildikten sonraki 15 dakika içinde düzenlenebilir.', ko: '리뷰는 게시 후 15분 이내에만 수정할 수 있습니다.',
+    pl: 'Recenzję można edytować tylko w ciągu 15 minut od opublikowania.', vi: 'Chỉ có thể sửa đánh giá trong vòng 15 phút sau khi đăng.',
+    uk: 'Відгук можна змінити лише протягом 15 хвилин після публікації.', sv: 'Recensioner kan bara redigeras inom 15 minuter efter publicering.',
+    da: 'Anmeldelser kan kun redigeres inden for 15 minutter efter udgivelse.', fi: 'Arvioita voi muokata vain 15 minuutin ajan julkaisusta.',
+    bg: 'Отзивите могат да се редактират само до 15 минути след публикуване.', ro: 'Recenziile pot fi editate doar în 15 minute de la publicare.',
+    sr: 'Рецензије се могу мењати само у року од 15 минута од објаве.', cs: 'Recenze lze upravit jen do 15 minut od zveřejnění.',
+    th: 'แก้ไขรีวิวได้ภายใน 15 นาทีหลังโพสต์เท่านั้น', bn: 'রিভিউ পোস্ট করার ১৫ মিনিটের মধ্যেই কেবল সম্পাদনা করা যায়।',
+    fa: 'نظرات فقط تا ۱۵ دقیقه پس از ارسال قابل ویرایش هستند.', he: 'ניתן לערוך ביקורת רק בתוך 15 דקות מהפרסום.', hu: 'A vélemények csak a közzétételt követő 15 percen belül szerkeszthetők.'
+  }
+}
+mergeLabels(REVIEW_EDIT_LABELS)
+
+const REVIEW_PANEL_LABELS = {
+  'rev.featured': {
+    en: 'Featured', es: 'Destacada', fr: 'À la une', de: 'Hervorgehoben', it: 'In evidenza', pt: 'Em destaque', el: 'Επιλεγμένη',
+    nl: 'Uitgelicht', ru: 'Избранный', ja: '注目', zh: '精选', ar: 'مميّز', no: 'Utvalgt', hi: 'विशेष', id: 'Unggulan', tr: 'Öne çıkan',
+    ko: '추천', pl: 'Wyróżniona', vi: 'Nổi bật', uk: 'Вибраний', sv: 'Utvald', da: 'Fremhævet', fi: 'Nostettu', bg: 'Избран',
+    ro: 'Recomandată', sr: 'Издвојено', cs: 'Vybraná', th: 'แนะนำ', bn: 'বিশেষ', fa: 'برگزیده', he: 'מומלץ', hu: 'Kiemelt'
+  },
+  'rev.reply': {
+    en: 'Reply from Blxr', es: 'Respuesta de Blxr', fr: 'Réponse de Blxr', de: 'Antwort von Blxr', it: 'Risposta di Blxr', pt: 'Resposta de Blxr',
+    el: 'Απάντηση από τον Blxr', nl: 'Reactie van Blxr', ru: 'Ответ Blxr', ja: 'Blxr からの返信', zh: 'Blxr 的回复', ar: 'رد من Blxr', no: 'Svar fra Blxr',
+    hi: 'Blxr का जवाब', id: 'Balasan dari Blxr', tr: 'Blxr’ın yanıtı', ko: 'Blxr의 답글', pl: 'Odpowiedź od Blxr', vi: 'Phản hồi từ Blxr', uk: 'Відповідь Blxr',
+    sv: 'Svar från Blxr', da: 'Svar fra Blxr', fi: 'Blxrin vastaus', bg: 'Отговор от Blxr', ro: 'Răspuns de la Blxr', sr: 'Одговор од Blxr', cs: 'Odpověď od Blxr',
+    th: 'คำตอบจาก Blxr', bn: 'Blxr এর উত্তর', fa: 'پاسخ Blxr', he: 'תגובה מ Blxr', hu: 'Blxr válasza'
+  },
+  'rev.pending': {
+    en: 'Awaiting approval', es: 'Pendiente de aprobación', fr: 'En attente de validation', de: 'Wartet auf Freigabe', it: 'In attesa di approvazione',
+    pt: 'A aguardar aprovação', el: 'Σε αναμονή έγκρισης', nl: 'Wacht op goedkeuring', ru: 'Ожидает одобрения', ja: '承認待ち', zh: '等待审核', ar: 'بانتظار الموافقة',
+    no: 'Venter på godkjenning', hi: 'स्वीकृति की प्रतीक्षा में', id: 'Menunggu persetujuan', tr: 'Onay bekliyor', ko: '승인 대기 중', pl: 'Czeka na zatwierdzenie',
+    vi: 'Đang chờ duyệt', uk: 'Очікує схвалення', sv: 'Väntar på godkännande', da: 'Afventer godkendelse', fi: 'Odottaa hyväksyntää', bg: 'Чака одобрение',
+    ro: 'În așteptarea aprobării', sr: 'Чека одобрење', cs: 'Čeká na schválení', th: 'รอการอนุมัติ', bn: 'অনুমোদনের অপেক্ষায়', fa: 'در انتظار تأیید', he: 'ממתין לאישור', hu: 'Jóváhagyásra vár'
+  },
+  'rev.success.pending': {
+    en: 'Your review will appear once it has been approved.', es: 'Tu reseña aparecerá cuando se apruebe.', fr: 'Votre avis apparaîtra une fois validé.',
+    de: 'Deine Bewertung erscheint, sobald sie freigegeben wurde.', it: 'La tua recensione apparirà una volta approvata.', pt: 'A tua avaliação aparecerá depois de aprovada.',
+    el: 'Η κριτική σου θα εμφανιστεί μόλις εγκριθεί.', nl: 'Je beoordeling verschijnt zodra die is goedgekeurd.', ru: 'Отзыв появится после одобрения.',
+    ja: 'レビューは承認後に表示されます。', zh: '你的评价将在审核通过后显示。', ar: 'سيظهر تقييمك بعد الموافقة عليه.', no: 'Anmeldelsen din vises når den er godkjent.',
+    hi: 'स्वीकृति के बाद आपकी समीक्षा दिखाई देगी।', id: 'Ulasan Anda akan tampil setelah disetujui.', tr: 'Yorumun onaylandıktan sonra görünecek.',
+    ko: '리뷰는 승인 후에 표시됩니다.', pl: 'Twoja recenzja pojawi się po zatwierdzeniu.', vi: 'Đánh giá của bạn sẽ hiển thị sau khi được duyệt.',
+    uk: 'Відгук з’явиться після схвалення.', sv: 'Din recension visas när den har godkänts.', da: 'Din anmeldelse vises, når den er godkendt.',
+    fi: 'Arviosi näkyy, kun se on hyväksytty.', bg: 'Отзивът ви ще се появи след одобрение.', ro: 'Recenzia ta va apărea după aprobare.',
+    sr: 'Ваша рецензија ће се појавити након одобрења.', cs: 'Vaše recenze se zobrazí po schválení.', th: 'รีวิวของคุณจะแสดงเมื่อได้รับการอนุมัติ',
+    bn: 'অনুমোদনের পর আপনার রিভিউ দেখা যাবে।', fa: 'نظر شما پس از تأیید نمایش داده می‌شود.', he: 'הביקורת שלך תופיע לאחר האישור.', hu: 'A véleményed jóváhagyás után jelenik meg.'
+  }
+}
+mergeLabels(REVIEW_PANEL_LABELS)

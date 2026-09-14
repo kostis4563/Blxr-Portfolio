@@ -22,3 +22,5 @@ export { staticPaths, localizedPaths }
 export { metaFor } from './lib/seo'
 
 export const NOT_FOUND_PATH = '/404'
+
+export { REVIEW_PANEL_PATH } from './lib/router'

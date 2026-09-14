@@ -296,6 +296,8 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
     saveHits()
     saveVitals()
     saveReviews()
+    saveInvites()
+    saveSettings()
     process.exit(0)
   })
 }
@@ -420,6 +422,17 @@ const REVIEWS_MAX = 1000
 const REVIEW_LIMITS = { name: [2, 40], role: [0, 60], text: [20, 600] }
 const REVIEW_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 const REVIEW_COOKIE = 'blxr_rv'
+const REVIEW_EDIT_WINDOW_MS = 15 * 60 * 1000
+const REVIEW_OWNER_KEY = process.env.REVIEW_OWNER_KEY || ''
+const PANEL_COOKIE = 'blxr_panel'
+const PANEL_SESSION_MS = 12 * 60 * 60 * 1000
+const PANEL_LOGIN_MAX_FAILS = 5
+const PANEL_LOCKOUT_MS = 15 * 60 * 1000
+const SETTINGS_FILE = path.join(STATE_DIR, 'review-settings.json')
+const INVITES_FILE = path.join(STATE_DIR, 'review-invites.json')
+const INVITE_TTL_MS = 4 * 24 * 60 * 60 * 1000
+const INVITE_SWEEP_MS = 60 * 60 * 1000
+const INVITE_DEFAULT_TEXT = 'Rated without leaving a written review.'
 const REVIEW_TOKEN_RE = /^[a-f0-9]{32}$/
 const REVIEW_GLOBAL_WINDOW_MS = 60 * 60 * 1000
 const REVIEW_GLOBAL_MAX = 30
@@ -431,7 +444,35 @@ const REVIEW_LINK_RE = /https?:\/\/|www\.|\S+\.(?:com|net|org|io|gg|xyz|me|app|d
 const CONTROL_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u2028-\u202E\uFEFF]/g
 
 const foldTerm = (s) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-const blockedTerms = BLOCKED_TERMS.map(foldTerm).filter(Boolean)
+
+const SETTINGS_DEFAULT = { paused: false, approval: false, blockedTerms: [] }
+let settings = { ...SETTINGS_DEFAULT }
+let settingsDirty = false
+try {
+  const parsed = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'))
+  if (parsed && typeof parsed === 'object') settings = normalizeSettings(parsed)
+} catch {
+}
+function normalizeSettings(input) {
+  return {
+    paused: input.paused === true,
+    approval: input.approval === true,
+    blockedTerms: Array.isArray(input.blockedTerms)
+      ? [...new Set(input.blockedTerms.map((t) => cleanLine(t).slice(0, 60)).filter(Boolean))].slice(0, 200)
+      : [],
+  }
+}
+function saveSettings() {
+  if (!settingsDirty) return
+  settingsDirty = false
+  try {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings))
+  } catch {
+  }
+}
+setInterval(saveSettings, HITS_SAVE_DEBOUNCE_MS).unref()
+
+const blockedTerms = () => [...BLOCKED_TERMS, ...settings.blockedTerms].map(foldTerm).filter(Boolean)
 
 let reviews = []
 let reviewsDirty = false
@@ -513,7 +554,148 @@ function cookieToken(req) {
 const deviceToken = (body) =>
   typeof body?.device === 'string' && REVIEW_TOKEN_RE.test(body.device) ? body.device : null
 
-const publicReview = ({ id, name, role, rating, text, at }) => ({ id, name, role, rating, text, at })
+const publicReview = ({ id, name, role, rating, text, at, editedAt, auto, pinned, reply, pending }) => ({
+  id,
+  name,
+  role,
+  rating,
+  text,
+  at,
+  ...(editedAt ? { editedAt } : {}),
+  ...(auto ? { auto: true } : {}),
+  ...(pinned ? { pinned: true } : {}),
+  ...(reply ? { reply } : {}),
+  ...(pending ? { pending: true } : {}),
+})
+
+const panelReview = (r) => {
+  const out = { ...r }
+  for (const key of SUBMITTER_KEYS) delete out[key]
+  return out
+}
+
+const isVisible = (r) => !r.hidden && !r.pending
+
+const panelSessions = new Map()
+const panelFails = new Map()
+
+function panelSession(req) {
+  const header = req.headers.cookie
+  if (typeof header !== 'string') return null
+  for (const part of header.split(';')) {
+    const [name, ...rest] = part.trim().split('=')
+    if (name !== PANEL_COOKIE) continue
+    const token = rest.join('=').trim()
+    const expires = panelSessions.get(token)
+    if (!expires) return null
+    if (expires <= Date.now()) {
+      panelSessions.delete(token)
+      return null
+    }
+    return token
+  }
+  return null
+}
+
+const panelCookie = (token, maxAge) =>
+  `${PANEL_COOKIE}=${token}; Path=/api/reviews; Max-Age=${maxAge}; HttpOnly; SameSite=Strict`
+
+function panelStats(now) {
+  const visible = reviews.filter(isVisible)
+  const week = now - 7 * 86_400_000
+  const month = now - 30 * 86_400_000
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  let sum = 0
+  for (const r of visible) {
+    distribution[r.rating] += 1
+    sum += r.rating
+  }
+  return {
+    total: reviews.length,
+    visible: visible.length,
+    hidden: reviews.filter((r) => r.hidden && !r.pending).length,
+    pending: reviews.filter((r) => r.pending).length,
+    pinned: reviews.filter((r) => r.pinned).length,
+    auto: reviews.filter((r) => r.auto).length,
+    invited: reviews.filter((r) => r.invited).length,
+    average: visible.length ? Math.round((sum / visible.length) * 10) / 10 : 0,
+    distribution,
+    lastWeek: reviews.filter((r) => Date.parse(r.at) >= week).length,
+    lastMonth: reviews.filter((r) => Date.parse(r.at) >= month).length,
+    invitesPending: invites.filter((i) => inviteStatus(i, now) === 'pending').length,
+  }
+}
+
+let invites = []
+let invitesDirty = false
+
+const isInviteRecord = (i) =>
+  i &&
+  typeof i === 'object' &&
+  REVIEW_TOKEN_RE.test(i.token) &&
+  typeof i.name === 'string' &&
+  typeof i.createdAt === 'string' &&
+  typeof i.expiresAt === 'string'
+
+try {
+  const parsed = JSON.parse(fs.readFileSync(INVITES_FILE, 'utf8'))
+  if (Array.isArray(parsed)) invites = parsed.filter(isInviteRecord)
+} catch {
+  invites = []
+}
+
+function saveInvites() {
+  if (!invitesDirty) return
+  invitesDirty = false
+  try {
+    fs.writeFileSync(INVITES_FILE, JSON.stringify(invites))
+  } catch {
+  }
+}
+setInterval(saveInvites, HITS_SAVE_DEBOUNCE_MS).unref()
+
+const inviteStatus = (invite, now) =>
+  invite.reviewId ? (invite.auto ? 'auto' : 'used') : Date.parse(invite.expiresAt) <= now ? 'expired' : 'pending'
+
+const publicInvite = (invite, now) => ({
+  name: invite.name,
+  role: invite.role,
+  status: inviteStatus(invite, now),
+  expiresAt: invite.expiresAt,
+})
+
+const ownerInvite = (invite, now) => ({ ...invite, status: inviteStatus(invite, now) })
+
+function keyMatches(given) {
+  if (!REVIEW_OWNER_KEY || typeof given !== 'string') return false
+  const a = Buffer.from(given)
+  const b = Buffer.from(REVIEW_OWNER_KEY)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
+
+const isOwner = (req) => Boolean(panelSession(req)) || keyMatches(req.headers['x-review-key'])
+
+function sweepInvites() {
+  const now = Date.now()
+  for (const invite of invites) {
+    if (invite.reviewId || Date.parse(invite.expiresAt) > now) continue
+    if (reviews.length >= REVIEWS_MAX) break
+    const record = {
+      id: newReviewId(),
+      name: invite.name,
+      role: invite.role || '',
+      rating: Number.isInteger(invite.rating) && invite.rating >= 1 && invite.rating <= 5 ? invite.rating : 5,
+      text: invite.text || INVITE_DEFAULT_TEXT,
+      at: new Date(now).toISOString(),
+      auto: true,
+    }
+    reviews.push(record)
+    invite.reviewId = record.id
+    invite.auto = true
+    reviewsDirty = true
+    invitesDirty = true
+  }
+}
 
 function cleanLine(value) {
   if (typeof value !== 'string') return ''
@@ -534,7 +716,7 @@ function cleanBlock(value) {
 const withinLimits = (s, [min, max]) => s.length >= min && s.length <= max
 const isBlocked = (s) => {
   const folded = foldTerm(s)
-  return blockedTerms.some((term) => folded.includes(term))
+  return blockedTerms().some((term) => folded.includes(term))
 }
 
 function validateReview(body) {
@@ -700,7 +882,12 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/api/reviews') {
       if (req.method === 'GET') {
-        const items = reviews.map(publicReview).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+        const cookie = cookieToken(req)
+        const mine = cookie ? hashToken('cookie', cookie) : null
+        const items = reviews
+          .filter((r) => isVisible(r) || (r.pending && mine && r.cookieHash === mine))
+          .map(publicReview)
+          .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
         return json(res, 200, { items, total: items.length }, NO_STORE)
       }
       if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
@@ -710,6 +897,7 @@ const server = http.createServer(async (req, res) => {
 
       const checked = validateReview(body)
       if (checked.error) return json(res, 400, checked, NO_STORE)
+      if (settings.paused) return json(res, 503, { error: 'paused', retryAfter: 3600 }, { ...NO_STORE, 'retry-after': '3600' })
 
       const now = Date.now()
       const at = new Date(now).toISOString()
@@ -725,7 +913,14 @@ const server = http.createServer(async (req, res) => {
         deviceHash: device ? hashToken('device', device) : null,
         cookieHash: cookie ? hashToken('cookie', cookie) : null,
       }
-      const limited = reviewRateLimit(submitter, now)
+
+      const inviteToken = typeof body.invite === 'string' && REVIEW_TOKEN_RE.test(body.invite) ? body.invite : null
+      const invite = inviteToken ? invites.find((i) => i.token === inviteToken) : null
+      if (inviteToken && (!invite || inviteStatus(invite, now) !== 'pending')) {
+        return json(res, 410, { error: invite ? `invite_${inviteStatus(invite, now)}` : 'invite_not_found' }, NO_STORE)
+      }
+
+      const limited = invite ? null : reviewRateLimit(submitter, now)
       if (limited) {
         const status = limited.error === 'full' ? 503 : 429
         return json(res, status, limited, { ...NO_STORE, 'retry-after': String(limited.retryAfter) })
@@ -735,12 +930,207 @@ const server = http.createServer(async (req, res) => {
       if (!cookie) submitter.cookieHash = hashToken('cookie', issued)
       const record = { id: newReviewId(), ...checked.review, at, ...submitter }
       if (!record.deviceHash) delete record.deviceHash
+      if (invite) {
+        invite.reviewId = record.id
+        invitesDirty = true
+        record.invited = true
+      } else if (settings.approval) {
+        record.hidden = true
+        record.pending = true
+      }
       reviews.push(record)
       reviewsDirty = true
       return json(res, 201, { item: publicReview(record) }, {
         ...NO_STORE,
         'set-cookie': `${REVIEW_COOKIE}=${issued}; Path=/api/reviews; Max-Age=${Math.ceil(REVIEW_WINDOW_MS / 1000)}; HttpOnly; SameSite=Strict`,
       })
+    }
+
+    const editMatch = /^\/api\/reviews\/([a-z0-9]{8})$/.exec(url.pathname)
+    if (editMatch) {
+      if (req.method !== 'PATCH') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      const record = reviews.find((r) => r.id === editMatch[1])
+      if (!record) return json(res, 404, { error: 'not_found' }, NO_STORE)
+
+      const body = await readJsonBody(req, 4096)
+      if (!body || typeof body !== 'object') return json(res, 400, { error: 'invalid', fields: [] }, NO_STORE)
+
+      const cookie = cookieToken(req)
+      const device = deviceToken(body)
+      const owns =
+        (cookie && record.cookieHash && record.cookieHash === hashToken('cookie', cookie)) ||
+        (device && record.deviceHash && record.deviceHash === hashToken('device', device))
+      if (!owns) return json(res, 403, { error: 'not_yours' }, NO_STORE)
+      if (Date.now() - Date.parse(record.at) > REVIEW_EDIT_WINDOW_MS) return json(res, 403, { error: 'edit_window' }, NO_STORE)
+
+      const checked = validateReview(body)
+      if (checked.error) return json(res, 400, checked, NO_STORE)
+
+      Object.assign(record, checked.review, { editedAt: new Date().toISOString() })
+      reviewsDirty = true
+      return json(res, 200, { item: publicReview(record) }, NO_STORE)
+    }
+
+    if (url.pathname === '/api/reviews/panel/login') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      if (!REVIEW_OWNER_KEY) return json(res, 503, { error: 'panel_disabled' }, NO_STORE)
+      const now = Date.now()
+      const ipHash = hashToken('panel', clientIp(req))
+      const fails = panelFails.get(ipHash)
+      if (fails && fails.count >= PANEL_LOGIN_MAX_FAILS && now - fails.at < PANEL_LOCKOUT_MS) {
+        const retryAfter = Math.ceil((PANEL_LOCKOUT_MS - (now - fails.at)) / 1000)
+        return json(res, 429, { error: 'locked', retryAfter }, { ...NO_STORE, 'retry-after': String(retryAfter) })
+      }
+      const body = await readJsonBody(req, 1024)
+      if (typeof body?.password !== 'string' || body.password.length < 16 || !keyMatches(body.password)) {
+        const next = fails && now - fails.at < PANEL_LOCKOUT_MS ? { count: fails.count + 1, at: now } : { count: 1, at: now }
+        panelFails.set(ipHash, next)
+        return json(res, 401, { error: 'wrong_password', attemptsLeft: Math.max(0, PANEL_LOGIN_MAX_FAILS - next.count) }, NO_STORE)
+      }
+      panelFails.delete(ipHash)
+      const token = crypto.randomBytes(24).toString('hex')
+      panelSessions.set(token, now + PANEL_SESSION_MS)
+      for (const [t, exp] of panelSessions) if (exp <= now) panelSessions.delete(t)
+      res.writeHead(204, { ...NO_STORE, 'set-cookie': panelCookie(token, Math.ceil(PANEL_SESSION_MS / 1000)) })
+      return res.end()
+    }
+
+    if (url.pathname === '/api/reviews/panel/logout') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      const token = panelSession(req)
+      if (token) panelSessions.delete(token)
+      res.writeHead(204, { ...NO_STORE, 'set-cookie': panelCookie('', 0) })
+      return res.end()
+    }
+
+    if (url.pathname === '/api/reviews/panel/session') {
+      if (!isOwner(req)) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+      res.writeHead(204, NO_STORE)
+      return res.end()
+    }
+
+    const panelMatch = /^\/api\/reviews\/panel(?:\/(reviews|settings)(?:\/([a-z0-9]{8}))?)?$/.exec(url.pathname)
+    if (panelMatch) {
+      if (!isOwner(req)) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+      const [, section, id] = panelMatch
+      const now = Date.now()
+
+      if (!section) {
+        if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+        return json(res, 200, {
+          reviews: reviews.map(panelReview).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
+          invites: invites.map((i) => ownerInvite(i, now)).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+          settings,
+          stats: panelStats(now),
+        }, NO_STORE)
+      }
+
+      if (section === 'settings') {
+        if (req.method !== 'PUT') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+        const body = await readJsonBody(req, 16_384)
+        if (!body || typeof body !== 'object') return json(res, 400, { error: 'invalid', fields: [] }, NO_STORE)
+        settings = normalizeSettings({ ...settings, ...body })
+        settingsDirty = true
+        return json(res, 200, { settings }, NO_STORE)
+      }
+
+      if (!id) return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      const index = reviews.findIndex((r) => r.id === id)
+      if (index < 0) return json(res, 404, { error: 'not_found' }, NO_STORE)
+      const record = reviews[index]
+
+      if (req.method === 'DELETE') {
+        reviews.splice(index, 1)
+        reviewsDirty = true
+        res.writeHead(204, NO_STORE)
+        return res.end()
+      }
+
+      if (req.method !== 'PATCH') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      const body = await readJsonBody(req, 4096)
+      if (!body || typeof body !== 'object') return json(res, 400, { error: 'invalid', fields: [] }, NO_STORE)
+
+      if ('name' in body || 'role' in body || 'rating' in body || 'text' in body) {
+        const checked = validateReview({ ...record, ...body })
+        if (checked.error) return json(res, 400, checked, NO_STORE)
+        Object.assign(record, checked.review, { editedAt: new Date(now).toISOString() })
+      }
+      if ('hidden' in body) record.hidden = body.hidden === true
+      if ('pinned' in body) record.pinned = body.pinned === true
+      if ('pending' in body && body.pending === false) {
+        record.pending = false
+        record.hidden = false
+      }
+      if ('reply' in body) {
+        const text = cleanBlock(body.reply)
+        if (!text) delete record.reply
+        else if (text.length > REVIEW_LIMITS.text[1] || REVIEW_LINK_RE.test(text)) return json(res, 400, { error: 'invalid', fields: ['reply'] }, NO_STORE)
+        else record.reply = { text, at: new Date(now).toISOString() }
+      }
+      for (const key of ['hidden', 'pinned', 'pending']) if (record[key] === false) delete record[key]
+      reviewsDirty = true
+      return json(res, 200, { item: panelReview(record) }, NO_STORE)
+    }
+
+    const inviteMatch = /^\/api\/reviews\/invites(?:\/([a-f0-9]{32}))?$/.exec(url.pathname)
+    if (inviteMatch) {
+      const token = inviteMatch[1]
+      const now = Date.now()
+
+      if (req.method === 'GET' && token) {
+        const invite = invites.find((i) => i.token === token)
+        if (!invite) return json(res, 404, { error: 'not_found' }, NO_STORE)
+        return json(res, 200, { invite: publicInvite(invite, now) }, NO_STORE)
+      }
+
+      if (!isOwner(req)) return json(res, REVIEW_OWNER_KEY ? 403 : 404, { error: REVIEW_OWNER_KEY ? 'forbidden' : 'not_found' }, NO_STORE)
+
+      if (req.method === 'GET') {
+        const list = invites.map((i) => ownerInvite(i, now)).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+        return json(res, 200, { items: list }, NO_STORE)
+      }
+
+      if (req.method === 'DELETE' && token) {
+        const index = invites.findIndex((i) => i.token === token)
+        if (index < 0) return json(res, 404, { error: 'not_found' }, NO_STORE)
+        if (invites[index].reviewId) return json(res, 409, { error: 'already_used' }, NO_STORE)
+        invites.splice(index, 1)
+        invitesDirty = true
+        res.writeHead(204, NO_STORE)
+        return res.end()
+      }
+
+      if (req.method === 'POST' && !token) {
+        const body = await readJsonBody(req, 4096)
+        const name = cleanLine(body?.name)
+        const role = cleanLine(body?.role)
+        const text = cleanBlock(body?.text)
+        const fields = []
+        if (!withinLimits(name, REVIEW_LIMITS.name) || !/\p{L}/u.test(name)) fields.push('name')
+        if (!withinLimits(role, REVIEW_LIMITS.role)) fields.push('role')
+        if (text && !withinLimits(text, REVIEW_LIMITS.text)) fields.push('text')
+        if (fields.length) return json(res, 400, { error: 'invalid', fields }, NO_STORE)
+        if ([name, role, text].some((v) => REVIEW_LINK_RE.test(v))) return json(res, 400, { error: 'link', fields: ['text'] }, NO_STORE)
+
+        const rating = Number(body?.rating)
+        const days = Number(body?.days)
+        const invite = {
+          token: crypto.randomBytes(16).toString('hex'),
+          name,
+          role,
+          text,
+          rating: Number.isInteger(rating) && rating >= 1 && rating <= 5 ? rating : 5,
+          createdAt: new Date(now).toISOString(),
+          expiresAt: new Date(now + (Number.isInteger(days) && days >= 1 && days <= 30 ? days * 86_400_000 : INVITE_TTL_MS)).toISOString(),
+          reviewId: null,
+          auto: false,
+        }
+        invites.push(invite)
+        invitesDirty = true
+        return json(res, 201, { invite: ownerInvite(invite, now) }, NO_STORE)
+      }
+
+      return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
     }
 
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' })
@@ -846,3 +1236,6 @@ server.listen(PORT, HOST, () => {
 
 warmTop()
 setInterval(warmTop, TOP_CACHE_TTL_MS - 10 * 60_000).unref()
+
+sweepInvites()
+setInterval(sweepInvites, INVITE_SWEEP_MS).unref()
