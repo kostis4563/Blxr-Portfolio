@@ -306,18 +306,25 @@ function Owners({ owners }) {
   return (
     <ul className="-my-2.5 divide-y divide-line">
       {owners.slice(0, 6).map((o) => (
-        <li key={o.login} className="flex items-center gap-3 py-2.5">
+        <li key={o.login || 'private'} className="flex items-center gap-3 py-2.5">
           {o.avatar ? (
             <img src={o.avatar} alt="" width={28} height={28} className={`h-7 w-7 shrink-0 bg-surface-raised object-cover ${o.type === 'org' ? 'rounded-md' : 'rounded-full'}`} />
           ) : (
-            <span className={`grid h-7 w-7 shrink-0 place-items-center bg-surface-raised text-[11px] font-semibold uppercase text-ink-subtle ${o.type === 'org' ? 'rounded-md' : 'rounded-full'}`}>{o.login[0]}</span>
+            <span className={`grid h-7 w-7 shrink-0 place-items-center bg-surface-raised text-[11px] font-semibold uppercase text-ink-subtle ${o.type === 'org' ? 'rounded-md' : 'rounded-full'}`}>
+              {o.login ? o.login[0] : <Icon name="lock" className="h-3.5 w-3.5" />}
+            </span>
           )}
           <span className="min-w-0 flex-1">
-            <a href={`https://github.com/${o.login}`} target="_blank" rel="noreferrer" className="block truncate text-[13px] font-medium text-ink-strong hover:underline">
-              {o.type === 'self' ? 'Your repositories' : o.login}
-            </a>
+            {o.login ? (
+              <a href={`https://github.com/${o.login}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 truncate text-[13px] font-medium text-ink-strong hover:underline">
+                {o.type === 'self' ? 'Your repositories' : o.login}
+                {o.private && <Icon name="lock" className="h-3 w-3 text-ink-subtle" />}
+              </a>
+            ) : (
+              <span className="block truncate text-[13px] font-medium text-ink-strong">Private repositories</span>
+            )}
             <span className="block text-[11.5px] leading-snug text-ink-subtle">
-              {o.type === 'org' ? 'Organization' : o.type === 'self' ? `@${o.login}` : 'User'} · {o.repos} {o.repos === 1 ? 'repo' : 'repos'} · {formatCount(o.f)} files
+              {o.type === 'org' ? 'Organization' : o.type === 'self' ? `@${o.login}` : o.type === 'private' ? 'Names hidden' : 'User'} · {o.repos} {o.repos === 1 ? 'repo' : 'repos'} · {formatCount(o.f)} files
             </span>
           </span>
           <span className="shrink-0 text-right text-[12px] tabular-nums text-ink-muted">
@@ -347,12 +354,20 @@ function RepoTable({ repos }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-line border-t border-line">
-          {rows.map((r) => (
-            <tr key={r.fullName} className="transition-colors hover:bg-surface-hover/60">
+          {rows.map((r, i) => (
+            <tr key={r.fullName || `private-${i}`} className="transition-colors hover:bg-surface-hover/60">
               <td className="max-w-[260px] px-5 py-2.5">
-                <a href={r.url} target="_blank" rel="noreferrer" className="block truncate font-medium text-ink-strong hover:underline">
-                  <span className="text-ink-muted">{r.owner}/</span>{r.name}
-                </a>
+                {r.name ? (
+                  <a href={r.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 truncate font-medium text-ink-strong hover:underline">
+                    <span className="truncate"><span className="text-ink-muted">{r.owner}/</span>{r.name}</span>
+                    {r.private && <Icon name="lock" className="h-3 w-3 shrink-0 text-ink-subtle" />}
+                  </a>
+                ) : (
+                  <span className="flex items-center gap-1.5 font-medium text-ink-muted">
+                    <Icon name="lock" className="h-3 w-3 shrink-0" />
+                    {r.owner ? <span><span className="text-ink-muted">{r.owner}/</span>private repository</span> : 'Private repository'}
+                  </span>
+                )}
                 <span className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-subtle">
                   {r.language && <span className="flex items-center gap-1"><LanguageDot color={r.languageColor} />{r.language}</span>}
                   {r.stars > 0 && <span>★ {formatCount(r.stars)}</span>}
@@ -503,10 +518,11 @@ function StatsView({ data, onRefresh, refreshing, stale }) {
       </Panel>
 
       <p className="px-0.5 text-[11.5px] leading-relaxed text-ink-subtle">
-        Counted from the default branch of {coverage.reposScanned === 1 ? 'the one public repository' : `${coverage.reposScanned} public repositories`} you have committed to since {general.firstYear || 'you joined'} — yours, other people's and organisations' alike.
+        Counted from the default branch of {coverage.reposScanned === 1 ? 'the one repository' : `${coverage.reposScanned} repositories`} you have committed to since {general.firstYear || 'you joined'} — yours, other people's and organisations' alike
+        {coverage.privateRepos > 0 ? `, ${coverage.privateRepos} of them private (${data.access?.owner ? 'only you see their names' : 'shown without names'}).` : '.'}
         {coverage.reposFound > coverage.reposScanned && ` The ${coverage.reposFound - coverage.reposScanned} you committed to least were skipped.`}
         {coverage.truncated && ' Some very large histories were cut short, so all-time totals are a floor.'}
-        {coverage.privateSkipped > 0 && ` ${formatCount(coverage.privateSkipped)} contributions in private repositories are not included.`}
+        {coverage.privateSkipped > 0 && ` ${formatCount(coverage.privateSkipped)} contributions in private repositories the server cannot read are not included.`}
         {' '}Commits on other branches are not counted until they land on the default branch.
       </p>
     </div>

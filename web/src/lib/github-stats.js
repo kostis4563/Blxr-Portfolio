@@ -1,3 +1,4 @@
+import { currentSession } from './supabase'
 // Dashboard → Stats. The numbers are the site owner's — the server works out
 // whose token it holds and builds everything for that GitHub account.
 
@@ -49,7 +50,13 @@ function writeStatsCache(data) {
 export async function fetchGithubStats({ signal, refresh = false } = {}) {
   let res
   try {
-    res = await fetch(`/api/github/stats${refresh ? '?refresh=1' : ''}`, { signal })
+    // Signed in as the token's GitHub account → private repositories come
+    // back with their names; anyone else gets them as "Private repository".
+    const token = currentSession()?.access_token
+    res = await fetch(`/api/github/stats${refresh ? '?refresh=1' : ''}`, {
+      signal,
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    })
   } catch (err) {
     if (err?.name === 'AbortError') throw err
     throw new StatsError('offline')

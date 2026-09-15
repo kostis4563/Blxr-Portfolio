@@ -215,18 +215,29 @@ Dashboard → Stats: the GitHub activity of **the account that owns
 `GITHUB_TOKEN`** (GraphQL `viewer`, re-checked daily). There is no `user`
 parameter — the route can't be pointed at anyone else. Needs
 `GITHUB_TOKEN`, else `503 stats_disabled`; `429 rate_limited` (GitHub's
-limit), `502 github_failed`. Open like the contributions route: it is
-public data, cached an hour, and `refresh=1` only recomputes every two
-minutes.
+limit), `502 github_failed`. Open like the contributions route, cached an
+hour; `refresh=1` only recomputes every two minutes.
 
-Three rounds of GraphQL, all public data:
+Private repositories are included when the token can read them (a classic
+token with `repo`, or a fine-grained one with *Contents: read* on them).
+Their names, links and owners are only returned to the owner — a caller
+whose Supabase session (`Authorization: Bearer`) has the same email as the
+GitHub account (its public email, `/user/emails` when the token has
+*Email addresses: read* / `user:email`, or `STATS_OWNER_EMAIL`) or a linked
+GitHub identity with that login. Everyone else gets `"Private repository"`
+rows with the numbers only, and private repos of other owners folded into one
+`{ "type": "private" }` entry in `owners`. `access.owner` says which view it
+is. Needs `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` to check sessions;
+without them everyone gets the public view.
+
+Three rounds of GraphQL:
 
 1. Profile, follower/PR/issue counts, own public repos (for stars) and the
    past year's contribution calendar.
 2. One alias per contribution year (12 most recent): every repository the
    account committed to that year — own, other people's, organisations' —
-   via `commitContributionsByRepository`. Private ones are dropped (their
-   commits still show in `general.restricted`).
+   via `commitContributionsByRepository`. Private ones the token cannot see
+   only show up in `general.restricted`.
 3. For the 120 most-committed of those, the default branch's commit history
    filtered to this author (`history(author: {id})`), 5 repos × 100 commits
    per query, paged until dry or capped (2,000 commits per repo, ~9,000 per
@@ -243,16 +254,18 @@ Three rounds of GraphQL, all public data:
   "grid": [ [24 hourly counts] × 7 weekdays, UTC ],
   "calendar": { "contributions": 1934, "activeDays": 266, "busiestDay": {}, "streak": { "current": 6, "longest": 11 }, "commits": 812, "pullRequests": 30, "issues": 12 },
   "general": { "pullRequests": 78, "issues": 21, "ownRepos": 3, "stars": 165, "forks": 40, "commitsAllYears": 900, "restricted": 60, "firstYear": 2024 },
-  "repos":  [ { "fullName": "acme/platform", "owner": "acme", "ownerType": "org", "commits": 140, "files": 718, "additions": 21762, "deletions": 8610, "first": "…", "last": "…", "language": "TypeScript", "stars": 2200 } ],
-  "owners": [ { "login": "octo", "type": "self|org|user", "avatar": "…", "repos": 3, "c": 380, "a": 0, "d": 0, "f": 1958 } ],
+  "repos":  [ { "fullName": "acme/platform", "owner": "acme", "ownerType": "org", "private": false, "commits": 140, "files": 718, "additions": 21762, "deletions": 8610, "first": "…", "last": "…", "language": "TypeScript", "stars": 2200 },
+              { "fullName": null, "name": null, "url": null, "owner": null, "ownerType": "private", "private": true, "commits": 40, "…": "…" } ],
+  "owners": [ { "login": "octo", "type": "self|org|user|private", "avatar": "…", "repos": 3, "c": 380, "a": 0, "d": 0, "f": 1958 } ],
   "languages": [ { "name": "JavaScript", "color": "#f1e05a", "commits": 290, "share": 0.54 } ],
-  "coverage": { "reposFound": 7, "reposScanned": 7, "reposWithCommits": 6, "privateSkipped": 60, "pages": 9, "truncated": false },
+  "coverage": { "reposFound": 7, "reposScanned": 7, "reposWithCommits": 6, "privateRepos": 2, "privateSkipped": 60, "pages": 9, "truncated": false },
+  "access": { "owner": false },
   "fetchedAt": "…" }
 ```
 
 `c`/`a`/`d`/`f` = commits, lines added, lines removed, files changed.
-Only commits on default branches are seen. A token with no scopes is
-enough. `GITHUB_API` overrides the API base for tests.
+Only commits on default branches are seen. A token with no scopes gives
+public repositories only. `GITHUB_API` overrides the API base for tests.
 
 ## Reviews
 

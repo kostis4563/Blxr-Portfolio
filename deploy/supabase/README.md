@@ -211,12 +211,26 @@ totals. Nothing to connect and no table: the Node server asks GitHub whose
 token it holds and builds the page for that account.
 
 The one thing it needs is `GITHUB_TOKEN` in `/etc/blxr-search.env` — the
-same token the home page's contribution graph uses. A fine-grained token
-with **no** permissions is enough; only public data is read. Private
-repositories (yours or an organisation's) are not walked, so their commits
-only count towards the "private contributions" line at the bottom of the
-page. Until the token is set the page says "Developer stats are not enabled
-on this server yet". Results are cached an hour on the server.
+same token the home page's contribution graph uses; it gets there from the
+`BLXR_GITHUB_TOKEN` repository secret on every deploy. Until it is set the
+page says "Developer stats are not enabled on this server yet". Results are
+cached an hour on the server.
+
+What the token may read decides what is counted:
+
+- **No permissions** — public repositories only; private commits just add
+  up in the "private contributions" line at the bottom.
+- **Classic token with `repo` + `user:email`** (GitHub → Settings →
+  Developer settings → Tokens (classic)) — private repositories too, your
+  own and every organisation's you can read. Prefer this one: a fine-grained
+  token only covers one owner, so it would miss organisation repos.
+
+Private repositories are never shown to visitors: the API hands out their
+numbers as "Private repository" with no name, link or owner. Only you see
+the names — you count as the owner when you are signed in to the dashboard
+with an email the GitHub account has (that is what `user:email` is for), or
+with a GitHub sign-in of the same login. `STATS_OWNER_EMAIL` in the server
+env is a manual fallback.
 
 ## Notes
 

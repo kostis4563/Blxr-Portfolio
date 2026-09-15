@@ -883,7 +883,7 @@ const GH_STATS_USER_QUERY = `query($login: String!, $from: DateTime!, $to: DateT
     pullRequests { totalCount }
     issues { totalCount }
     starredRepositories { totalCount }
-    repositories(first: 100, ownerAffiliations: [OWNER], privacy: PUBLIC, isFork: false) {
+    repositories(first: 100, ownerAffiliations: [OWNER], isFork: false) {
       totalCount
       nodes { stargazerCount forkCount }
     }
@@ -1006,11 +1006,12 @@ async function ghContributedRepos(login, years) {
     restricted += col.restrictedContributionsCount || 0
     for (const entry of col.commitContributionsByRepository || []) {
       const r = entry?.repository
-      if (!r?.nameWithOwner || r.isPrivate) continue
+      if (!r?.nameWithOwner) continue
       const cur = repos.get(r.nameWithOwner) || {
         fullName: r.nameWithOwner,
         name: r.name,
         url: r.url,
+        private: Boolean(r.isPrivate),
         owner: r.owner?.login || r.nameWithOwner.split('/')[0],
         ownerAvatar: r.owner?.avatarUrl || null,
         ownerType: r.owner?.__typename === 'Organization' ? 'org' : 'user',
@@ -1182,13 +1183,20 @@ async function buildGithubStats(login) {
     const mine = perRepo.get(r.fullName)
     if (!mine) continue
     repoRows.push({
-      fullName: r.fullName, name: r.name, url: r.url, owner: r.owner, ownerType: r.ownerType, stars: r.stars,
+      fullName: r.fullName, name: r.name, url: r.url, owner: r.owner, ownerType: r.ownerType, stars: r.stars, private: r.private,
       language: r.language, languageColor: r.languageColor, fork: r.fork, archived: r.archived,
       commits: mine.c, additions: mine.a, deletions: mine.d, files: mine.f, first: mine.first, last: mine.last,
     })
     const o = owners.get(r.owner) || { login: r.owner, avatar: r.ownerAvatar, type: r.owner.toLowerCase() === canonical.toLowerCase() ? 'self' : r.ownerType, repos: 0, ...emptyBucket() }
     o.repos += 1
     for (const k of ['c', 'a', 'd', 'f']) o[k] += mine[k]
+    // Split kept so the public view can drop the private part of an owner.
+    if (r.private) o.private = true
+    else {
+      o.public = o.public || { repos: 0, ...emptyBucket() }
+      o.public.repos += 1
+      for (const k of ['c', 'a', 'd', 'f']) o.public[k] += mine[k]
+    }
     owners.set(r.owner, o)
     if (r.language) {
       const l = languages.get(r.language) || { name: r.language, color: r.languageColor, commits: 0 }
@@ -1244,11 +1252,13 @@ async function buildGithubStats(login) {
     },
     repos: repoRows,
     owners: [...owners.values()].sort((a, b) => b.c - a.c),
+    access: { owner: true },
     languages: [...languages.values()].sort((a, b) => b.commits - a.commits).map((l) => ({ ...l, share: langTotal ? l.commits / langTotal : 0 })),
     coverage: {
       reposFound: repos.length,
       reposScanned: scanned.length,
       reposWithCommits: repoRows.length,
+      privateRepos: repoRows.filter((r) => r.private).length,
       privateSkipped: restricted,
       pages: pagesUsed,
       truncated,
@@ -1257,18 +1267,80 @@ async function buildGithubStats(login) {
   }
 }
 
-// The login behind GITHUB_TOKEN, re-checked daily.
+// The account behind GITHUB_TOKEN, re-checked daily: its login plus every
+// email GitHub knows for it (the public one from GraphQL, the rest from
+// /user/emails when the token may read them), so a signed-in dashboard user
+// can be recognised as the owner.
 async function githubOwner() {
-  if (ghOwner && Date.now() - ghOwner.at < 24 * 60 * 60 * 1000) return ghOwner.login
-  const json = await ghGraphql('{ viewer { login } }', {})
+  if (ghOwner && Date.now() - ghOwner.at < 24 * 60 * 60 * 1000) return ghOwner
+  const json = await ghGraphql('{ viewer { login email } }', {})
   const login = json?.data?.viewer?.login
   if (!login) throw new GhError('stats_disabled', 503)
-  ghOwner = { login, at: Date.now() }
-  return login
+  const emails = new Set()
+  if (json.data.viewer.email) emails.add(json.data.viewer.email.toLowerCase())
+  try {
+    const res = await withTimeout((signal) =>
+      fetch(`${GH_API}/user/emails`, { signal, headers: { authorization: `Bearer ${GH_TOKEN}`, 'user-agent': 'blxr.net', accept: 'application/vnd.github+json' } }),
+    )
+    if (res.ok) for (const e of await res.json()) if (e?.verified && typeof e.email === 'string') emails.add(e.email.toLowerCase())
+  } catch {
+    // no email permission on the token — the public email and STATS_OWNER_EMAIL still work
+  }
+  if (STATS_OWNER_EMAIL) emails.add(STATS_OWNER_EMAIL)
+  ghOwner = { login, emails, at: Date.now() }
+  return ghOwner
+}
+
+// Optional extra way to be recognised as the owner: the email of the
+// dashboard account, for when the GitHub account's emails are all private.
+const STATS_OWNER_EMAIL = (process.env.STATS_OWNER_EMAIL || '').trim().toLowerCase()
+
+// True when the caller's Supabase session belongs to the token's GitHub
+// account — same login on a linked GitHub identity, or a matching email.
+async function isStatsOwner(req, owner) {
+  if (!req.headers.authorization) return false
+  let user = null
+  try {
+    user = await supabaseUser(req)
+  } catch {
+    return false
+  }
+  if (!user) return false
+  if (user.email && owner.emails.has(user.email.toLowerCase())) return true
+  for (const id of user.identities || []) {
+    const login = id?.provider === 'github' ? id.identity_data?.user_name || id.identity_data?.preferred_username : null
+    if (typeof login === 'string' && login.toLowerCase() === owner.login.toLowerCase()) return true
+  }
+  return false
+}
+
+// The public view of the stats: private repositories keep their numbers but
+// lose their names, links and owners (other people's organisations are not
+// this site's to reveal). Public repositories owned by you stay as they are.
+function redactStats(data, owner) {
+  const self = owner.login.toLowerCase()
+  const repos = data.repos.map((r) => (r.private ? {
+    ...r,
+    fullName: null, name: null, url: null, stars: 0,
+    owner: r.owner.toLowerCase() === self ? r.owner : null,
+    ownerType: r.owner.toLowerCase() === self ? r.ownerType : 'private',
+  } : r))
+  const owners = []
+  let hidden = null
+  for (const o of data.owners) {
+    if (o.type === 'self' || !o.private) { owners.push(o); continue }
+    if (o.public) owners.push({ ...o, ...o.public, private: false })
+    const priv = o.public ? { repos: o.repos - o.public.repos, c: o.c - o.public.c, a: o.a - o.public.a, d: o.d - o.public.d, f: o.f - o.public.f } : o
+    hidden = hidden || { login: null, avatar: null, type: 'private', repos: 0, c: 0, a: 0, d: 0, f: 0 }
+    for (const k of ['repos', 'c', 'a', 'd', 'f']) hidden[k] += priv[k]
+  }
+  if (hidden) owners.push(hidden)
+  owners.sort((a, b) => b.c - a.c)
+  return { ...data, repos, owners: owners.map(({ public: _p, ...o }) => o), access: { owner: false } }
 }
 
 async function githubStats(refresh) {
-  const login = await githubOwner()
+  const { login } = await githubOwner()
   const key = login.toLowerCase()
   const hit = ghStatsCache.get(key)
   if (hit) {
@@ -1722,7 +1794,8 @@ const server = http.createServer(async (req, res) => {
       if (!GH_TOKEN) return json(res, 503, { error: 'stats_disabled' }, NO_STORE)
       try {
         const data = await githubStats(url.searchParams.get('refresh') === '1')
-        return json(res, 200, data, NO_STORE)
+        const owner = await githubOwner()
+        return json(res, 200, (await isStatsOwner(req, owner)) ? data : redactStats(data, owner), NO_STORE)
       } catch (err) {
         if (err instanceof GhError) return json(res, err.status, { error: err.code }, NO_STORE)
         return json(res, 502, { error: 'github_failed' }, NO_STORE)
