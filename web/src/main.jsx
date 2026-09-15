@@ -4,6 +4,10 @@ import Root from './root.jsx'
 import { langOf } from './lib/router'
 import { preloadTable } from './lib/i18n'
 import { reportWebVitals } from './lib/vitals'
+import { applyDevicePrefs } from './lib/prefs'
+
+// Motion/density choices from Settings apply before the first paint.
+applyDevicePrefs()
 
 const container = document.getElementById('root')
 const hydrate = () => {

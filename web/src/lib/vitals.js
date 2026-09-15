@@ -1,3 +1,5 @@
+import { analyticsAllowed } from './prefs'
+
 const ENDPOINT = '/api/vitals'
 
 const CLS_SESSION_GAP_MS = 1000
@@ -12,7 +14,7 @@ const supported = () =>
   typeof navigator.sendBeacon === 'function'
 
 const optedOut = () =>
-  navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl
+  navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl || !analyticsAllowed()
 
 function observe(type, callback, options) {
   try {

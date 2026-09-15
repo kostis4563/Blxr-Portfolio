@@ -94,6 +94,34 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'login') {
+    return {
+      ...base,
+      title: `Sign in — ${SITE_NAME}`,
+      description: 'Sign in to blxr.net or create an account.',
+      noindex: true,
+    }
+  }
+
+  if (route.name === 'dashboard') {
+    return {
+      ...base,
+      title: `Dashboard — ${SITE_NAME}`,
+      description: 'Owner dashboard for blxr.net.',
+      noindex: true,
+    }
+  }
+
+  // The shell is generic; the page titles itself once the profile loads.
+  if (route.name === 'profile') {
+    return {
+      ...base,
+      title: `Profile — ${SITE_NAME}`,
+      description: 'A member profile on blxr.net.',
+      noindex: true,
+    }
+  }
+
   return {
     ...base,
     title: `${pick('Not found', 'nf.title')} — ${SITE_NAME}`,

@@ -27,8 +27,12 @@ export function resolveInitialTheme() {
   )
 }
 
+// 'system' | 'light' | 'dark' — what the user picked, not what is showing.
+const readPreference = () => (typeof window === 'undefined' ? 'system' : readStoredTheme() ?? 'system')
+
 export function useTheme() {
   const [theme, setTheme] = useState(resolveInitialTheme)
+  const [preference, setPreferenceState] = useState(readPreference)
   const isFirstApply = useRef(true)
 
   useEffect(() => {
@@ -66,9 +70,26 @@ export function useTheme() {
     setTheme((current) => {
       const next = current === 'dark' ? 'light' : 'dark'
       storeTheme(next)
+      setPreferenceState(next)
       return next
     })
   }, [])
 
-  return { theme, toggleTheme }
+  const setPreference = useCallback((pref) => {
+    if (pref === 'system') {
+      try {
+        localStorage.removeItem(STORAGE_KEY)
+      } catch {
+      }
+      setPreferenceState('system')
+      setTheme(window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      return
+    }
+    if (pref !== 'light' && pref !== 'dark') return
+    storeTheme(pref)
+    setPreferenceState(pref)
+    setTheme(pref)
+  }, [])
+
+  return { theme, preference, toggleTheme, setPreference }
 }

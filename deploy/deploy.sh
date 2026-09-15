@@ -103,6 +103,7 @@ deploy_server() {
   step "Installing server -> $SERVER_ROOT"
   run install -D -m 0644 "$ROOT/server/src/server.mjs" "$SERVER_ROOT/server.mjs"
   run install -D -m 0644 "$ROOT/server/src/moderation.mjs" "$SERVER_ROOT/moderation.mjs"
+  run install -D -m 0644 "$ROOT/server/src/mail.mjs" "$SERVER_ROOT/mail.mjs"
 
   step "Installing systemd unit"
   run install -m 0644 "$ROOT/server/deploy/blxr-search.service" "$UNIT"
