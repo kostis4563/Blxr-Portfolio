@@ -21,6 +21,10 @@ NGINX_SITE=/etc/nginx/sites-available/blxr
 NGINX_SNIPPET=/etc/nginx/snippets/blxr-security-headers.conf
 NGINX_HINTS_SNIPPET=/etc/nginx/snippets/blxr-early-hints.conf
 NGINX_CF_SNIPPET=/etc/nginx/snippets/blxr-cloudflare-realip.conf
+SERVER_ENV=/etc/blxr-search.env
+# KEY=value lines the deploy job writes from repository secrets (never
+# committed); merged into $SERVER_ENV by deploy_server and deleted.
+ENV_OVERRIDES="$ROOT/deploy/.env-overrides"
 
 run() {
   if [[ "$DRY_RUN" == "1" ]]; then printf '  [dry-run] %s\n' "$*"; else "$@"; fi
@@ -73,8 +77,29 @@ check_early_hints() {
   printf '       bash deploy/deploy.sh nginx\n\n'
 }
 
+# Replace-or-append each KEY=value from $ENV_OVERRIDES into $SERVER_ENV, so
+# secrets live in the repository's Actions secrets and reach the box on
+# every deploy. Keys with an empty value are left untouched.
+sync_server_env() {
+  [[ -s "$ENV_OVERRIDES" ]] || return 0
+  step "Syncing secrets -> $SERVER_ENV"
+  local line key value
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]] || continue
+    key="${BASH_REMATCH[1]}"; value="${BASH_REMATCH[2]}"
+    [[ -n "$value" ]] || { echo "  $key: secret not set, skipped"; continue; }
+    if [[ "$DRY_RUN" == "1" ]]; then echo "  [dry-run] set $key (${#value} chars)"; continue; fi
+    touch "$SERVER_ENV"; chmod 0640 "$SERVER_ENV"
+    sed -i "/^$key=/d" "$SERVER_ENV"
+    printf '%s=%s\n' "$key" "$value" >> "$SERVER_ENV"
+    echo "  set $key (${#value} chars)"
+  done < "$ENV_OVERRIDES"
+  run rm -f "$ENV_OVERRIDES"
+}
+
 deploy_server() {
   need_root
+  sync_server_env
   step "Installing server -> $SERVER_ROOT"
   run install -D -m 0644 "$ROOT/server/src/server.mjs" "$SERVER_ROOT/server.mjs"
   run install -D -m 0644 "$ROOT/server/src/moderation.mjs" "$SERVER_ROOT/moderation.mjs"

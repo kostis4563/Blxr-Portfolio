@@ -17,4 +17,12 @@ jobs:
       - uses: actions/checkout@v5
 
       - run: npm ci
+
+      # Secrets for /etc/blxr-search.env. deploy.sh merges whatever is set
+      # here and deletes the file; add a line per variable you want managed.
+      - name: Stage server secrets
+        env:
+          GITHUB_TOKEN_VALUE: ${{ secrets.BLXR_GITHUB_TOKEN }}
+        run: printf 'GITHUB_TOKEN=%s\n' "$GITHUB_TOKEN_VALUE" > "$GITHUB_WORKSPACE/deploy/.env-overrides"
+
       - run: sudo bash "$GITHUB_WORKSPACE/deploy/deploy.sh"
