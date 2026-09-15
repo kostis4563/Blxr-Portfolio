@@ -205,7 +205,7 @@ function Tile({ label, icon, value, format = formatCount, prefix = '', sub, spar
       <span title={formatExact(value)} className="truncate font-mono text-[25px] font-semibold leading-none tracking-tight text-ink-strong tabular-nums">
         {prefix}{format(shown)}
       </span>
-      {spark && <Sparkline values={spark} height={24} className="text-ink-strong/60 group-hover/tile:text-ink-strong" />}
+      {spark && <Sparkline values={spark} height={24} className="text-ink-strong/50 group-hover/tile:text-ink-strong/80" />}
       {bar != null && (
         <span className="flex h-[24px] items-center">
           <span className="block h-1 w-full overflow-hidden rounded-full bg-surface-raised">
@@ -523,7 +523,7 @@ function Owners({ owners }) {
                 <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-ink-muted">{Math.round(share * 100)}%</span>
               </span>
               <span className="mt-0.5 block truncate text-[11px] leading-snug text-ink-subtle">
-                {o.type === 'org' ? 'Organization' : o.type === 'self' ? `@${o.login}` : o.type === 'private' ? 'Names hidden' : 'User'} · {plural(o.repos, 'repo')} · {formatCount(o.f)} files · <span className="text-emerald-500/80">+{formatCount(o.a)}</span> <span className="text-rose-500/80">−{formatCount(o.d)}</span>
+                {o.type === 'org' ? 'Organization' : o.type === 'self' ? `@${o.login}` : o.type === 'private' ? 'Names hidden' : 'User'} · {plural(o.repos, 'repo')} · {formatCount(o.f)} files
               </span>
             </span>
           </li>
@@ -666,13 +666,12 @@ function StatsView({ data, onRefresh, refreshing, stale }) {
 
   return (
     <div className="settings-stagger flex flex-col gap-5">
-      <section className={`${CARD} relative overflow-hidden`}>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(520px 200px at 100% 0%, color-mix(in srgb, var(--color-brand-indigo) 12%, transparent), transparent 70%)' }} />
-        <div className="relative flex flex-wrap items-center gap-x-5 gap-y-4 px-5 py-4">
+      <section className={CARD}>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-4 px-5 py-4">
           {user.avatar ? (
-            <img src={user.avatar} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-full bg-surface-raised object-cover ring-2 ring-line ring-offset-2 ring-offset-surface" />
+            <img src={user.avatar} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-full bg-surface-raised object-cover ring-1 ring-line" />
           ) : (
-            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-surface-raised text-ink-subtle ring-2 ring-line ring-offset-2 ring-offset-surface"><GitHubMark className="h-6 w-6" /></span>
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-surface-raised text-ink-subtle ring-1 ring-line"><GitHubMark className="h-6 w-6" /></span>
           )}
           <div className="min-w-0 flex-1 basis-[240px]">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -695,16 +694,15 @@ function StatsView({ data, onRefresh, refreshing, stale }) {
               {location && <span className="flex items-center gap-1 truncate"><Icon name="globe" className="h-3 w-3 text-ink-faint" />{location}</span>}
             </p>
           </div>
-          <div className="flex items-center gap-3 rounded-lg border border-line bg-surface-raised/50 px-3.5 py-2.5 text-ink-strong" title="Commits per day, last 30 days">
+          <div className="flex items-center gap-3 text-ink-strong" title="Commits per day, last 30 days">
             <span className="flex flex-col">
               <span className={LABEL}>Last 30 days</span>
               <span className="font-mono text-[17px] font-semibold leading-tight tabular-nums">{formatCount(periods.month.c)} <span className="text-[11.5px] font-normal text-ink-subtle">commits</span></span>
             </span>
-            <Sparkline values={month30} width={96} height={34} className="text-ink-strong" />
+            <Sparkline values={month30} width={96} height={34} className="text-ink-strong/70" />
           </div>
           <div className="flex w-full items-center justify-end gap-2 border-t border-line pt-3 lg:w-auto lg:border-0 lg:pt-0">
-            <span className="mr-auto flex items-center gap-1.5 text-[11.5px] text-ink-subtle lg:mr-0" title={data.fetchedAt}>
-              <span className={`h-1.5 w-1.5 rounded-full ${stale ? 'bg-amber-500' : 'bg-emerald-500'}`} aria-hidden="true" />
+            <span className="mr-auto text-[11.5px] text-ink-subtle lg:mr-0" title={data.fetchedAt}>
               {stale ? 'Cached · ' : ''}Updated {relativeTime(data.fetchedAt)}
             </span>
             <button type="button" onClick={onRefresh} disabled={refreshing} className={BTN_SECONDARY} aria-label="Refresh stats">
@@ -768,9 +766,6 @@ function StatsView({ data, onRefresh, refreshing, stale }) {
               })}
             </tbody>
           </table>
-          <p className="mt-3 border-t border-line pt-3 text-[11.5px] leading-relaxed text-ink-subtle">
-            The line under each commit count is its share of all time.
-          </p>
         </Panel>
       </div>
 
@@ -788,11 +783,11 @@ function StatsView({ data, onRefresh, refreshing, stale }) {
         </Panel>
       </div>
 
-      <Panel title="Repositories" aside={`${data.repos.length} with your commits · all time · click a heading to sort`}>
+      <Panel title="Repositories" aside={`${data.repos.length} with your commits · all time`}>
         <RepoTable repos={data.repos} />
       </Panel>
 
-      <Panel title="On GitHub" aside="account-wide, all branches">
+      <Panel title="On GitHub" aside="account-wide">
         <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
           <Mini icon="calendar" label="Contributions, past year" value={formatCount(calendar.contributions)} sub={`${calendar.activeDays} active days`} />
           <Mini icon="terminal" label="Commits on GitHub" value={formatCount(general.commitsAllYears)} sub={general.firstYear ? `since ${general.firstYear}` : undefined} />
