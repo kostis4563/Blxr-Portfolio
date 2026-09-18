@@ -10,14 +10,15 @@ const MAX_ZOOM = 4
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value))
 
-function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose }) {
+function Cropper({ kind, source, image, type, animated, busy, onApply, onKeep, onClose }) {
   const spec = ART_KINDS[kind] ?? ART_KINDS.logo
   const stage = STAGE[kind] ?? STAGE.logo
-  const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [view, setView] = useState({ zoom: 1, x: 0, y: 0 })
+  const { zoom } = view
   const [error, setError] = useState(null)
   const [working, setWorking] = useState(false)
   const drag = useRef(null)
+  const floor = useRef(null)
 
   const wide = image?.naturalWidth ?? 1
   const tall = image?.naturalHeight ?? 1
@@ -29,8 +30,8 @@ function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose
   }
 
   const settled = useMemo(
-    () => ({ x: clamp(pan.x, -room.x, room.x), y: clamp(pan.y, -room.y, room.y) }),
-    [pan.x, pan.y, room.x, room.y],
+    () => ({ x: clamp(view.x, -room.x, room.x), y: clamp(view.y, -room.y, room.y) }),
+    [view.x, view.y, room.x, room.y],
   )
 
   const box = useMemo(() => {
@@ -46,10 +47,8 @@ function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose
   useEffect(() => {
     const move = (event) => {
       if (!drag.current) return
-      setPan({
-        x: drag.current.from.x + (event.clientX - drag.current.x),
-        y: drag.current.from.y + (event.clientY - drag.current.y),
-      })
+      const { from, x, y } = drag.current
+      setView((held) => ({ ...held, x: from.x + (event.clientX - x), y: from.y + (event.clientY - y) }))
     }
     const drop = () => {
       drag.current = null
@@ -70,28 +69,42 @@ function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose
     event.preventDefault()
   }
 
-  const turn = (next) => {
-    const wanted = clamp(next, 1, MAX_ZOOM)
-    const ratio = wanted / zoom
-    setZoom(wanted)
-    setPan((held) => ({ x: held.x * ratio, y: held.y * ratio }))
-  }
+  const turn = useCallback((next) => {
+    setView((held) => {
+      const wanted = clamp(next(held.zoom), 1, MAX_ZOOM)
+      const ratio = wanted / held.zoom
+      return { zoom: wanted, x: held.x * ratio, y: held.y * ratio }
+    })
+  }, [])
+
+  // React registers wheel listeners as passive, so preventDefault() there is
+  // ignored and the sheet scrolls under the cursor. Attach a real one instead.
+  useEffect(() => {
+    const node = floor.current
+    if (!node) return undefined
+    const wheel = (event) => {
+      event.preventDefault()
+      turn((held) => held + (event.deltaY < 0 ? 0.15 : -0.15))
+    }
+    node.addEventListener('wheel', wheel, { passive: false })
+    return () => node.removeEventListener('wheel', wheel)
+  }, [turn, animated])
 
   const nudge = (event) => {
     const steps = { ArrowLeft: [12, 0], ArrowRight: [-12, 0], ArrowUp: [0, 12], ArrowDown: [0, -12] }
     const step = steps[event.key]
     if (step) {
       event.preventDefault()
-      setPan((held) => ({ x: held.x + step[0], y: held.y + step[1] }))
+      setView((held) => ({ ...held, x: held.x + step[0], y: held.y + step[1] }))
       return
     }
     if (event.key === '+' || event.key === '=') {
       event.preventDefault()
-      turn(zoom + 0.25)
+      turn((held) => held + 0.25)
     }
     if (event.key === '-') {
       event.preventDefault()
-      turn(zoom - 0.25)
+      turn((held) => held - 0.25)
     }
   }
 
@@ -99,7 +112,7 @@ function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose
     setError(null)
     setWorking(true)
     try {
-      await onApply(await cropArt(image, kind, box))
+      await onApply(await cropArt(image, kind, box, type))
     } catch (failure) {
       setError(failure.message)
       setWorking(false)
@@ -160,19 +173,14 @@ function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose
         ) : (
           <>
             <div
+              ref={floor}
               role="application"
               tabIndex={0}
               aria-label="Drag to position the image"
               onPointerDown={grab}
               onKeyDown={nudge}
-              onWheel={(event) => {
-                event.preventDefault()
-                turn(zoom + (event.deltaY < 0 ? 0.15 : -0.15))
-              }}
               style={{ width: stage.width, height: stage.height }}
-              className={`relative mx-auto max-w-full cursor-grab touch-none overflow-hidden rounded-xl border border-line bg-surface-raised active:cursor-grabbing ${
-                kind === 'logo' ? '' : ''
-              }`}
+              className="relative mx-auto max-w-full cursor-grab touch-none overflow-hidden rounded-xl border border-line bg-surface outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/25 active:cursor-grabbing"
             >
               <div className="absolute inset-0 flex items-center justify-center">{picture(1, 1, 1)}</div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-0">
@@ -184,9 +192,8 @@ function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose
             </div>
 
             <div className="flex items-center gap-3">
-              <button type="button" aria-label="Zoom out" onClick={() => turn(zoom - 0.25)} className={`${BTN_BARE} px-1.5`}>
+              <button type="button" aria-label="Zoom out" onClick={() => turn((held) => held - 0.25)} className={`${BTN_BARE} px-1.5`}>
                 <Icon name="search" className="h-4 w-4" />
-                <span className="sr-only">Zoom out</span>
                 <span aria-hidden="true">−</span>
               </button>
               <input
@@ -196,10 +203,13 @@ function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose
                 step={0.05}
                 value={zoom}
                 aria-label="Zoom"
-                onChange={(event) => turn(Number(event.target.value))}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  turn(() => next)
+                }}
                 className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-surface-hover accent-[var(--color-ink-strong)]"
               />
-              <button type="button" aria-label="Zoom in" onClick={() => turn(zoom + 0.25)} className={`${BTN_BARE} px-1.5`}>
+              <button type="button" aria-label="Zoom in" onClick={() => turn((held) => held + 0.25)} className={`${BTN_BARE} px-1.5`}>
                 <Icon name="search" className="h-4 w-4" />
                 <span aria-hidden="true">+</span>
               </button>
@@ -208,7 +218,7 @@ function Cropper({ kind, source, image, animated, busy, onApply, onKeep, onClose
             <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-raised/40 p-3">
               <span
                 style={{ width: mini, height: kind === 'logo' ? mini : mini / spec.ratio }}
-                className={`relative shrink-0 overflow-hidden ${kind === 'logo' ? 'rounded-lg' : 'rounded-md'} bg-surface`}
+                className={`relative shrink-0 overflow-hidden ${kind === 'logo' ? 'rounded-lg' : 'rounded-md'} bg-surface ring-1 ring-inset ring-line`}
               >
                 <span className="absolute inset-0 flex items-center justify-center">{picture(1, 1, shrink)}</span>
               </span>
@@ -274,7 +284,7 @@ export default function ArtField({ kind, board, colour, name, disabled, onPick, 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-start gap-3">
-        <span className={`${spec.frame} shrink-0 overflow-hidden rounded-lg border border-line bg-surface-raised`}>
+        <span className={`${spec.frame} shrink-0 overflow-hidden rounded-lg border border-line ${held?.path ? 'bg-surface' : 'bg-surface-raised'}`}>
           {held?.path ? (
             <StoredImage path={held.path} alt="" focus={held.focus} className="h-full w-full object-cover" />
           ) : kind === 'logo' ? (
@@ -324,6 +334,7 @@ export default function ArtField({ kind, board, colour, name, disabled, onPick, 
           kind={kind}
           source={picked.source}
           image={picked.image}
+          type={picked.type}
           animated={picked.animated}
           busy={busy}
           onApply={apply}

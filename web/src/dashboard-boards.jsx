@@ -199,12 +199,12 @@ function BoardTile({ board, onOpen }) {
       onClick={() => onOpen(board.id)}
       className="group relative flex cursor-pointer flex-col items-stretch overflow-hidden rounded-xl border border-line bg-surface text-left transition-colors hover:border-line-strong"
     >
-      <span className={`absolute inset-x-0 top-0 h-px ${shade(board.colour).stripe}`} aria-hidden="true" />
-
-      {board.art?.banner?.path && (
+      {board.art?.banner?.path ? (
         <span className="block h-16 w-full overflow-hidden border-b border-line">
           <StoredImage path={board.art.banner.path} alt="" focus={board.art.banner.focus} className="h-full w-full object-cover" />
         </span>
+      ) : (
+        <span className={`absolute inset-x-0 top-0 h-px ${shade(board.colour).stripe}`} aria-hidden="true" />
       )}
 
       <span className="flex flex-1 flex-col p-4">

@@ -515,15 +515,46 @@ async function removeFolder(boardId) {
 
 const SIGNED_TTL = 3600
 const signed = new Map()
+let queue = null
 
-export async function signedUrl(path) {
-  if (!path) return null
+function flushSigning() {
+  const batch = queue
+  queue = null
+  const paths = [...batch.keys()]
+  client()
+    .storage.from(BUCKET)
+    .createSignedUrls(paths, SIGNED_TTL)
+    .then(({ data, error }) => {
+      const found = new Map()
+      if (!error) {
+        for (const row of data || []) {
+          if (row?.signedUrl && !row.error) found.set(row.path, row.signedUrl)
+        }
+      }
+      for (const [path, waiting] of batch) {
+        const url = found.get(path) || null
+        if (url) signed.set(path, { url, until: Date.now() + (SIGNED_TTL - 120) * 1000 })
+        for (const settle of waiting) settle(url)
+      }
+    })
+    .catch(() => {
+      for (const waiting of batch.values()) for (const settle of waiting) settle(null)
+    })
+}
+
+export function signedUrl(path) {
+  if (!path) return Promise.resolve(null)
   const held = signed.get(path)
-  if (held && held.until > Date.now()) return held.url
-  const { data, error } = await client().storage.from(BUCKET).createSignedUrl(path, SIGNED_TTL)
-  if (error || !data?.signedUrl) return null
-  signed.set(path, { url: data.signedUrl, until: Date.now() + (SIGNED_TTL - 120) * 1000 })
-  return data.signedUrl
+  if (held && held.until > Date.now()) return Promise.resolve(held.url)
+  return new Promise((resolve) => {
+    if (!queue) {
+      queue = new Map()
+      queueMicrotask(flushSigning)
+    }
+    const waiting = queue.get(path) || []
+    waiting.push(resolve)
+    queue.set(path, waiting)
+  })
 }
 
 export function forgetSignedUrl(path) {

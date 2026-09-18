@@ -32,6 +32,7 @@ const ATTEMPTS = [
   { type: 'image/jpeg', quality: 0.82, scale: 1 },
   { type: 'image/webp', quality: 0.75, scale: 0.6 },
   { type: 'image/jpeg', quality: 0.7, scale: 0.6 },
+  { type: 'image/webp', quality: 0.7, scale: 0.45 },
 ]
 
 const SHRINK = [
@@ -40,7 +41,10 @@ const SHRINK = [
   { type: 'image/jpeg', quality: 0.82, scale: 0.85 },
   { type: 'image/webp', quality: 0.75, scale: 0.6 },
   { type: 'image/jpeg', quality: 0.7, scale: 0.45 },
+  { type: 'image/webp', quality: 0.7, scale: 0.4 },
 ]
+
+const withAlpha = (list) => list.filter((attempt) => attempt.type !== 'image/jpeg')
 
 export const isImage = (entry) => String(entry?.type ?? '').startsWith('image/')
 
@@ -89,6 +93,21 @@ function canvasFor(width, height) {
   return { canvas, brush }
 }
 
+export function hasAlpha(image, sourceType) {
+  if (sourceType === 'image/jpeg') return false
+  try {
+    const edge = 48
+    const { canvas, brush } = canvasFor(edge, edge)
+    brush.drawImage(image, 0, 0, canvas.width, canvas.height)
+    const data = brush.getImageData(0, 0, canvas.width, canvas.height).data
+    for (let at = 3; at < data.length; at += 4) if (data[at] < 255) return true
+  } catch {
+  }
+  return false
+}
+
+const attemptsFor = (list, image, sourceType) => (hasAlpha(image, sourceType) ? withAlpha(list) : list)
+
 async function paint(image, width, height, type, quality) {
   const { canvas, brush } = canvasFor(width, height)
   brush.drawImage(image, 0, 0, canvas.width, canvas.height)
@@ -133,7 +152,7 @@ export async function readAttachment(file) {
 
   const source = await readFile(file)
   const image = await loadImage(source)
-  for (const attempt of SHRINK) {
+  for (const attempt of attemptsFor(SHRINK, image, file.type)) {
     const blob = await paint(image, image.naturalWidth * attempt.scale, image.naturalHeight * attempt.scale, attempt.type, attempt.quality)
     if (blob.size <= FILE_MAX) {
       return {
@@ -155,15 +174,15 @@ export async function openArt(file) {
   if (!ART_TYPES.includes(file.type)) throw new Error('Use a PNG, JPEG, WebP or GIF image.')
   const source = await readFile(file)
   const image = await loadImage(source)
-  return { source, image, type: file.type, size: file.size }
+  return { source, image, type: file.type, size: file.size, alpha: hasAlpha(image, file.type) }
 }
 
-export async function cropArt(image, kind, box) {
+export async function cropArt(image, kind, box, sourceType) {
   const spec = ART_KINDS[kind] ?? ART_KINDS.logo
   const width = Math.max(1, Math.min(spec.width, Math.round(box.width)))
   const height = Math.max(1, Math.round((width * spec.height) / spec.width))
 
-  for (const attempt of ATTEMPTS) {
+  for (const attempt of attemptsFor(ATTEMPTS, image, sourceType)) {
     const { canvas, brush } = canvasFor(width * attempt.scale, height * attempt.scale)
     brush.drawImage(image, box.x, box.y, box.width, box.height, 0, 0, canvas.width, canvas.height)
     const blob = await toBlob(canvas, attempt.type, attempt.quality)
@@ -188,7 +207,7 @@ export async function readArt(file, kind) {
   const image = await loadImage(await readFile(file))
   const fit = Math.min(1, spec.width / image.naturalWidth, spec.height / image.naturalHeight)
 
-  for (const attempt of ATTEMPTS) {
+  for (const attempt of attemptsFor(ATTEMPTS, image, file.type)) {
     const scale = fit * attempt.scale
     const blob = await paint(image, image.naturalWidth * scale, image.naturalHeight * scale, attempt.type, attempt.quality)
     if (blob.size <= spec.cap) return { blob, bytes: blob.size, type: blob.type || attempt.type }

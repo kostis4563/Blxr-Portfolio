@@ -60,30 +60,43 @@ export function Chip({ active, onClick, children, title, disabled }) {
 }
 
 export function StoredImage({ path, alt = '', className = '', focus, draggable = false, onLoad }) {
-  const [url, setUrl] = useState(null)
+  const [state, setState] = useState({ path: null, url: null, failed: false })
+  const [shown, setShown] = useState(false)
 
   useEffect(() => {
     let live = true
-    setUrl(null)
-    if (!path) return undefined
+    setShown(false)
+    if (!path) {
+      setState({ path: null, url: null, failed: true })
+      return undefined
+    }
     signedUrl(path).then((next) => {
-      if (live) setUrl(next)
+      if (live) setState({ path, url: next, failed: !next })
     })
     return () => {
       live = false
     }
   }, [path])
 
-  if (!url) return <span className={`block animate-pulse bg-surface-raised ${className}`} />
+  const ready = state.path === path && state.url
+  if (!ready) {
+    const idle = state.path === path && state.failed
+    return <span className={`block bg-surface-raised ${idle ? '' : 'animate-pulse'} ${className}`} aria-hidden="true" />
+  }
   return (
     <img
-      src={url}
+      src={state.url}
       alt={alt}
       loading="lazy"
+      decoding="async"
       draggable={draggable}
-      onLoad={onLoad}
+      onLoad={(event) => {
+        setShown(true)
+        onLoad?.(event)
+      }}
+      onError={() => setState((held) => ({ ...held, url: null, failed: true }))}
       style={focus ? { objectPosition: `${focus.x}% ${focus.y}%` } : undefined}
-      className={className}
+      className={`transition-opacity duration-300 ${shown ? 'opacity-100' : 'opacity-0'} ${className}`}
     />
   )
 }
