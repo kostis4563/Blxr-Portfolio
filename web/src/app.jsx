@@ -7,13 +7,9 @@ import Testimonials from './components/testimonials'
 import ProjectsPage from './projects-page'
 import LibraryPage from './library-page'
 import ReviewsPage from './reviews-page'
-<<<<<<< Updated upstream
-import ReviewPanelPage from './review-panel-page'
-=======
 import LoginPage from './login-page'
 import DashboardPage from './dashboard-page'
 import PublicProfilePage from './public-profile-page'
->>>>>>> Stashed changes
 import NotFoundPage from './not-found-page'
 import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
@@ -50,7 +46,7 @@ function App() {
     if (!skillBadgesArmed) setSkillBadgesArmed(true)
   }
 
-  const { theme, toggleTheme } = useTheme()
+  const { theme, preference: themePreference, toggleTheme, setPreference: setThemePreference } = useTheme()
   const { t } = useI18n()
 
   const homeScrollRef = useRef(0)
@@ -424,10 +420,6 @@ function App() {
     )
   }
 
-<<<<<<< Updated upstream
-  if (currentView === 'reviewpanel') {
-    return <ReviewPanelPage theme={theme} onToggleTheme={toggleTheme} />
-=======
   if (currentView === 'login') {
     return <LoginPage theme={theme} onToggleTheme={toggleTheme} />
   }
@@ -448,7 +440,6 @@ function App() {
         {palette}
       </>
     )
->>>>>>> Stashed changes
   }
 
   return (

@@ -1,0 +1,50 @@
+<!-- You're invited &mdash; mirrors /login: dark, left-aligned, inline styles only, no images. -->
+<div style="margin:0;padding:0;background-color:#0a0a0a;">
+<span style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">You've been invited to blxr.</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color:#0a0a0a;">
+  <tr>
+    <td align="center" style="padding:56px 24px 64px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:400px;">
+        <tr>
+          <td style="padding-bottom:40px;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#ffffff;">blxr</td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:8px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#737373;">Invitation</td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:10px;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:24px;line-height:1.2;font-weight:700;letter-spacing:-0.02em;color:#ffffff;">You're invited</td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:28px;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13.5px;line-height:1.65;color:#a3a3a3;">You've been invited to join blxr. Accept to set up your account.</td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:36px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="#e5e5e5" style="background-color:#e5e5e5;border-radius:999px;">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:11px 22px;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;font-weight:500;line-height:18px;color:#0a0a0a;text-decoration:none;border-radius:999px;">Accept invite</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="border-top:1px dashed #2d2d2d;font-size:0;line-height:0;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td style="padding-top:20px;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.7;color:#737373;">
+            Not expecting an invite? You can safely ignore this email.<br>
+            If the button doesn't work, open this link:<br>
+            <a href="{{ .ConfirmationURL }}" style="color:#a3a3a3;text-decoration:underline;word-break:break-all;">{{ .ConfirmationURL }}</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-top:40px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#525252;">
+            <a href="{{ .SiteURL }}" style="color:#525252;text-decoration:none;">blxr.net</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</div>

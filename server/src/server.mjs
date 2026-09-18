@@ -3,11 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
-<<<<<<< Updated upstream
-=======
 import { mailConfigured, sendMail, passwordChangedMail, describeClient } from './mail.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
->>>>>>> Stashed changes
 
 const PORT = Number(process.env.PORT) || 8899
 const HOST = '127.0.0.1'
@@ -754,7 +751,7 @@ const GH_CACHE_TTL_MS = 30 * 60 * 1000
 const GH_CACHE_MAX = 50
 const ghCache = new Map()
 
-const GH_USER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/
+const GH_USER_RE = /^[A-Za-z0-9](?:-?[A-Za-z0-9]){0,38}$/
 
 function ghRange(year, now) {
   if (year === 'last') {
@@ -841,8 +838,6 @@ async function fetchContributions(user, year) {
   return ghFromMirror(user, year)
 }
 
-<<<<<<< Updated upstream
-=======
 const GH_API = (process.env.GITHUB_API || 'https://api.github.com').replace(/\/$/, '')
 const GH_STATS_TTL_MS = 60 * 60 * 1000
 const GH_STATS_REFRESH_MIN_MS = 2 * 60 * 1000
@@ -1381,7 +1376,6 @@ async function isSiteOwner(req) {
   return ok
 }
 
->>>>>>> Stashed changes
 function json(res, status, body, headers) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
@@ -1464,8 +1458,6 @@ const server = http.createServer(async (req, res) => {
       return res.end()
     }
 
-<<<<<<< Updated upstream
-=======
     if (url.pathname === '/api/mail/password-changed') {
       if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
       if (!mailConfigured() || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) return json(res, 503, { error: 'mail_disabled' }, NO_STORE)
@@ -1515,7 +1507,6 @@ const server = http.createServer(async (req, res) => {
       return res.end()
     }
 
->>>>>>> Stashed changes
     if (url.pathname === '/api/vitals' && req.method === 'POST') {
       const body = await readJsonBody(req, 1024)
       const list = Array.isArray(body) ? body : body ? [body] : []
@@ -1844,8 +1835,6 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { items })
     }
 
-<<<<<<< Updated upstream
-=======
     if (url.pathname === '/api/github/stats') {
       if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
       if (!GH_TOKEN) return json(res, 503, { error: 'stats_disabled' }, NO_STORE)
@@ -1859,7 +1848,6 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
->>>>>>> Stashed changes
     if (url.pathname === '/api/github/contributions') {
       const user = (url.searchParams.get('user') || '').trim()
       if (!GH_USER_RE.test(user)) return json(res, 400, { error: 'bad_user' })

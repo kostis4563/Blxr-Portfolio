@@ -142,8 +142,12 @@ Zone is at GoDaddy (`ns37/ns38.domaincontrol.com`), moving to Cloudflare.
 
 ### Mail
 
-No MX record, no mail agent on the box, nothing sends mail (contact is a
-`mailto:` link). Correct records for a domain that sends nothing:
+No MX record, no mail agent on the box. Outbound mail (account emails) goes
+through Resend — DNS records and Supabase's SMTP form are in
+[`supabase/README.md`](supabase/README.md); the one mail the Node server
+sends itself needs `RESEND_API_KEY` in `/etc/blxr-search.env`. Contact is
+still a `mailto:` link. If mail is ever dropped again, the records for a
+domain that sends nothing are:
 
 ```dns
 blxr.net.                TXT  "v=spf1 -all"

@@ -80,6 +80,7 @@
   --animate-rise-in: rise-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-overlay-in: overlay-in 0.2s ease-out both;
   --animate-panel-in: panel-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-menu-in: menu-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
 
   @keyframes view-in {
     from {
@@ -120,6 +121,17 @@
       transform: translateY(0) scale(1);
     }
   }
+
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -137,8 +149,6 @@
   }
 }
 
-<<<<<<< Updated upstream
-=======
 @keyframes settings-rise {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
@@ -160,7 +170,6 @@
   scroll-behavior: auto !important;
 }
 
->>>>>>> Stashed changes
 :root[data-theme='light'] {
   --color-bg: #fafaf9;
   --color-surface: #ffffff;
@@ -1026,8 +1035,6 @@ body {
   text-decoration-thickness: 1.5px;
   text-underline-offset: 5px;
 }
-<<<<<<< Updated upstream
-=======
 
 :root[data-view='dashboard'] .music-widget {
   left: auto;
@@ -1039,4 +1046,3 @@ body {
   right: 0;
   transform-origin: bottom right;
 }
->>>>>>> Stashed changes

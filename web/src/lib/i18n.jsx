@@ -99,7 +99,9 @@ export function I18nProvider({ children }) {
     el.dir = meta?.dir === 'rtl' ? 'rtl' : 'ltr'
   }, [lang])
 
-  const setLang = useCallback((code) => {
+  // `redirect: false` keeps the URL as is — for pages that are not localized,
+  // like the dashboard, where only the stored preference should change.
+  const setLang = useCallback((code, { redirect = true } = {}) => {
     if (!LANG_CODES.includes(code)) return
     setPrefLang(code)
     try {
@@ -108,7 +110,7 @@ export function I18nProvider({ children }) {
     }
 
     loadTable(code)
-    navigate(localizePath(routeOf(window.location.pathname), code))
+    if (redirect) navigate(localizePath(routeOf(window.location.pathname), code))
   }, [])
 
   const t = useCallback((key, vars, fallback) => {

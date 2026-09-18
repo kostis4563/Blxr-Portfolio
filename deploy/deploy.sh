@@ -25,6 +25,9 @@ SERVER_ENV=/etc/blxr-search.env
 # KEY=value lines the deploy job writes from repository secrets (never
 # committed); merged into $SERVER_ENV by deploy_server and deleted.
 ENV_OVERRIDES="$ROOT/deploy/.env-overrides"
+# Non-secret server settings (public URLs and keys), committed; merged the
+# same way, before the secrets.
+ENV_PUBLIC="$ROOT/deploy/server.env"
 
 run() {
   if [[ "$DRY_RUN" == "1" ]]; then printf '  [dry-run] %s\n' "$*"; else "$@"; fi
@@ -80,20 +83,27 @@ check_early_hints() {
 # Replace-or-append each KEY=value from $ENV_OVERRIDES into $SERVER_ENV, so
 # secrets live in the repository's Actions secrets and reach the box on
 # every deploy. Keys with an empty value are left untouched.
-sync_server_env() {
-  [[ -s "$ENV_OVERRIDES" ]] || return 0
-  step "Syncing secrets -> $SERVER_ENV"
-  local line key value
+# merge_env FILE — KEY=value lines from FILE replace the same keys in $SERVER_ENV.
+merge_env() {
+  local file="$1" line key value
+  [[ -s "$file" ]] || return 0
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ "$line" =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]] || continue
     key="${BASH_REMATCH[1]}"; value="${BASH_REMATCH[2]}"
-    [[ -n "$value" ]] || { echo "  $key: secret not set, skipped"; continue; }
+    [[ -n "$value" ]] || { echo "  $key: not set, skipped"; continue; }
     if [[ "$DRY_RUN" == "1" ]]; then echo "  [dry-run] set $key (${#value} chars)"; continue; fi
     touch "$SERVER_ENV"; chmod 0640 "$SERVER_ENV"
     sed -i "/^$key=/d" "$SERVER_ENV"
     printf '%s=%s\n' "$key" "$value" >> "$SERVER_ENV"
     echo "  set $key (${#value} chars)"
-  done < "$ENV_OVERRIDES"
+  done < "$file"
+}
+
+sync_server_env() {
+  [[ -s "$ENV_PUBLIC" || -s "$ENV_OVERRIDES" ]] || return 0
+  step "Syncing settings -> $SERVER_ENV"
+  merge_env "$ENV_PUBLIC"
+  merge_env "$ENV_OVERRIDES"
   run rm -f "$ENV_OVERRIDES"
 }
 
@@ -103,6 +113,7 @@ deploy_server() {
   step "Installing server -> $SERVER_ROOT"
   run install -D -m 0644 "$ROOT/server/src/server.mjs" "$SERVER_ROOT/server.mjs"
   run install -D -m 0644 "$ROOT/server/src/moderation.mjs" "$SERVER_ROOT/moderation.mjs"
+  run install -D -m 0644 "$ROOT/server/src/mail.mjs" "$SERVER_ROOT/mail.mjs"
 
   step "Installing systemd unit"
   run install -m 0644 "$ROOT/server/deploy/blxr-search.service" "$UNIT"

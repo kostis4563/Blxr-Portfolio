@@ -21,6 +21,8 @@ const TARGETS = [
 
   { glob: /^pfp\.webp$/, widths: [128, 192], quality: LOGO_Q },
 
+  { glob: /^blxr-logo\.webp$/, widths: [48, 96], quality: LOGO_Q },
+
   { glob: /^(async|amitista|delivo)-logo\.webp$/, widths: [48, 96], quality: LOGO_Q },
 
   { glob: /^7x0-logo\.webp$/, widths: [160, 272], quality: LOGO_Q },

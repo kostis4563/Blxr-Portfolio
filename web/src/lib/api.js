@@ -1,3 +1,5 @@
+import { analyticsAllowed } from './prefs'
+
 const BASE = '/api/music'
 const REVIEWS = '/api/reviews'
 
@@ -27,6 +29,7 @@ export async function fetchTopChart({ limit = 10, country, signal } = {}) {
 export function recordHit(path) {
   if (typeof navigator === 'undefined' || !navigator.sendBeacon) return
   if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl) return
+  if (!analyticsAllowed()) return
 
   const send = () => {
     try {
@@ -42,8 +45,6 @@ export function recordHit(path) {
   }
 }
 
-<<<<<<< Updated upstream
-=======
 export function deleteAccountRequest(accessToken) {
   return fetch('/api/account/delete', {
     method: 'POST',
@@ -59,7 +60,6 @@ export function notifyPasswordChanged(accessToken) {
   }).catch(() => null)
 }
 
->>>>>>> Stashed changes
 export class ReviewError extends Error {
   constructor(code, { fields = [], retryAfter = 0, status = 0 } = {}) {
     super(code)

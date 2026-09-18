@@ -4,14 +4,11 @@ import Root from './root.jsx'
 import { langOf } from './lib/router'
 import { preloadTable } from './lib/i18n'
 import { reportWebVitals } from './lib/vitals'
-<<<<<<< Updated upstream
-=======
 import { installErrorReporting } from './lib/report-errors'
 import { applyDevicePrefs } from './lib/prefs'
 
 applyDevicePrefs()
 installErrorReporting()
->>>>>>> Stashed changes
 
 const container = document.getElementById('root')
 const hydrate = () => {
