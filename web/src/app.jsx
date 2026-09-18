@@ -9,6 +9,7 @@ import ProjectsPage from './projects-page'
 import LibraryPage from './library-page'
 import ReviewsPage from './reviews-page'
 import NowPage from './now-page'
+import CvPage from './cv-page'
 import LoginPage from './login-page'
 import DashboardPage from './dashboard-page'
 import PublicProfilePage from './public-profile-page'
@@ -22,6 +23,7 @@ import { useTheme } from './lib/use-theme'
 import { useI18n } from './lib/i18n'
 import { projectsList, SHORT_KEY, METRIC_KEY, METRIC_VALUE_KEY } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
+import { SKILL_CATEGORIES, SKILL_LEVELS, TOOL_CATEGORIES, CERTIFICATIONS, themedIconFor } from './lib/skills'
 import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH } from './lib/router'
 import { applyHead } from './lib/seo'
 import { jumpToSection } from './lib/palette'
@@ -262,101 +264,26 @@ function App() {
     }
   ]
 
-  const certifications = [
-    { name: 'JavaScript', tier: t('tier.intermediate'), issuer: 'HackerRank', date: null, url: null },
-    { name: 'JavaScript', tier: t('tier.basic'), issuer: 'HackerRank', date: null, url: null },
-    { name: 'Python', tier: t('tier.basic'), issuer: 'HackerRank', date: null, url: null },
-    { name: 'Go', tier: t('tier.basic'), issuer: 'HackerRank', date: null, url: null },
-    { name: 'CSS', tier: t('tier.basic'), issuer: 'HackerRank', date: null, url: null }
-  ]
+  const certifications = CERTIFICATIONS.map((cert) => ({ ...cert, tier: t(cert.tierKey) }))
 
-  const skillLevels = {
-    advanced: { label: t('level.advanced'), rank: 4, bar: 'bg-emerald-400' },
-    comfortable: { label: t('level.comfortable'), rank: 3, bar: 'bg-sky-400' },
-    basic: { label: t('level.basic'), rank: 2, bar: 'bg-zinc-300' },
-    learning: { label: t('level.learning'), rank: 1, bar: 'bg-amber-400' }
-  }
+  const skillLevels = Object.fromEntries(
+    Object.entries(SKILL_LEVELS).map(([id, level]) => [id, { ...level, label: t(level.key) }])
+  )
 
   const meterSegments = [0, 1, 2, 3]
 
-  const LIGHT_THEME_ICONS = {
-    '/icons/apple_dark.svg': '/icons/apple.svg',
-    '/icons/mysql-icon-dark.svg': '/icons/mysql-icon-light.svg',
-    '/icons/github_dark.svg': '/icons/github.svg',
-    '/icons/json_dark.svg': '/icons/json.svg',
-    '/icons/komodo_dark.svg': '/icons/komodo.svg',
-    '/icons/cursor_dark.svg': '/icons/cursor.svg',
-    '/icons/devin_dark.png': '/icons/devin.png'
-  }
-  const themedIcon = (url) => (theme === 'light' ? LIGHT_THEME_ICONS[url] ?? url : url)
+  const themedIcon = themedIconFor(theme)
 
-  const skillCategories = [
-    {
-      name: t('skills.languages'),
-      items: [
-        { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable', desc: 'Scripting language for the web' },
-        { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', desc: 'General-purpose scripting & automation' },
-        { name: 'CSS', icon: '/icons/css.svg', level: 'advanced', desc: 'Styling & layout for the web' },
-        { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced', desc: 'Markup that structures web pages' }
-      ]
-    },
-    {
-      name: t('skills.frameworks'),
-      items: [
-        { name: 'React', icon: '/icons/react_dark.svg', level: 'advanced', desc: 'UI library for building interfaces' },
-        { name: 'discord.js', icon: '/icons/discordjs.svg', level: 'advanced', desc: 'Node.js library for Discord bots' }
-      ]
-    },
-    {
-      name: t('skills.infrastructure'),
-      items: [
-        { name: 'MySQL', icon: themedIcon('/icons/mysql-icon-dark.svg'), level: 'basic', desc: 'Relational database management' },
-        { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable', desc: 'Process manager for Node.js' },
-        { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', desc: 'CDN, DNS & edge security' }
-      ]
-    }
-  ]
+  const skillCategories = SKILL_CATEGORIES.map((category) => ({
+    name: t(category.nameKey),
+    items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon) }))
+  }))
 
-  const toolCategories = [
-    {
-      name: t('tools.development'),
-      wide: false,
-      items: [
-        { name: 'Git', icon: '/icons/git.svg', desc: 'Version control for code' },
-        { name: 'GitHub', icon: themedIcon('/icons/github_dark.svg'), desc: 'Code hosting & collaboration' },
-        { name: 'npm', icon: '/icons/npm.svg', desc: 'Package manager for Node.js' }
-      ]
-    },
-    {
-      name: t('tools.design'),
-      wide: false,
-      items: [
-        { name: 'Figma', icon: '/icons/figma.svg', desc: 'Interface design & prototyping' },
-        { name: 'Adobe', icon: '/icons/adobe.svg', desc: 'Creative software suite' },
-        { name: 'Photoshop', icon: '/icons/photoshop.svg', desc: 'Image editing & compositing' },
-        { name: 'Illustrator', icon: '/icons/illustrator.svg', desc: 'Vector graphics & illustration' },
-        { name: 'Canva', icon: '/icons/canva.svg', desc: 'Quick graphic design' }
-      ]
-    },
-    {
-      name: t('skills.editors'),
-      wide: true,
-      items: [
-        { name: 'VS Code', icon: '/icons/vscode.svg', desc: 'Code editor' },
-        { name: 'Visual Studio', icon: '/icons/visual-studio.svg', desc: 'IDE for app development' },
-        { name: 'Xcode', icon: '/icons/xcode.svg', desc: "Apple's IDE for iOS & macOS" },
-        { name: 'Komodo', icon: themedIcon('/icons/komodo_dark.svg'), desc: 'Lightweight code editor' }
-      ]
-    },
-    {
-      name: t('skills.systems'),
-      wide: true,
-      items: [
-        { name: 'macOS', icon: themedIcon('/icons/apple_dark.svg'), desc: "Apple's desktop OS" },
-        { name: 'Windows', icon: '/icons/windows.svg', desc: "Microsoft's desktop OS" }
-      ]
-    }
-  ]
+  const toolCategories = TOOL_CATEGORIES.map((category) => ({
+    name: t(category.nameKey),
+    wide: category.wide,
+    items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon) }))
+  }))
 
   const toolboxPreview = ['Git', 'Figma', 'VS Code', 'macOS']
     .map((name) => toolCategories.flatMap((category) => category.items).find((item) => item.name === name))
@@ -417,6 +344,15 @@ function App() {
     return (
       <>
         <NowPage theme={theme} onToggleTheme={toggleTheme} />
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'cv') {
+    return (
+      <>
+        <CvPage theme={theme} onToggleTheme={toggleTheme} />
         {palette}
       </>
     )

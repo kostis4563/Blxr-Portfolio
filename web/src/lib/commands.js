@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, NOW_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, NOW_PATH, CV_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList, SHORT_KEY } from './projects'
 import { libraryList } from './library'
@@ -59,6 +59,16 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
       href: NOW_PATH,
       run: () => navigate(NOW_PATH),
       keywords: 'now currently learning building studying ib status',
+    },
+    {
+      id: 'page-cv',
+      group: jump,
+      label: t('cv.title'),
+      hint: t('cv.kicker'),
+      icon: 'file',
+      href: CV_PATH,
+      run: () => navigate(CV_PATH),
+      keywords: 'cv resume résumé curriculum vitae experience education skills certifications print pdf',
     },
 
     ...SECTIONS.map((section) => ({

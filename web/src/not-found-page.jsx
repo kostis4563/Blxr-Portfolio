@@ -17,6 +17,7 @@ import {
   LIBRARY_PATH,
   REVIEWS_PATH,
   NOW_PATH,
+  CV_PATH,
   projectPath,
   libraryPath,
 } from './lib/router'
@@ -52,6 +53,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
       ...libraryList.map((entry) => ({ path: libraryPath(entry.id), label: entry.title })),
       { path: REVIEWS_PATH, label: t('rev.title') },
       { path: NOW_PATH, label: t('now.title') },
+      { path: CV_PATH, label: t('cv.title') },
       ...SECTIONS.map((s) => ({ path: `/${s.id}`, label: t(s.key), section: s.id })),
     ],
     [t],

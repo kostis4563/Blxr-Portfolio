@@ -3,6 +3,7 @@ import { translate } from './i18n'
 import { projectsList } from './projects'
 import { libraryList, findLibraryItem } from './library'
 import { NOW_UPDATED } from './now'
+import { CV_UPDATED } from './cv'
 import {
   alternatesFor,
   libraryPath,
@@ -32,6 +33,9 @@ const REVIEWS_DESCRIPTION =
 
 const NOW_DESCRIPTION =
   'What Blxr is doing right now: learning Node, PostgreSQL, React and Next.js, building open source projects, and finishing the IB with a Computer Science focus.'
+
+const CV_DESCRIPTION =
+  'CV of Blxr, a full stack developer in Athens: experience, selected projects, education, skills and certifications. Printable.'
 
 export function metaFor(pathname) {
   const { lang, route: routePath } = splitLocale(pathname)
@@ -94,6 +98,14 @@ export function metaFor(pathname) {
       ...base,
       title: `${pick('Now', 'now.title')} — ${SITE_NAME}`,
       description: pick(NOW_DESCRIPTION, 'now.tagline'),
+    }
+  }
+
+  if (route.name === 'cv') {
+    return {
+      ...base,
+      title: `${pick('CV', 'cv.title')} — ${SITE_NAME}`,
+      description: pick(CV_DESCRIPTION, 'cv.tagline'),
     }
   }
 
@@ -281,6 +293,18 @@ function jsonLdFor(path) {
       description: NOW_DESCRIPTION,
       url: `${SITE_URL}/now`,
       dateModified: NOW_UPDATED,
+      mainEntity: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
+  if (route.name === 'cv') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: 'CV',
+      description: CV_DESCRIPTION,
+      url: `${SITE_URL}/cv`,
+      dateModified: CV_UPDATED,
       mainEntity: { '@id': `${SITE_URL}/#blxr` },
     }
   }

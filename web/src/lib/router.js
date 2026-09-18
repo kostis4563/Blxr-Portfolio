@@ -37,6 +37,7 @@ export function parseRoute(path) {
   if (p === '/library') return { name: 'library', itemId: null }
   if (p === '/reviews') return { name: 'reviews' }
   if (p === '/now') return { name: 'now' }
+  if (p === '/cv') return { name: 'cv' }
   if (p === '/login') return { name: 'login' }
   if (p === '/dashboard') return { name: 'dashboard' }
   if (p === PROFILE_BASE_PATH) return { name: 'profile', handle: null }
@@ -102,6 +103,7 @@ export const libraryPath = (id) => `/library/${encodeURIComponent(id)}`
 export const REVIEWS_PATH = '/reviews'
 export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
 export const NOW_PATH = '/now'
+export const CV_PATH = '/cv'
 export const LOGIN_PATH = '/login'
 export const REGISTER_PATH = `${LOGIN_PATH}#register`
 export const RESET_PATH = `${LOGIN_PATH}#reset`
@@ -119,6 +121,7 @@ export const staticPaths = () => [
   ...libraryList.map((entry) => libraryPath(entry.id)),
   REVIEWS_PATH,
   NOW_PATH,
+  CV_PATH,
 ]
 
 export const localizedPaths = () =>

@@ -6783,3 +6783,161 @@ const REVIEW_PANEL_LABELS = {
   }
 }
 mergeLabels(REVIEW_PANEL_LABELS)
+
+const CV_LABELS = {
+  'cv.title': {
+    en: 'CV', es: 'CV', fr: 'CV', de: 'Lebenslauf', it: 'CV', pt: 'CV', el: 'Βιογραφικό', nl: 'CV', ru: 'Резюме', ja: '経歴', zh: '简历',
+    ar: 'السيرة الذاتية', no: 'CV', hi: 'सीवी', id: 'CV', tr: 'Özgeçmiş', ko: '이력서', pl: 'CV', vi: 'CV', uk: 'Резюме', sv: 'CV', da: 'CV',
+    fi: 'CV', bg: 'Автобиография', ro: 'CV', sr: 'Биографија', cs: 'Životopis', th: 'ประวัติย่อ', bn: 'সিভি', fa: 'رزومه', he: 'קורות חיים', hu: 'Önéletrajz'
+  },
+  'cv.kicker': {
+    en: 'Curriculum vitae', es: 'Currículum', fr: 'Curriculum vitae', de: 'Curriculum vitae', it: 'Curriculum vitae', pt: 'Currículo',
+    el: 'Curriculum vitae', nl: 'Curriculum vitae', ru: 'Curriculum vitae', ja: 'Curriculum vitae', zh: '个人简历', ar: 'السيرة الذاتية',
+    no: 'Curriculum vitae', hi: 'करिकुलम विटे', id: 'Curriculum vitae', tr: 'Curriculum vitae', ko: 'Curriculum vitae', pl: 'Curriculum vitae',
+    vi: 'Curriculum vitae', uk: 'Curriculum vitae', sv: 'Curriculum vitae', da: 'Curriculum vitae', fi: 'Curriculum vitae', bg: 'Curriculum vitae',
+    ro: 'Curriculum vitae', sr: 'Curriculum vitae', cs: 'Curriculum vitae', th: 'Curriculum vitae', bn: 'কারিকুলাম ভিটা', fa: 'کوریکولوم ویته',
+    he: 'קורות חיים', hu: 'Curriculum vitae'
+  },
+  'cv.tagline': {
+    en: 'CV of Blxr, a full stack developer in Athens: experience, selected projects, education, skills and certifications. Printable.',
+    es: 'CV de Blxr, desarrollador full stack en Atenas: experiencia, proyectos seleccionados, formación, habilidades y certificaciones. Imprimible.',
+    fr: 'CV de Blxr, développeur full stack à Athènes : expérience, projets choisis, formation, compétences et certifications. Imprimable.',
+    de: 'Lebenslauf von Blxr, Full-Stack-Entwickler in Athen: Erfahrung, ausgewählte Projekte, Ausbildung, Fähigkeiten und Zertifikate. Druckbar.',
+    it: 'CV di Blxr, sviluppatore full stack ad Atene: esperienza, progetti selezionati, formazione, competenze e certificazioni. Stampabile.',
+    pt: 'CV de Blxr, programador full stack em Atenas: experiência, projetos selecionados, formação, competências e certificações. Imprimível.',
+    el: 'Βιογραφικό του Blxr, full stack developer στην Αθήνα: εμπειρία, επιλεγμένα projects, σπουδές, δεξιότητες και πιστοποιήσεις. Εκτυπώσιμο.',
+    nl: 'CV van Blxr, full stack developer in Athene: ervaring, geselecteerde projecten, opleiding, vaardigheden en certificaten. Printbaar.',
+    ru: 'Резюме Blxr, full stack разработчика из Афин: опыт, избранные проекты, образование, навыки и сертификаты. Можно распечатать.',
+    ja: 'アテネのフルスタック開発者 Blxr の経歴書：経験、主なプロジェクト、学歴、スキル、資格。印刷可能。',
+    zh: 'Blxr 的简历，雅典的全栈开发者：经历、精选项目、教育、技能和认证。可打印。',
+    ar: 'السيرة الذاتية لـ Blxr، مطوّر full stack في أثينا: الخبرة والمشاريع المختارة والتعليم والمهارات والشهادات. قابلة للطباعة.',
+    no: 'CV for Blxr, full stack utvikler i Athen: erfaring, utvalgte prosjekter, utdanning, ferdigheter og sertifiseringer. Kan skrives ut.',
+    hi: 'एथेंस के फुल स्टैक डेवलपर Blxr का सीवी: अनुभव, चुनिंदा प्रोजेक्ट, शिक्षा, कौशल और प्रमाणपत्र। प्रिंट करने योग्य।',
+    id: 'CV Blxr, developer full stack di Athena: pengalaman, proyek pilihan, pendidikan, keahlian, dan sertifikasi. Dapat dicetak.',
+    tr: 'Atina’da full stack geliştirici Blxr’ın özgeçmişi: deneyim, seçili projeler, eğitim, beceriler ve sertifikalar. Yazdırılabilir.',
+    ko: '아테네의 풀스택 개발자 Blxr의 이력서: 경력, 주요 프로젝트, 학력, 기술, 자격증. 인쇄 가능.',
+    pl: 'CV Blxr, full stack developera z Aten: doświadczenie, wybrane projekty, edukacja, umiejętności i certyfikaty. Do druku.',
+    vi: 'CV của Blxr, lập trình viên full stack tại Athens: kinh nghiệm, dự án tiêu biểu, học vấn, kỹ năng và chứng chỉ. Có thể in.',
+    uk: 'Резюме Blxr, full stack розробника з Афін: досвід, вибрані проєкти, освіта, навички та сертифікати. Можна роздрукувати.',
+    sv: 'CV för Blxr, full stack utvecklare i Aten: erfarenhet, utvalda projekt, utbildning, kunskaper och certifikat. Utskriftsvänligt.',
+    da: 'CV for Blxr, full stack udvikler i Athen: erfaring, udvalgte projekter, uddannelse, kompetencer og certificeringer. Kan printes.',
+    fi: 'Blxrin CV, full stack kehittäjä Ateenasta: kokemus, valitut projektit, koulutus, taidot ja sertifikaatit. Tulostettava.',
+    bg: 'Автобиография на Blxr, full stack разработчик в Атина: опит, избрани проекти, образование, умения и сертификати. За печат.',
+    ro: 'CV-ul lui Blxr, developer full stack în Atena: experiență, proiecte selectate, educație, competențe și certificări. Printabil.',
+    sr: 'Биографија Blxr, full stack програмера из Атине: искуство, изабрани пројекти, образовање, вештине и сертификати. За штампу.',
+    cs: 'Životopis Blxr, full stack vývojáře z Atén: zkušenosti, vybrané projekty, vzdělání, dovednosti a certifikáty. K tisku.',
+    th: 'ประวัติย่อของ Blxr นักพัฒนา full stack ในเอเธนส์: ประสบการณ์ โปรเจกต์คัดสรร การศึกษา ทักษะ และใบรับรอง พิมพ์ได้',
+    bn: 'এথেন্সের ফুল স্ট্যাক ডেভেলপার Blxr এর সিভি: অভিজ্ঞতা, নির্বাচিত প্রজেক্ট, শিক্ষা, দক্ষতা ও সার্টিফিকেট। প্রিন্টযোগ্য।',
+    fa: 'رزومه Blxr، توسعه‌دهنده full stack در آتن: تجربه، پروژه‌های منتخب، تحصیلات، مهارت‌ها و گواهی‌ها. قابل چاپ.',
+    he: 'קורות החיים של Blxr, מפתח full stack באתונה: ניסיון, פרויקטים נבחרים, השכלה, מיומנויות והסמכות. ניתן להדפסה.',
+    hu: 'Blxr önéletrajza, full stack fejlesztő Athénban: tapasztalat, válogatott projektek, tanulmányok, készségek és tanúsítványok. Nyomtatható.'
+  },
+  'cv.cta': {
+    en: 'Read my CV', es: 'Ver mi CV', fr: 'Voir mon CV', de: 'Lebenslauf ansehen', it: 'Leggi il mio CV', pt: 'Ver o meu CV', el: 'Δείτε το βιογραφικό μου',
+    nl: 'Bekijk mijn cv', ru: 'Моё резюме', ja: '経歴を見る', zh: '查看我的简历', ar: 'اطّلع على سيرتي الذاتية', no: 'Se CV-en min', hi: 'मेरा सीवी देखें',
+    id: 'Lihat CV saya', tr: 'Özgeçmişimi gör', ko: '이력서 보기', pl: 'Zobacz moje CV', vi: 'Xem CV của tôi', uk: 'Моє резюме', sv: 'Läs mitt CV',
+    da: 'Se mit CV', fi: 'Lue CV:ni', bg: 'Вижте автобиографията ми', ro: 'Vezi CV-ul meu', sr: 'Погледај моју биографију', cs: 'Můj životopis',
+    th: 'ดูประวัติย่อของฉัน', bn: 'আমার সিভি দেখুন', fa: 'رزومه من', he: 'קורות החיים שלי', hu: 'Önéletrajzom'
+  },
+  'cv.print': {
+    en: 'Print', es: 'Imprimir', fr: 'Imprimer', de: 'Drucken', it: 'Stampa', pt: 'Imprimir', el: 'Εκτύπωση', nl: 'Afdrukken', ru: 'Печать', ja: '印刷',
+    zh: '打印', ar: 'طباعة', no: 'Skriv ut', hi: 'प्रिंट करें', id: 'Cetak', tr: 'Yazdır', ko: '인쇄', pl: 'Drukuj', vi: 'In', uk: 'Друк', sv: 'Skriv ut',
+    da: 'Udskriv', fi: 'Tulosta', bg: 'Печат', ro: 'Printează', sr: 'Штампај', cs: 'Tisk', th: 'พิมพ์', bn: 'প্রিন্ট', fa: 'چاپ', he: 'הדפסה', hu: 'Nyomtatás'
+  },
+  'cv.printHint': {
+    en: 'Print or save as PDF', es: 'Imprimir o guardar como PDF', fr: 'Imprimer ou enregistrer en PDF', de: 'Drucken oder als PDF speichern',
+    it: 'Stampa o salva come PDF', pt: 'Imprimir ou guardar como PDF', el: 'Εκτύπωση ή αποθήκευση ως PDF', nl: 'Afdrukken of opslaan als pdf',
+    ru: 'Распечатать или сохранить в PDF', ja: '印刷または PDF として保存', zh: '打印或保存为 PDF', ar: 'طباعة أو حفظ بصيغة PDF',
+    no: 'Skriv ut eller lagre som PDF', hi: 'प्रिंट करें या PDF में सहेजें', id: 'Cetak atau simpan sebagai PDF', tr: 'Yazdır veya PDF olarak kaydet',
+    ko: '인쇄 또는 PDF로 저장', pl: 'Wydrukuj lub zapisz jako PDF', vi: 'In hoặc lưu thành PDF', uk: 'Роздрукувати або зберегти як PDF',
+    sv: 'Skriv ut eller spara som PDF', da: 'Udskriv eller gem som PDF', fi: 'Tulosta tai tallenna PDF:nä', bg: 'Печат или запис като PDF',
+    ro: 'Printează sau salvează ca PDF', sr: 'Штампај или сачувај као PDF', cs: 'Vytisknout nebo uložit jako PDF', th: 'พิมพ์หรือบันทึกเป็น PDF',
+    bn: 'প্রিন্ট করুন বা PDF হিসেবে সংরক্ষণ করুন', fa: 'چاپ یا ذخیره به‌صورت PDF', he: 'הדפסה או שמירה כ-PDF', hu: 'Nyomtatás vagy mentés PDF-ként'
+  },
+  'cv.updated': {
+    en: 'Updated', es: 'Actualizado', fr: 'Mis à jour', de: 'Aktualisiert', it: 'Aggiornato', pt: 'Atualizado', el: 'Ενημερώθηκε', nl: 'Bijgewerkt',
+    ru: 'Обновлено', ja: '更新', zh: '更新于', ar: 'آخر تحديث', no: 'Oppdatert', hi: 'अपडेट किया गया', id: 'Diperbarui', tr: 'Güncellendi', ko: '업데이트',
+    pl: 'Zaktualizowano', vi: 'Cập nhật', uk: 'Оновлено', sv: 'Uppdaterad', da: 'Opdateret', fi: 'Päivitetty', bg: 'Обновено', ro: 'Actualizat',
+    sr: 'Ажурирано', cs: 'Aktualizováno', th: 'อัปเดต', bn: 'আপডেট', fa: 'به‌روزرسانی', he: 'עודכן', hu: 'Frissítve'
+  },
+  'cv.timezone': {
+    en: 'Time', es: 'Zona', fr: 'Fuseau', de: 'Zeitzone', it: 'Fuso', pt: 'Fuso', el: 'Ζώνη', nl: 'Tijdzone', ru: 'Часовой пояс', ja: '時間帯', zh: '时区',
+    ar: 'التوقيت', no: 'Tidssone', hi: 'समय क्षेत्र', id: 'Zona waktu', tr: 'Saat dilimi', ko: '시간대', pl: 'Strefa', vi: 'Múi giờ', uk: 'Часовий пояс',
+    sv: 'Tidszon', da: 'Tidszone', fi: 'Aikavyöhyke', bg: 'Часова зона', ro: 'Fus orar', sr: 'Временска зона', cs: 'Časové pásmo', th: 'เขตเวลา',
+    bn: 'সময় অঞ্চল', fa: 'منطقه زمانی', he: 'אזור זמן', hu: 'Időzóna'
+  },
+  'cv.projects': {
+    en: 'Selected projects', es: 'Proyectos seleccionados', fr: 'Projets choisis', de: 'Ausgewählte Projekte', it: 'Progetti selezionati',
+    pt: 'Projetos selecionados', el: 'Επιλεγμένα projects', nl: 'Geselecteerde projecten', ru: 'Избранные проекты', ja: '主なプロジェクト', zh: '精选项目',
+    ar: 'مشاريع مختارة', no: 'Utvalgte prosjekter', hi: 'चुनिंदा प्रोजेक्ट', id: 'Proyek pilihan', tr: 'Seçili projeler', ko: '주요 프로젝트',
+    pl: 'Wybrane projekty', vi: 'Dự án tiêu biểu', uk: 'Вибрані проєкти', sv: 'Utvalda projekt', da: 'Udvalgte projekter', fi: 'Valitut projektit',
+    bg: 'Избрани проекти', ro: 'Proiecte selectate', sr: 'Изабрани пројекти', cs: 'Vybrané projekty', th: 'โปรเจกต์คัดสรร', bn: 'নির্বাচিত প্রজেক্ট',
+    fa: 'پروژه‌های منتخب', he: 'פרויקטים נבחרים', hu: 'Válogatott projektek'
+  },
+  'cv.education': {
+    en: 'Education', es: 'Formación', fr: 'Formation', de: 'Ausbildung', it: 'Formazione', pt: 'Formação', el: 'Εκπαίδευση', nl: 'Opleiding',
+    ru: 'Образование', ja: '学歴', zh: '教育', ar: 'التعليم', no: 'Utdanning', hi: 'शिक्षा', id: 'Pendidikan', tr: 'Eğitim', ko: '학력', pl: 'Edukacja',
+    vi: 'Học vấn', uk: 'Освіта', sv: 'Utbildning', da: 'Uddannelse', fi: 'Koulutus', bg: 'Образование', ro: 'Educație', sr: 'Образовање',
+    cs: 'Vzdělání', th: 'การศึกษา', bn: 'শিক্ষা', fa: 'تحصیلات', he: 'השכלה', hu: 'Tanulmányok'
+  },
+  'cv.certsAndLanguages': {
+    en: 'Certifications & languages', es: 'Certificaciones e idiomas', fr: 'Certifications et langues', de: 'Zertifikate & Sprachen',
+    it: 'Certificazioni e lingue', pt: 'Certificações e idiomas', el: 'Πιστοποιήσεις & γλώσσες', nl: 'Certificaten & talen',
+    ru: 'Сертификаты и языки', ja: '資格と言語', zh: '认证与语言', ar: 'الشهادات واللغات', no: 'Sertifiseringer og språk',
+    hi: 'प्रमाणपत्र और भाषाएँ', id: 'Sertifikasi & bahasa', tr: 'Sertifikalar ve diller', ko: '자격증 및 언어', pl: 'Certyfikaty i języki',
+    vi: 'Chứng chỉ & ngôn ngữ', uk: 'Сертифікати та мови', sv: 'Certifikat & språk', da: 'Certificeringer & sprog', fi: 'Sertifikaatit ja kielet',
+    bg: 'Сертификати и езици', ro: 'Certificări și limbi', sr: 'Сертификати и језици', cs: 'Certifikáty a jazyky', th: 'ใบรับรองและภาษา',
+    bn: 'সার্টিফিকেট ও ভাষা', fa: 'گواهی‌ها و زبان‌ها', he: 'הסמכות ושפות', hu: 'Tanúsítványok és nyelvek'
+  },
+  'cv.certifications': {
+    en: 'Certifications', es: 'Certificaciones', fr: 'Certifications', de: 'Zertifikate', it: 'Certificazioni', pt: 'Certificações', el: 'Πιστοποιήσεις',
+    nl: 'Certificaten', ru: 'Сертификаты', ja: '資格', zh: '认证', ar: 'الشهادات', no: 'Sertifiseringer', hi: 'प्रमाणपत्र', id: 'Sertifikasi', tr: 'Sertifikalar',
+    ko: '자격증', pl: 'Certyfikaty', vi: 'Chứng chỉ', uk: 'Сертифікати', sv: 'Certifikat', da: 'Certificeringer', fi: 'Sertifikaatit', bg: 'Сертификати',
+    ro: 'Certificări', sr: 'Сертификати', cs: 'Certifikáty', th: 'ใบรับรอง', bn: 'সার্টিফিকেট', fa: 'گواهی‌ها', he: 'הסמכות', hu: 'Tanúsítványok'
+  },
+  'cv.languages': {
+    en: 'Languages', es: 'Idiomas', fr: 'Langues', de: 'Sprachen', it: 'Lingue', pt: 'Idiomas', el: 'Γλώσσες', nl: 'Talen', ru: 'Языки', ja: '言語', zh: '语言',
+    ar: 'اللغات', no: 'Språk', hi: 'भाषाएँ', id: 'Bahasa', tr: 'Diller', ko: '언어', pl: 'Języki', vi: 'Ngôn ngữ', uk: 'Мови', sv: 'Språk', da: 'Sprog',
+    fi: 'Kielet', bg: 'Езици', ro: 'Limbi', sr: 'Језици', cs: 'Jazyky', th: 'ภาษา', bn: 'ভাষা', fa: 'زبان‌ها', he: 'שפות', hu: 'Nyelvek'
+  },
+  'cv.stack': {
+    en: 'Stack', es: 'Stack', fr: 'Stack', de: 'Stack', it: 'Stack', pt: 'Stack', el: 'Stack', nl: 'Stack', ru: 'Стек', ja: '技術スタック', zh: '技术栈',
+    ar: 'التقنيات', no: 'Stack', hi: 'स्टैक', id: 'Stack', tr: 'Teknolojiler', ko: '기술 스택', pl: 'Stack', vi: 'Công nghệ', uk: 'Стек', sv: 'Stack',
+    da: 'Stack', fi: 'Stack', bg: 'Стек', ro: 'Stack', sr: 'Стек', cs: 'Stack', th: 'เทคโนโลยี', bn: 'স্ট্যাক', fa: 'فناوری‌ها', he: 'טכנולוגיות', hu: 'Stack'
+  },
+  'cv.footer': {
+    en: 'This is the formal version. For what I am working on at the moment, see',
+    es: 'Esta es la versión formal. Para ver en qué estoy trabajando ahora mismo, pasa por',
+    fr: 'Ceci est la version formelle. Pour ce sur quoi je travaille en ce moment, voir',
+    de: 'Das ist die formelle Version. Woran ich gerade arbeite, steht unter',
+    it: 'Questa è la versione formale. Per vedere a cosa sto lavorando in questo momento, guarda',
+    pt: 'Esta é a versão formal. Para ver no que estou a trabalhar neste momento, vê',
+    el: 'Αυτή είναι η επίσημη εκδοχή. Για το τι δουλεύω αυτή τη στιγμή, δείτε το',
+    nl: 'Dit is de formele versie. Waar ik op dit moment aan werk, zie je op',
+    ru: 'Это официальная версия. Над чем я работаю прямо сейчас — на странице',
+    ja: 'これは正式版です。今取り組んでいることは',
+    zh: '这是正式版本。想了解我目前在做什么，请看',
+    ar: 'هذه هي النسخة الرسمية. لمعرفة ما أعمل عليه حاليًا، انظر',
+    no: 'Dette er den formelle versjonen. Hva jeg jobber med akkurat nå finner du på',
+    hi: 'यह औपचारिक संस्करण है। मैं इस समय किस पर काम कर रहा हूँ, देखें',
+    id: 'Ini versi formalnya. Untuk yang sedang saya kerjakan saat ini, lihat',
+    tr: 'Bu resmi sürüm. Şu anda ne üzerinde çalıştığımı görmek için',
+    ko: '이것은 공식 버전입니다. 지금 하고 있는 일은',
+    pl: 'To wersja formalna. Nad czym pracuję w tej chwili, zobacz na',
+    vi: 'Đây là bản chính thức. Để xem tôi đang làm gì lúc này, hãy xem',
+    uk: 'Це офіційна версія. Над чим я працюю зараз — на сторінці',
+    sv: 'Det här är den formella versionen. Vad jag jobbar med just nu finns på',
+    da: 'Dette er den formelle version. Hvad jeg arbejder på lige nu, kan du se på',
+    fi: 'Tämä on virallinen versio. Mitä teen juuri nyt, näet sivulta',
+    bg: 'Това е официалната версия. Върху какво работя в момента — на',
+    ro: 'Aceasta este versiunea formală. Pentru ce lucrez în acest moment, vezi',
+    sr: 'Ово је формална верзија. На чему тренутно радим видите на',
+    cs: 'Toto je formální verze. Na čem právě pracuji, najdete na',
+    th: 'นี่คือฉบับทางการ ส่วนสิ่งที่กำลังทำอยู่ตอนนี้ ดูได้ที่',
+    bn: 'এটি আনুষ্ঠানিক সংস্করণ। এই মুহূর্তে আমি কী নিয়ে কাজ করছি তা দেখুন',
+    fa: 'این نسخه رسمی است. برای دیدن کاری که الان مشغولش هستم، ببینید',
+    he: 'זו הגרסה הרשמית. על מה אני עובד כרגע אפשר לראות ב',
+    hu: 'Ez a hivatalos változat. Hogy min dolgozom épp most, azt itt látod:'
+  }
+}
+mergeLabels(CV_LABELS)

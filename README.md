@@ -74,6 +74,8 @@ web/src/
 ├── projects-page.jsx
 ├── library-page.jsx
 ├── reviews-page.jsx   /reviews — public review form and list
+├── now-page.jsx       /now — what I'm doing at the moment, content in lib/now.js
+├── cv-page.jsx        /cv — printable CV, content in lib/cv.js
 ├── login-page.jsx     /login — sign in / register / reset, backed by Supabase Auth
 ├── dashboard-page.jsx /dashboard — signed-in dashboard (components/dashboard-sidebar.jsx + dashboard-topbar.jsx)
 ├── dashboard-boards.jsx  /dashboard#boards — kanban boards (components/boards/)
@@ -91,6 +93,8 @@ web/src/
     ├── library.js
     ├── reviews.js       limits, summary maths, plural/relative-time helpers
     ├── profile.js
+    ├── now.js           /now content + last-updated stamp
+    ├── cv.js            /cv content + last-updated stamp
     ├── palette.js       command palette state
     ├── commands.js      command palette entries
     ├── text-match.js    accent-insensitive folding
@@ -131,6 +135,8 @@ web/src/
 | `/library` | `library.html` |
 | `/library/<id>` | `library/<id>.html` |
 | `/reviews` | `reviews.html` |
+| `/now` | `now.html` |
+| `/cv` | `cv.html` — printable CV, `Print` in the header uses the browser's print / save as PDF |
 | `/login` | `login.html` — sign in / register (`#register`) / reset (`#reset`) / new password (`#update`), English only, noindex |
 | `/dashboard` | `dashboard.html` — signed-in dashboard, sections via hash (`#settings/domains`, `#boards/<board>/<card>`), English only, noindex; bounces to `/login?next=…` without a session. `#reviewpanel/…` and `#logs/…` only exist for the owner account (`OWNER_EMAIL` in `lib/dashboard.js`, `SITE_OWNER_EMAIL` on the server) |
 | `/<lang>` | `<lang>.html` |
