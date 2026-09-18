@@ -10,6 +10,24 @@ Project ref: `mjgymhtgqxzrcnkthntp`, so the OAuth callback every provider gets i
 https://mjgymhtgqxzrcnkthntp.supabase.co/auth/v1/callback
 ```
 
+## 0. Site URL and redirect allow-list (do this first)
+
+A new project ships with **Site URL = `http://localhost:3000`**, and Supabase
+only honours the app's `redirectTo` (`https://blxr.net/login?next=…`) when it
+matches the allow-list. Until both are set, every Google/Discord sign-in and
+every mail link lands on `http://localhost:3000/?code=…`.
+
+Supabase dashboard → **Authentication → URL Configuration**:
+
+| Field | Value |
+| :-- | :-- |
+| Site URL | `https://blxr.net` |
+| Redirect URLs | `https://blxr.net/**` and `http://localhost:5173/**` (local `npm run dev`) |
+
+The wildcard covers `/login?next=…`, `/dashboard` and the settings pages the
+app hands to `redirectTo`. `{{ .SiteURL }}` in [`email-templates/`](email-templates/)
+reads the same Site URL, so mail links fix themselves.
+
 ## Mail
 
 Out of the box Supabase sends auth mail from `noreply@mail.app.supabase.io`,

@@ -111,9 +111,12 @@ deploy_server() {
   need_root
   sync_server_env
   step "Installing server -> $SERVER_ROOT"
-  run install -D -m 0644 "$ROOT/server/src/server.mjs" "$SERVER_ROOT/server.mjs"
-  run install -D -m 0644 "$ROOT/server/src/moderation.mjs" "$SERVER_ROOT/moderation.mjs"
-  run install -D -m 0644 "$ROOT/server/src/mail.mjs" "$SERVER_ROOT/mail.mjs"
+  # Every module next to server.mjs; a hand-kept list silently drops a new
+  # file (log.mjs, 2026-09-18) and the service crash-loops on ERR_MODULE_NOT_FOUND.
+  local f
+  for f in "$ROOT"/server/src/*.mjs; do
+    run install -D -m 0644 "$f" "$SERVER_ROOT/$(basename "$f")"
+  done
 
   step "Installing systemd unit"
   run install -m 0644 "$ROOT/server/deploy/blxr-search.service" "$UNIT"
