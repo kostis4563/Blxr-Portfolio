@@ -1,9 +1,24 @@
 import { defineConfig, loadEnv } from 'vite'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import JavaScriptObfuscator from 'javascript-obfuscator'
 
 const obfuscate = process.env.OBFUSCATE === '1'
+
+const ROUTE_PAGES = ['projects', 'library', 'reviews', 'now', 'cv', 'login', 'dashboard', 'public-profile', 'not-found']
+
+const pageSource = (name) => fileURLToPath(new URL(`./src/${name}-page.jsx`, import.meta.url))
+const stubPage = fileURLToPath(new URL('./src/stub-page.js', import.meta.url))
+
+const pageAliases = (ssr) => {
+  const map = {}
+  for (const name of ROUTE_PAGES) {
+    map[`#ssr-page/${name}`] = ssr ? pageSource(name) : stubPage
+    map[`#client-page/${name}`] = ssr ? stubPage : pageSource(name)
+  }
+  return map
+}
 
 const BANNER = `<!--
   this is a page by blxr
@@ -115,8 +130,15 @@ const apiProxy = (mode) => {
   return set === undefined ? PROD_API : set
 }
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ command, mode, isSsrBuild }) => ({
   server: apiProxy(mode) ? { proxy: { '/api': { target: apiProxy(mode), changeOrigin: true } } } : undefined,
+  resolve: {
+    alias: pageAliases(command === 'build' ? isSsrBuild : false),
+  },
+  define:
+    command === 'build' && typeof isSsrBuild === 'boolean'
+      ? { 'import.meta.env.SSR': isSsrBuild ? 'true' : 'false' }
+      : undefined,
   plugins: [
     react(),
     tailwindcss(),
@@ -137,11 +159,12 @@ export default defineConfig(({ mode }) => ({
 
             {
               name: 'app',
-              test: /[\\/]src[\\/](?!lib[\\/]locales[\\/]|components[\\/](music-widget|command-palette\.jsx))/,
+              test: /[\\/]src[\\/](?!lib[\\/](locales[\\/]|quote-portrait\.js)|components[\\/](music-widget|command-palette\.jsx|dashboard-[^/]+\.jsx)|dashboard-[^/]+\.jsx$|(projects|library|reviews|now|cv|login|dashboard|public-profile|not-found)-page\.jsx$)/,
             },
           ],
         },
         chunkFileNames: 'assets/[name]-[hash].js',
+        preloadDynamicImports: false,
       },
     },
   },

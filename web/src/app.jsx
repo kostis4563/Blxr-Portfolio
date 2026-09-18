@@ -1,19 +1,19 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react'
+import { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 'react'
 
 const AUTOPLAY_MS = 6000
 import GitHubContributions from './components/github-contribution'
 import AnimatedFooter from './components/animated-footer'
 import Testimonials from './components/testimonials'
 import ContactSection from './components/contact-section'
-import ProjectsPage from './projects-page'
-import LibraryPage from './library-page'
-import ReviewsPage from './reviews-page'
-import NowPage from './now-page'
-import CvPage from './cv-page'
-import LoginPage from './login-page'
-import DashboardPage from './dashboard-page'
-import PublicProfilePage from './public-profile-page'
-import NotFoundPage from './not-found-page'
+import ProjectsPageImpl from '#ssr-page/projects'
+import LibraryPageImpl from '#ssr-page/library'
+import ReviewsPageImpl from '#ssr-page/reviews'
+import NowPageImpl from '#ssr-page/now'
+import CvPageImpl from '#ssr-page/cv'
+import LoginPageImpl from '#ssr-page/login'
+import DashboardPageImpl from '#ssr-page/dashboard'
+import PublicProfilePageImpl from '#ssr-page/public-profile'
+import NotFoundPageImpl from '#ssr-page/not-found'
 import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
 import CommandPaletteHost from './components/command-palette-host'
@@ -29,6 +29,28 @@ import { applyHead } from './lib/seo'
 import { jumpToSection } from './lib/palette'
 import { recordHit } from './lib/api'
 import { rememberVisit } from './lib/recent'
+
+const routePage = (Static, loader) => (import.meta.env.SSR ? Static : lazy(loader))
+
+const ProjectsPage = routePage(ProjectsPageImpl, () => import('#client-page/projects'))
+const LibraryPage = routePage(LibraryPageImpl, () => import('#client-page/library'))
+const ReviewsPage = routePage(ReviewsPageImpl, () => import('#client-page/reviews'))
+const NowPage = routePage(NowPageImpl, () => import('#client-page/now'))
+const CvPage = routePage(CvPageImpl, () => import('#client-page/cv'))
+const LoginPage = routePage(LoginPageImpl, () => import('#client-page/login'))
+const DashboardPage = routePage(DashboardPageImpl, () => import('#client-page/dashboard'))
+const PublicProfilePage = routePage(PublicProfilePageImpl, () => import('#client-page/public-profile'))
+const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-found'))
+
+const PageFallback = () => (
+  <div
+    className="flex min-h-screen items-center justify-center bg-bg text-ink"
+    role="status"
+    aria-busy="true"
+  >
+    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-subtle" />
+  </div>
+)
 import {
   GITHUB_USERNAME,
   GITHUB_JOINED,
@@ -299,7 +321,9 @@ function App() {
   if (currentView === 'notFound') {
     return (
       <>
-        <NotFoundPage theme={theme} onToggleTheme={toggleTheme} />
+        <Suspense fallback={<PageFallback />}>
+          <NotFoundPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
         {palette}
       </>
     )
@@ -308,11 +332,13 @@ function App() {
   if (currentView === 'projects') {
     return (
       <>
-        <ProjectsPage
-          onBack={() => navigate(HOME_PATH)}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <ProjectsPage
+            onBack={() => navigate(HOME_PATH)}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        </Suspense>
         {palette}
       </>
     )
@@ -321,11 +347,13 @@ function App() {
   if (currentView === 'library') {
     return (
       <>
-        <LibraryPage
-          openItemId={route.itemId}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <LibraryPage
+            openItemId={route.itemId}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        </Suspense>
         {palette}
       </>
     )
@@ -334,7 +362,9 @@ function App() {
   if (currentView === 'reviews') {
     return (
       <>
-        <ReviewsPage theme={theme} onToggleTheme={toggleTheme} />
+        <Suspense fallback={<PageFallback />}>
+          <ReviewsPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
         {palette}
       </>
     )
@@ -343,7 +373,9 @@ function App() {
   if (currentView === 'now') {
     return (
       <>
-        <NowPage theme={theme} onToggleTheme={toggleTheme} />
+        <Suspense fallback={<PageFallback />}>
+          <NowPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
         {palette}
       </>
     )
@@ -352,20 +384,28 @@ function App() {
   if (currentView === 'cv') {
     return (
       <>
-        <CvPage theme={theme} onToggleTheme={toggleTheme} />
+        <Suspense fallback={<PageFallback />}>
+          <CvPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
         {palette}
       </>
     )
   }
 
   if (currentView === 'login') {
-    return <LoginPage theme={theme} onToggleTheme={toggleTheme} />
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <LoginPage theme={theme} onToggleTheme={toggleTheme} />
+      </Suspense>
+    )
   }
 
   if (currentView === 'profile') {
     return (
       <>
-        <PublicProfilePage handle={route.handle} theme={theme} onToggleTheme={toggleTheme} />
+        <Suspense fallback={<PageFallback />}>
+          <PublicProfilePage handle={route.handle} theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
         {palette}
       </>
     )
@@ -374,7 +414,9 @@ function App() {
   if (currentView === 'dashboard') {
     return (
       <>
-        <DashboardPage theme={theme} themePreference={themePreference} onToggleTheme={toggleTheme} onSetTheme={setThemePreference} />
+        <Suspense fallback={<PageFallback />}>
+          <DashboardPage theme={theme} themePreference={themePreference} onToggleTheme={toggleTheme} onSetTheme={setThemePreference} />
+        </Suspense>
         {palette}
       </>
     )
