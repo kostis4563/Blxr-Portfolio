@@ -18,6 +18,8 @@ const POLL_MS = 10_000
 const MESSAGES = {
   unauthorized: 'The server did not accept this session as the owner. SITE_OWNER_EMAIL (or STATS_OWNER_EMAIL) in its env file has to be this account’s email, with SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY set beside it.',
   logs_disabled: 'The log is not switched on for this server yet — set SITE_OWNER_EMAIL in its env file and restart it.',
+  needs_mfa: 'Two-factor authentication is on for this account, and the server only accepts owner sessions that passed it. Sign out, sign back in and enter your authenticator code.',
+  rate_limited: 'Too many requests from this address. Wait a moment and try again.',
   offline: 'You appear to be offline.',
   failed: 'The server did not answer. Try again in a moment.',
 }

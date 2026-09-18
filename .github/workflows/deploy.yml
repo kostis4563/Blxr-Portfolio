@@ -9,6 +9,9 @@ concurrency:
   group: blxr-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: [self-hosted, blxr-deploy]
@@ -18,8 +21,6 @@ jobs:
 
       - run: npm ci
 
-      # Secrets for /etc/blxr-search.env. deploy.sh merges whatever is set
-      # here and deletes the file; add a line per variable you want managed.
       - name: Stage server secrets
         env:
           GITHUB_TOKEN_VALUE: ${{ secrets.BLXR_GITHUB_TOKEN }}

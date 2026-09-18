@@ -53,6 +53,7 @@ function wrap(error) {
     else if (msg.includes('invalid login credentials')) code = 'invalid_credentials'
     else if (msg.includes('already registered')) code = 'email_taken'
     else if (msg.includes('rate limit')) code = 'locked'
+    else if (msg.includes('captcha')) code = 'captcha'
     else if (msg.includes('invalid totp code') || msg.includes('invalid mfa code')) code = 'bad_code'
     else if (msg.includes('manual linking')) code = 'linking_disabled'
     else if (msg.includes('mfa') && msg.includes('not enabled')) code = 'mfa_disabled'
@@ -82,21 +83,21 @@ async function run(fn) {
   return result?.data ?? null
 }
 
-export async function authLogin({ email, password, remember = true }) {
+export async function authLogin({ email, password, remember = true, captchaToken }) {
   setRemember(remember)
-  const data = await run((sb) => sb.auth.signInWithPassword({ email, password }))
+  const data = await run((sb) => sb.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined }))
   return data?.user ?? null
 }
 
 // Returns { user, confirmed }: `confirmed` is false when Supabase wants the
 // address verified first, in which case there is no session yet.
-export async function authRegister({ name, email, password }) {
+export async function authRegister({ name, email, password, captchaToken }) {
   setRemember(true)
   const data = await run((sb) =>
     sb.auth.signUp({
       email,
       password,
-      options: { data: { name }, emailRedirectTo: callbackUrl(DASHBOARD_PATH) },
+      options: { data: { name }, emailRedirectTo: callbackUrl(DASHBOARD_PATH), ...(captchaToken ? { captchaToken } : {}) },
     }),
   )
   // Supabase returns a user with an empty identities list for an existing email
@@ -109,8 +110,8 @@ export async function authRegister({ name, email, password }) {
 
 // The link lands on /login; supabase-js raises PASSWORD_RECOVERY there and the
 // page switches to the new-password form.
-export function authRequestReset(email) {
-  return run((sb) => sb.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl(LOGIN_PATH) }))
+export function authRequestReset(email, { captchaToken } = {}) {
+  return run((sb) => sb.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl(LOGIN_PATH), ...(captchaToken ? { captchaToken } : {}) }))
 }
 
 export async function authUpdatePassword(password) {
@@ -155,12 +156,12 @@ export async function authUpdateEmail(email) {
 
 // Confirms the current password before a change, on a side client so the
 // real session (and its MFA level) is left alone.
-export async function authVerifyPassword(email, password) {
+export async function authVerifyPassword(email, password, { captchaToken } = {}) {
   const probe = probeClient()
   if (!probe) throw new AuthError('not_configured')
   let result
   try {
-    result = await probe.auth.signInWithPassword({ email, password })
+    result = await probe.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined })
   } catch (err) {
     throw wrap(err) || new AuthError('failed')
   }
@@ -244,7 +245,8 @@ export async function authDeleteAccount() {
   let body = null
   try { body = await res.json() } catch { /* not json */ }
   if (res.status === 503) throw new AuthError('delete_disabled', { status: 503 })
-  if (res.status === 401) throw new AuthError('reauth', { status: 401 })
+  if (res.status === 401) throw new AuthError(body?.error === 'needs_mfa' ? 'needs_mfa' : 'reauth', { status: 401 })
+  if (res.status === 429) throw new AuthError('locked', { status: 429, retryAfter: Number(res.headers.get('retry-after')) || 60 })
   throw new AuthError(body?.error === 'offline' ? 'offline' : 'failed', { status: res.status })
 }
 

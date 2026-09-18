@@ -1,9 +1,11 @@
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { link, navigate, useRouteHash, HOME_PATH, LOGIN_PATH, REGISTER_PATH, RESET_PATH, UPDATE_PASSWORD_PATH, VERIFY_PATH, DASHBOARD_PATH } from './lib/router'
 import { authLogin, authRegister, authRequestReset, authUpdatePassword, authSignInWith, authSignOut, mfaRequired, mfaChallenge, AUTH_PROVIDERS } from './lib/auth'
 import { useAuth, clearRecovery } from './lib/supabase'
 import { SOCIAL_ICON_PATHS } from './lib/profile'
+import { PASSWORD_MIN, passwordProblem, strengthOf } from './lib/password'
+import { Captcha } from './components/captcha'
 
 const LABEL = 'text-[11px] font-mono font-semibold text-ink-subtle uppercase tracking-wider'
 const INPUT =
@@ -15,7 +17,7 @@ const PROVIDER =
 const SWITCH = 'cursor-pointer font-medium text-ink-strong underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink-strong'
 const QUIET = 'cursor-pointer text-[11px] text-ink-subtle transition-colors hover:text-ink-strong'
 
-export const PASSWORD_MIN = 8
+export { PASSWORD_MIN }
 const NAME_MAX = 32
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -91,6 +93,7 @@ function messageFor(err, mode) {
   if (code === 'bad_code') return 'That code is not right. Codes change every 30 seconds.'
   if (code === 'code_expired') return 'That code expired — enter the current one.'
   if (code === 'no_factor') return 'No authenticator is set up for this account.'
+  if (code === 'captcha') return 'The verification check did not pass. Reload the page and try again.'
   if (mode === 'verify') return 'Could not verify the code.'
   if (mode === 'login') return 'Could not sign in.'
   if (mode === 'register') return 'Could not create the account.'
@@ -110,7 +113,7 @@ function messageForCallback(params) {
   return 'Sign-in failed. Try again.'
 }
 
-function validate(mode, form) {
+function validate(mode, form, accountEmail = '') {
   const errors = {}
   if (mode === 'verify') {
     if (!/^\d{6}$/.test(form.code.replace(/\s+/g, ''))) errors.code = 'Enter the 6-digit code.'
@@ -124,21 +127,15 @@ function validate(mode, form) {
   if (mode !== 'update' && !EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email.'
   if (mode !== 'reset') {
     if (!form.password) errors.password = mode === 'update' ? 'Enter a new password.' : 'Enter your password.'
-    else if (mode !== 'login' && form.password.length < PASSWORD_MIN) errors.password = `Use at least ${PASSWORD_MIN} characters.`
+    else if (mode !== 'login') {
+      const problem = passwordProblem(form.password, { email: form.email || accountEmail, name: form.name })
+      if (problem) errors.password = problem
+    }
   }
   if (mode !== 'login' && mode !== 'reset' && form.confirm !== form.password) errors.confirm = 'Passwords do not match.'
   return errors
 }
 
-// 0–4: length, then one point each for mixed case, digits and symbols.
-function strengthOf(password) {
-  if (!password) return 0
-  let score = password.length >= PASSWORD_MIN ? 1 : 0
-  if (password.length >= 12) score += 1
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1
-  if (/\d/.test(password) && /[^A-Za-z0-9]/.test(password)) score += 1
-  return Math.min(score, 4)
-}
 const STRENGTH_LABEL = ['', 'Weak', 'Okay', 'Good', 'Strong']
 const STRENGTH_COLOR = ['', 'bg-red-500', 'bg-amber-500', 'bg-emerald-500', 'bg-emerald-500']
 
@@ -284,6 +281,7 @@ export default function LoginPage({ theme, onToggleTheme }) {
   const [notice, setNotice] = useState(null)
   const [next, setNext] = useState(DASHBOARD_PATH)
   const [leaving, setLeaving] = useState(false)
+  const captcha = useRef(null)
 
   // Keep the email when hopping between forms; drop everything else.
   useEffect(() => {
@@ -353,7 +351,7 @@ export default function LoginPage({ theme, onToggleTheme }) {
   const submit = async (event) => {
     event.preventDefault()
     if (busy) return
-    const nextErrors = validate(mode, form)
+    const nextErrors = validate(mode, form, session?.user?.email || '')
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return
 
@@ -361,12 +359,13 @@ export default function LoginPage({ theme, onToggleTheme }) {
     setError(null)
     const email = form.email.trim()
     try {
+      const captchaToken = captcha.current && mode !== 'update' && mode !== 'verify' ? await captcha.current.run() : undefined
       if (mode === 'login') {
-        await authLogin({ email, password: form.password, remember: form.remember })
+        await authLogin({ email, password: form.password, remember: form.remember, captchaToken })
         setLeaving(true)
         navigate(next, { replace: true })
       } else if (mode === 'register') {
-        const { confirmed } = await authRegister({ name: form.name.trim(), email, password: form.password })
+        const { confirmed } = await authRegister({ name: form.name.trim(), email, password: form.password, captchaToken })
         if (confirmed) {
           setLeaving(true)
           navigate(next, { replace: true })
@@ -382,7 +381,7 @@ export default function LoginPage({ theme, onToggleTheme }) {
         setLeaving(true)
         navigate(next, { replace: true })
       } else {
-        await authRequestReset(email)
+        await authRequestReset(email, { captchaToken })
         setNotice({ kind: 'reset', email })
       }
     } catch (err) {
@@ -557,6 +556,8 @@ export default function LoginPage({ theme, onToggleTheme }) {
                   {error}
                 </p>
               )}
+
+              {(mode === 'login' || mode === 'register' || mode === 'reset') && <Captcha handle={captcha} />}
 
               <button type="submit" disabled={busy} className={`${CTA} mt-6`}>
                 <span>{busy ? copy.busy : copy.cta}</span>

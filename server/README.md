@@ -4,10 +4,11 @@ Backend behind `/api/` on blxr.net. Fans search out across public mirrors,
 caches results, gives the frontend one stable shape.
 
 Zero npm dependencies — `node:http`, `node:fs`, `node:path`, `node:crypto` only.
-Four files: `server.mjs` (everything), `moderation.mjs` (the review
-blocklist, see [Reviews](#reviews)), `mail.mjs` (the one email the app
-sends itself, see [Account mail](#account-mail)) and `log.mjs` (the event
-log behind Dashboard → Logs, see [Log](#log)).
+Five files: `server.mjs` (everything), `guard.mjs` (rate limits, the
+same-origin rule and bearer-token checks, see [Security](#security)),
+`moderation.mjs` (the review blocklist, see [Reviews](#reviews)), `mail.mjs`
+(the one email the app sends itself, see [Account mail](#account-mail)) and
+`log.mjs` (the event log behind Dashboard → Logs, see [Log](#log)).
 
 ## Running it
 
@@ -24,11 +25,52 @@ All routes `GET` except `/api/hit`, `POST /api/vitals` and
 `/api/reviews/<id>` takes `PATCH`, `/api/logs` takes `GET` and `DELETE`, and
 the owner routes under `/api/reviews/panel` and `/api/reviews/invites` take
 what the [panel](#review-panel) section lists. Anything else: `405`. Errors:
-`{ "error": "..." }` with `400` (bad review), `401` (no panel session),
-`403` (not your review, edit window over), `404` (unknown path), `410` (invite
-link used or expired), `429` (review rate limit, panel login lockout), `502`
-(every upstream failed) or `503` (`/api/music/top` still resolving a cold
-chart, `Retry-After: 15`; reviews paused; or the review store is full).
+`{ "error": "..." }` with `400` (bad review), `401` (no panel session;
+`needs_mfa` when the account has two-factor on and this session skipped it),
+`403` (not your review, edit window over, or `bad_origin` — a write from
+another site), `404` (unknown path), `410` (invite link used or expired),
+`429` (`rate_limited` from the per-address buckets below, the review rules,
+or a panel login lockout), `502` (every upstream failed) or `503`
+(`/api/music/top` still resolving a cold chart, `Retry-After: 15`; reviews
+paused; or the review store is full).
+
+## Security
+
+Everything in `guard.mjs`, applied before any route runs:
+
+- **Methods.** `GET`, `HEAD`, `POST`, `PATCH`, `PUT`, `DELETE`; anything else
+  is `405` without being looked at.
+- **Same-origin writes.** A `POST`/`PATCH`/`PUT`/`DELETE` whose `Origin` is
+  not `SITE_URL` (or its `www` twin, or an entry of `ALLOWED_ORIGINS`) is
+  refused with `403 bad_origin`; so is one with no `Origin` but
+  `Sec-Fetch-Site: cross-site`. Requests with neither header (curl) pass —
+  every write is also behind a bearer token, a `SameSite=Strict` cookie or a
+  rate limit. Unset both variables and the check is off (local runs).
+- **Rate limits.** Token buckets per address, refilled continuously, all
+  per minute: `all` 300 for anything; `auth` 30 for routes that verify a
+  bearer token (`/api/logs`, the panel, invites, `/api/mail/*`,
+  `/api/account/*`, `/api/github/stats` with a token); `upstream` 90 for
+  `/api/music/*` and `/api/github/*`; `write` 12 for review posts and edits;
+  `beacon` 60 for hits, vitals and browser error reports. Over the limit
+  answers `429 rate_limited` with `Retry-After`. nginx has a coarser
+  10 req/s ceiling in front (`deploy/nginx/blxr.conf`). Addresses are
+  hashed with a salt that lives only in the process.
+- **Bearer tokens.** A token is only sent to Supabase when it has the shape
+  of a JWT, is not expired and names the `authenticated` audience. Verified
+  sessions and refused tokens are both remembered a minute under a salted
+  hash, so a replayed bad token costs nothing upstream. A session on an
+  account with a verified authenticator must carry `aal2` (it passed the
+  code) for the owner routes, `POST /api/mail/password-changed`,
+  `POST /api/account/delete` and the owner view of `/api/github/stats`;
+  otherwise `401 needs_mfa`. The same rule is enforced inside Postgres by
+  `mfa_satisfied()` in `deploy/supabase/*.sql`.
+- **Headers and sockets.** Every answer carries `X-Content-Type-Options`,
+  `X-Robots-Tag: noindex`, `Cross-Origin-Resource-Policy: same-origin` and
+  `Referrer-Policy: no-referrer`. Headers must arrive within 10 s and a whole
+  request within 30 s; JSON bodies are capped per route (512 B–16 KB).
+- **Process.** `deploy/blxr-search.service` runs it as `www-data` with a
+  read-only system, no capabilities, a syscall allow-list and only its own
+  state directory writable.
 
 Consumed by `web/src/lib/api.js` (music/hit/reviews/mail routes),
 `web/src/lib/github.js` (contributions route, which also owns the

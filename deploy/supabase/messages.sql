@@ -1,7 +1,21 @@
+create or replace function public.mfa_satisfied()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2'
+      or not exists (
+        select 1 from auth.mfa_factors
+        where user_id = auth.uid() and status = 'verified'
+      );
+$$;
+
+revoke all on function public.mfa_satisfied() from public;
+grant execute on function public.mfa_satisfied() to authenticated;
+
 create or replace function public.is_site_owner()
 returns boolean
 language sql stable as $$
-  select coalesce(auth.jwt() ->> 'email', '') = 'kostisnomikos@gmail.com';
+  select coalesce(auth.jwt() ->> 'email', '') = 'kostisnomikos@gmail.com'
+     and public.mfa_satisfied();
 $$;
 
 revoke all on function public.is_site_owner() from public;

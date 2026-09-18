@@ -358,6 +358,68 @@ Clearing a conversation (owner only, from its menu) deletes the thread and
 cascades to its messages; the app removes the files first. Deleting an
 account cascades the same way and orphans its files.
 
+## 13. Hardening checklist
+
+What the dashboard has to say for the login to hold up. Everything in the
+app already expects these; none of them changes a line of code.
+
+**Authentication → Sign In / Providers → Email**
+
+| Setting | Value | Why |
+| :-- | :-- | :-- |
+| Confirm email | **on** | An unconfirmed address never gets a session, so nobody can register as someone else. |
+| Secure email change | **on** | Both addresses must confirm before an email moves. |
+| Secure password change | **on** | Supabase asks for a recent sign-in before `updateUser({ password })`; Settings → Password already verifies the current one first. |
+| Minimum password length | **12** | Matches `PASSWORD_MIN` in `web/src/lib/password.js`; the forms refuse shorter ones before the round trip. |
+| Password requirements | Letters, digits and symbols | Same bar as the strength meter's top score. |
+| Prevent use of leaked passwords | **on** (Pro plan) | Checks HaveIBeenPwned on sign-up and change. The app's own list in `password.js` covers the worst of it on the free plan. |
+
+**Authentication → Attack Protection**
+
+| Setting | Value | Why |
+| :-- | :-- | :-- |
+| Enable Captcha | **on**, provider *Turnstile* | Cloudflare → Turnstile → Add widget (`blxr.net`, *Managed*). Secret key here; site key in `web/.env.production` as `VITE_TURNSTILE_SITE_KEY`, then rebuild. Sign-in, sign-up, reset mail and the current-password check send a token; without the site key in the build the forms send none and Supabase refuses them — set both or neither. |
+
+**Authentication → Rate Limits**
+
+| Limit | Value |
+| :-- | :-- |
+| Sign-ins and sign-ups (per IP, 5 min) | 30 (the default; lower to 10 if you never onboard people in bulk) |
+| Token refreshes | default |
+| Verification/OTP attempts | default |
+| Emails per hour | 30 (needs custom SMTP, §2) |
+
+**Authentication → Multi-Factor**
+
+- TOTP: *Enroll* and *Verify* **on**, then enrol the owner account from
+  `/dashboard#settings/security` straight away. Once a factor is verified,
+  `/login` demands the code, `/dashboard` refuses to open without it, the Node
+  server answers `401 needs_mfa` to a password-only session on the owner
+  routes, and `mfa_satisfied()` in [`messages.sql`](messages.sql) /
+  [`boards.sql`](boards.sql) makes Postgres do the same for the inbox and the
+  admin view of boards. Re-run both files after pulling this change.
+- Keep a second authenticator (or the secret) somewhere safe — there are no
+  recovery codes.
+
+**Authentication → Sessions**
+
+| Setting | Value | Why |
+| :-- | :-- | :-- |
+| Refresh token reuse interval | 10 s (default) | A stolen refresh token used twice signs everyone out. |
+| Time-box user sessions | 7 days | The owner signs in again weekly. "Keep me signed in" still works within the box. |
+| Inactivity timeout | 24 h | A forgotten tab on a shared machine expires by itself. |
+| Single session per user | off | The dashboard is used from more than one device. |
+
+**Project Settings → API**
+
+- Keep the legacy `anon`/`service_role` JWT keys disabled once the
+  `sb_publishable_…` / `sb_secret_…` pair is in use; the secret key lives
+  only in `/etc/blxr-search.env` on the box (via the `BLXR_SUPABASE_SECRET_KEY`
+  repository secret if you add one to `deploy.yml`).
+- **Authentication → URL Configuration → Redirect URLs**: only
+  `https://blxr.net/**` in production. Remove the `localhost` entry when you
+  are not developing; it is the one place an open redirect could come from.
+
 ## Notes
 
 - Until a provider is enabled in Supabase its button says "That sign-in

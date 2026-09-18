@@ -56,6 +56,14 @@ DRY_RUN=1 npm run deploy  # show the plan, touch nothing
 - **Build is ~1500 files** (14 routes x 32 languages, `.gz` + `.br` twins,
   ~32 MB). First deploy after a routing change moves a lot more files than
   usual.
+- **`/api/` is rate-limited at the edge.** `blxr.conf` declares
+  `limit_req_zone`/`limit_conn_zone` at the top of the file, which only
+  works because `sites-enabled/*` is included from nginx's `http` block.
+  `nginx -t` fails with *"limit_req_zone" directive is not allowed here* if
+  that include ever moves. The finer per-route buckets live in the Node
+  server (`server/README.md` → Security).
+- **Dotfiles and `*.env|map|sql|…` under the web root answer 404** from
+  `blxr.conf`, whatever lands there. `.well-known/` is the exception.
 - **`/api/` must outrank the catch-all** — true today because nginx matches
   the longest prefix regardless of block order; would need attention if
   `/api/` ever became a regex location.

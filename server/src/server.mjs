@@ -5,6 +5,7 @@ import crypto from 'node:crypto'
 import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
 import { mailConfigured, sendMail, passwordChangedMail, describeClient } from './mail.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
+import { rateLimit, rateLimitSize, originAllowed, ALLOWED_ORIGINS, bearerOf, jwtLooksUsable, isAal2, hasVerifiedFactor, fingerprint, API_HEADERS } from './guard.mjs'
 
 const PORT = Number(process.env.PORT) || 8899
 const HOST = '127.0.0.1'
@@ -1278,7 +1279,7 @@ async function isStatsOwner(req, owner) {
   } catch {
     return false
   }
-  if (!user) return false
+  if (!user || !mfaSatisfied(user)) return false
   if (user.email && owner.emails.has(user.email.toLowerCase())) return true
   for (const id of user.identities || []) {
     const login = id?.provider === 'github' ? id.identity_data?.user_name || id.identity_data?.preferred_username : null
@@ -1338,43 +1339,70 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || ''
 const PASSWORD_MAIL_INTERVAL_MS = 10 * 60_000
 const passwordMailAt = new Map()
 
-async function supabaseUser(req) {
-  const auth = req.headers.authorization
-  const token = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
-  if (!token || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) return null
-  const res = await withTimeout((signal) =>
-    fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      signal,
-      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${token}` },
-    }),
-  )
-  if (!res.ok) return null
-  const user = await res.json()
-  return typeof user?.id === 'string' && typeof user?.email === 'string' ? user : null
+const USER_CACHE_TTL_MS = 60_000
+const USER_CACHE_MAX = 2000
+const userCache = new Map()
+
+function cacheUser(key, user, now) {
+  userCache.set(key, { user, at: now })
+  if (userCache.size > USER_CACHE_MAX) {
+    for (const [k, v] of userCache) if (now - v.at >= USER_CACHE_TTL_MS) userCache.delete(k)
+    while (userCache.size > USER_CACHE_MAX) userCache.delete(userCache.keys().next().value)
+  }
 }
+
+async function supabaseUser(req) {
+  const token = bearerOf(req)
+  if (!token || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) return null
+  const now = Date.now()
+  if (!jwtLooksUsable(token, now)) return null
+  const key = fingerprint('user', token)
+  const known = userCache.get(key)
+  if (known && now - known.at < USER_CACHE_TTL_MS) return known.user
+  let user = null
+  try {
+    const res = await withTimeout((signal) =>
+      fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        signal,
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${token}` },
+      }),
+    )
+    if (res.ok) {
+      const body = await res.json()
+      if (typeof body?.id === 'string' && typeof body?.email === 'string') {
+        user = { ...body, aal2: isAal2(token), mfaEnrolled: hasVerifiedFactor(body) }
+      }
+    } else if (res.status >= 500 || res.status === 429) {
+      return null
+    }
+  } catch {
+    return null
+  }
+  cacheUser(key, user, now)
+  return user
+}
+
+const mfaSatisfied = (user) => !user.mfaEnrolled || user.aal2
 
 const SITE_OWNER_EMAIL = (process.env.SITE_OWNER_EMAIL || STATS_OWNER_EMAIL || '').trim().toLowerCase()
-const OWNER_TOKEN_TTL_MS = 60_000
-const ownerTokens = new Map()
 
 async function isSiteOwner(req) {
-  const auth = req.headers.authorization
-  const token = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
-  if (!token || !SITE_OWNER_EMAIL) return false
-  const now = Date.now()
-  const known = ownerTokens.get(token)
-  if (known && now - known.at < OWNER_TOKEN_TTL_MS) return known.ok
-  let ok = false
+  if (!SITE_OWNER_EMAIL || !bearerOf(req)) return false
+  let user = null
   try {
-    const user = await supabaseUser(req)
-    ok = Boolean(user?.email) && user.email.toLowerCase() === SITE_OWNER_EMAIL
+    user = await supabaseUser(req)
   } catch {
-    ok = false
+    return false
   }
-  ownerTokens.set(token, { ok, at: now })
-  for (const [t, v] of ownerTokens) if (now - v.at >= OWNER_TOKEN_TTL_MS) ownerTokens.delete(t)
-  return ok
+  if (!user?.email || user.email.toLowerCase() !== SITE_OWNER_EMAIL) return false
+  if (!mfaSatisfied(user)) {
+    log.warn('auth', 'owner session without its second factor was refused')
+    return 'needs_mfa'
+  }
+  return true
 }
+
+const ownerDenied = (owner) => ({ error: owner === 'needs_mfa' ? 'needs_mfa' : 'unauthorized' })
 
 function json(res, status, body, headers) {
   res.writeHead(status, {
@@ -1439,16 +1467,53 @@ function systemReport() {
       github: Boolean(GH_TOKEN),
     },
     state: { dir: STATE_DIR, files, reviews: reviews.length, invites: invites.length, hitDays: Object.keys(hits).length, vitalDays: Object.keys(vitals).length, logs: logSize() },
-    caches: { search: cache.size, top: topCache.size, contributions: ghCache.size, stats: ghStatsCache.size },
+    caches: { search: cache.size, top: topCache.size, contributions: ghCache.size, stats: ghStatsCache.size, sessions: userCache.size, rateLimits: rateLimitSize() },
+    guard: { origins: [...ALLOWED_ORIGINS] },
     mirrors: [...PIPED, ...INVIDIOUS].map((base) => ({ base, kind: PIPED.includes(base) ? 'piped' : 'invidious', down: !mirrorUp(base), until: mirrorUp(base) ? null : new Date(mirrorDownUntil.get(base)).toISOString() })),
     reviews: { paused: settings.paused, approval: settings.approval, blockedTerms: settings.blockedTerms.length, pending: reviews.filter((r) => r.pending).length },
     chart: { warm: Boolean(topCache.get(topKey(TOP_WARM_KEY.country, TOP_WARM_KEY.limit))), age: topCache.get(topKey(TOP_WARM_KEY.country, TOP_WARM_KEY.limit)) ? now - topCache.get(topKey(TOP_WARM_KEY.country, TOP_WARM_KEY.limit)).at : null },
   }
 }
 
+const METHODS = new Set(['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE'])
+
+function bucketsFor(req, pathname) {
+  const out = []
+  const authed = Boolean(req.headers.authorization)
+  if (
+    pathname === '/api/logs' ||
+    pathname.startsWith('/api/reviews/panel') ||
+    pathname.startsWith('/api/mail/') ||
+    pathname.startsWith('/api/account/') ||
+    (pathname.startsWith('/api/reviews/invites') && (authed || req.method !== 'GET')) ||
+    (pathname === '/api/github/stats' && authed)
+  ) {
+    out.push('auth')
+  }
+  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/')) out.push('upstream')
+  if ((pathname === '/api/reviews' && req.method === 'POST') || (/^\/api\/reviews\/[a-z0-9]{8}$/.test(pathname) && req.method === 'PATCH')) out.push('write')
+  if (pathname === '/api/hit' || pathname === '/api/logs/client' || (pathname === '/api/vitals' && req.method === 'POST')) out.push('beacon')
+  out.push('all')
+  return out
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${HOST}`)
+    for (const [name, value] of Object.entries(API_HEADERS)) res.setHeader(name, value)
+
+    if (!METHODS.has(req.method)) return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+    if (req.method === 'HEAD') req.method = 'GET'
+
+    if (!originAllowed(req)) return json(res, 403, { error: 'bad_origin' }, NO_STORE)
+
+    const address = clientIp(req)
+    for (const bucket of bucketsFor(req, url.pathname)) {
+      const limited = rateLimit(bucket, address)
+      if (limited) {
+        return json(res, 429, { error: 'rate_limited', retryAfter: limited.retryAfter }, { ...NO_STORE, 'retry-after': String(limited.retryAfter) })
+      }
+    }
 
     if (url.pathname === '/api/hit') {
       if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' })
@@ -1463,6 +1528,7 @@ const server = http.createServer(async (req, res) => {
       if (!mailConfigured() || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) return json(res, 503, { error: 'mail_disabled' }, NO_STORE)
       const user = await supabaseUser(req)
       if (!user) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+      if (!mfaSatisfied(user)) return json(res, 401, { error: 'needs_mfa' }, NO_STORE)
       const now = Date.now()
       if (now - (passwordMailAt.get(user.id) || 0) < PASSWORD_MAIL_INTERVAL_MS) {
         return json(res, 429, { error: 'too_soon' }, NO_STORE)
@@ -1486,6 +1552,7 @@ const server = http.createServer(async (req, res) => {
       if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || !SUPABASE_SECRET_KEY) return json(res, 503, { error: 'delete_disabled' }, NO_STORE)
       const user = await supabaseUser(req)
       if (!user) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+      if (!mfaSatisfied(user)) return json(res, 401, { error: 'needs_mfa' }, NO_STORE)
       let ok = false
       try {
         const del = await withTimeout((signal) =>
@@ -1631,7 +1698,9 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/api/logs') {
       if (req.method !== 'GET' && req.method !== 'DELETE') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
-      if (!(await isSiteOwner(req))) return json(res, SITE_OWNER_EMAIL ? 401 : 503, { error: SITE_OWNER_EMAIL ? 'unauthorized' : 'logs_disabled' }, NO_STORE)
+      if (!SITE_OWNER_EMAIL) return json(res, 503, { error: 'logs_disabled' }, NO_STORE)
+      const owner = await isSiteOwner(req)
+      if (owner !== true) return json(res, 401, ownerDenied(owner), NO_STORE)
       if (req.method === 'DELETE') {
         const removed = clearLog()
         log.info('server', `log cleared from the dashboard (${removed} entries)`)
@@ -1654,7 +1723,8 @@ const server = http.createServer(async (req, res) => {
 
     const panelMatch = /^\/api\/reviews\/panel(?:\/(reviews|settings)(?:\/([a-z0-9]{8}))?)?$/.exec(url.pathname)
     if (panelMatch) {
-      if (!(await isOwner(req))) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+      const owner = await isOwner(req)
+      if (owner !== true) return json(res, 401, ownerDenied(owner), NO_STORE)
       const [, section, id] = panelMatch
       const now = Date.now()
 
@@ -1726,7 +1796,9 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { invite: publicInvite(invite, now) }, NO_STORE)
       }
 
-      if (!(await isOwner(req))) return json(res, SITE_OWNER_EMAIL ? 403 : 404, { error: SITE_OWNER_EMAIL ? 'forbidden' : 'not_found' }, NO_STORE)
+      if (!SITE_OWNER_EMAIL) return json(res, 404, { error: 'not_found' }, NO_STORE)
+      const owner = await isOwner(req)
+      if (owner !== true) return json(res, owner === 'needs_mfa' ? 401 : 403, owner === 'needs_mfa' ? ownerDenied(owner) : { error: 'forbidden' }, NO_STORE)
 
       if (req.method === 'GET') {
         const list = invites.map((i) => ownerInvite(i, now)).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
@@ -1880,6 +1952,12 @@ const server = http.createServer(async (req, res) => {
     return json(res, 502, { error: 'upstream_failed' })
   }
 })
+
+server.headersTimeout = 10_000
+server.requestTimeout = 30_000
+server.keepAliveTimeout = 5_000
+server.maxHeadersCount = 64
+server.maxRequestsPerSocket = 1000
 
 server.listen(PORT, HOST, () => {
   console.log(`blxr music search proxy on http://${HOST}:${PORT}`)

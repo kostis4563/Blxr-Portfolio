@@ -18,8 +18,9 @@ import { clearRecent } from './lib/recent'
 import { SOCIAL_ICON_PATHS } from './lib/profile'
 import { normalizeUrl } from './lib/profiles'
 import { Sensitive } from './components/sensitive'
+import { PASSWORD_MIN, passwordProblem, strengthOf } from './lib/password'
+import { Captcha } from './components/captcha'
 
-const PASSWORD_MIN = 8
 const NAME_MAX = 32
 const BIO_MAX = 160
 const LOCATION_MAX = 64
@@ -55,14 +56,6 @@ const MESSAGES = {
 }
 const messageFor = (err, fallback) => MESSAGES[err?.code] || fallback
 
-function strengthOf(password) {
-  if (!password) return 0
-  let score = password.length >= PASSWORD_MIN ? 1 : 0
-  if (password.length >= 12) score += 1
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1
-  if (/\d/.test(password) && /[^A-Za-z0-9]/.test(password)) score += 1
-  return Math.min(score, 4)
-}
 const STRENGTH_LABEL = ['', 'Weak', 'Okay', 'Good', 'Strong']
 const STRENGTH_COLOR = ['', 'bg-red-500', 'bg-amber-500', 'bg-emerald-500', 'bg-emerald-500']
 
@@ -532,6 +525,7 @@ function PasswordSection({ user }) {
   const [errors, setErrors] = useState({})
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const captcha = useRef(null)
 
   const set = (key) => (e) => {
     const value = e.target.value
@@ -545,7 +539,10 @@ function PasswordSection({ user }) {
     const next = {}
     if (hasPassword && !form.current) next.current = 'Enter your current password.'
     if (!form.password) next.password = 'Enter a new password.'
-    else if (form.password.length < PASSWORD_MIN) next.password = `Use at least ${PASSWORD_MIN} characters.`
+    else {
+      const problem = passwordProblem(form.password, { email: user.email, name: user.user_metadata?.name })
+      if (problem) next.password = problem
+    }
     if (form.confirm !== form.password) next.confirm = 'Passwords do not match.'
     setErrors(next)
     if (Object.keys(next).length) return
@@ -555,7 +552,8 @@ function PasswordSection({ user }) {
     try {
       if (hasPassword) {
         try {
-          await authVerifyPassword(user.email, form.current)
+          const captchaToken = captcha.current ? await captcha.current.run() : undefined
+          await authVerifyPassword(user.email, form.current, { captchaToken })
         } catch (err) {
           if (err?.code === 'invalid_credentials') {
             setErrors({ current: 'Incorrect password.' })
@@ -611,6 +609,7 @@ function PasswordSection({ user }) {
             <PasswordInput id={`${id}-confirm`} value={form.confirm} onChange={set('confirm')} autoComplete="new-password" invalid={Boolean(errors.confirm)} />
           </Field>
           {error && <div className="sm:col-span-2"><ErrorNote>{error}</ErrorNote></div>}
+          {hasPassword && <div className="sm:col-span-2"><Captcha handle={captcha} /></div>}
         </div>
       </Section>
     </form>

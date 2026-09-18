@@ -568,7 +568,7 @@ export default function ReviewPanel({ tab, auth = () => ({}), lang, onUnauthoriz
       props.current.onData?.(next)
       setError(null)
     } catch (err) {
-      if (err?.status === 401 || err?.status === 403) props.current.onUnauthorized?.()
+      if (err?.status === 401 || err?.status === 403) props.current.onUnauthorized?.(err?.code)
       else setError('Could not load the panel.')
     }
   }, [])
