@@ -37,6 +37,12 @@ export function parseRoute(path) {
   if (p === '/library') return { name: 'library', itemId: null }
   if (p === '/reviews') return { name: 'reviews' }
   if (p === '/reviewpanel') return { name: 'reviewpanel' }
+  if (p === '/login') return { name: 'login' }
+  if (p === '/dashboard') return { name: 'dashboard' }
+  if (p === PROFILE_BASE_PATH) return { name: 'profile', handle: null }
+
+  const profileMatch = /^\/u\/([^/]+)$/.exec(p)
+  if (profileMatch) return { name: 'profile', handle: decodeURIComponent(profileMatch[1]).toLowerCase() }
 
   const match = /^\/projects\/([^/]+)$/.exec(p)
   if (match) {
@@ -96,6 +102,17 @@ export const libraryPath = (id) => `/library/${encodeURIComponent(id)}`
 export const REVIEWS_PATH = '/reviews'
 export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
 export const REVIEW_PANEL_PATH = '/reviewpanel'
+export const LOGIN_PATH = '/login'
+export const REGISTER_PATH = `${LOGIN_PATH}#register`
+export const RESET_PATH = `${LOGIN_PATH}#reset`
+export const UPDATE_PASSWORD_PATH = `${LOGIN_PATH}#update`
+export const VERIFY_PATH = `${LOGIN_PATH}#verify`
+export const DASHBOARD_PATH = '/dashboard'
+export const dashboardPath = (id) => (id ? `${DASHBOARD_PATH}#${id}` : DASHBOARD_PATH)
+// Public profiles. `/u` on its own is the prerendered shell nginx serves for
+// every handle; the page reads the handle from the URL.
+export const PROFILE_BASE_PATH = '/u'
+export const profilePath = (handle) => `${PROFILE_BASE_PATH}/${encodeURIComponent(handle)}`
 
 export const staticPaths = () => [
   HOME_PATH,

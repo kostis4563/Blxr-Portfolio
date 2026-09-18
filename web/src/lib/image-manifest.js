@@ -13,6 +13,7 @@ export const IMAGES = {
   '/audio/sunset-drive.png': { v: 'd484ba57', ext: '.png', widths: [] },
   '/banner-chrome.webp': { v: 'bc2a51d4', ext: '.webp', widths: [480, 768, 1600] },
   '/banner-crystal.webp': { v: 'b7d3e8ef', ext: '.webp', widths: [480, 768, 1600] },
+  '/blxr-logo.webp': { v: '8b77306e', ext: '.webp', widths: [48, 96] },
   '/delivo-logo.webp': { v: '6b686a09', ext: '.webp', widths: [48, 96] },
   '/delivo.webp': { v: '8b66918c', ext: '.webp', widths: [480, 768, 1200] },
   '/favicon-wordmark.png': { v: '9aa40b08', ext: '.png', widths: [] },

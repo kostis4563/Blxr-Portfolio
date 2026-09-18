@@ -23,4 +23,4 @@ export { metaFor } from './lib/seo'
 
 export const NOT_FOUND_PATH = '/404'
 
-export { REVIEW_PANEL_PATH } from './lib/router'
+export { REVIEW_PANEL_PATH, LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH } from './lib/router'

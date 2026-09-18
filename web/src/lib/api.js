@@ -1,3 +1,5 @@
+import { analyticsAllowed } from './prefs'
+
 const BASE = '/api/music'
 const REVIEWS = '/api/reviews'
 
@@ -27,6 +29,7 @@ export async function fetchTopChart({ limit = 10, country, signal } = {}) {
 export function recordHit(path) {
   if (typeof navigator === 'undefined' || !navigator.sendBeacon) return
   if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl) return
+  if (!analyticsAllowed()) return
 
   const send = () => {
     try {
@@ -40,6 +43,25 @@ export function recordHit(path) {
   } else {
     send()
   }
+}
+
+// Deletes the signed-in account. Resolves to the Response; the caller reads
+// the status (204 ok, 503 not enabled on this server, 401 token rejected).
+export function deleteAccountRequest(accessToken) {
+  return fetch('/api/account/delete', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${accessToken}` },
+  }).catch(() => new Response(JSON.stringify({ error: 'offline' }), { status: 0 }))
+}
+
+// Asks the server to mail the account a "your password was changed" notice.
+// Best effort: the password is already changed, so failures are ignored.
+export function notifyPasswordChanged(accessToken) {
+  return fetch('/api/mail/password-changed', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${accessToken}` },
+    keepalive: true,
+  }).catch(() => null)
 }
 
 export class ReviewError extends Error {

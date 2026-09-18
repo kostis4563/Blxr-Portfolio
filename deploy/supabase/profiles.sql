@@ -1,0 +1,150 @@
+-- Public profiles: built at /dashboard#profile, shown at /u/<handle>.
+-- Run once in Supabase → SQL editor. Safe to re-run.
+--
+-- The browser talks to this table directly with the publishable key; row
+-- level security is what keeps one user out of another's row.
+
+create table if not exists public.profiles (
+  id            uuid primary key references auth.users (id) on delete cascade,
+  handle        text not null unique,
+  display_name  text not null,
+  headline      text not null default '',
+  bio           text not null default '',
+  pronouns      text not null default '',
+  location      text not null default '',
+  website       text not null default '',
+  avatar_url    text,
+  accent        text not null default 'ink',
+  open_to_work  boolean not null default false,
+  links         jsonb not null default '[]'::jsonb,
+  skills        text[] not null default '{}',
+  visibility    text not null default 'private',
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint profiles_handle_format  check (handle ~ '^[a-z0-9_]{3,20}$'),
+  constraint profiles_handle_reserved check (handle not in (
+    'admin', 'administrator', 'api', 'blxr', 'dashboard', 'help', 'login', 'me', 'mod',
+    'moderator', 'null', 'owner', 'profile', 'root', 'settings', 'staff', 'support', 'system',
+    'undefined', 'www'
+  )),
+  constraint profiles_display_name_len check (char_length(display_name) between 1 and 40),
+  constraint profiles_headline_len     check (char_length(headline) <= 80),
+  constraint profiles_bio_len          check (char_length(bio) <= 500),
+  constraint profiles_pronouns_len     check (char_length(pronouns) <= 24),
+  constraint profiles_location_len     check (char_length(location) <= 64),
+  constraint profiles_website_len      check (char_length(website) <= 200),
+  constraint profiles_avatar_len       check (avatar_url is null or char_length(avatar_url) <= 400),
+  -- Only our own bucket or a sign-in provider's CDN (what the CSP allows).
+  constraint profiles_avatar_host      check (avatar_url is null or avatar_url ~ '^https://(lh3\.googleusercontent\.com/|avatars\.githubusercontent\.com/|cdn\.discordapp\.com/|[a-z0-9-]+\.supabase\.co/storage/v1/object/public/avatars/)'),
+  constraint profiles_accent           check (accent in ('ink', 'violet', 'blue', 'teal', 'green', 'amber', 'rose')),
+  constraint profiles_links_shape      check (jsonb_typeof(links) = 'array' and jsonb_array_length(links) <= 6),
+  constraint profiles_skills_len       check (coalesce(array_length(skills, 1), 0) <= 12),
+  constraint profiles_visibility       check (visibility in ('public', 'unlisted', 'private'))
+);
+
+-- v2: design and content options. `add column if not exists` keeps the file
+-- re-runnable on a project that already has the v1 table.
+alter table public.profiles
+  add column if not exists status       text not null default '',
+  add column if not exists now_text     text not null default '',
+  add column if not exists showcase     jsonb not null default '[]'::jsonb,
+  add column if not exists cover_url    text,
+  add column if not exists layout       text not null default 'card',
+  add column if not exists pattern      text not null default 'dots',
+  add column if not exists avatar_shape text not null default 'circle',
+  add column if not exists theme        text not null default 'system',
+  add column if not exists sections     text[] not null default '{about,now,showcase,links,skills}';
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_status_len') then
+    alter table public.profiles
+      add constraint profiles_status_len    check (char_length(status) <= 60),
+      add constraint profiles_now_len       check (char_length(now_text) <= 240),
+      add constraint profiles_showcase_shape check (jsonb_typeof(showcase) = 'array' and jsonb_array_length(showcase) <= 4),
+      add constraint profiles_cover_len     check (cover_url is null or char_length(cover_url) <= 400),
+      add constraint profiles_cover_host    check (cover_url is null or cover_url ~ '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/avatars/'),
+      add constraint profiles_layout        check (layout in ('card', 'cover', 'minimal')),
+      add constraint profiles_pattern       check (pattern in ('dots', 'grid', 'none')),
+      add constraint profiles_avatar_shape  check (avatar_shape in ('circle', 'rounded')),
+      add constraint profiles_theme         check (theme in ('system', 'light', 'dark')),
+      add constraint profiles_sections_len  check (coalesce(array_length(sections, 1), 0) <= 5);
+  end if;
+end $$;
+
+create index if not exists profiles_visibility_idx on public.profiles (visibility) where visibility = 'public';
+
+-- Keep updated_at honest.
+create or replace function public.profiles_touch()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$;
+
+drop trigger if exists profiles_touch on public.profiles;
+create trigger profiles_touch before update on public.profiles
+  for each row execute function public.profiles_touch();
+
+-- Row level security ---------------------------------------------------------
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "profiles: read published or own" on public.profiles;
+create policy "profiles: read published or own" on public.profiles
+  for select using (visibility <> 'private' or auth.uid() = id);
+
+drop policy if exists "profiles: insert own" on public.profiles;
+create policy "profiles: insert own" on public.profiles
+  for insert with check (auth.uid() = id);
+
+drop policy if exists "profiles: update own" on public.profiles;
+create policy "profiles: update own" on public.profiles
+  for update using (auth.uid() = id) with check (auth.uid() = id);
+
+drop policy if exists "profiles: delete own" on public.profiles;
+create policy "profiles: delete own" on public.profiles
+  for delete using (auth.uid() = id);
+
+-- Handle availability. Private profiles are invisible through RLS, so a plain
+-- select would call a taken handle free; this runs as the owner and only
+-- answers yes/no. Your own current handle counts as available.
+create or replace function public.handle_available(candidate text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select not exists (
+    select 1 from public.profiles
+    where handle = lower(candidate) and id is distinct from auth.uid()
+  );
+$$;
+
+revoke all on function public.handle_available(text) from public;
+grant execute on function public.handle_available(text) to anon, authenticated;
+
+-- Avatars --------------------------------------------------------------------
+-- One public bucket; each user may only write inside a folder named after
+-- their user id. The app resizes to 320px WebP before uploading.
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('avatars', 'avatars', true, 1048576, array['image/webp', 'image/jpeg', 'image/png'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "avatars: public read" on storage.objects;
+create policy "avatars: public read" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+drop policy if exists "avatars: insert own folder" on storage.objects;
+create policy "avatars: insert own folder" on storage.objects
+  for insert with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatars: update own folder" on storage.objects;
+create policy "avatars: update own folder" on storage.objects
+  for update using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatars: delete own folder" on storage.objects;
+create policy "avatars: delete own folder" on storage.objects
+  for delete using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);

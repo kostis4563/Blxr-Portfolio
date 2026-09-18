@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
+import { mailConfigured, sendMail, passwordChangedMail, describeClient } from './mail.mjs'
 
 const PORT = Number(process.env.PORT) || 8899
 const HOST = '127.0.0.1'
@@ -762,7 +763,7 @@ const GH_CACHE_TTL_MS = 30 * 60 * 1000
 const GH_CACHE_MAX = 50
 const ghCache = new Map()
 
-const GH_USER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/
+const GH_USER_RE = /^[A-Za-z0-9](?:-?[A-Za-z0-9]){0,38}$/
 
 function ghRange(year, now) {
   if (year === 'last') {
@@ -848,6 +849,545 @@ async function fetchContributions(user, year) {
   return ghFromMirror(user, year)
 }
 
+// Developer stats: what the dashboard's Stats page shows. Always the account
+// that owns GITHUB_TOKEN (GraphQL `viewer`), so there is nothing to look up
+// and no way to point the route at someone else. Public data only.
+//
+// Three rounds of GraphQL: the profile and this year's calendar; then, one
+// alias per contribution year, every repository the login committed to
+// (own, other people's, organisations'); then the default-branch history of
+// each of those repositories filtered to this author, which carries per-
+// commit lines and files changed. Commits are bucketed by day, so the page
+// can slice the same numbers by today / week / month / year / all time.
+const GH_API = (process.env.GITHUB_API || 'https://api.github.com').replace(/\/$/, '')
+const GH_STATS_TTL_MS = 60 * 60 * 1000
+const GH_STATS_REFRESH_MIN_MS = 2 * 60 * 1000
+const GH_STATS_CACHE_MAX = 100
+const GH_STATS_TIMEOUT_MS = 25_000
+const GH_STATS_YEARS = 12 // contribution years scanned for repositories
+const GH_STATS_REPOS = 120 // repositories scanned for history
+const GH_STATS_BATCH = 5 // repositories per history query
+const GH_STATS_PAGE = 100 // commits per repository per query
+const GH_STATS_PAGES_PER_REPO = 20 // 2,000 commits per repository
+const GH_STATS_MAX_PAGES = 90 // ~9,000 commits per build
+const GH_STATS_MONTHS = 120 // months of history returned
+const ghStatsCache = new Map() // login -> { at, data }
+const ghStatsInflight = new Map() // login -> promise
+let ghOwner = null // { login, at } — the token's own account
+
+const GH_STATS_USER_QUERY = `query($login: String!, $from: DateTime!, $to: DateTime!) {
+  user(login: $login) {
+    id login name avatarUrl url createdAt bio company location
+    followers { totalCount }
+    following { totalCount }
+    pullRequests { totalCount }
+    issues { totalCount }
+    starredRepositories { totalCount }
+    repositories(first: 100, ownerAffiliations: [OWNER], isFork: false) {
+      totalCount
+      nodes { stargazerCount forkCount }
+    }
+    contributionsCollection(from: $from, to: $to) {
+      contributionYears
+      totalCommitContributions totalPullRequestContributions totalIssueContributions totalPullRequestReviewContributions restrictedContributionsCount
+      contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } }
+    }
+  }
+}`
+
+const GH_STATS_YEAR_FIELDS = `totalCommitContributions restrictedContributionsCount
+  commitContributionsByRepository(maxRepositories: 100) {
+    repository {
+      nameWithOwner name url isPrivate isFork isArchived stargazerCount pushedAt
+      owner { login avatarUrl __typename }
+      primaryLanguage { name color }
+      defaultBranchRef { name }
+    }
+    contributions { totalCount }
+  }`
+
+const GH_STATS_HISTORY_FIELDS = `pageInfo { hasNextPage endCursor }
+  nodes { committedDate additions deletions changedFilesIfAvailable }`
+
+class GhError extends Error {
+  constructor(code, status) {
+    super(code)
+    this.code = code
+    this.status = status
+  }
+}
+
+async function ghGraphql(query, variables) {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), GH_STATS_TIMEOUT_MS)
+  let res
+  try {
+    res = await fetch(`${GH_API}/graphql`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${GH_TOKEN}`, 'content-type': 'application/json', 'user-agent': 'blxr.net' },
+      body: JSON.stringify({ query, variables }),
+      signal: ctrl.signal,
+    })
+  } catch {
+    throw new GhError('github_failed', 502)
+  } finally {
+    clearTimeout(t)
+  }
+  if (res.status === 401) throw new GhError('stats_disabled', 503)
+  if (res.status === 403 || res.status === 429) throw new GhError('rate_limited', 429)
+  if (!res.ok) throw new GhError('github_failed', 502)
+  const json = await res.json()
+  if ((json?.errors || []).some((e) => e?.type === 'RATE_LIMITED')) throw new GhError('rate_limited', 429)
+  return json
+}
+
+const isoDay = (d) => d.toISOString().slice(0, 10)
+const dayKey = (iso) => String(iso).slice(0, 10)
+// Sunday-start week containing the day, as an ISO date.
+function weekOf(day) {
+  const d = new Date(`${day}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay())
+  return isoDay(d)
+}
+const daysAgo = (now, n) => {
+  const d = new Date(now)
+  d.setUTCDate(d.getUTCDate() - n)
+  return isoDay(d)
+}
+const emptyBucket = () => ({ c: 0, a: 0, d: 0, f: 0 })
+const add = (b, c) => {
+  b.c += 1
+  b.a += c.additions || 0
+  b.d += c.deletions || 0
+  b.f += c.changedFilesIfAvailable || 0
+}
+
+function streaks(days, today) {
+  let longest = 0
+  let run = 0
+  let runStart = null
+  let longestFrom = null
+  let longestTo = null
+  for (const day of days) {
+    if (day.count > 0) {
+      if (!run) runStart = day.date
+      run += 1
+      if (run > longest) {
+        longest = run
+        longestFrom = runStart
+        longestTo = day.date
+      }
+    } else {
+      run = 0
+    }
+  }
+  // Today counts as part of the streak even before its first commit lands.
+  let current = 0
+  for (let i = days.length - 1; i >= 0; i--) {
+    if (days[i].count > 0) current += 1
+    else if (i === days.length - 1 && days[i].date === today) continue
+    else break
+  }
+  return { current, longest, longestFrom, longestTo }
+}
+
+// Every repository the login committed to, across its contribution years.
+async function ghContributedRepos(login, years) {
+  const parts = years.map((y) => `y${y}: contributionsCollection(from: "${y}-01-01T00:00:00Z", to: "${y}-12-31T23:59:59Z") { ${GH_STATS_YEAR_FIELDS} }`)
+  const json = await ghGraphql(`query($login: String!) { user(login: $login) { ${parts.join('\n')} } }`, { login })
+  const user = json?.data?.user || {}
+  const repos = new Map()
+  let commitsAllYears = 0
+  let restricted = 0
+  for (const y of years) {
+    const col = user[`y${y}`]
+    if (!col) continue
+    commitsAllYears += col.totalCommitContributions || 0
+    restricted += col.restrictedContributionsCount || 0
+    for (const entry of col.commitContributionsByRepository || []) {
+      const r = entry?.repository
+      if (!r?.nameWithOwner) continue
+      const cur = repos.get(r.nameWithOwner) || {
+        fullName: r.nameWithOwner,
+        name: r.name,
+        url: r.url,
+        private: Boolean(r.isPrivate),
+        owner: r.owner?.login || r.nameWithOwner.split('/')[0],
+        ownerAvatar: r.owner?.avatarUrl || null,
+        ownerType: r.owner?.__typename === 'Organization' ? 'org' : 'user',
+        stars: r.stargazerCount || 0,
+        fork: Boolean(r.isFork),
+        archived: Boolean(r.isArchived),
+        pushedAt: r.pushedAt || null,
+        language: r.primaryLanguage?.name || null,
+        languageColor: r.primaryLanguage?.color || null,
+        branch: r.defaultBranchRef?.name || null,
+        contributions: 0,
+      }
+      cur.contributions += entry.contributions?.totalCount || 0
+      repos.set(r.nameWithOwner, cur)
+    }
+  }
+  return { repos: [...repos.values()], commitsAllYears, restricted }
+}
+
+// Default-branch commits by this author for a batch of repositories; keeps
+// paging each until it runs dry or the caps are hit.
+async function ghHistories(userId, repos, onCommit) {
+  const cursors = new Map(repos.map((r) => [r.fullName, { after: null, pages: 0 }]))
+  let pending = repos.filter((r) => r.branch)
+  let pagesUsed = 0
+  let truncated = false
+  while (pending.length && pagesUsed < GH_STATS_MAX_PAGES) {
+    const batch = pending.slice(0, GH_STATS_BATCH)
+    const parts = batch.map((r, i) => {
+      const [owner, name] = r.fullName.split('/')
+      const after = cursors.get(r.fullName).after
+      return `r${i}: repository(owner: ${JSON.stringify(owner)}, name: ${JSON.stringify(name)}) { defaultBranchRef { target { ... on Commit {
+        history(first: ${GH_STATS_PAGE}, author: { id: $uid }${after ? `, after: ${JSON.stringify(after)}` : ''}) { ${GH_STATS_HISTORY_FIELDS} } } } } }`
+    })
+    const json = await ghGraphql(`query($uid: ID!) { ${parts.join('\n')} }`, { uid: userId })
+    pagesUsed += batch.length
+    const next = []
+    batch.forEach((r, i) => {
+      const history = json?.data?.[`r${i}`]?.defaultBranchRef?.target?.history
+      const state = cursors.get(r.fullName)
+      state.pages += 1
+      for (const c of history?.nodes || []) if (c?.committedDate) onCommit(r, c)
+      if (history?.pageInfo?.hasNextPage) {
+        if (state.pages >= GH_STATS_PAGES_PER_REPO) truncated = true
+        else {
+          state.after = history.pageInfo.endCursor
+          next.push(r)
+        }
+      }
+    })
+    pending = [...pending.slice(GH_STATS_BATCH), ...next]
+  }
+  if (pending.length) truncated = true
+  return { truncated, pagesUsed }
+}
+
+async function buildGithubStats(login) {
+  const now = new Date()
+  const from = new Date(now)
+  from.setUTCFullYear(from.getUTCFullYear() - 1)
+  from.setUTCDate(from.getUTCDate() + 1)
+  const today = isoDay(now)
+
+  const first = await ghGraphql(GH_STATS_USER_QUERY, { login, from: from.toISOString(), to: now.toISOString() })
+  const user = first?.data?.user
+  if (!user) {
+    const notFound = (first?.errors || []).some((e) => e?.type === 'NOT_FOUND')
+    throw new GhError(notFound ? 'not_found' : 'github_failed', notFound ? 404 : 502)
+  }
+  const canonical = user.login || login
+  const cc = user.contributionsCollection || {}
+
+  // Calendar (past year) → active days, busiest day, streaks.
+  const calendarDays = []
+  for (const week of cc.contributionCalendar?.weeks || []) {
+    for (const day of week.contributionDays || []) {
+      if (day?.date && day.date <= today) calendarDays.push({ date: day.date, count: day.contributionCount || 0 })
+    }
+  }
+  calendarDays.sort((a, b) => (a.date < b.date ? -1 : 1))
+
+  const years = (cc.contributionYears || []).slice().sort((a, b) => b - a).slice(0, GH_STATS_YEARS)
+  const { repos, commitsAllYears, restricted } = years.length
+    ? await ghContributedRepos(canonical, years)
+    : { repos: [], commitsAllYears: 0, restricted: 0 }
+  repos.sort((a, b) => b.contributions - a.contributions)
+  const scanned = repos.slice(0, GH_STATS_REPOS)
+
+  // Aggregation targets.
+  const byDay = new Map() // 'YYYY-MM-DD' -> bucket
+  const perRepo = new Map() // fullName -> bucket + first/last
+  const grid = Array.from({ length: 7 }, () => new Array(24).fill(0)) // [weekday][hour], UTC
+  const bounds = {
+    today: { since: today, repos: new Set() },
+    week: { since: daysAgo(now, 6), repos: new Set() },
+    month: { since: daysAgo(now, 29), repos: new Set() },
+    year: { since: daysAgo(now, 364), repos: new Set() },
+    all: { since: '0000-00-00', repos: new Set() },
+  }
+  const periods = Object.fromEntries(Object.keys(bounds).map((k) => [k, emptyBucket()]))
+
+  const onCommit = (repo, c) => {
+    const day = dayKey(c.committedDate)
+    if (day > today) return
+    let bucket = byDay.get(day)
+    if (!bucket) byDay.set(day, (bucket = emptyBucket()))
+    add(bucket, c)
+    let mine = perRepo.get(repo.fullName)
+    if (!mine) perRepo.set(repo.fullName, (mine = { ...emptyBucket(), first: day, last: day }))
+    add(mine, c)
+    if (day < mine.first) mine.first = day
+    if (day > mine.last) mine.last = day
+    const when = new Date(c.committedDate)
+    grid[when.getUTCDay()][when.getUTCHours()] += 1
+    for (const [k, b] of Object.entries(bounds)) {
+      if (day >= b.since) {
+        add(periods[k], c)
+        b.repos.add(repo.fullName)
+      }
+    }
+  }
+  const { truncated, pagesUsed } = await ghHistories(user.id, scanned, onCommit)
+  for (const [k, b] of Object.entries(bounds)) periods[k].repos = b.repos.size
+
+  // Series: 30 days, 52 weeks, up to GH_STATS_MONTHS months.
+  const daily = []
+  for (let i = 29; i >= 0; i--) {
+    const date = daysAgo(now, i)
+    daily.push({ date, ...(byDay.get(date) || emptyBucket()) })
+  }
+  const weekly = new Map()
+  const monthly = new Map()
+  for (const [day, b] of byDay) {
+    const w = weekOf(day)
+    const m = day.slice(0, 7)
+    const wb = weekly.get(w) || emptyBucket()
+    const mb = monthly.get(m) || emptyBucket()
+    for (const k of ['c', 'a', 'd', 'f']) {
+      wb[k] += b[k]
+      mb[k] += b[k]
+    }
+    weekly.set(w, wb)
+    monthly.set(m, mb)
+  }
+  const weeks = []
+  const thisWeek = weekOf(today)
+  for (let i = 51; i >= 0; i--) {
+    const d = new Date(`${thisWeek}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() - i * 7)
+    const week = isoDay(d)
+    weeks.push({ week, ...(weekly.get(week) || emptyBucket()) })
+  }
+  const months = []
+  const firstMonth = [...monthly.keys()].sort()[0] || today.slice(0, 7)
+  const cursor = new Date(`${firstMonth}-01T00:00:00Z`)
+  const end = new Date(`${today.slice(0, 7)}-01T00:00:00Z`)
+  while (cursor <= end) {
+    const month = cursor.toISOString().slice(0, 7)
+    months.push({ month, ...(monthly.get(month) || emptyBucket()) })
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1)
+  }
+
+  // Owners (you, other people, organisations) and languages, weighted by
+  // your commits.
+  const owners = new Map()
+  const languages = new Map()
+  const repoRows = []
+  for (const r of scanned) {
+    const mine = perRepo.get(r.fullName)
+    if (!mine) continue
+    repoRows.push({
+      fullName: r.fullName, name: r.name, url: r.url, owner: r.owner, ownerType: r.ownerType, stars: r.stars, private: r.private,
+      language: r.language, languageColor: r.languageColor, fork: r.fork, archived: r.archived,
+      commits: mine.c, additions: mine.a, deletions: mine.d, files: mine.f, first: mine.first, last: mine.last,
+    })
+    const o = owners.get(r.owner) || { login: r.owner, avatar: r.ownerAvatar, type: r.owner.toLowerCase() === canonical.toLowerCase() ? 'self' : r.ownerType, repos: 0, ...emptyBucket() }
+    o.repos += 1
+    for (const k of ['c', 'a', 'd', 'f']) o[k] += mine[k]
+    // Split kept so the public view can drop the private part of an owner.
+    if (r.private) o.private = true
+    else {
+      o.public = o.public || { repos: 0, ...emptyBucket() }
+      o.public.repos += 1
+      for (const k of ['c', 'a', 'd', 'f']) o.public[k] += mine[k]
+    }
+    owners.set(r.owner, o)
+    if (r.language) {
+      const l = languages.get(r.language) || { name: r.language, color: r.languageColor, commits: 0 }
+      l.commits += mine.c
+      languages.set(r.language, l)
+    }
+  }
+  repoRows.sort((a, b) => b.commits - a.commits)
+  const langTotal = [...languages.values()].reduce((s, l) => s + l.commits, 0)
+
+  return {
+    user: {
+      login: canonical,
+      name: user.name || '',
+      avatar: user.avatarUrl || null,
+      url: user.url || `https://github.com/${canonical}`,
+      createdAt: user.createdAt || null,
+      bio: user.bio || '',
+      company: user.company || '',
+      location: user.location || '',
+      followers: user.followers?.totalCount || 0,
+      following: user.following?.totalCount || 0,
+    },
+    periods,
+    daily,
+    weekly: weeks,
+    monthly: months.slice(-GH_STATS_MONTHS),
+    grid,
+    calendar: {
+      from: isoDay(from),
+      to: today,
+      contributions: cc.contributionCalendar?.totalContributions || 0,
+      commits: cc.totalCommitContributions || 0,
+      pullRequests: cc.totalPullRequestContributions || 0,
+      issues: cc.totalIssueContributions || 0,
+      reviews: cc.totalPullRequestReviewContributions || 0,
+      restricted: cc.restrictedContributionsCount || 0,
+      activeDays: calendarDays.filter((d) => d.count > 0).length,
+      busiestDay: calendarDays.reduce((best, d) => (d.count > (best?.count || 0) ? d : best), null),
+      streak: streaks(calendarDays, today),
+    },
+    general: {
+      pullRequests: user.pullRequests?.totalCount || 0,
+      issues: user.issues?.totalCount || 0,
+      starred: user.starredRepositories?.totalCount || 0,
+      ownRepos: user.repositories?.totalCount || 0,
+      stars: (user.repositories?.nodes || []).reduce((s, r) => s + (r?.stargazerCount || 0), 0),
+      forks: (user.repositories?.nodes || []).reduce((s, r) => s + (r?.forkCount || 0), 0),
+      commitsAllYears,
+      restricted,
+      years: years.length,
+      firstYear: years.length ? Math.min(...years) : null,
+    },
+    repos: repoRows,
+    owners: [...owners.values()].sort((a, b) => b.c - a.c),
+    access: { owner: true },
+    languages: [...languages.values()].sort((a, b) => b.commits - a.commits).map((l) => ({ ...l, share: langTotal ? l.commits / langTotal : 0 })),
+    coverage: {
+      reposFound: repos.length,
+      reposScanned: scanned.length,
+      reposWithCommits: repoRows.length,
+      privateRepos: repoRows.filter((r) => r.private).length,
+      privateSkipped: restricted,
+      pages: pagesUsed,
+      truncated,
+    },
+    fetchedAt: now.toISOString(),
+  }
+}
+
+// The account behind GITHUB_TOKEN, re-checked daily: its login plus every
+// email GitHub knows for it (the public one from GraphQL, the rest from
+// /user/emails when the token may read them), so a signed-in dashboard user
+// can be recognised as the owner.
+async function githubOwner() {
+  if (ghOwner && Date.now() - ghOwner.at < 24 * 60 * 60 * 1000) return ghOwner
+  const json = await ghGraphql('{ viewer { login email } }', {})
+  const login = json?.data?.viewer?.login
+  if (!login) throw new GhError('stats_disabled', 503)
+  const emails = new Set()
+  if (json.data.viewer.email) emails.add(json.data.viewer.email.toLowerCase())
+  try {
+    const res = await withTimeout((signal) =>
+      fetch(`${GH_API}/user/emails`, { signal, headers: { authorization: `Bearer ${GH_TOKEN}`, 'user-agent': 'blxr.net', accept: 'application/vnd.github+json' } }),
+    )
+    if (res.ok) for (const e of await res.json()) if (e?.verified && typeof e.email === 'string') emails.add(e.email.toLowerCase())
+  } catch {
+    // no email permission on the token — the public email and STATS_OWNER_EMAIL still work
+  }
+  if (STATS_OWNER_EMAIL) emails.add(STATS_OWNER_EMAIL)
+  ghOwner = { login, emails, at: Date.now() }
+  return ghOwner
+}
+
+// Optional extra way to be recognised as the owner: the email of the
+// dashboard account, for when the GitHub account's emails are all private.
+const STATS_OWNER_EMAIL = (process.env.STATS_OWNER_EMAIL || '').trim().toLowerCase()
+
+// True when the caller's Supabase session belongs to the token's GitHub
+// account — same login on a linked GitHub identity, or a matching email.
+async function isStatsOwner(req, owner) {
+  if (!req.headers.authorization) return false
+  let user = null
+  try {
+    user = await supabaseUser(req)
+  } catch {
+    return false
+  }
+  if (!user) return false
+  if (user.email && owner.emails.has(user.email.toLowerCase())) return true
+  for (const id of user.identities || []) {
+    const login = id?.provider === 'github' ? id.identity_data?.user_name || id.identity_data?.preferred_username : null
+    if (typeof login === 'string' && login.toLowerCase() === owner.login.toLowerCase()) return true
+  }
+  return false
+}
+
+// The public view of the stats: private repositories keep their numbers but
+// lose their names, links and owners (other people's organisations are not
+// this site's to reveal). Public repositories owned by you stay as they are.
+function redactStats(data, owner) {
+  const self = owner.login.toLowerCase()
+  const repos = data.repos.map((r) => (r.private ? {
+    ...r,
+    fullName: null, name: null, url: null, stars: 0,
+    owner: r.owner.toLowerCase() === self ? r.owner : null,
+    ownerType: r.owner.toLowerCase() === self ? r.ownerType : 'private',
+  } : r))
+  const owners = []
+  let hidden = null
+  for (const o of data.owners) {
+    if (o.type === 'self' || !o.private) { owners.push(o); continue }
+    if (o.public) owners.push({ ...o, ...o.public, private: false })
+    const priv = o.public ? { repos: o.repos - o.public.repos, c: o.c - o.public.c, a: o.a - o.public.a, d: o.d - o.public.d, f: o.f - o.public.f } : o
+    hidden = hidden || { login: null, avatar: null, type: 'private', repos: 0, c: 0, a: 0, d: 0, f: 0 }
+    for (const k of ['repos', 'c', 'a', 'd', 'f']) hidden[k] += priv[k]
+  }
+  if (hidden) owners.push(hidden)
+  owners.sort((a, b) => b.c - a.c)
+  return { ...data, repos, owners: owners.map(({ public: _p, ...o }) => o), access: { owner: false } }
+}
+
+async function githubStats(refresh) {
+  const { login } = await githubOwner()
+  const key = login.toLowerCase()
+  const hit = ghStatsCache.get(key)
+  if (hit) {
+    const age = Date.now() - hit.at
+    if (age < GH_STATS_TTL_MS && !(refresh && age >= GH_STATS_REFRESH_MIN_MS)) return hit.data
+  }
+  let job = ghStatsInflight.get(key)
+  if (!job) {
+    job = buildGithubStats(login)
+      .then((data) => {
+        ghStatsCache.delete(key)
+        ghStatsCache.set(key, { at: Date.now(), data })
+        if (ghStatsCache.size > GH_STATS_CACHE_MAX) ghStatsCache.delete(ghStatsCache.keys().next().value)
+        return data
+      })
+      .finally(() => ghStatsInflight.delete(key))
+    ghStatsInflight.set(key, job)
+  }
+  return job
+}
+
+// Account mail: the client asks for a "password changed" notice after Supabase
+// accepts the new password. The bearer token is checked against Supabase's
+// /user endpoint, so only the account owner can trigger mail to that address,
+// and at most once per PASSWORD_MAIL_INTERVAL_MS per account.
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '')
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || ''
+// Secret (service-role) key, only needed for account deletion. Never sent to clients.
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || ''
+const PASSWORD_MAIL_INTERVAL_MS = 10 * 60_000
+const passwordMailAt = new Map() // user id -> last send
+
+async function supabaseUser(req) {
+  const auth = req.headers.authorization
+  const token = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+  if (!token || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) return null
+  const res = await withTimeout((signal) =>
+    fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      signal,
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${token}` },
+    }),
+  )
+  if (!res.ok) return null
+  const user = await res.json()
+  return typeof user?.id === 'string' && typeof user?.email === 'string' ? user : null
+}
+
 function json(res, status, body, headers) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
@@ -868,6 +1408,53 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req)
       if (body && typeof body.path === 'string') recordHit(body.path)
       res.writeHead(204, { 'cache-control': 'no-store' })
+      return res.end()
+    }
+
+    if (url.pathname === '/api/mail/password-changed') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      if (!mailConfigured() || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) return json(res, 503, { error: 'mail_disabled' }, NO_STORE)
+      const user = await supabaseUser(req)
+      if (!user) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+      const now = Date.now()
+      if (now - (passwordMailAt.get(user.id) || 0) < PASSWORD_MAIL_INTERVAL_MS) {
+        return json(res, 429, { error: 'too_soon' }, NO_STORE)
+      }
+      passwordMailAt.set(user.id, now)
+      for (const [id, at] of passwordMailAt) if (now - at >= PASSWORD_MAIL_INTERVAL_MS) passwordMailAt.delete(id)
+      const mail = passwordChangedMail({ email: user.email, client: describeClient(req.headers['user-agent']), at: new Date(now) })
+      try {
+        await withTimeout((signal) => sendMail({ to: user.email, ...mail }, { signal }))
+      } catch {
+        passwordMailAt.delete(user.id)
+        return json(res, 502, { error: 'mail_failed' }, NO_STORE)
+      }
+      res.writeHead(204, NO_STORE)
+      return res.end()
+    }
+
+    // Settings → Danger zone. The bearer token proves who is asking; the
+    // admin call then removes that user and every session they have.
+    if (url.pathname === '/api/account/delete') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || !SUPABASE_SECRET_KEY) return json(res, 503, { error: 'delete_disabled' }, NO_STORE)
+      const user = await supabaseUser(req)
+      if (!user) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+      let ok = false
+      try {
+        const del = await withTimeout((signal) =>
+          fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(user.id)}`, {
+            method: 'DELETE',
+            signal,
+            headers: { apikey: SUPABASE_SECRET_KEY, authorization: `Bearer ${SUPABASE_SECRET_KEY}` },
+          }),
+        )
+        ok = del.ok
+      } catch {
+        ok = false
+      }
+      if (!ok) return json(res, 502, { error: 'delete_failed' }, NO_STORE)
+      res.writeHead(204, NO_STORE)
       return res.end()
     }
 
@@ -1197,6 +1784,22 @@ const server = http.createServer(async (req, res) => {
       const items = await searchAll(q, limit, 'videos')
       if (items.length) cacheSet(key, items)
       return json(res, 200, { items })
+    }
+
+    // Dashboard → Stats: the token owner's own GitHub activity. Public data,
+    // cached an hour, and a refresh only recomputes every couple of minutes,
+    // so it can stay open like the contribution route.
+    if (url.pathname === '/api/github/stats') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      if (!GH_TOKEN) return json(res, 503, { error: 'stats_disabled' }, NO_STORE)
+      try {
+        const data = await githubStats(url.searchParams.get('refresh') === '1')
+        const owner = await githubOwner()
+        return json(res, 200, (await isStatsOwner(req, owner)) ? data : redactStats(data, owner), NO_STORE)
+      } catch (err) {
+        if (err instanceof GhError) return json(res, err.status, { error: err.code }, NO_STORE)
+        return json(res, 502, { error: 'github_failed' }, NO_STORE)
+      }
     }
 
     if (url.pathname === '/api/github/contributions') {

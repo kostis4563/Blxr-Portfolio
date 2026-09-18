@@ -80,6 +80,7 @@
   --animate-rise-in: rise-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-overlay-in: overlay-in 0.2s ease-out both;
   --animate-panel-in: panel-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-menu-in: menu-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
 
   @keyframes view-in {
     from {
@@ -120,6 +121,17 @@
       transform: translateY(0) scale(1);
     }
   }
+
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -135,6 +147,29 @@
   .nf-cell {
     animation-delay: 0s !important;
   }
+}
+
+/* Settings pages: cards rise in one after another when a tab opens. */
+@keyframes settings-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.settings-stagger > * {
+  animation: settings-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.settings-stagger > :nth-child(2) { animation-delay: 60ms; }
+.settings-stagger > :nth-child(3) { animation-delay: 120ms; }
+.settings-stagger > :nth-child(4) { animation-delay: 180ms; }
+.settings-stagger > :nth-child(n + 5) { animation-delay: 240ms; }
+
+/* Same as above, chosen in Settings → Appearance rather than the OS. */
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 :root[data-theme='light'] {
@@ -909,4 +944,16 @@ body {
   text-decoration-color: color-mix(in srgb, var(--color-brand-indigo) 75%, transparent);
   text-decoration-thickness: 1.5px;
   text-underline-offset: 5px;
+}
+
+/* The dashboard sidebar owns the bottom-left corner; dock the music widget on the right there. */
+:root[data-view='dashboard'] .music-widget {
+  left: auto;
+  right: 1rem;
+}
+
+:root[data-view='dashboard'] .music-widget [role='dialog'] {
+  left: auto;
+  right: 0;
+  transform-origin: bottom right;
 }

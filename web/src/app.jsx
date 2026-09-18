@@ -7,6 +7,9 @@ import ProjectsPage from './projects-page'
 import LibraryPage from './library-page'
 import ReviewsPage from './reviews-page'
 import ReviewPanelPage from './review-panel-page'
+import LoginPage from './login-page'
+import DashboardPage from './dashboard-page'
+import PublicProfilePage from './public-profile-page'
 import NotFoundPage from './not-found-page'
 import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
@@ -43,7 +46,7 @@ function App() {
     if (!skillBadgesArmed) setSkillBadgesArmed(true)
   }
 
-  const { theme, toggleTheme } = useTheme()
+  const { theme, preference: themePreference, toggleTheme, setPreference: setThemePreference } = useTheme()
   const { t } = useI18n()
 
   const homeScrollRef = useRef(0)
@@ -421,6 +424,28 @@ function App() {
     return <ReviewPanelPage theme={theme} onToggleTheme={toggleTheme} />
   }
 
+  if (currentView === 'login') {
+    return <LoginPage theme={theme} onToggleTheme={toggleTheme} />
+  }
+
+  if (currentView === 'profile') {
+    return (
+      <>
+        <PublicProfilePage handle={route.handle} theme={theme} onToggleTheme={toggleTheme} />
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'dashboard') {
+    return (
+      <>
+        <DashboardPage theme={theme} themePreference={themePreference} onToggleTheme={toggleTheme} onSetTheme={setThemePreference} />
+        {palette}
+      </>
+    )
+  }
+
   return (
     <div className={`min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-clip antialiased font-sans ${isReturningHome ? '' : 'animate-view-in'}`}>
 
@@ -724,7 +749,7 @@ function App() {
         </section>
 
         <section id="skills" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-shake">
+          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             {t('home.skills')}
           </h2>
 
@@ -941,7 +966,7 @@ function App() {
         </section>
 
         <section id="education" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-watom">
+          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             {t('home.education')}
           </h2>
 
@@ -985,7 +1010,7 @@ function App() {
 
             {}
             <div className="grid grid-cols-1 gap-2 py-4 sm:grid-cols-[7.5rem_1fr] sm:gap-6">
-              <div className="text-[12px] font-watom text-ink-subtle sm:pt-px">
+              <div className="text-[12px] font-bagus text-ink-subtle sm:pt-px">
                 {t('home.certifications')}
               </div>
 
@@ -1025,7 +1050,7 @@ function App() {
         </section>
 
         <section id="contact" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-vergilia">
+          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             {t('home.contact')}
           </h2>
 

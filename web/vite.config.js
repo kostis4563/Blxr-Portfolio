@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import JavaScriptObfuscator from 'javascript-obfuscator'
@@ -105,7 +105,18 @@ function obfuscatorPlugin() {
   }
 }
 
-export default defineConfig({
+// `npm run dev` forwards /api to the live server, so search, reviews and stats
+// work without running the Node server locally. Set VITE_API_PROXY (shell or
+// .env.local; e.g. http://127.0.0.1:8899 where `npm start --workspace server`
+// listens) to point it somewhere else, or to '' to turn the proxy off.
+const PROD_API = 'https://blxr.net'
+const apiProxy = (mode) => {
+  const set = process.env.VITE_API_PROXY ?? loadEnv(mode, process.cwd(), 'VITE_').VITE_API_PROXY
+  return set === undefined ? PROD_API : set
+}
+
+export default defineConfig(({ mode }) => ({
+  server: apiProxy(mode) ? { proxy: { '/api': { target: apiProxy(mode), changeOrigin: true } } } : undefined,
   plugins: [
     react(),
     tailwindcss(),
@@ -133,4 +144,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

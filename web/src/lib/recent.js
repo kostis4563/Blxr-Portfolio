@@ -21,3 +21,10 @@ export function rememberVisit(pathname) {
   } catch {
   }
 }
+
+export function clearRecent() {
+  try {
+    localStorage.removeItem(KEY)
+  } catch {
+  }
+}
