@@ -1,21 +1,16 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import ThemeToggle from './components/theme-toggle'
-import { Stars, StarPicker } from './components/star-rating'
-import { useI18n } from './lib/i18n'
-import { link, REVIEWS_PATH } from './lib/router'
+import { Stars, StarPicker } from './star-rating'
+import { link, REVIEWS_PATH } from '../lib/router'
 import {
-  panelLogin,
-  panelLogout,
-  panelSession,
   fetchPanel,
   panelUpdateReview,
   panelDeleteReview,
   panelSaveSettings,
   createInvite,
   deleteInvite,
-} from './lib/api'
-import { REVIEW_LIMITS, INVITE_DAYS, relativeTime, absoluteTime, inviteLink } from './lib/reviews'
+} from '../lib/api'
+import { REVIEW_LIMITS, INVITE_DAYS, relativeTime, absoluteTime, inviteLink } from '../lib/reviews'
 
 const LABEL = 'text-[11px] font-mono font-semibold text-ink-subtle uppercase tracking-wider'
 const INPUT =
@@ -28,7 +23,6 @@ const ACTION = 'cursor-pointer text-[12px] font-medium text-ink-muted transition
 const DANGER = 'cursor-pointer text-[12px] font-medium text-ink-subtle transition-colors hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40'
 const CHIP = 'rounded-md border px-1.5 py-px font-mono text-[10px] uppercase tracking-wider'
 
-const TABS = ['overview', 'reviews', 'invites', 'settings']
 const FILTERS = ['all', 'pending', 'hidden', 'featured', 'auto', 'invited', 'replied']
 
 const STATUS_CHIP = {
@@ -57,57 +51,6 @@ function flagsOf(r) {
   if (r.editedAt) flags.push(['edited', 'text-ink-faint border-line'])
   if (r.reply) flags.push(['replied', 'text-ink-muted border-line-strong'])
   return flags
-}
-
-function Login({ onLogin }) {
-  const [password, setPassword] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(null)
-
-  const submit = async (event) => {
-    event.preventDefault()
-    if (!password) return
-    setBusy(true)
-    setError(null)
-    try {
-      await panelLogin(password)
-      onLogin()
-    } catch (err) {
-      if (err?.code === 'locked') setError(`Too many attempts. Try again in ${Math.ceil((err.retryAfter || 900) / 60)} min.`)
-      else if (err?.code === 'wrong_password') setError('Wrong password.')
-      else if (err?.code === 'panel_disabled') setError('The panel is off: REVIEW_OWNER_KEY is not set on the server.')
-      else setError('Could not sign in.')
-      setPassword('')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="flex min-h-screen items-center justify-center px-5">
-      <form onSubmit={submit} className="w-full max-w-[380px] rounded-2xl border border-line bg-surface-raised/40 p-7">
-        <p className={`${LABEL} mb-2`}>Owner</p>
-        <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">Review panel</h1>
-        <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">Manage reviews, invite links and settings.</p>
-        <label className="mt-6 flex flex-col gap-2">
-          <span className={LABEL}>Password</span>
-          <input
-            type="password"
-            autoComplete="current-password"
-            autoFocus
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={INPUT}
-          />
-        </label>
-        {error && <p role="alert" className="mt-3 text-[12.5px] text-red-500">{error}</p>}
-        <button type="submit" disabled={busy || !password} className={`${CTA} mt-5`}>
-          <span>{busy ? 'Signing in…' : 'Sign in'}</span>
-          {!busy && <span aria-hidden="true">→</span>}
-        </button>
-      </form>
-    </div>
-  )
 }
 
 function Stat({ label, value, hint }) {
@@ -549,7 +492,7 @@ function Toggle({ label, hint, checked, onChange, disabled }) {
   )
 }
 
-function Settings({ settings, reviews, busy, onSave, onLogout }) {
+function Settings({ settings, reviews, busy, onSave }) {
   const [terms, setTerms] = useState(settings.blockedTerms.join('\n'))
   const [saved, setSaved] = useState(false)
 
@@ -599,40 +542,37 @@ function Settings({ settings, reviews, busy, onSave, onLogout }) {
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface-raised/40 p-4">
         <button type="button" onClick={exportJson} className={ACTION}>Export reviews as JSON</button>
         <a {...link(REVIEWS_PATH)} className={ACTION}>Open public page →</a>
-        <button type="button" onClick={onLogout} className={`${DANGER} ms-auto`}>Log out</button>
       </div>
     </div>
   )
 }
 
-export default function ReviewPanelPage({ theme, onToggleTheme }) {
-  const { lang } = useI18n()
-  const [auth, setAuth] = useState('checking')
+export default function ReviewPanel({ tab, auth = () => ({}), lang, onUnauthorized, onData }) {
   const [data, setData] = useState(null)
-  const [tab, setTab] = useState('overview')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
   const [copied, setCopied] = useState(null)
   const [openId, setOpenId] = useState(null)
-
+  const props = useRef({ auth, onUnauthorized, onData })
   useEffect(() => {
-    panelSession().then((ok) => setAuth(ok ? 'in' : 'out'))
-  }, [])
+    props.current = { auth, onUnauthorized, onData }
+  })
 
   const refresh = useCallback(async () => {
     try {
-      setData(await fetchPanel())
+      const next = await fetchPanel(props.current.auth())
+      setData(next)
+      props.current.onData?.(next)
       setError(null)
     } catch (err) {
-      if (err?.status === 401) setAuth('out')
+      if (err?.status === 401 || err?.status === 403) props.current.onUnauthorized?.()
       else setError('Could not load the panel.')
     }
   }, [])
 
   useEffect(() => {
-    if (auth !== 'in') return
     refresh()
     const timer = window.setInterval(refresh, 30_000)
     window.addEventListener('focus', refresh)
@@ -640,7 +580,7 @@ export default function ReviewPanelPage({ theme, onToggleTheme }) {
       window.clearInterval(timer)
       window.removeEventListener('focus', refresh)
     }
-  }, [auth, refresh, tab])
+  }, [refresh, tab])
 
   useEffect(() => {
     if (!copied) return
@@ -651,7 +591,7 @@ export default function ReviewPanelPage({ theme, onToggleTheme }) {
   const run = async (fn) => {
     setBusy(true)
     try {
-      const result = await fn()
+      const result = await fn(props.current.auth())
       await refresh()
       return result
     } finally {
@@ -676,13 +616,6 @@ export default function ReviewPanelPage({ theme, onToggleTheme }) {
     })
   }, [data, query, filter])
 
-  if (auth === 'checking') return <div className="min-h-screen bg-bg" />
-  if (auth === 'out') return (
-    <div className="min-h-screen bg-bg text-ink font-sans antialiased animate-view-in">
-      <Login onLogin={() => setAuth('in')} />
-    </div>
-  )
-
   const stats = data?.stats
   const pending = data ? data.reviews.filter((r) => r.pending) : []
   const dialogList = tab === 'overview' ? pending : filtered
@@ -692,127 +625,89 @@ export default function ReviewPanelPage({ theme, onToggleTheme }) {
     busy,
     onCopy: copy,
     onOpen: setOpenId,
-    onPatch: (id, patch) => run(() => panelUpdateReview(id, patch)),
+    onPatch: (id, patch) => run((opts) => panelUpdateReview(id, patch, opts)),
   }
 
   return (
-    <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
-      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-line top-0 flex items-center px-5 sm:px-8">
-        <div className="w-full flex items-center justify-between">
-          <a {...link(REVIEWS_PATH)} className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer">
-            <span>←</span>
-            <span>Reviews</span>
-          </a>
-          <div className="flex items-center gap-4">
-            <ThemeToggle theme={theme} onToggle={onToggleTheme} className="text-ink-muted hover:text-ink-strong transition-colors duration-200" />
+    <>
+      {error && <p role="alert" className="mb-6 w-full rounded-xl border border-red-500/30 bg-red-500/[0.06] px-4 py-3 text-[12.5px] text-red-500">{error}</p>}
+
+      {!data ? (
+        <p className="text-[13px] text-ink-subtle">Loading…</p>
+      ) : tab === 'overview' ? (
+        <div className="w-full">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Average" value={stats.average.toFixed(1)} hint={`${stats.visible} visible`} />
+            <Stat label="Pending" value={stats.pending} hint={data.settings.approval ? 'approval on' : 'approval off'} />
+            <Stat label="Last 7 days" value={stats.lastWeek} hint={`${stats.lastMonth} in 30 days`} />
+            <Stat label="Invites open" value={stats.invitesPending} hint={`${stats.auto} auto posted`} />
+            <Stat label="Hidden" value={stats.hidden} />
+            <Stat label="Featured" value={stats.pinned} />
+            <Stat label="Via invite" value={stats.invited} />
+            <Stat label="Total stored" value={stats.total} />
           </div>
-        </div>
-      </header>
 
-      <main className="w-full max-w-[960px] mx-auto px-5 sm:px-8 pt-24 pb-24 flex flex-col items-start min-h-screen bg-bg animate-rise-in">
-        <div className="mb-8 flex w-full flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className={`${LABEL} mb-3`}>Owner</p>
-            <h1 className="text-[30px] font-bold tracking-[-0.035em] leading-tight text-ink-strong">Review panel</h1>
-          </div>
-          <nav className="flex items-center gap-1.5 overflow-x-auto" aria-label="Sections">
-            {TABS.map((name) => (
-              <button
-                key={name}
-                type="button"
-                aria-pressed={tab === name}
-                onClick={() => setTab(name)}
-                className={`px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all cursor-pointer whitespace-nowrap capitalize ${
-                  tab === name ? 'bg-ink-strong text-ink-inverse font-semibold' : 'text-ink-muted hover:text-ink-strong'
-                }`}
-              >
-                {name}
-                {name === 'reviews' && stats?.pending > 0 && <span className="ms-1.5 font-mono text-[10px] text-amber-500">{stats.pending}</span>}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {error && <p role="alert" className="mb-6 w-full rounded-xl border border-red-500/30 bg-red-500/[0.06] px-4 py-3 text-[12.5px] text-red-500">{error}</p>}
-
-        {!data ? (
-          <p className="text-[13px] text-ink-subtle">Loading…</p>
-        ) : tab === 'overview' ? (
-          <div className="w-full">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="Average" value={stats.average.toFixed(1)} hint={`${stats.visible} visible`} />
-              <Stat label="Pending" value={stats.pending} hint={data.settings.approval ? 'approval on' : 'approval off'} />
-              <Stat label="Last 7 days" value={stats.lastWeek} hint={`${stats.lastMonth} in 30 days`} />
-              <Stat label="Invites open" value={stats.invitesPending} hint={`${stats.auto} auto posted`} />
-              <Stat label="Hidden" value={stats.hidden} />
-              <Stat label="Featured" value={stats.pinned} />
-              <Stat label="Via invite" value={stats.invited} />
-              <Stat label="Total stored" value={stats.total} />
+          <div className="mt-6 rounded-2xl border border-line bg-surface-raised/40 p-5">
+            <p className={`${LABEL} mb-3`}>Distribution</p>
+            <div className="flex flex-col gap-1.5">
+              {[5, 4, 3, 2, 1].map((n) => {
+                const c = stats.distribution[n]
+                const pct = stats.visible ? (c / stats.visible) * 100 : 0
+                return (
+                  <div key={n} className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+                    <span className="w-[3ch] font-mono text-[12px] text-ink-muted">{n}<span className="text-ink-faint">★</span></span>
+                    <span className="h-1.5 overflow-hidden rounded-full bg-surface-hover"><span className="block h-full rounded-full bg-ink-muted" style={{ width: `${pct}%` }} /></span>
+                    <span className="w-[3ch] text-right font-mono text-[12px] text-ink-subtle">{c}</span>
+                  </div>
+                )
+              })}
             </div>
-
-            <div className="mt-6 rounded-2xl border border-line bg-surface-raised/40 p-5">
-              <p className={`${LABEL} mb-3`}>Distribution</p>
-              <div className="flex flex-col gap-1.5">
-                {[5, 4, 3, 2, 1].map((n) => {
-                  const c = stats.distribution[n]
-                  const pct = stats.visible ? (c / stats.visible) * 100 : 0
-                  return (
-                    <div key={n} className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-                      <span className="w-[3ch] font-mono text-[12px] text-ink-muted">{n}<span className="text-ink-faint">★</span></span>
-                      <span className="h-1.5 overflow-hidden rounded-full bg-surface-hover"><span className="block h-full rounded-full bg-ink-muted" style={{ width: `${pct}%` }} /></span>
-                      <span className="w-[3ch] text-right font-mono text-[12px] text-ink-subtle">{c}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {pending.length > 0 && (
-              <div className="mt-8">
-                <p className={`${LABEL} mb-1`}>Awaiting approval</p>
-                <ol className="border-t border-line">
-                  {pending.map((item) => (
-                    <ReviewRow key={item.id} item={item} copied={copied === item.id} {...rowProps} />
-                  ))}
-                </ol>
-              </div>
-            )}
           </div>
-        ) : tab === 'reviews' ? (
-          <div className="w-full">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <input type="search" placeholder="Search name, role, text or id…" value={query} onChange={(e) => setQuery(e.target.value)} className={`${INPUT} sm:max-w-[320px]`} />
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                {FILTERS.map((name) => (
-                  <button key={name} type="button" aria-pressed={filter === name} onClick={() => setFilter(name)}
-                    className={`px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all cursor-pointer whitespace-nowrap capitalize ${filter === name ? 'bg-ink-strong text-ink-inverse font-semibold' : 'text-ink-muted hover:text-ink-strong'}`}>
-                    {name}
-                  </button>
+
+          {pending.length > 0 && (
+            <div className="mt-8">
+              <p className={`${LABEL} mb-1`}>Awaiting approval</p>
+              <ol className="border-t border-line">
+                {pending.map((item) => (
+                  <ReviewRow key={item.id} item={item} copied={copied === item.id} {...rowProps} />
                 ))}
-              </div>
+              </ol>
             </div>
-            <p className="mb-1 font-mono text-[11px] text-ink-subtle">{filtered.length} of {data.reviews.length}</p>
-            <ol className="border-t border-line">
-              {filtered.map((item) => (
-                <ReviewRow key={item.id} item={item} copied={copied === item.id} {...rowProps} />
+          )}
+        </div>
+      ) : tab === 'reviews' ? (
+        <div className="w-full">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <input type="search" placeholder="Search name, role, text or id…" value={query} onChange={(e) => setQuery(e.target.value)} className={`${INPUT} sm:max-w-[320px]`} />
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {FILTERS.map((name) => (
+                <button key={name} type="button" aria-pressed={filter === name} onClick={() => setFilter(name)}
+                  className={`px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all cursor-pointer whitespace-nowrap capitalize ${filter === name ? 'bg-ink-strong text-ink-inverse font-semibold' : 'text-ink-muted hover:text-ink-strong'}`}>
+                  {name}
+                </button>
               ))}
-            </ol>
-            {filtered.length === 0 && <p className="py-10 text-center text-[13px] text-ink-subtle">Nothing matches.</p>}
+            </div>
           </div>
-        ) : tab === 'invites' ? (
-          <div className="w-full">
-            <Invites invites={data.invites} lang={lang} busy={busy} copied={copied} onCopy={copy}
-              onCreate={(draft) => run(() => createInvite(draft))}
-              onRevoke={(token) => run(() => deleteInvite(token))} />
-          </div>
-        ) : (
-          <div className="w-full">
-            <Settings settings={data.settings} reviews={data.reviews} busy={busy}
-              onSave={(patch) => run(() => panelSaveSettings({ ...data.settings, ...patch }))}
-              onLogout={() => panelLogout().finally(() => setAuth('out'))} />
-          </div>
-        )}
-      </main>
+          <p className="mb-1 font-mono text-[11px] text-ink-subtle">{filtered.length} of {data.reviews.length}</p>
+          <ol className="border-t border-line">
+            {filtered.map((item) => (
+              <ReviewRow key={item.id} item={item} copied={copied === item.id} {...rowProps} />
+            ))}
+          </ol>
+          {filtered.length === 0 && <p className="py-10 text-center text-[13px] text-ink-subtle">Nothing matches.</p>}
+        </div>
+      ) : tab === 'invites' ? (
+        <div className="w-full">
+          <Invites invites={data.invites} lang={lang} busy={busy} copied={copied} onCopy={copy}
+            onCreate={(draft) => run((opts) => createInvite(draft, opts))}
+            onRevoke={(token) => run((opts) => deleteInvite(token, opts))} />
+        </div>
+      ) : (
+        <div className="w-full">
+          <Settings settings={data.settings} reviews={data.reviews} busy={busy}
+            onSave={(patch) => run((opts) => panelSaveSettings({ ...data.settings, ...patch }, opts))} />
+        </div>
+      )}
 
       {openItem && (
         <ReviewDialog
@@ -822,11 +717,11 @@ export default function ReviewPanelPage({ theme, onToggleTheme }) {
           lang={lang}
           busy={busy}
           onPatch={rowProps.onPatch}
-          onDelete={(id) => run(() => panelDeleteReview(id))}
+          onDelete={(id) => run((opts) => panelDeleteReview(id, opts))}
           onOpen={setOpenId}
           onClose={() => setOpenId(null)}
         />
       )}
-    </div>
+    </>
   )
 }

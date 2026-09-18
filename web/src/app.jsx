@@ -3,10 +3,17 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react'
 const AUTOPLAY_MS = 6000
 import GitHubContributions from './components/github-contribution'
 import AnimatedFooter from './components/animated-footer'
+import Testimonials from './components/testimonials'
 import ProjectsPage from './projects-page'
 import LibraryPage from './library-page'
 import ReviewsPage from './reviews-page'
+<<<<<<< Updated upstream
 import ReviewPanelPage from './review-panel-page'
+=======
+import LoginPage from './login-page'
+import DashboardPage from './dashboard-page'
+import PublicProfilePage from './public-profile-page'
+>>>>>>> Stashed changes
 import NotFoundPage from './not-found-page'
 import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
@@ -417,8 +424,31 @@ function App() {
     )
   }
 
+<<<<<<< Updated upstream
   if (currentView === 'reviewpanel') {
     return <ReviewPanelPage theme={theme} onToggleTheme={toggleTheme} />
+=======
+  if (currentView === 'login') {
+    return <LoginPage theme={theme} onToggleTheme={toggleTheme} />
+  }
+
+  if (currentView === 'profile') {
+    return (
+      <>
+        <PublicProfilePage handle={route.handle} theme={theme} onToggleTheme={toggleTheme} />
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'dashboard') {
+    return (
+      <>
+        <DashboardPage theme={theme} themePreference={themePreference} onToggleTheme={toggleTheme} onSetTheme={setThemePreference} />
+        {palette}
+      </>
+    )
+>>>>>>> Stashed changes
   }
 
   return (
@@ -509,7 +539,7 @@ function App() {
               return (
                 <>
                   <span className="font-vergilia font-normal">{greeting.slice(0, at)}</span>
-                  <span className="font-bagus font-normal">{greeting.slice(at, at + 4)}</span>
+                  <span className="hl-word font-bagus font-normal">{greeting.slice(at, at + 4)}</span>
                   <span className="font-vergilia font-normal">{greeting.slice(at + 4)}</span>
                 </>
               )
@@ -551,7 +581,7 @@ function App() {
           <div className="w-full mt-8">
             <GitHubContributions
               username={GITHUB_USERNAME} since={GITHUB_JOINED}
-              activeSince={GITHUB_ACTIVE_SINCE}
+              activeSince={GITHUB_ACTIVE_SINCE} minimal
             />
           </div>
         </section>
@@ -574,9 +604,8 @@ function App() {
 
             <div
               data-reveal
-              style={{ '--reveal-delay': '90ms' }}
               data-paused={autoplayEnabled ? undefined : ''}
-              style={{ '--autoplay': `${AUTOPLAY_MS}ms` }}
+              style={{ '--reveal-delay': '90ms', '--autoplay': `${AUTOPLAY_MS}ms` }}
               className="project-carousel relative mt-8 w-[calc(100%+3rem)] -mx-6"
               onKeyDown={handleCarouselKeyDown}
               onMouseEnter={pauseCarousel}
@@ -1023,6 +1052,8 @@ function App() {
             </div>
           </div>
         </section>
+
+        <Testimonials />
 
         <section id="contact" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-vergilia">

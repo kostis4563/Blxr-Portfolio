@@ -85,11 +85,37 @@ export function metaFor(pathname) {
     }
   }
 
+<<<<<<< Updated upstream
   if (route.name === 'reviewpanel') {
     return {
       ...base,
       title: `Review panel — ${SITE_NAME}`,
       description: 'Owner tools for blxr.net reviews.',
+=======
+  if (route.name === 'login') {
+    return {
+      ...base,
+      title: `Sign in — ${SITE_NAME}`,
+      description: 'Sign in to blxr.net or create an account.',
+      noindex: true,
+    }
+  }
+
+  if (route.name === 'dashboard') {
+    return {
+      ...base,
+      title: `Dashboard — ${SITE_NAME}`,
+      description: 'Owner dashboard for blxr.net.',
+      noindex: true,
+    }
+  }
+
+  if (route.name === 'profile') {
+    return {
+      ...base,
+      title: `Profile — ${SITE_NAME}`,
+      description: 'A member profile on blxr.net.',
+>>>>>>> Stashed changes
       noindex: true,
     }
   }

@@ -36,7 +36,16 @@ export function parseRoute(path) {
   if (p === '/projects') return { name: 'projects', projectId: null }
   if (p === '/library') return { name: 'library', itemId: null }
   if (p === '/reviews') return { name: 'reviews' }
+<<<<<<< Updated upstream
   if (p === '/reviewpanel') return { name: 'reviewpanel' }
+=======
+  if (p === '/login') return { name: 'login' }
+  if (p === '/dashboard') return { name: 'dashboard' }
+  if (p === PROFILE_BASE_PATH) return { name: 'profile', handle: null }
+
+  const profileMatch = /^\/u\/([^/]+)$/.exec(p)
+  if (profileMatch) return { name: 'profile', handle: decodeURIComponent(profileMatch[1]).toLowerCase() }
+>>>>>>> Stashed changes
 
   const match = /^\/projects\/([^/]+)$/.exec(p)
   if (match) {
@@ -95,7 +104,19 @@ export const LIBRARY_PATH = '/library'
 export const libraryPath = (id) => `/library/${encodeURIComponent(id)}`
 export const REVIEWS_PATH = '/reviews'
 export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
+<<<<<<< Updated upstream
 export const REVIEW_PANEL_PATH = '/reviewpanel'
+=======
+export const LOGIN_PATH = '/login'
+export const REGISTER_PATH = `${LOGIN_PATH}#register`
+export const RESET_PATH = `${LOGIN_PATH}#reset`
+export const UPDATE_PASSWORD_PATH = `${LOGIN_PATH}#update`
+export const VERIFY_PATH = `${LOGIN_PATH}#verify`
+export const DASHBOARD_PATH = '/dashboard'
+export const dashboardPath = (id) => (id ? `${DASHBOARD_PATH}#${id}` : DASHBOARD_PATH)
+export const PROFILE_BASE_PATH = '/u'
+export const profilePath = (handle) => `${PROFILE_BASE_PATH}/${encodeURIComponent(handle)}`
+>>>>>>> Stashed changes
 
 export const staticPaths = () => [
   HOME_PATH,

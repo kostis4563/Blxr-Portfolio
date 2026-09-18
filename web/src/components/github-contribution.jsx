@@ -106,7 +106,7 @@ const longestStreak = (days) => {
 const dayUrl = (username, date) =>
   `https://github.com/${encodeURIComponent(username)}?tab=overview&from=${date}&to=${date}`;
 
-export default function GitHubContributions({ username, since, activeSince }) {
+export default function GitHubContributions({ username, since, activeSince, minimal = false }) {
   const { t, lang } = useI18n();
   const locale = LOCALE_TAGS[lang] || "en-US";
 
@@ -511,115 +511,126 @@ export default function GitHubContributions({ username, since, activeSince }) {
   const windows = [ROLLING, ...years];
 
   return (
-    <div ref={cardRef} className="relative w-full rounded-[14px] border border-line bg-surface-raised/40 p-4 sm:p-5 font-sans select-none">
-      <div className="flex items-baseline justify-between gap-4 mb-3">
-        <h3 className="flex items-baseline gap-1.5 text-[13px] font-medium text-ink-strong tracking-tight">
-          {t("gh.title")}
+    <div
+      ref={cardRef}
+      className={
+        minimal
+          ? "relative w-full font-sans select-none"
+          : "relative w-full rounded-[14px] border border-line bg-surface-raised/40 p-4 sm:p-5 font-sans select-none"
+      }
+    >
+      {!minimal && (
+        <div className="flex items-baseline justify-between gap-4 mb-3">
+          <h3 className="flex items-baseline gap-1.5 text-[13px] font-medium text-ink-strong tracking-tight">
+            {t("gh.title")}
 
-          {}
-          {statItems.length > 0 && (
-            <span
-              className={`group/stats relative inline-flex self-center ${coarsePointer ? "-my-1.5" : ""}`}
+            {}
+            {statItems.length > 0 && (
+              <span
+                className={`group/stats relative inline-flex self-center ${coarsePointer ? "-my-1.5" : ""}`}
+              >
+                <button
+                  type="button"
+                  aria-label={t("gh.stats")}
+
+                  aria-expanded={coarsePointer ? statsOpen : undefined}
+                  onClick={() => setStatsOpen((open) => !open)}
+                  className={`flex items-center justify-center rounded-[4px] outline-none focus-visible:ring-1 focus-visible:ring-ink-muted transition-colors duration-200 ${
+                    coarsePointer ? "w-7 h-7 -mx-1" : "w-[15px] h-[15px]"
+                  } ${
+                    statsOpen && coarsePointer
+                      ? "text-ink-strong bg-surface-hover"
+                      : "text-ink-faint hover:text-ink-strong focus-visible:text-ink-strong hover:bg-surface-hover"
+                  }`}
+                >
+                  {}
+                  <svg
+                    viewBox="0 0 12 12"
+                    className={coarsePointer ? "w-[13px] h-[13px]" : "w-[11px] h-[11px]"}
+                    aria-hidden="true"
+                  >
+                    <rect x="1" y="7" width="2.4" height="4" rx="0.7" fill="currentColor" />
+                    <rect x="4.8" y="4" width="2.4" height="7" rx="0.7" fill="currentColor" />
+                    <rect x="8.6" y="1" width="2.4" height="10" rx="0.7" fill="currentColor" />
+                  </svg>
+                </button>
+
+                {}
+                {!coarsePointer && (
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute top-full left-0 mt-2 z-30 min-w-[190px] px-2.5 py-2 rounded-md border border-line-strong bg-surface-inverted/95 backdrop-blur-sm shadow-lg shadow-[color:var(--shadow-cast)] text-[10.5px] font-normal tracking-tight text-ink-on-inverted opacity-0 -translate-y-1 group-hover/stats:opacity-100 group-hover/stats:translate-y-0 group-focus-within/stats:opacity-100 group-focus-within/stats:translate-y-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+                  >
+                    {statItems.map((item) => (
+                      <StatRow key={item.key} label={item.label} value={item.value} />
+                    ))}
+                  </span>
+                )}
+              </span>
+            )}
+          </h3>
+
+          <span className="group/since relative shrink-0">
+            <a
+              href={`https://github.com/${username}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11.5px] text-ink-subtle hover:text-ink-strong focus-visible:text-ink-strong outline-none transition-colors duration-200"
             >
-              <button
-                type="button"
-                aria-label={t("gh.stats")}
+              @{username}
+            </a>
 
-                aria-expanded={coarsePointer ? statsOpen : undefined}
-                onClick={() => setStatsOpen((open) => !open)}
-                className={`flex items-center justify-center rounded-[4px] outline-none focus-visible:ring-1 focus-visible:ring-ink-muted transition-colors duration-200 ${
-                  coarsePointer ? "w-7 h-7 -mx-1" : "w-[15px] h-[15px]"
-                } ${
-                  statsOpen && coarsePointer
-                    ? "text-ink-strong bg-surface-hover"
-                    : "text-ink-faint hover:text-ink-strong focus-visible:text-ink-strong hover:bg-surface-hover"
+            {since && (
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute top-full right-0 mt-2 z-30 px-2 py-1 rounded-md border border-line-strong bg-surface-inverted/95 backdrop-blur-sm shadow-lg shadow-[color:var(--shadow-cast)] text-[10.5px] font-medium tracking-tight whitespace-nowrap text-ink-on-inverted opacity-0 -translate-y-1 group-hover/since:opacity-100 group-hover/since:translate-y-0 group-focus-within/since:opacity-100 group-focus-within/since:translate-y-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+              >
+                {t("gh.accountCreated")}{" "}
+                <span className="text-ink-strong">{formatMonthYear(since, locale)}</span>
+                {activeSince && (
+                  <>
+                    <span className="text-ink-faint"> · </span>
+                    {t("gh.firstCommit")}{" "}
+                    <span className="text-ink-strong">{formatDay(activeSince, locale)}</span>
+                  </>
+                )}
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {}
+      {}
+      {!minimal && (
+        <div
+          role="group"
+          aria-label={t("gh.selectYear")}
+          className="flex items-center gap-1 mb-4 -mx-1 px-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {windows.map((w) => {
+            const selected = w === year;
+            return (
+              <button
+                key={w}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setYear(w)}
+                className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-medium tracking-tight border transition-colors duration-200 outline-none focus-visible:ring-1 focus-visible:ring-ink-muted ${
+                  selected
+                    ? "border-line-strong bg-surface-hover text-ink-strong"
+                    : "border-transparent text-ink-subtle hover:text-ink hover:bg-surface-hover/60"
                 }`}
               >
-                {}
-                <svg
-                  viewBox="0 0 12 12"
-                  className={coarsePointer ? "w-[13px] h-[13px]" : "w-[11px] h-[11px]"}
-                  aria-hidden="true"
-                >
-                  <rect x="1" y="7" width="2.4" height="4" rx="0.7" fill="currentColor" />
-                  <rect x="4.8" y="4" width="2.4" height="7" rx="0.7" fill="currentColor" />
-                  <rect x="8.6" y="1" width="2.4" height="10" rx="0.7" fill="currentColor" />
-                </svg>
+                {w === ROLLING ? t("gh.lastYear") : w}
               </button>
-
-              {}
-              {!coarsePointer && (
-                <span
-                  role="tooltip"
-                  className="pointer-events-none absolute top-full left-0 mt-2 z-30 min-w-[190px] px-2.5 py-2 rounded-md border border-line-strong bg-surface-inverted/95 backdrop-blur-sm shadow-lg shadow-[color:var(--shadow-cast)] text-[10.5px] font-normal tracking-tight text-ink-on-inverted opacity-0 -translate-y-1 group-hover/stats:opacity-100 group-hover/stats:translate-y-0 group-focus-within/stats:opacity-100 group-focus-within/stats:translate-y-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-                >
-                  {statItems.map((item) => (
-                    <StatRow key={item.key} label={item.label} value={item.value} />
-                  ))}
-                </span>
-              )}
-            </span>
-          )}
-        </h3>
-
-        <span className="group/since relative shrink-0">
-          <a
-            href={`https://github.com/${username}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[11.5px] text-ink-subtle hover:text-ink-strong focus-visible:text-ink-strong outline-none transition-colors duration-200"
-          >
-            @{username}
-          </a>
-
-          {since && (
-            <span
-              role="tooltip"
-              className="pointer-events-none absolute top-full right-0 mt-2 z-30 px-2 py-1 rounded-md border border-line-strong bg-surface-inverted/95 backdrop-blur-sm shadow-lg shadow-[color:var(--shadow-cast)] text-[10.5px] font-medium tracking-tight whitespace-nowrap text-ink-on-inverted opacity-0 -translate-y-1 group-hover/since:opacity-100 group-hover/since:translate-y-0 group-focus-within/since:opacity-100 group-focus-within/since:translate-y-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-            >
-              {t("gh.accountCreated")}{" "}
-              <span className="text-ink-strong">{formatMonthYear(since, locale)}</span>
-              {activeSince && (
-                <>
-                  <span className="text-ink-faint"> · </span>
-                  {t("gh.firstCommit")}{" "}
-                  <span className="text-ink-strong">{formatDay(activeSince, locale)}</span>
-                </>
-              )}
-            </span>
-          )}
-        </span>
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {}
-      {}
-      <div
-        role="group"
-        aria-label={t("gh.selectYear")}
-        className="flex items-center gap-1 mb-4 -mx-1 px-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {windows.map((w) => {
-          const selected = w === year;
-          return (
-            <button
-              key={w}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => setYear(w)}
-              className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-medium tracking-tight border transition-colors duration-200 outline-none focus-visible:ring-1 focus-visible:ring-ink-muted ${
-                selected
-                  ? "border-line-strong bg-surface-hover text-ink-strong"
-                  : "border-transparent text-ink-subtle hover:text-ink hover:bg-surface-hover/60"
-              }`}
-            >
-              {w === ROLLING ? t("gh.lastYear") : w}
-            </button>
-          );
-        })}
-      </div>
-
-      {}
-      {coarsePointer && statsOpen && statItems.length > 0 && (
+      {!minimal && coarsePointer && statsOpen && statItems.length > 0 && (
         <div className="mb-4 px-3 py-2 rounded-lg border border-line bg-surface-hover/40 text-[11px] text-ink-secondary">
           {statItems.map((item) => (
             <StatRow key={item.key} label={item.label} value={item.value} />
@@ -791,34 +802,35 @@ export default function GitHubContributions({ username, since, activeSince }) {
         </div>
       )}
 
-      {}
-      <div className="flex items-end justify-between gap-4 mt-4 pt-3.5 border-t border-dashed border-line text-[10.5px]">
-        {skeleton ? (
-          <span className="inline-block w-44 h-3 rounded bg-surface-raised animate-pulse align-middle" />
-        ) : (
-          <span className="min-w-0 text-ink-faint">
-            {}
-            {activeSince && (
-              <span className="block">
-                {t("gh.started")} {formatDay(activeSince, locale)}
-              </span>
-            )}
-            {}
-            {offline && <span className="block">{t("gh.cached")}</span>}
-          </span>
-        )}
+      {!minimal && (
+        <div className="flex items-end justify-between gap-4 mt-4 pt-3.5 border-t border-dashed border-line text-[10.5px]">
+          {skeleton ? (
+            <span className="inline-block w-44 h-3 rounded bg-surface-raised animate-pulse align-middle" />
+          ) : (
+            <span className="min-w-0 text-ink-faint">
+              {}
+              {activeSince && (
+                <span className="block">
+                  {t("gh.started")} {formatDay(activeSince, locale)}
+                </span>
+              )}
+              {}
+              {offline && <span className="block">{t("gh.cached")}</span>}
+            </span>
+          )}
 
-        <span className="flex items-center gap-1 text-ink-faint shrink-0">
-          <span className="hidden sm:inline mr-0.5">{t("gh.less")}</span>
-          {LEVEL_CLASSES.map((cls, i) => (
-            <span
-              key={i}
-              className={`w-[9px] h-[9px] rounded-[2px] ring-1 ring-inset ring-[var(--hairline)] ${cls}`}
-            />
-          ))}
-          <span className="hidden sm:inline ml-0.5">{t("gh.more")}</span>
-        </span>
-      </div>
+          <span className="flex items-center gap-1 text-ink-faint shrink-0">
+            <span className="hidden sm:inline mr-0.5">{t("gh.less")}</span>
+            {LEVEL_CLASSES.map((cls, i) => (
+              <span
+                key={i}
+                className={`w-[9px] h-[9px] rounded-[2px] ring-1 ring-inset ring-[var(--hairline)] ${cls}`}
+              />
+            ))}
+            <span className="hidden sm:inline ml-0.5">{t("gh.more")}</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

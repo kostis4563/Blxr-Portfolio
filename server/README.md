@@ -4,8 +4,15 @@ Backend behind `/api/` on blxr.net. Fans search out across public mirrors,
 caches results, gives the frontend one stable shape.
 
 Zero npm dependencies — `node:http`, `node:fs`, `node:path`, `node:crypto` only.
+<<<<<<< Updated upstream
 Two files: `server.mjs` (everything) and `moderation.mjs` (the review
 blocklist, see [Reviews](#reviews)).
+=======
+Four files: `server.mjs` (everything), `moderation.mjs` (the review
+blocklist, see [Reviews](#reviews)), `mail.mjs` (the one email the app
+sends itself, see [Account mail](#account-mail)) and `log.mjs` (the event
+log behind Dashboard → Logs, see [Log](#log)).
+>>>>>>> Stashed changes
 
 ## Running it
 
@@ -17,8 +24,9 @@ Listens on `127.0.0.1:8899`. No credentials needed — see `.env.example`.
 
 ## API
 
-All routes `GET` except `/api/hit` and `POST /api/vitals`; `/api/vitals`
-and `/api/reviews` answer both verbs, `/api/reviews/<id>` takes `PATCH`, and
+All routes `GET` except `/api/hit`, `POST /api/vitals` and
+`POST /api/logs/client`; `/api/vitals` and `/api/reviews` answer both verbs,
+`/api/reviews/<id>` takes `PATCH`, `/api/logs` takes `GET` and `DELETE`, and
 the owner routes under `/api/reviews/panel` and `/api/reviews/invites` take
 what the [panel](#review-panel) section lists. Anything else: `405`. Errors:
 `{ "error": "..." }` with `400` (bad review), `401` (no panel session),
@@ -143,16 +151,12 @@ and only within **15 minutes** of `at`; otherwise `403 not_yours` /
 `403 edit_window`. Answers `200 { "item": {…} }` with `editedAt` set.
 
 ### Review panel — `/api/reviews/panel…`
-Backs the owner page at `blxr.net/reviewpanel`. The password is
-`REVIEW_OWNER_KEY` from the env file on the box and nowhere else: it is never
-in the repo, and while it is unset the panel answers `503 panel_disabled`.
-Passwords shorter than 16 characters are rejected outright. Five wrong
-attempts from one address lock it for 15 minutes.
+Backs Dashboard → Review panel on the owner's own session. Every route
+accepts `Authorization: Bearer <supabase access token>` when the token's
+account has the email in `SITE_OWNER_EMAIL` (defaults to `STATS_OWNER_EMAIL`;
+checked against `SUPABASE_URL/auth/v1/user`, cached a minute per token).
+Unauthenticated calls answer `401`.
 
-- `POST /panel/login` `{ "password" }` → `204` and an `HttpOnly; SameSite=Strict`
-  session cookie scoped to `/api/reviews`, valid 12 hours (sessions live in
-  memory, so a server restart signs everyone out).
-- `POST /panel/logout`, `GET /panel/session` (`204` or `401`).
 - `GET /panel` → `{ reviews, invites, settings, stats }`. `reviews` is every
   record including hidden and pending ones, minus the hashes.
 - `PATCH /panel/reviews/<id>` with any of `name`, `role`, `rating`, `text`
@@ -163,10 +167,48 @@ attempts from one address lock it for 15 minutes.
   `$STATE_DIRECTORY/review-settings.json`. Blocked terms merge with
   `BLOCKED_TERMS` from `moderation.mjs`.
 
-Scripts can skip the login and send the password as `X-Review-Key` instead.
+That is the same bearer rule Dashboard → Logs uses.
+
+### `POST /api/logs/client`
+Browser error reports from `web/src/lib/report-errors.js`. Body
+`{ "message", "kind"?, "stack"?, "path"?, "detail"? }`; `kind` is `error`
+(default), `rejection`, `resource` or `console`. Always `204`, body ignored
+past 8 KB, at most 40 reports per address per 10 minutes (the address is
+hashed for the cap and not kept). Lands in the log as source `client`.
+
+### `GET /api/logs?levels=<l,l>&sources=<s,s>&status=<c>&since=<ms>&q=<text>&limit=<n>&before=<id>`
+Dashboard → Logs. Owner only — the `Authorization: Bearer` rule above;
+`401` otherwise, `503 logs_disabled` while `SITE_OWNER_EMAIL` is unset. `levels` is any of
+`error`, `warn`, `info` (comma-separated; `level` works too); `sources` any
+of `server`, `api`, `client`, `upstream`, `github`, `auth`, `reviews`,
+`mail`; `status` an HTTP code or a class (`4xx`, `5xx`); `since` a time in
+ms (events whose last occurrence is older are skipped); `q` a substring over
+message, path, code, stack and detail; `limit` 0–500 (default 200),
+`before` pages by id. Everything is optional and combines.
+
+```json
+{ "items": [ { "id": 41, "at": "2026-09-17T18:04:11.000Z", "last": "…", "count": 3,
+               "level": "warn", "source": "api", "message": "404 not_found",
+               "method": "GET", "path": "/api/nope", "status": 404, "code": "not_found",
+               "stack": "…", "detail": "…", "client": "Chrome on macOS" } ],
+  "matched": 120,
+  "facets": { "levels": { "error": 4 }, "sources": { "api": 9 }, "statuses": { "4xx": 6, "5xx": 2 } },
+  "summary": { "total": 380, "byLevel": {}, "bySource": {}, "recent": { "error": 2, "warn": 9, "info": 30, "api": 11, "client": 1 }, "lastError": "…", "oldest": "…" },
+  "system": { "process": {}, "features": {}, "state": {}, "caches": {}, "mirrors": [], "reviews": {}, "chart": {} },
+  "now": "…" }
+```
+
+`facets` counts what the `since` window holds by level, source and status
+class, before the other filters — the numbers on the filter chips.
+`system` is what the System page shows: node version, uptime and memory;
+which features the env enables (booleans only, never values); the state
+files with sizes; cache sizes; every search mirror and whether it is
+currently skipped.
+
+`DELETE /api/logs` (same auth) empties the log and answers `{ "removed": n }`.
 
 ### Invite links — `/api/reviews/invites`
-Same session as the panel (or `X-Review-Key`).
+Same owner auth as the panel (`Authorization: Bearer`).
 
 - `POST` `{ "name", "role"?, "text"?, "rating"?, "days"? }` → `201 { "invite" }`
   with a 32-hex `token`. The link is `https://blxr.net/reviews?invite=<token>`.
@@ -220,7 +262,7 @@ header can't be spoofed from outside.
 
 ### Removing a review
 
-The panel at `/reviewpanel` hides, deletes, pins, edits and replies. Removing
+The panel in the dashboard hides, deletes, pins, edits and replies. Removing
 by source still works and survives anything the panel does:
 
 1. Find the id. Every card on `/reviews` shows it as a faint `#xxxxxxxx`
@@ -267,15 +309,40 @@ Chart-rank history: `$STATE_DIRECTORY/chart-history.json`
 `movement` is `null`.
 
 View counts in `hits.json`, Core Web Vitals histograms in `vitals.json`,
-reviews in `reviews.json`, invite links in `review-invites.json`. All flushed every 30s and on `SIGTERM`/`SIGINT`;
+reviews in `reviews.json`, invite links in `review-invites.json`, the event
+log in `logs.json`. All flushed every 30s and on `SIGTERM`/`SIGINT`;
 hits and vitals pruned to the last 90 days per write, reviews kept
 indefinitely. Corrupt/missing file starts from zero.
 
-All saved from one signal handler (the first listener to call
-`process.exit()` ends the process, so a second handler for the same signal
-never runs). Anything added later that persists to disk goes in that same
-handler, next to `saveHits()`, `saveVitals()`, `saveReviews()` and
-`saveInvites()`.
+All saved from one `saveAll()` in the signal handler (the first listener to
+call `process.exit()` ends the process, so a second handler for the same
+signal never runs). Anything added later that persists to disk goes in
+`saveAll()`, next to `saveHits()`, `saveVitals()`, `saveReviews()`,
+`saveInvites()` and `saveLog()`.
+
+## Log
+
+`log.mjs` keeps the last 3,000 events in memory and in `logs.json`. What
+goes in:
+
+- every answer with status ≥ 400, from the `json()` helper — `warn` for 4xx,
+  `error` for 5xx, with method, path (never the query string), status and
+  the `error` code (source `api`);
+- exceptions: the request handler's catch, `uncaughtException` (logged,
+  state saved, then the process still exits so systemd restarts it) and
+  `unhandledRejection` (logged, process kept) — with the stack (`server`);
+- search mirrors being put on cooldown, the top-chart warm-up failing
+  (`upstream`); GitHub GraphQL failures, rejected token, rate limits
+  (`github`); owner authorization failures, account deletions
+  (`auth`); reviews posted, invites auto-posted, moderation removals
+  (`reviews`); Resend refusing a mail (`mail`); browser reports (`client`);
+  start and stop (`server`).
+
+The same event again within a minute (same level, source, message, path,
+status and code) bumps `count` and `last` on the existing entry instead of
+adding one, so a scanner hammering a 404 is one line. Nothing identifying
+is stored: no addresses, tokens, query strings or bodies; browser reports
+carry a `describeClient()` summary like "Chrome on macOS" at most.
 
 ## Deploy
 

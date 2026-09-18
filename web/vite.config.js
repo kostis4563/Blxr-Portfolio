@@ -121,6 +121,7 @@ export default defineConfig({
           groups: [
 
             { name: 'gsap', test: /[\\/]node_modules[\\/]gsap[\\/]/ },
+            { name: 'three', test: /[\\/]node_modules[\\/]three[\\/]/ },
             { name: 'vendor', test: /node_modules/ },
 
             {

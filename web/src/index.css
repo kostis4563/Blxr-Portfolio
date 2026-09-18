@@ -137,6 +137,30 @@
   }
 }
 
+<<<<<<< Updated upstream
+=======
+@keyframes settings-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.settings-stagger > * {
+  animation: settings-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.settings-stagger > :nth-child(2) { animation-delay: 60ms; }
+.settings-stagger > :nth-child(3) { animation-delay: 120ms; }
+.settings-stagger > :nth-child(4) { animation-delay: 180ms; }
+.settings-stagger > :nth-child(n + 5) { animation-delay: 240ms; }
+
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+>>>>>>> Stashed changes
 :root[data-theme='light'] {
   --color-bg: #fafaf9;
   --color-surface: #ffffff;
@@ -395,6 +419,77 @@ body {
 .project-cta:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px -14px var(--shadow-cast);
+}
+
+.quote-rule {
+  position: absolute;
+  background: var(--color-line);
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.quote-rule-x {
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.quote-rule-x.bottom-0 {
+  transform-origin: right;
+}
+.quote-rule-y {
+  top: -24px;
+  bottom: -24px;
+  width: 1px;
+  transform: scaleY(0);
+  transform-origin: top;
+}
+.quote-rule-y.right-0 {
+  transform-origin: bottom;
+}
+[data-in] .quote-rule {
+  transform: none;
+}
+.quote-tick {
+  opacity: 0;
+  transition: opacity 500ms ease 700ms;
+}
+[data-in] .quote-tick {
+  opacity: 1;
+}
+.quote-photo {
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 900ms cubic-bezier(0.22, 1, 0.36, 1) 250ms;
+}
+[data-in] .quote-photo {
+  clip-path: inset(0);
+}
+.quote-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 100%;
+  background: var(--color-ink-strong);
+  transform-origin: left;
+  transform: scaleX(0);
+  animation: quote-progress var(--dwell, 7000ms) linear both;
+}
+[data-paused] .quote-progress {
+  animation-play-state: paused;
+}
+@keyframes quote-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quote-rule,
+  .quote-tick,
+  .quote-photo {
+    transition: none;
+    transform: none;
+    opacity: 1;
+    clip-path: none;
+  }
 }
 
 .reveal-pending {
@@ -662,50 +757,71 @@ body {
 }
 
 .hero-title {
-  background-image: linear-gradient(
-    100deg,
-    var(--color-ink-strong) 0%,
-    var(--color-ink-strong) 70%,
-    var(--color-brand-indigo) 88%,
-    var(--color-brand-purple) 100%
-  );
-  background-size: 200% 100%;
-  background-position: 100% 0;
+  color: var(--color-ink-strong);
+}
+
+.hl-word {
+  --hl-from: #60a5fa;
+  --hl-to: #2563eb;
+  --hl-bg-via: rgba(23, 37, 84, 0.3);
+  --hl-bg-to: rgba(23, 37, 84, 0.6);
+  --hl-caret: #3b82f6;
+
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+  padding: 0 0.1em 0 0.06em;
+  margin: 0 0.12em 0 -0.06em;
+  background-image: linear-gradient(to right, var(--hl-from), var(--hl-to));
   -webkit-background-clip: text;
           background-clip: text;
   color: transparent;
-
   -webkit-text-fill-color: transparent;
-  animation: hero-sheen 9s ease-in-out infinite;
 }
 
-@keyframes hero-sheen {
-  0%, 100% { background-position: 100% 0; }
-  50% { background-position: 82% 0; }
+:root[data-theme='light'] .hl-word {
+  --hl-from: #60a5fa;
+  --hl-to: #1e40af;
+  --hl-bg-via: rgba(191, 219, 254, 0.3);
+  --hl-bg-to: #bfdbfe;
 }
 
-[dir='rtl'] .hero-title {
-  background-image: linear-gradient(
-    260deg,
-    var(--color-ink-strong) 0%,
-    var(--color-ink-strong) 70%,
-    var(--color-brand-indigo) 88%,
-    var(--color-brand-purple) 100%
-  );
-  background-position: 0 0;
-  animation-name: hero-sheen-rtl;
+.hl-word::before {
+  content: '';
+  position: absolute;
+  inset: 0.04em 0 0.02em;
+  z-index: -1;
+  background: linear-gradient(to right, transparent, var(--hl-bg-via), var(--hl-bg-to));
 }
 
-@keyframes hero-sheen-rtl {
-  0%, 100% { background-position: 0 0; }
-  50% { background-position: 18% 0; }
+.hl-word::after {
+  content: '';
+  position: absolute;
+  top: 0.06em;
+  bottom: 0.04em;
+  inset-inline-end: -0.16em;
+  width: 0.09em;
+  background: var(--hl-caret);
+  animation: hl-blink 0.8s ease-in-out infinite alternate;
+}
+
+[dir='rtl'] .hl-word::before {
+  background: linear-gradient(to left, transparent, var(--hl-bg-via), var(--hl-bg-to));
+}
+
+@keyframes hl-blink {
+  from { opacity: 1; }
+  to { opacity: 0.5; }
+}
+
+:root[data-motion='reduced'] .hl-word::after {
+  animation: none;
 }
 
 @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
-  .hero-title {
-    color: var(--color-ink-strong);
+  .hl-word {
+    color: var(--hl-to);
     -webkit-text-fill-color: currentColor;
-    animation: none;
   }
 }
 
@@ -910,3 +1026,17 @@ body {
   text-decoration-thickness: 1.5px;
   text-underline-offset: 5px;
 }
+<<<<<<< Updated upstream
+=======
+
+:root[data-view='dashboard'] .music-widget {
+  left: auto;
+  right: 1rem;
+}
+
+:root[data-view='dashboard'] .music-widget [role='dialog'] {
+  left: auto;
+  right: 0;
+  transform-origin: bottom right;
+}
+>>>>>>> Stashed changes

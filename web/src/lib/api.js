@@ -42,6 +42,24 @@ export function recordHit(path) {
   }
 }
 
+<<<<<<< Updated upstream
+=======
+export function deleteAccountRequest(accessToken) {
+  return fetch('/api/account/delete', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${accessToken}` },
+  }).catch(() => new Response(JSON.stringify({ error: 'offline' }), { status: 0 }))
+}
+
+export function notifyPasswordChanged(accessToken) {
+  return fetch('/api/mail/password-changed', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${accessToken}` },
+    keepalive: true,
+  }).catch(() => null)
+}
+
+>>>>>>> Stashed changes
 export class ReviewError extends Error {
   constructor(code, { fields = [], retryAfter = 0, status = 0 } = {}) {
     super(code)
@@ -78,10 +96,10 @@ export async function submitReview(review, { signal } = {}) {
   return data?.item ?? null
 }
 
-async function reviewRequest(path, { method = 'GET', body, key, signal } = {}) {
+async function reviewRequest(path, { method = 'GET', body, bearer, signal } = {}) {
   const headers = {}
   if (body !== undefined) headers['content-type'] = 'application/json'
-  if (key) headers['x-review-key'] = key
+  if (bearer) headers.authorization = `Bearer ${bearer}`
   const res = await fetch(`${REVIEWS}${path}`, {
     method,
     headers,
@@ -112,47 +130,30 @@ export async function fetchInvite(token, { signal } = {}) {
   return data?.invite ?? null
 }
 
-export async function createInvite(invite, { signal } = {}) {
-  const data = await reviewRequest('/invites', { method: 'POST', body: invite, signal })
+export async function createInvite(invite, { signal, bearer } = {}) {
+  const data = await reviewRequest('/invites', { method: 'POST', body: invite, signal, bearer })
   return data?.invite ?? null
 }
 
-export function deleteInvite(token, { signal } = {}) {
-  return reviewRequest(`/invites/${encodeURIComponent(token)}`, { method: 'DELETE', signal })
+export function deleteInvite(token, { signal, bearer } = {}) {
+  return reviewRequest(`/invites/${encodeURIComponent(token)}`, { method: 'DELETE', signal, bearer })
 }
 
-export function panelLogin(password, { signal } = {}) {
-  return reviewRequest('/panel/login', { method: 'POST', body: { password }, signal })
+export function fetchPanel({ signal, bearer } = {}) {
+  return reviewRequest('/panel', { signal, bearer })
 }
 
-export function panelLogout({ signal } = {}) {
-  return reviewRequest('/panel/logout', { method: 'POST', signal })
-}
-
-export async function panelSession({ signal } = {}) {
-  try {
-    await reviewRequest('/panel/session', { signal })
-    return true
-  } catch {
-    return false
-  }
-}
-
-export function fetchPanel({ signal } = {}) {
-  return reviewRequest('/panel', { signal })
-}
-
-export async function panelUpdateReview(id, patch, { signal } = {}) {
-  const data = await reviewRequest(`/panel/reviews/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch, signal })
+export async function panelUpdateReview(id, patch, { signal, bearer } = {}) {
+  const data = await reviewRequest(`/panel/reviews/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch, signal, bearer })
   return data?.item ?? null
 }
 
-export function panelDeleteReview(id, { signal } = {}) {
-  return reviewRequest(`/panel/reviews/${encodeURIComponent(id)}`, { method: 'DELETE', signal })
+export function panelDeleteReview(id, { signal, bearer } = {}) {
+  return reviewRequest(`/panel/reviews/${encodeURIComponent(id)}`, { method: 'DELETE', signal, bearer })
 }
 
-export async function panelSaveSettings(settings, { signal } = {}) {
-  const data = await reviewRequest('/panel/settings', { method: 'PUT', body: settings, signal })
+export async function panelSaveSettings(settings, { signal, bearer } = {}) {
+  const data = await reviewRequest('/panel/settings', { method: 'PUT', body: settings, signal, bearer })
   return data?.settings ?? null
 }
 
