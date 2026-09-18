@@ -19,7 +19,7 @@ export async function render(path = '/') {
 
 export { staticPaths, localizedPaths }
 
-export { metaFor } from './lib/seo'
+export { metaFor, lastmodFor } from './lib/seo'
 
 export const NOT_FOUND_PATH = '/404'
 

@@ -17,7 +17,7 @@ const HTML_RE = /<html[^>]*>/
 const EMAIL_OFF = '<!--email_off-->'
 const EMAIL_ON = '<!--email_on-->'
 
-const { render, localizedPaths, metaFor, NOT_FOUND_PATH, LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH } = await import(
+const { render, localizedPaths, metaFor, lastmodFor, NOT_FOUND_PATH, LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH } = await import(
   pathToFileURL(ssrEntry).href
 )
 
@@ -98,8 +98,10 @@ await writeFile(
 console.log(`prerender: ${hints.length} early-hint links -> early-hints.conf`)
 
 const SITE_URL = 'https://blxr.net'
-const lastmod = new Date().toISOString().slice(0, 10)
+const buildDate = new Date().toISOString().slice(0, 10)
 const indexable = localizedPaths().filter((path) => !metaFor(path).noindex)
+
+const lastmodForPath = (path) => lastmodFor(path) || buildDate
 
 const priorityFor = (path) => {
   const { lang, route } = metaFor(path)
@@ -111,7 +113,7 @@ const sitemap = [
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
   ...indexable.map(
     (path) =>
-      `  <url><loc>${SITE_URL}${path}</loc><lastmod>${lastmod}</lastmod>` +
+      `  <url><loc>${SITE_URL}${path}</loc><lastmod>${lastmodForPath(path)}</lastmod>` +
       `<priority>${priorityFor(path)}</priority></url>`,
   ),
   '</urlset>',

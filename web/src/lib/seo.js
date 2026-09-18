@@ -48,7 +48,8 @@ export function metaFor(pathname) {
   if (route.name === 'home') {
     return {
       ...base,
-      title: 'Blxr Portfolio',
+      title:
+        lang === DEFAULT_LANG ? 'Blxr — Student Developer Portfolio, Projects & CV' : 'Blxr Portfolio',
 
       description:
         lang === DEFAULT_LANG
@@ -136,39 +137,19 @@ export function metaFor(pathname) {
     }
   }
 
-  if (route.name === 'login') {
-    return {
-      ...base,
-      title: `Sign in — ${SITE_NAME}`,
-      description: 'Sign in to blxr.net or create an account.',
-      noindex: true,
-    }
-  }
-
-  if (route.name === 'dashboard') {
-    return {
-      ...base,
-      title: `Dashboard — ${SITE_NAME}`,
-      description: 'Owner dashboard for blxr.net.',
-      noindex: true,
-    }
-  }
-
-  if (route.name === 'profile') {
-    return {
-      ...base,
-      title: `Profile — ${SITE_NAME}`,
-      description: 'A member profile on blxr.net.',
-      noindex: true,
-    }
-  }
-
   return {
     ...base,
     title: `${pick('Not found', 'nf.title')} — ${SITE_NAME}`,
     description: pick('That page does not exist on blxr.net.', 'nf.body'),
     noindex: true,
   }
+}
+
+export function lastmodFor(pathname) {
+  const route = parseRoute(pathname)
+  if (route.name === 'now') return NOW_UPDATED
+  if (route.name === 'cv') return CV_UPDATED
+  return null
 }
 
 const APP_CATEGORY = {
@@ -204,6 +185,8 @@ const projectNode = (p) => {
     operatingSystem: osFor(p),
     description: p.shortDescription,
     url,
+    image: p.image ? `${SITE_URL}${p.image}` : undefined,
+    datePublished: p.date,
     codeRepository: p.github ?? undefined,
     ...(license && license !== 'Proprietary' ? { license } : {}),
     author: { '@id': `${SITE_URL}/#blxr` },
@@ -219,7 +202,20 @@ function jsonLdFor(path) {
     name: 'Blxr',
     alternateName: 'kostis4563',
     url: SITE_URL,
+    image: `${SITE_URL}/pfp.webp`,
     description: 'Student in Athens building backend and web tooling.',
+    jobTitle: 'Full stack developer',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Athens',
+      addressCountry: 'GR',
+    },
+    knowsLanguage: ['en', 'el'],
+    worksFor: {
+      '@type': 'Organization',
+      name: 'Amitista Studio',
+      url: 'https://amitista.com',
+    },
     knowsAbout: ['Go', 'JavaScript', 'Python', 'Security tooling'],
     sameAs: ['https://github.com/kostis4563'],
   }
@@ -238,6 +234,16 @@ function jsonLdFor(path) {
           inLanguage: LANG_CODES,
           author: { '@id': `${SITE_URL}/#blxr` },
         },
+        {
+          '@type': 'ProfilePage',
+          '@id': `${SITE_URL}/#profile`,
+          url: SITE_URL,
+          name: 'Blxr',
+          inLanguage: LANG_CODES,
+          dateModified: NOW_UPDATED,
+          mainEntity: { '@id': `${SITE_URL}/#blxr` },
+          author: { '@id': `${SITE_URL}/#blxr` },
+        },
       ],
     }
   }
@@ -249,6 +255,7 @@ function jsonLdFor(path) {
       name: 'Projects',
       description: PROJECTS_DESCRIPTION,
       url: `${SITE_URL}/projects`,
+      author: { '@id': `${SITE_URL}/#blxr` },
       hasPart: projectsList.map(projectNode),
     }
   }
@@ -267,6 +274,8 @@ function jsonLdFor(path) {
       operatingSystem: 'Windows',
       description: item.shortDescription,
       url: `${SITE_URL}${libraryPath(item.id)}`,
+      image: item.image ? `${SITE_URL}${item.image}` : undefined,
+      datePublished: item.date,
       codeRepository: item.github ?? undefined,
       isPartOf: { '@id': `${SITE_URL}/library#library` },
       author: { '@id': `${SITE_URL}/#blxr` },
@@ -280,6 +289,7 @@ function jsonLdFor(path) {
       name: 'Reviews',
       description: REVIEWS_DESCRIPTION,
       url: `${SITE_URL}/reviews`,
+      author: { '@id': `${SITE_URL}/#blxr` },
       about: { '@id': `${SITE_URL}/#blxr` },
     }
   }
@@ -317,6 +327,7 @@ function jsonLdFor(path) {
       name: 'FiveM Library',
       description: LIBRARY_DESCRIPTION,
       url: `${SITE_URL}/library`,
+      author: { '@id': `${SITE_URL}/#blxr` },
       hasPart: realEntries.map((entry) => ({
         '@type': 'SoftwareApplication',
         name: entry.title,
@@ -324,11 +335,58 @@ function jsonLdFor(path) {
         operatingSystem: 'Windows',
         description: entry.shortDescription,
         url: `${SITE_URL}${libraryPath(entry.id)}`,
+        image: entry.image ? `${SITE_URL}${entry.image}` : undefined,
+        datePublished: entry.date,
       })),
     }
   }
 
   return null
+}
+
+function crumbsFor(route, lang) {
+  if (route.name === 'home') return null
+  const urlOf = (r) => `${SITE_URL}${localizePath(r, lang)}`
+  const t = (key, literal) => (lang === DEFAULT_LANG ? literal : translate(lang, key, null, literal))
+
+  const items = [{ name: t('cmd.home', 'Home'), item: urlOf('/') }]
+
+  if (route.name === 'projects') {
+    items.push({ name: t('proj.archiveTitle', 'Projects'), item: urlOf('/projects') })
+  } else if (route.name === 'reviews') {
+    items.push({ name: t('rev.title', 'Reviews'), item: urlOf('/reviews') })
+  } else if (route.name === 'now') {
+    items.push({ name: t('now.title', 'Now'), item: urlOf('/now') })
+  } else if (route.name === 'cv') {
+    items.push({ name: t('cv.title', 'CV'), item: urlOf('/cv') })
+  } else if (route.name === 'library') {
+    const libraryName = t('lib.title', 'FiveM Library')
+    items.push({ name: libraryName, item: urlOf('/library') })
+    if (route.itemId) {
+      const item = findLibraryItem(route.itemId)
+      if (item) items.push({ name: item.title, item: urlOf(`/library/${item.id}`) })
+    }
+  } else {
+    return null
+  }
+
+  return {
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map(({ name, item }, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name,
+      item,
+    })),
+  }
+}
+
+function withCrumbs(ld, crumbs) {
+  if (!ld || !crumbs) return ld ?? null
+  if (Array.isArray(ld['@graph'])) {
+    return { ...ld, '@graph': [...ld['@graph'], crumbs] }
+  }
+  return { '@context': 'https://schema.org', '@graph': [ld, crumbs] }
 }
 
 const escapeAttr = (s) =>
@@ -337,11 +395,15 @@ const escapeAttr = (s) =>
 export function headTags(pathname) {
   const { path, route, lang, title, description, noindex } = metaFor(pathname)
   const canonical = `${SITE_URL}${path === '/' ? '/' : path}`
-  const jsonLd = jsonLdFor(route)
+  const ogRoute = parseRoute(route)
+  const ogItem = ogRoute.name === 'library' && ogRoute.itemId ? findLibraryItem(ogRoute.itemId) : null
+  const ogImage = ogItem?.image ? `${SITE_URL}${ogItem.image}` : OG_IMAGE
+  const jsonLd = withCrumbs(jsonLdFor(route), crumbsFor(ogRoute, lang))
 
   const tags = [
     `<title>${escapeAttr(title)}</title>`,
     `<meta name="description" content="${escapeAttr(description)}" />`,
+    `<meta name="author" content="${SITE_NAME}" />`,
     noindex ? '<meta name="robots" content="noindex" />' : `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
 
     ...(noindex
@@ -354,22 +416,34 @@ export function headTags(pathname) {
           `<link rel="alternate" hreflang="x-default" href="${escapeAttr(`${SITE_URL}${route === '/' ? '/' : route}`)}" />`,
         ]),
 
-    `<meta property="og:type" content="${route === '/' ? 'website' : 'article'}" />`,
+    `<meta property="og:type" content="${ogRoute.name === 'library' && ogRoute.itemId ? 'article' : 'website'}" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
 
     `<meta property="og:locale" content="${(LOCALE_TAGS[lang] || lang).replace('-', '_')}" />`,
+    ...(noindex
+      ? []
+      : Object.keys(LOCALE_TAGS)
+          .filter((code) => code !== lang)
+          .map(
+            (code) =>
+              `<meta property="og:locale:alternate" content="${LOCALE_TAGS[code].replace('-', '_')}" />`,
+          )),
     `<meta property="og:title" content="${escapeAttr(title)}" />`,
     `<meta property="og:description" content="${escapeAttr(description)}" />`,
     `<meta property="og:url" content="${escapeAttr(canonical)}" />`,
-    `<meta property="og:image" content="${OG_IMAGE}" />`,
-    '<meta property="og:image:width" content="1200" />',
-    '<meta property="og:image:height" content="630" />',
-    `<meta property="og:image:alt" content="The blxr wordmark" />`,
+    `<meta property="og:image" content="${escapeAttr(ogImage)}" />`,
+    ...(ogItem
+      ? [`<meta property="article:published_time" content="${ogItem.date || '2026'}" />`]
+      : [
+          '<meta property="og:image:width" content="1200" />',
+          '<meta property="og:image:height" content="630" />',
+        ]),
+    `<meta property="og:image:alt" content="${ogItem ? escapeAttr(`${ogItem.title} preview`) : 'The blxr wordmark'}" />`,
 
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${escapeAttr(title)}" />`,
     `<meta name="twitter:description" content="${escapeAttr(description)}" />`,
-    `<meta name="twitter:image" content="${OG_IMAGE}" />`,
+    `<meta name="twitter:image" content="${escapeAttr(ogImage)}" />`,
 
     jsonLd
       ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`
