@@ -73,6 +73,61 @@ begin
   end if;
 end $$;
 
+create or replace function public.http_url_ok(candidate text, max_len integer default 400)
+returns boolean
+language sql immutable as $$
+  select candidate is not null
+     and char_length(candidate) <= max_len
+     and candidate ~ '^https?://[^[:space:]<>"''`]+$';
+$$;
+
+create or replace function public.profile_links_ok(links jsonb)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(links) = 'array' then
+     jsonb_array_length(links) <= 6
+     and not exists (
+       select 1 from jsonb_array_elements(links) l
+       where jsonb_typeof(l) <> 'object'
+          or not public.http_url_ok(l ->> 'url', 200)
+          or (l ? 'label' and (jsonb_typeof(l -> 'label') <> 'string' or char_length(l ->> 'label') > 24))
+          or (case when jsonb_typeof(l) = 'object' then exists (select 1 from jsonb_object_keys(l) k where k not in ('url', 'label')) else true end)
+     )
+  else false end;
+$$;
+
+create or replace function public.profile_showcase_ok(showcase jsonb)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(showcase) = 'array' then
+     jsonb_array_length(showcase) <= 4
+     and not exists (
+       select 1 from jsonb_array_elements(showcase) s
+       where jsonb_typeof(s) <> 'object'
+          or jsonb_typeof(s -> 'title') <> 'string'
+          or char_length(s ->> 'title') not between 1 and 40
+          or (s ? 'description' and (jsonb_typeof(s -> 'description') <> 'string' or char_length(s ->> 'description') > 120))
+          or (s ? 'url' and jsonb_typeof(s -> 'url') <> 'string')
+          or (coalesce(s ->> 'url', '') <> '' and not public.http_url_ok(s ->> 'url', 200))
+          or (case when jsonb_typeof(s) = 'object' then exists (select 1 from jsonb_object_keys(s) k where k not in ('title', 'description', 'url')) else true end)
+     )
+  else false end;
+$$;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_website_url') then
+    alter table public.profiles
+      add constraint profiles_website_url check (website = '' or public.http_url_ok(website, 200)) not valid,
+      add constraint profiles_links_ok     check (public.profile_links_ok(links)) not valid,
+      add constraint profiles_showcase_ok  check (public.profile_showcase_ok(showcase)) not valid,
+      add constraint profiles_skills_shape check (
+        not exists (select 1 from unnest(skills) s where s is null or char_length(s) not between 1 and 24)
+      ) not valid,
+      add constraint profiles_sections_shape check (sections <@ '{about,now,showcase,links,skills}'::text[]) not valid;
+  end if;
+end $$;
+
 create index if not exists profiles_visibility_idx on public.profiles (visibility) where visibility = 'public';
 
 -- Keep updated_at honest.

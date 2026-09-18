@@ -5,7 +5,7 @@ import crypto from 'node:crypto'
 import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
 import { mailConfigured, sendMail, passwordChangedMail, describeClient } from './mail.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
-import { rateLimit, rateLimitSize, originAllowed, ALLOWED_ORIGINS, bearerOf, jwtLooksUsable, isAal2, hasVerifiedFactor, fingerprint, API_HEADERS } from './guard.mjs'
+import { rateLimit, rateLimitSize, originAllowed, ALLOWED_ORIGINS, bearerOf, jwtLooksUsable, isAal2, hasVerifiedFactor, fingerprint, safeEqual, isHttps, isJsonBody, API_HEADERS } from './guard.mjs'
 
 const PORT = Number(process.env.PORT) || 8899
 const HOST = '127.0.0.1'
@@ -419,6 +419,11 @@ function summariseVitals(days) {
 
 function readJsonBody(req, limit = 512) {
   return new Promise((resolve) => {
+    if (!isJsonBody(req) || Number(req.headers['content-length']) > limit) {
+      req.resume()
+      resolve(null)
+      return
+    }
     let size = 0
     const chunks = []
     req.on('data', (chunk) => {
@@ -456,6 +461,7 @@ const REVIEW_TOKEN_RE = /^[a-f0-9]{32}$/
 const REVIEW_GLOBAL_WINDOW_MS = 60 * 60 * 1000
 const REVIEW_GLOBAL_MAX = 30
 const REVIEW_SALT = process.env.REVIEW_SALT || 'blxr-reviews'
+if (!process.env.REVIEW_SALT) console.warn('REVIEW_SALT is unset — submitter hashes use the built-in default; set a long random value in the env file')
 const REVIEW_ID_RE = /^[a-z0-9]{8}$/
 const REVIEW_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
@@ -753,6 +759,17 @@ const GH_CACHE_MAX = 50
 const ghCache = new Map()
 
 const GH_USER_RE = /^[A-Za-z0-9](?:-?[A-Za-z0-9]){0,38}$/
+const GH_USERS = new Set(String(process.env.GITHUB_USERS || '').split(',').map((u) => u.trim().toLowerCase()).filter((u) => GH_USER_RE.test(u)))
+async function ghUserAllowed(user) {
+  const login = user.toLowerCase()
+  if (GH_USERS.has(login)) return true
+  if (!GH_TOKEN) return GH_USERS.size === 0
+  try {
+    return (await githubOwner()).login.toLowerCase() === login
+  } catch {
+    return false
+  }
+}
 
 function ghRange(year, now) {
   if (year === 'last') {
@@ -1279,7 +1296,7 @@ async function isStatsOwner(req, owner) {
   } catch {
     return false
   }
-  if (!user || !mfaSatisfied(user)) return false
+  if (!user || !mfaSatisfied(user) || !emailConfirmed(user)) return false
   if (user.email && owner.emails.has(user.email.toLowerCase())) return true
   for (const id of user.identities || []) {
     const login = id?.provider === 'github' ? id.identity_data?.user_name || id.identity_data?.preferred_username : null
@@ -1383,6 +1400,7 @@ async function supabaseUser(req) {
 }
 
 const mfaSatisfied = (user) => !user.mfaEnrolled || user.aal2
+const emailConfirmed = (user) => typeof user.email_confirmed_at === 'string' || typeof user.confirmed_at === 'string'
 
 const SITE_OWNER_EMAIL = (process.env.SITE_OWNER_EMAIL || STATS_OWNER_EMAIL || '').trim().toLowerCase()
 
@@ -1395,6 +1413,10 @@ async function isSiteOwner(req) {
     return false
   }
   if (!user?.email || user.email.toLowerCase() !== SITE_OWNER_EMAIL) return false
+  if (!emailConfirmed(user)) {
+    log.warn('auth', 'owner e-mail matched on an unconfirmed account — refused')
+    return false
+  }
   if (!mfaSatisfied(user)) {
     log.warn('auth', 'owner session without its second factor was refused')
     return 'needs_mfa'
@@ -1482,6 +1504,8 @@ function bucketsFor(req, pathname) {
   const authed = Boolean(req.headers.authorization)
   if (
     pathname === '/api/logs' ||
+    pathname === '/api/hits' ||
+    (pathname === '/api/vitals' && req.method === 'GET') ||
     pathname.startsWith('/api/reviews/panel') ||
     pathname.startsWith('/api/mail/') ||
     pathname.startsWith('/api/account/') ||
@@ -1648,7 +1672,7 @@ const server = http.createServer(async (req, res) => {
       log.info('reviews', `${record.pending ? 'review awaiting approval' : invite ? 'invited review posted' : 'review posted'} #${record.id} — ${record.rating}★ by ${record.name}`)
       return json(res, 201, { item: publicReview(record) }, {
         ...NO_STORE,
-        'set-cookie': `${REVIEW_COOKIE}=${issued}; Path=/api/reviews; Max-Age=${Math.ceil(REVIEW_WINDOW_MS / 1000)}; HttpOnly; SameSite=Strict`,
+        'set-cookie': `${REVIEW_COOKIE}=${issued}; Path=/api/reviews; Max-Age=${Math.ceil(REVIEW_WINDOW_MS / 1000)}; HttpOnly; SameSite=Strict${isHttps(req) ? '; Secure' : ''}`,
       })
     }
 
@@ -1664,8 +1688,8 @@ const server = http.createServer(async (req, res) => {
       const cookie = cookieToken(req)
       const device = deviceToken(body)
       const owns =
-        (cookie && record.cookieHash && record.cookieHash === hashToken('cookie', cookie)) ||
-        (device && record.deviceHash && record.deviceHash === hashToken('device', device))
+        (cookie && safeEqual(record.cookieHash, hashToken('cookie', cookie))) ||
+        (device && safeEqual(record.deviceHash, hashToken('device', device)))
       if (!owns) return json(res, 403, { error: 'not_yours' }, NO_STORE)
       if (Date.now() - Date.parse(record.at) > REVIEW_EDIT_WINDOW_MS) return json(res, 403, { error: 'edit_window' }, NO_STORE)
 
@@ -1850,11 +1874,17 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' })
 
+    if (url.pathname === '/api/vitals' || url.pathname === '/api/hits') {
+      if (!SITE_OWNER_EMAIL) return json(res, 404, { error: 'not_found' }, NO_STORE)
+      const owner = await isSiteOwner(req)
+      if (owner !== true) return json(res, 401, ownerDenied(owner), NO_STORE)
+    }
+
     if (url.pathname === '/api/vitals') {
       const window = Math.min(VITALS_RETENTION_DAYS, Math.max(1, Number(url.searchParams.get('days')) || 7))
       const from = new Date(Date.now() - (window - 1) * 86_400_000).toISOString().slice(0, 10)
       const days = Object.keys(vitals).filter((day) => day >= from).sort()
-      return json(res, 200, { window, days: days.length, metrics: summariseVitals(days) })
+      return json(res, 200, { window, days: days.length, metrics: summariseVitals(days) }, NO_STORE)
     }
 
     if (url.pathname === '/api/hits') {
@@ -1863,7 +1893,7 @@ const server = http.createServer(async (req, res) => {
         (sum, day) => sum + Object.values(hits[day]).reduce((a, b) => a + b, 0),
         0,
       )
-      return json(res, 200, { total, today: hits[today()] || {}, days: days.length })
+      return json(res, 200, { total, today: hits[today()] || {}, days: days.length }, NO_STORE)
     }
 
     if (url.pathname === '/api/music/health') return json(res, 200, { ok: true, source: 'youtube' })
@@ -1923,6 +1953,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/github/contributions') {
       const user = (url.searchParams.get('user') || '').trim()
       if (!GH_USER_RE.test(user)) return json(res, 400, { error: 'bad_user' })
+      if (!(await ghUserAllowed(user))) return json(res, 404, { error: 'unknown_user' }, NO_STORE)
 
       const rawYear = (url.searchParams.get('y') || 'last').trim()
       const nowYear = new Date().getUTCFullYear()

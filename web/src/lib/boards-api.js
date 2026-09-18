@@ -36,6 +36,11 @@ function lift(error, what) {
     if (text.includes('comments_shape')) return new BoardError(`A card takes at most ${LIMITS.comments} comments.`)
     if (text.includes('links_shape')) return new BoardError(`A card takes at most ${LIMITS.links} links.`)
     if (text.includes('files_shape')) return new BoardError(`A card takes at most ${LIMITS.files} files.`)
+    if (text.includes('links_ok')) return new BoardError('Links have to start with http:// or https://.')
+    if (text.includes('files_ok') || text.includes('art_ok')) return new BoardError('That attachment does not belong to this board.')
+    if (text.includes('checklist_ok')) return new BoardError(`A step has to fit in ${LIMITS.step} characters.`)
+    if (text.includes('comments_ok')) return new BoardError(`A comment has to fit in ${LIMITS.comment} characters.`)
+    if (text.includes('lists_ok')) return new BoardError(`A column name has to fit in ${LIMITS.listName} characters.`)
     if (text.includes('title_len')) return new BoardError(`A card title has to fit in ${LIMITS.title} characters.`)
     if (text.includes('name_len')) return new BoardError(`A board name has to fit in ${LIMITS.name} characters.`)
     if (text.includes('note_len')) return new BoardError(`A board description has to fit in ${LIMITS.note} characters.`)
@@ -568,7 +573,7 @@ export async function attachFile(card, prepared) {
 
   const entry = {
     id,
-    name: prepared.name,
+    name: String(prepared.name || 'attachment').slice(0, 200),
     type: prepared.type,
     bytes: prepared.bytes,
     path,

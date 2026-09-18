@@ -50,6 +50,31 @@ create table if not exists public.messages (
   constraint messages_has_content    check (deleted_at is not null or char_length(btrim(body)) > 0 or jsonb_array_length(files) > 0)
 );
 
+create or replace function public.message_files_ok(files jsonb, thread uuid)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(files) = 'array' then
+     jsonb_array_length(files) <= 6
+     and not exists (
+       select 1 from jsonb_array_elements(files) f
+       where jsonb_typeof(f) <> 'object'
+          or jsonb_typeof(f -> 'id') <> 'string' or char_length(f ->> 'id') not between 1 and 32
+          or jsonb_typeof(f -> 'name') <> 'string' or char_length(f ->> 'name') not between 1 and 200
+          or jsonb_typeof(f -> 'type') <> 'string' or (f ->> 'type') not in ('image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf')
+          or jsonb_typeof(f -> 'path') <> 'string' or (f ->> 'path') !~ ('^' || thread::text || '/[A-Za-z0-9_.-]{1,120}$')
+          or (jsonb_typeof(f -> 'thumb') = 'string' and (f ->> 'thumb') !~ ('^' || thread::text || '/[A-Za-z0-9_.-]{1,120}$'))
+     )
+  else false end;
+$$;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'messages_files_ok') then
+    alter table public.messages
+      add constraint messages_files_ok check (public.message_files_ok(files, thread_id)) not valid;
+  end if;
+end $$;
+
 create index if not exists messages_thread_idx on public.messages (thread_id, created_at);
 create index if not exists messages_thread_updated_idx on public.messages (thread_id, updated_at);
 
@@ -134,6 +159,12 @@ begin
   end if;
   for emoji in select jsonb_object_keys(new.reactions) loop
     if char_length(emoji) > 8 or jsonb_typeof(new.reactions -> emoji) <> 'array' or jsonb_array_length(new.reactions -> emoji) > 2 then
+      raise exception 'malformed reaction';
+    end if;
+    if exists (
+      select 1 from jsonb_array_elements(new.reactions -> emoji) who
+      where jsonb_typeof(who) <> 'string' or char_length(who #>> '{}') > 64
+    ) then
       raise exception 'malformed reaction';
     end if;
   end loop;

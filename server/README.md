@@ -46,12 +46,18 @@ Everything in `guard.mjs`, applied before any route runs:
   `Sec-Fetch-Site: cross-site`. Requests with neither header (curl) pass —
   every write is also behind a bearer token, a `SameSite=Strict` cookie or a
   rate limit. Unset both variables and the check is off (local runs).
+- **JSON only.** A request that carries a body must say
+  `Content-Type: application/json` and declare a `Content-Length` within the
+  route's cap, else the body is dropped and the route answers `400`. HTML
+  forms can't send that type, so a cross-site form post never reaches a
+  handler even if the origin list were wrong.
 - **Rate limits.** Token buckets per address, refilled continuously, all
   per minute: `all` 300 for anything; `auth` 30 for routes that verify a
   bearer token (`/api/logs`, the panel, invites, `/api/mail/*`,
   `/api/account/*`, `/api/github/stats` with a token); `upstream` 90 for
   `/api/music/*` and `/api/github/*`; `write` 12 for review posts and edits;
-  `beacon` 60 for hits, vitals and browser error reports. Over the limit
+  `beacon` 60 for hits, vitals and browser error reports; reads of
+  `/api/hits` and `/api/vitals` count as `auth`. Over the limit
   answers `429 rate_limited` with `Retry-After`. nginx has a coarser
   10 req/s ceiling in front (`deploy/nginx/blxr.conf`). Addresses are
   hashed with a salt that lives only in the process.
@@ -63,7 +69,22 @@ Everything in `guard.mjs`, applied before any route runs:
   code) for the owner routes, `POST /api/mail/password-changed`,
   `POST /api/account/delete` and the owner view of `/api/github/stats`;
   otherwise `401 needs_mfa`. The same rule is enforced inside Postgres by
-  `mfa_satisfied()` in `deploy/supabase/*.sql`.
+  `mfa_satisfied()` in `deploy/supabase/*.sql`. The owner routes also
+  require the account's e-mail to be confirmed, so flipping "Confirm email"
+  off in Supabase could never let a fresh sign-up with the owner's address
+  through.
+- **Secrets compared in constant time.** The review cookie and device
+  tokens are matched with `crypto.timingSafeEqual`; the cookie carries
+  `HttpOnly; SameSite=Strict; Secure` (the last one whenever nginx says the
+  hop was https).
+- **Data shape lives in Postgres too.** The browser writes profiles,
+  boards and messages straight to Supabase, so the `check` constraints in
+  `deploy/supabase/*.sql` are what stop a client that skips the app: links
+  and websites must be `http(s)://`, attachment paths must sit inside the
+  row's own folder in the bucket, and every JSON column has a per-element
+  shape (`profile_links_ok`, `card_files_ok`, `message_files_ok`, …). The
+  UI additionally drops anything that is not `http(s)` before it reaches
+  an `href`, and the CSP forbids `javascript:` navigation as a third layer.
 - **Headers and sockets.** Every answer carries `X-Content-Type-Options`,
   `X-Robots-Tag: noindex`, `Cross-Origin-Resource-Policy: same-origin` and
   `Referrer-Policy: no-referrer`. Headers must arrive within 10 s and a whole
@@ -118,6 +139,9 @@ Body `{ "path": "/projects" }`. Records one page view, answers `204` with no
 body (sent via `sendBeacon`).
 
 ### `GET /api/hits`
+Owner only (bearer token for `SITE_OWNER_EMAIL`, `401` otherwise; `404`
+when no owner is configured).
+
 ```json
 { "total": 1234, "today": { "/": 12, "/projects": 3 }, "days": 47 }
 ```
@@ -134,7 +158,7 @@ dropped. Answers `204`. Sent by `web/src/lib/vitals.js` once per visit, on
 page hide.
 
 ### `GET /api/vitals?days=<n>`
-Field data, default last 7 days (max 90).
+Field data, default last 7 days (max 90). Owner only, like `/api/hits`.
 
 ```json
 { "window": 7, "days": 7, "metrics": {
@@ -273,9 +297,13 @@ otherwise, flagged `auto: true` in the API. Invited submissions skip approval
 and the rate limit.
 
 ### `GET /api/github/contributions?user=<login>&y=last|YYYY`
-`user` must be a valid GitHub login (`400 bad_user` otherwise); `y` is
-`last` (rolling 12 months, default) or a four-digit year from 2008
-(`400 bad_year`).
+`user` must be a valid GitHub login (`400 bad_user` otherwise) **and one
+the proxy is for**: the login that owns `GITHUB_TOKEN`, plus anything in
+`GITHUB_USERS` (comma-separated). Any other login is `404 unknown_user`, so
+the token's rate limit can't be spent on strangers' graphs. With neither a
+token nor `GITHUB_USERS` the route stays open (it only reaches the keyless
+mirror then). `y` is `last` (rolling 12 months, default) or a four-digit
+year from 2008 (`400 bad_year`).
 
 ```json
 { "contributions": [ { "date": "2026-07-15", "count": 69 } ],

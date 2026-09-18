@@ -87,6 +87,125 @@ create table if not exists public.board_cards (
   constraint cards_activity_shape check (jsonb_typeof(activity) = 'array' and jsonb_array_length(activity) <= 40)
 );
 
+create or replace function public.http_url_ok(candidate text, max_len integer default 400)
+returns boolean
+language sql immutable as $$
+  select candidate is not null
+     and char_length(candidate) <= max_len
+     and candidate ~ '^https?://[^[:space:]<>"''`]+$';
+$$;
+
+create or replace function public.card_links_ok(links jsonb)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(links) = 'array' then
+     jsonb_array_length(links) <= 12
+     and not exists (
+       select 1 from jsonb_array_elements(links) l
+       where jsonb_typeof(l) <> 'object'
+          or not public.http_url_ok(l ->> 'url', 400)
+          or jsonb_typeof(l -> 'id') <> 'string' or char_length(l ->> 'id') not between 1 and 32
+          or (l ? 'label' and (jsonb_typeof(l -> 'label') <> 'string' or char_length(l ->> 'label') > 60))
+     )
+  else false end;
+$$;
+
+create or replace function public.board_path_ok(candidate text, board uuid)
+returns boolean
+language sql immutable as $$
+  select candidate is not null
+     and char_length(candidate) <= 300
+     and candidate ~ ('^[0-9a-f-]{36}/' || board::text || '/[A-Za-z0-9/_.-]+$');
+$$;
+
+create or replace function public.card_files_ok(files jsonb, board uuid)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(files) = 'array' then
+     jsonb_array_length(files) <= 10
+     and not exists (
+       select 1 from jsonb_array_elements(files) f
+       where jsonb_typeof(f) <> 'object'
+          or jsonb_typeof(f -> 'id') <> 'string' or char_length(f ->> 'id') not between 1 and 32
+          or jsonb_typeof(f -> 'name') <> 'string' or char_length(f ->> 'name') not between 1 and 200
+          or jsonb_typeof(f -> 'type') <> 'string' or (f ->> 'type') not in ('image/webp', 'image/jpeg', 'image/png', 'image/gif', 'application/pdf')
+          or jsonb_typeof(f -> 'path') <> 'string' or not public.board_path_ok(f ->> 'path', board)
+          or (jsonb_typeof(f -> 'thumb') = 'string' and not public.board_path_ok(f ->> 'thumb', board))
+     )
+  else false end;
+$$;
+
+create or replace function public.card_checklist_ok(checklist jsonb)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(checklist) = 'array' then
+     jsonb_array_length(checklist) <= 40
+     and not exists (
+       select 1 from jsonb_array_elements(checklist) c
+       where jsonb_typeof(c) <> 'object'
+          or jsonb_typeof(c -> 'id') <> 'string' or char_length(c ->> 'id') not between 1 and 32
+          or jsonb_typeof(c -> 'text') <> 'string' or char_length(c ->> 'text') not between 1 and 200
+          or (c ? 'done' and jsonb_typeof(c -> 'done') <> 'boolean')
+     )
+  else false end;
+$$;
+
+create or replace function public.card_comments_ok(comments jsonb)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(comments) = 'array' then
+     jsonb_array_length(comments) <= 120
+     and not exists (
+       select 1 from jsonb_array_elements(comments) c
+       where jsonb_typeof(c) <> 'object'
+          or jsonb_typeof(c -> 'id') <> 'string' or char_length(c ->> 'id') not between 1 and 32
+          or jsonb_typeof(c -> 'body') <> 'string' or char_length(c ->> 'body') not between 1 and 1000
+     )
+  else false end;
+$$;
+
+create or replace function public.board_lists_ok(lists jsonb)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(lists) = 'array' then
+     jsonb_array_length(lists) <= 12
+     and not exists (
+       select 1 from jsonb_array_elements(lists) l
+       where jsonb_typeof(l) <> 'object'
+          or jsonb_typeof(l -> 'id') <> 'string' or char_length(l ->> 'id') not between 1 and 40
+          or (l ? 'name' and (jsonb_typeof(l -> 'name') <> 'string' or char_length(l ->> 'name') > 32))
+     )
+  else false end;
+$$;
+
+create or replace function public.board_art_ok(art jsonb, board uuid)
+returns boolean
+language sql immutable as $$
+  select case when jsonb_typeof(art) = 'object' then not exists (
+       select 1 from jsonb_each(art) e
+       where jsonb_typeof(e.value) <> 'object'
+          or jsonb_typeof(e.value -> 'path') <> 'string'
+          or not public.board_path_ok(e.value ->> 'path', board)
+     ) else false end;
+$$;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'cards_links_ok') then
+    alter table public.board_cards
+      add constraint cards_links_ok     check (public.card_links_ok(links)) not valid,
+      add constraint cards_files_ok     check (public.card_files_ok(files, board_id)) not valid,
+      add constraint cards_checklist_ok check (public.card_checklist_ok(checklist)) not valid,
+      add constraint cards_comments_ok  check (public.card_comments_ok(comments)) not valid,
+      add constraint cards_labels_shape check (
+        not exists (select 1 from unnest(labels) l where l is null or char_length(l) not between 1 and 40)
+      ) not valid;
+    alter table public.boards
+      add constraint boards_lists_ok check (public.board_lists_ok(lists)) not valid,
+      add constraint boards_art_ok   check (public.board_art_ok(art, id)) not valid;
+  end if;
+end $$;
+
 create index if not exists board_cards_board_idx on public.board_cards (board_id, list_id, position);
 create index if not exists board_cards_owner_idx on public.board_cards (owner);
 create index if not exists board_cards_bin_idx on public.board_cards (deleted_at) where deleted_at is not null;

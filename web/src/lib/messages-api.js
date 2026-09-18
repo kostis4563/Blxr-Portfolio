@@ -34,6 +34,7 @@ function lift(error, what) {
   if (error.code === '23514') {
     if (text.includes('body_len')) return new MessageError(`A message has to fit in ${LIMITS.body} characters.`)
     if (text.includes('files_shape')) return new MessageError(`A message takes at most ${LIMITS.files} files.`)
+    if (text.includes('files_ok')) return new MessageError('That attachment does not belong to this conversation.')
     if (text.includes('has_content')) return new MessageError('There is nothing in that message to send.')
     return new MessageError('That is outside what a message accepts.')
   }
@@ -173,7 +174,7 @@ export async function uploadFile(threadId, prepared) {
     thumb = `${base}-thumb.webp`
     await upload(thumb, prepared.thumb, 'image/webp')
   }
-  return { id, name: prepared.name, type: prepared.type, bytes: prepared.bytes, path, thumb }
+  return { id, name: String(prepared.name || 'attachment').slice(0, 200), type: prepared.type, bytes: prepared.bytes, path, thumb }
 }
 
 export async function discardFile(entry) {

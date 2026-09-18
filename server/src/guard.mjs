@@ -128,6 +128,22 @@ export const isAal2 = (token) => jwtPayload(token)?.aal === 'aal2'
 export const hasVerifiedFactor = (user) =>
   Array.isArray(user?.factors) && user.factors.some((f) => f && f.status === 'verified')
 
+export function safeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || !a || !b) return false
+  const x = Buffer.from(a)
+  const y = Buffer.from(b)
+  if (x.length !== y.length) return false
+  return crypto.timingSafeEqual(x, y)
+}
+
+export const isHttps = (req) => req.headers['x-forwarded-proto'] === 'https' || Boolean(req.socket?.encrypted)
+
+export function isJsonBody(req) {
+  const type = req.headers['content-type']
+  if (typeof type !== 'string' || !type) return req.headers['content-length'] === undefined || req.headers['content-length'] === '0'
+  return /^application\/json\s*(;|$)/i.test(type)
+}
+
 export const API_HEADERS = {
   'x-content-type-options': 'nosniff',
   'x-robots-tag': 'noindex, nofollow',

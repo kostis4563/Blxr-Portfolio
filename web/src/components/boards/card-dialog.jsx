@@ -282,8 +282,10 @@ function Comments({ card, canWrite, actions }) {
   )
 }
 
+const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\/[^\s<>"'`]+$/i.test(value)
+
 function Links({ card, canWrite, actions }) {
-  const links = card.links || []
+  const links = (card.links || []).filter((entry) => entry && isHttpUrl(entry.url))
   const [label, setLabel] = useState('')
   const [url, setUrl] = useState('')
 
@@ -291,6 +293,7 @@ function Links({ card, canWrite, actions }) {
     const cleanUrl = url.trim()
     if (!cleanUrl) return
     const full = cleanUrl.includes('://') ? cleanUrl : `https://${cleanUrl}`
+    if (!isHttpUrl(full)) return
     actions.card.link.add(card, label.trim() || full.replace(/^https?:\/\//, '').slice(0, LIMITS.linkLabel), full)
     setLabel('')
     setUrl('')

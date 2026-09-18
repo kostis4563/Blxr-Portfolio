@@ -136,6 +136,8 @@ export function suggestHandle(source) {
   return base.length >= 3 && !RESERVED_HANDLES.has(base) ? base : ''
 }
 
+export const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\/[^\s<>"'`]+$/i.test(value)
+
 // '' for empty, null when it is not a usable http(s) URL, else the clean URL.
 export function normalizeUrl(raw) {
   const value = String(raw || '').trim()
@@ -168,15 +170,17 @@ export function fromRow(row) {
     bio: row.bio || '',
     pronouns: row.pronouns || '',
     location: row.location || '',
-    website: row.website || '',
+    website: isHttpUrl(row.website) ? row.website : '',
     avatar: row.avatar_url || null,
     accent: row.accent || 'ink',
     openToWork: Boolean(row.open_to_work),
-    links: Array.isArray(row.links) ? row.links.filter((l) => l && typeof l.url === 'string' && /^https?:\/\//i.test(l.url)) : [],
+    links: Array.isArray(row.links) ? row.links.filter((l) => l && isHttpUrl(l.url)) : [],
     skills: Array.isArray(row.skills) ? row.skills : [],
     status: row.status || '',
     now: row.now_text || '',
-    showcase: Array.isArray(row.showcase) ? row.showcase.filter((s) => s && typeof s.title === 'string') : [],
+    showcase: Array.isArray(row.showcase)
+      ? row.showcase.filter((s) => s && typeof s.title === 'string').map((s) => ({ ...s, url: isHttpUrl(s.url) ? s.url : '' }))
+      : [],
     cover: row.cover_url || null,
     layout: LAYOUTS.some((l) => l.id === row.layout) ? row.layout : 'card',
     pattern: PATTERNS.some((p) => p.id === row.pattern) ? row.pattern : 'dots',
