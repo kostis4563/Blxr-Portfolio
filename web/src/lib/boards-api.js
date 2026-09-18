@@ -90,9 +90,11 @@ export async function fetchRev(id) {
   const row = unwrap(await client().from('boards').select('rev').eq('id', id).maybeSingle())
   return row ? row.rev : null
 }
+const AGENDA_MAX_DAYS = 365
 
 export async function fetchAgenda(days = 14) {
-  const rows = unwrap(await client().rpc('boards_agenda', { horizon: `${days} days` }), 'The agenda could not be loaded')
+  const span = Math.min(AGENDA_MAX_DAYS, Math.max(1, Math.trunc(Number(days)) || 14))
+  const rows = unwrap(await client().rpc('boards_agenda', { horizon: `${span} days` }), 'The agenda could not be loaded')
   return rows || []
 }
 

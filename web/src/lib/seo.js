@@ -32,7 +32,7 @@ const REVIEWS_DESCRIPTION =
   'What clients and collaborators say about working with Blxr. Worked with me? Leave a review.'
 
 const NOW_DESCRIPTION =
-  'What Blxr is doing right now: learning Node, PostgreSQL, React and Next.js, building open source projects, and finishing the IB with a Computer Science focus.'
+  "What Blxr is doing right now: building websites and other products for clients, learning Node, PostgreSQL and React, and finishing the IB with a Computer Science focus."
 
 const CV_DESCRIPTION =
   'CV of Blxr, a full stack developer in Athens: experience, selected projects, education, skills and certifications. Printable.'
@@ -154,7 +154,6 @@ export function metaFor(pathname) {
     }
   }
 
-  // The shell is generic; the page titles itself once the profile loads.
   if (route.name === 'profile') {
     return {
       ...base,

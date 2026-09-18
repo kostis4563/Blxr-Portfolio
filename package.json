@@ -17,7 +17,7 @@
     "build:protected": "npm run build:protected --workspace web",
     "preview": "npm run preview --workspace web",
     "start:server": "npm start --workspace server",
-    "lint": "oxlint",
+    "lint": "oxlint && node scripts/check-query-strings.mjs",
     "deploy": "bash deploy/deploy.sh",
     "deploy:web": "bash deploy/deploy.sh web",
     "deploy:server": "bash deploy/deploy.sh server"
