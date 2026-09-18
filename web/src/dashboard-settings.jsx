@@ -17,6 +17,7 @@ import { useI18n } from './lib/i18n'
 import { clearRecent } from './lib/recent'
 import { SOCIAL_ICON_PATHS } from './lib/profile'
 import { normalizeUrl } from './lib/profiles'
+import { Sensitive } from './components/sensitive'
 
 const PASSWORD_MIN = 8
 const NAME_MAX = 32
@@ -275,7 +276,7 @@ function ProfileTab({ user }) {
 
       <Section title="Account details" description="Read-only information about this account.">
         <Row label="User ID" description="Quote this when you contact support.">
-          <code className="truncate font-mono text-[12px] text-ink-muted">{user.id}</code>
+          <Sensitive as="code" className="truncate font-mono text-[12px] text-ink-muted">{user.id}</Sensitive>
           <CopyButton text={user.id} />
         </Row>
         <Row label="Signed in with">
@@ -398,7 +399,7 @@ function ConnectedAccounts({ user }) {
             <Icon name="mail" className="h-4 w-4 text-ink-muted" /> Email & password
           </span>
         }
-        description={emailIdentity ? user.email : 'Set a password under Security to sign in with your email too.'}
+        description={emailIdentity ? <Sensitive>{user.email}</Sensitive> : 'Set a password under Security to sign in with your email too.'}
       >
         {emailIdentity ? <Badge tone="ok">Connected</Badge> : (
           <a {...link(dashboardPath('settings/security'))} className={BTN_SECONDARY}>Set password</a>
@@ -416,7 +417,7 @@ function ConnectedAccounts({ user }) {
                 {PROVIDER_NAMES[provider]}
               </span>
             }
-            description={identity ? detail || 'Connected' : 'Not connected'}
+            description={identity ? (detail ? <Sensitive>{detail}</Sensitive> : 'Connected') : 'Not connected'}
           >
             {identity ? (
               <>

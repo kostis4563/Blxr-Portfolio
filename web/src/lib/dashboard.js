@@ -1,4 +1,6 @@
-export const OWNER_EMAIL = 'kostisnomikos@gmail.com'
+import { CONTACT_EMAIL } from './profile'
+
+export const OWNER_EMAIL = CONTACT_EMAIL
 export const isSiteOwner = (user) => Boolean(user?.email) && user.email.toLowerCase() === OWNER_EMAIL
 
 export const ICONS = {

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Icon } from './icon'
 import { link, navigate, HOME_PATH, LOGIN_PATH } from '../lib/router'
 import { authSignOut } from '../lib/auth'
+import { Sensitive } from './sensitive'
 const PROVIDER_LABEL = { email: 'Email', google: 'Google', discord: 'Discord', apple: 'Apple', github: 'GitHub' }
 
 const MENU = 'absolute z-50 w-[240px] rounded-xl border border-line bg-surface shadow-xl animate-menu-in'
@@ -60,7 +61,9 @@ export function Avatar({ user, size }) {
   )
 }
 
-export default function AccountMenu({ user, theme, onToggleTheme, placement = 'down', trigger }) {
+const SITE_ITEMS = [{ path: HOME_PATH, icon: 'arrowUpRight', label: 'View site' }]
+
+export default function AccountMenu({ user, theme, onToggleTheme, placement = 'down', items = SITE_ITEMS, trigger }) {
   const [open, setOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const close = useCallback(() => setOpen(false), [])
@@ -90,7 +93,7 @@ export default function AccountMenu({ user, theme, onToggleTheme, placement = 'd
                   {PROVIDER_LABEL[user.provider] || user.provider}
                 </span>
               </p>
-              <p className="truncate text-[12px] text-ink-muted">{user.email}</p>
+              <Sensitive as="p" className="truncate text-[12px] text-ink-muted">{user.email}</Sensitive>
             </div>
           </div>
           <div className="border-t border-line p-1.5">
@@ -101,9 +104,15 @@ export default function AccountMenu({ user, theme, onToggleTheme, placement = 'd
             </button>
           </div>
           <div className="border-t border-line p-1.5">
-            <a role="menuitem" {...link(HOME_PATH, closeThen(close, HOME_PATH))} className={MENU_ITEM}>
-              <Icon name="arrowUpRight" className="h-4 w-4 text-ink-muted" /> View site
-            </a>
+            {items.map((item) => (
+              <a key={item.path} role="menuitem" {...link(item.path, closeThen(close, item.path))} className={MENU_ITEM}>
+                <Icon name={item.icon} className="h-4 w-4 text-ink-muted" />
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.badge && (
+                  <span className="rounded-full bg-ink-strong px-1.5 font-mono text-[10px] font-semibold leading-[15px] text-ink-inverse">{item.badge}</span>
+                )}
+              </a>
+            ))}
             <button role="menuitem" type="button" onClick={signOut} disabled={signingOut} className={`${MENU_ITEM} disabled:opacity-50`}>
               <Icon name="logout" className="h-4 w-4 text-ink-muted" /> {signingOut ? 'Signing out…' : 'Sign out'}
             </button>

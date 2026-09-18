@@ -4,9 +4,11 @@ const AUTOPLAY_MS = 6000
 import GitHubContributions from './components/github-contribution'
 import AnimatedFooter from './components/animated-footer'
 import Testimonials from './components/testimonials'
+import ContactSection from './components/contact-section'
 import ProjectsPage from './projects-page'
 import LibraryPage from './library-page'
 import ReviewsPage from './reviews-page'
+import NowPage from './now-page'
 import LoginPage from './login-page'
 import DashboardPage from './dashboard-page'
 import PublicProfilePage from './public-profile-page'
@@ -15,16 +17,17 @@ import ThemeToggle from './components/theme-toggle'
 import LanguagePicker from './components/language-picker'
 import CommandPaletteHost from './components/command-palette-host'
 import { CommandButton } from './components/command-button'
+import NavAccount from './components/nav-account'
 import { useTheme } from './lib/use-theme'
 import { useI18n } from './lib/i18n'
 import { projectsList, SHORT_KEY, METRIC_KEY, METRIC_VALUE_KEY } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
-import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, REVIEWS_PATH } from './lib/router'
+import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH } from './lib/router'
 import { applyHead } from './lib/seo'
+import { jumpToSection } from './lib/palette'
 import { recordHit } from './lib/api'
 import { rememberVisit } from './lib/recent'
 import {
-  CONTACT_EMAIL,
   GITHUB_USERNAME,
   GITHUB_JOINED,
   GITHUB_ACTIVE_SINCE,
@@ -39,7 +42,6 @@ function App() {
   const path = useRoutePath()
   const route = parseRoute(path)
   const currentView = route.name
-  const [emailCopied, setEmailCopied] = useState(false)
 
   const [skillBadgesArmed, setSkillBadgesArmed] = useState(false)
   const armSkillBadges = () => {
@@ -142,15 +144,6 @@ function App() {
   }, [currentView])
 
   const palette = <CommandPaletteHost theme={theme} onToggleTheme={toggleTheme} />
-
-  const handleCopyEmail = async () => {
-    try {
-      await navigator.clipboard.writeText(CONTACT_EMAIL)
-      setEmailCopied(true)
-      setTimeout(() => setEmailCopied(false), 1800)
-    } catch {
-    }
-  }
 
   const FEATURED_ORDER = ['amitista', 'async', '7x0-site']
   const featuredProjects = FEATURED_ORDER
@@ -420,6 +413,15 @@ function App() {
     )
   }
 
+  if (currentView === 'now') {
+    return (
+      <>
+        <NowPage theme={theme} onToggleTheme={toggleTheme} />
+        {palette}
+      </>
+    )
+  }
+
   if (currentView === 'login') {
     return <LoginPage theme={theme} onToggleTheme={toggleTheme} />
   }
@@ -499,6 +501,10 @@ function App() {
             <span aria-hidden="true" className={`${navDivider} hidden sm:block`} />
 
             <LanguagePicker className={navPillClass} />
+
+            <span aria-hidden="true" className={`${navDivider} hidden sm:block`} />
+
+            <NavAccount theme={theme} onToggleTheme={toggleTheme} pillClass={navPillClass} itemClass={navItemClass} />
           </nav>
         </div>
       </header>
@@ -559,9 +565,13 @@ function App() {
               </a>
             ))}
             <a
-              href={`mailto:${CONTACT_EMAIL}`}
+              href="#contact"
+              onClick={(event) => {
+                event.preventDefault()
+                jumpToSection('contact')
+              }}
               className="hover:text-ink-strong transition-colors duration-200"
-              aria-label="Email"
+              aria-label={t('home.contact')}
             >
               <svg className="w-[15px] h-[15px]" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
@@ -1046,92 +1056,7 @@ function App() {
 
         <Testimonials />
 
-        <section id="contact" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-vergilia">
-            {t('home.contact')}
-          </h2>
-
-          <div className="flex flex-col items-start gap-5 w-full text-[14px]">
-            <p className="text-ink-muted text-[13.5px] leading-relaxed font-light max-w-xl">
-              {t('contact.intro')}
-            </p>
-
-            <div className="flex items-center gap-2 w-full rounded-[14px] bg-surface-raised/60 border border-line p-1.5 pl-4 transition-colors duration-200 hover:border-line-strong">
-              <svg aria-hidden="true" className="w-4 h-4 shrink-0 text-ink-subtle" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-              </svg>
-
-              <a
-                href={`mailto:${CONTACT_EMAIL}`}
-                className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink-secondary hover:text-ink-strong transition-colors duration-200"
-              >
-                {CONTACT_EMAIL}
-              </a>
-
-              <button
-                type="button"
-                onClick={handleCopyEmail}
-                aria-label={emailCopied ? t('contact.copied') : t('contact.copy')}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] border border-line bg-bg text-[11.5px] font-medium text-ink-muted hover:text-ink-strong hover:border-line-strong active:scale-[0.97] transition-all duration-200 cursor-pointer"
-              >
-                {emailCopied ? (
-                  <>
-                    <svg aria-hidden="true" className="w-3 h-3 text-emerald-400/80" fill="none" stroke="currentColor" strokeWidth="2.6" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l5 5 10-10.5" />
-                    </svg>
-                    {t('contact.copied')}
-                  </>
-                ) : (
-                  <>
-                    <svg aria-hidden="true" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 8.25V5.5A1.5 1.5 0 019.75 4h9A1.5 1.5 0 0120.25 5.5v9a1.5 1.5 0 01-1.5 1.5H16m-10.25-7.75h9a1.5 1.5 0 011.5 1.5v9a1.5 1.5 0 01-1.5 1.5h-9a1.5 1.5 0 01-1.5-1.5v-9a1.5 1.5 0 011.5-1.5z" />
-                    </svg>
-                    {t('contact.copy')}
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2.5">
-              {SOCIALS.map((social) => {
-                const Wrapper = social.url ? 'a' : 'span'
-                const linkProps = social.url
-                  ? { href: social.url, target: '_blank', rel: 'noreferrer' }
-                  : {}
-
-                return (
-                  <Wrapper
-                    key={social.name}
-                    {...linkProps}
-                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[12px] bg-surface-raised/60 border border-line text-[12.5px] text-ink-secondary transition-all duration-200 ${
-                      social.url
-                        ? 'hover:text-ink-strong hover:border-line-strong hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer group'
-                        : ''
-                    }`}
-                  >
-                    <svg aria-hidden="true" className="w-3.5 h-3.5 shrink-0 text-ink-subtle group-hover:text-ink-strong transition-colors duration-200" fill="currentColor" viewBox="0 0 24 24">
-                      <path d={SOCIAL_ICON_PATHS[social.name]} />
-                    </svg>
-                    <span className="font-medium">{social.name}</span>
-                    {social.handle && <span className="text-ink-subtle">{social.handle}</span>}
-                  </Wrapper>
-                )
-              })}
-            </div>
-
-            <a
-              {...link(REVIEWS_PATH)}
-              className="group inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
-            >
-              <span>{t('rev.cta')}</span>
-              <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">→</span>
-            </a>
-
-            <p className="text-[11.5px] text-ink-faint">
-              {t('contact.based')}
-            </p>
-          </div>
-        </section>
+        <ContactSection />
 
        <div className="relative h-[360px] sm:h-[400px] w-full overflow-hidden mt-8">
       <AnimatedFooter

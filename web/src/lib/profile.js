@@ -1,4 +1,5 @@
-export const CONTACT_EMAIL = 'kostisnomikos@gmail.com'
+const EMAIL_PARTS = ['kostisnomikos', 'gmail.com']
+export const CONTACT_EMAIL = EMAIL_PARTS.join('@')
 
 export const GITHUB_USERNAME = 'kostis4563'
 export const GITHUB_URL = `https://github.com/${GITHUB_USERNAME}`

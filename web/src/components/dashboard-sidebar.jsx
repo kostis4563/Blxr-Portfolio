@@ -7,6 +7,7 @@ import { badgeOf } from '../lib/messages'
 import { imageProps } from '../lib/images'
 import { Icon } from './icon'
 import AccountMenu, { Avatar } from './account-menu'
+import { Sensitive } from './sensitive'
 
 export { Icon }
 
@@ -252,7 +253,7 @@ export default function DashboardSidebar({
         <Avatar user={user} size={26} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium leading-tight text-ink-strong">{user.name}</span>
-          <span className="block truncate text-[11.5px] leading-tight text-ink-subtle">{user.email}</span>
+          <Sensitive interactive={false} className="block truncate text-[11.5px] leading-tight text-ink-subtle">{user.email}</Sensitive>
         </span>
         <Icon name="chevronsUpDown" className="h-3.5 w-3.5 text-ink-faint" />
       </button>

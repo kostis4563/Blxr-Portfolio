@@ -16,6 +16,7 @@ import {
   PROJECTS_PATH,
   LIBRARY_PATH,
   REVIEWS_PATH,
+  NOW_PATH,
   projectPath,
   libraryPath,
 } from './lib/router'
@@ -50,6 +51,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
       { path: LIBRARY_PATH, label: t('lib.title') },
       ...libraryList.map((entry) => ({ path: libraryPath(entry.id), label: entry.title })),
       { path: REVIEWS_PATH, label: t('rev.title') },
+      { path: NOW_PATH, label: t('now.title') },
       ...SECTIONS.map((s) => ({ path: `/${s.id}`, label: t(s.key), section: s.id })),
     ],
     [t],
@@ -101,7 +103,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
 
   const suggestions = hasMatches
     ? matches
-    : pages.filter((e) => [HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH].includes(e.path))
+    : pages.filter((e) => [HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, NOW_PATH].includes(e.path))
 
   useEffect(() => {
     setSelected((s) => Math.min(s, Math.max(0, suggestions.length - 1)))
@@ -414,7 +416,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
                 </button>
                 {showAll && (
                   <div className="mt-3 grid gap-4 sm:grid-cols-2 animate-fade-in-up">
-                    <PageGroup title={t('nf.pages')} entries={pages.filter((e) => [HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH].includes(e.path))} />
+                    <PageGroup title={t('nf.pages')} entries={pages.filter((e) => [HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, NOW_PATH].includes(e.path))} />
                     <PageGroup title={t('nf.sections')} entries={catalogue.filter((e) => e.section)} />
                     <PageGroup title={t('home.projects')} entries={pages.filter((e) => e.path.startsWith(PROJECTS_PATH + '/'))} />
                     <PageGroup title={t('lib.title')} entries={pages.filter((e) => e.path.startsWith(LIBRARY_PATH + '/'))} />

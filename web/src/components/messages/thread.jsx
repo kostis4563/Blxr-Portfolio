@@ -8,6 +8,7 @@ import { TYPING_FOR, isImage, layout, mergeMessages, newestStamp, seenUpTo, togg
 import * as api from '../../lib/messages-api'
 import { refreshUnread } from '../../lib/messages-unread'
 import { profilePath } from '../../lib/router'
+import { Sensitive } from '../sensitive'
 
 const NEAR_BOTTOM = 96
 const POLL_LIVE = 30_000
@@ -362,6 +363,8 @@ export default function Thread({ thread: given, them, owner, uid, online = false
                 <TypingDots />
                 <span>typing</span>
               </>
+            ) : owner && status && status !== 'Online' ? (
+              <Sensitive className="font-mono text-[11px]">{status}</Sensitive>
             ) : (
               <span className={status === 'Online' ? 'text-ink-muted' : 'font-mono text-[11px]'}>{status}</span>
             )}

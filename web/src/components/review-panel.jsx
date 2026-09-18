@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Stars, StarPicker } from './star-rating'
+import { Sensitive } from './sensitive'
 import { link, REVIEWS_PATH } from '../lib/router'
 import {
   fetchPanel,
@@ -433,7 +434,7 @@ function Invites({ invites, lang, busy, onCreate, onRevoke, onCopy, copied }) {
 
       {created && (
         <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-line bg-surface-raised/40 p-4 sm:flex-row sm:items-center">
-          <code className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-ink-secondary">{inviteLink(created.token)}</code>
+          <Sensitive as="code" className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-ink-secondary">{inviteLink(created.token)}</Sensitive>
           <button type="button" onClick={() => onCopy(inviteLink(created.token), created.token)} className="shrink-0 cursor-pointer rounded-full border border-line-strong bg-surface-raised px-3.5 py-1.5 text-[12px] font-semibold text-ink-secondary transition-colors hover:text-ink-strong">
             {copied === created.token ? 'Copied' : 'Copy link'}
           </button>

@@ -1,11 +1,12 @@
-import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH } from './router'
+import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, NOW_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { authSignOut, loginUrlFor } from './auth'
 import { projectsList, SHORT_KEY } from './projects'
 import { libraryList } from './library'
 import { SECTIONS, jumpToSection } from './palette'
 import { fold } from './text-match'
 import { CONTACT_EMAIL, SOCIALS } from './profile'
 
-export function buildCommands({ t, theme, toggleTheme }) {
+export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
   const jump = t('cmd.group.jump')
   const actions = t('cmd.group.actions')
   const links = t('cmd.group.links')
@@ -48,6 +49,16 @@ export function buildCommands({ t, theme, toggleTheme }) {
       href: REVIEWS_PATH,
       run: () => navigate(REVIEWS_PATH),
       keywords: 'reviews testimonials feedback rating stars',
+    },
+    {
+      id: 'page-now',
+      group: jump,
+      label: t('now.title'),
+      hint: t('now.kicker'),
+      icon: 'activity',
+      href: NOW_PATH,
+      run: () => navigate(NOW_PATH),
+      keywords: 'now currently learning building studying ib status',
     },
 
     ...SECTIONS.map((section) => ({
@@ -102,6 +113,43 @@ export function buildCommands({ t, theme, toggleTheme }) {
       run: () => navigate(WRITE_REVIEW_PATH),
       keywords: 'review testimonial feedback rate',
     },
+    signedIn
+      ? {
+          id: 'page-dashboard',
+          group: jump,
+          label: t('cmd.dashboard'),
+          icon: 'grid',
+          href: DASHBOARD_PATH,
+          run: () => navigate(DASHBOARD_PATH),
+          keywords: 'dashboard account profile settings',
+        }
+      : {
+          id: 'action-sign-in',
+          group: actions,
+          label: t('cmd.signIn'),
+          hint: t('contact.dm.note'),
+          icon: 'user',
+          href: loginUrlFor(DASHBOARD_PATH),
+          run: () => navigate(loginUrlFor(DASHBOARD_PATH)),
+          keywords: 'login sign in account register',
+        },
+    {
+      id: 'action-send-message',
+      group: actions,
+      label: t('cmd.sendMessage'),
+      icon: 'message',
+      href: dashboardPath('messages'),
+      run: () => navigate(dashboardPath('messages')),
+      keywords: 'contact message chat dm write talk',
+    },
+    signedIn && {
+      id: 'action-sign-out',
+      group: actions,
+      label: t('cmd.signOut'),
+      icon: 'logout',
+      run: () => authSignOut().then(() => navigate(LOGIN_PATH, { replace: true })),
+      keywords: 'logout sign out',
+    },
     {
       id: 'action-copy-email',
       group: actions,
@@ -133,7 +181,7 @@ export function buildCommands({ t, theme, toggleTheme }) {
     },
   ]
 
-  return commands.map((command) => ({
+  return commands.filter(Boolean).map((command) => ({
     ...command,
     fLabel: fold(command.label),
     haystack: fold([command.label, command.hint || '', command.group, command.keywords || ''].join(' ')),

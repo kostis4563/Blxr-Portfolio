@@ -2,6 +2,7 @@ import { LANG_CODES, LOCALE_TAGS, DEFAULT_LANG } from './languages'
 import { translate } from './i18n'
 import { projectsList } from './projects'
 import { libraryList, findLibraryItem } from './library'
+import { NOW_UPDATED } from './now'
 import {
   alternatesFor,
   libraryPath,
@@ -28,6 +29,9 @@ const LIBRARY_DESCRIPTION =
 
 const REVIEWS_DESCRIPTION =
   'What clients and collaborators say about working with Blxr. Worked with me? Leave a review.'
+
+const NOW_DESCRIPTION =
+  'What Blxr is doing right now: learning Node, PostgreSQL, React and Next.js, building open source projects, and finishing the IB with a Computer Science focus.'
 
 export function metaFor(pathname) {
   const { lang, route: routePath } = splitLocale(pathname)
@@ -82,6 +86,14 @@ export function metaFor(pathname) {
       ...base,
       title: `${pick('Reviews', 'rev.title')} — ${SITE_NAME}`,
       description: pick(REVIEWS_DESCRIPTION, 'rev.tagline'),
+    }
+  }
+
+  if (route.name === 'now') {
+    return {
+      ...base,
+      title: `${pick('Now', 'now.title')} — ${SITE_NAME}`,
+      description: pick(NOW_DESCRIPTION, 'now.tagline'),
     }
   }
 
@@ -258,6 +270,18 @@ function jsonLdFor(path) {
       description: REVIEWS_DESCRIPTION,
       url: `${SITE_URL}/reviews`,
       about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
+  if (route.name === 'now') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: 'Now',
+      description: NOW_DESCRIPTION,
+      url: `${SITE_URL}/now`,
+      dateModified: NOW_UPDATED,
+      mainEntity: { '@id': `${SITE_URL}/#blxr` },
     }
   }
 
