@@ -189,7 +189,7 @@ export function AnimatedFooter({
 
   const cc = charColor ?? (isDark ? "#ffffff" : "#1c1917");
   const hc = hoverColor ?? (isDark ? "#ffffff" : "#1c1917");
-  const hcc = hoverCharColor ?? (isDark ? "#ffffff" : "#fafaf9");
+  const hcc = hoverCharColor ?? (isDark ? "#ffffff" : "#f2f1ee");
 
   const useIntensityColor = charColor == null;
 

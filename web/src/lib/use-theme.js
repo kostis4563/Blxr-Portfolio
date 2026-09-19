@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'blxr-theme'
+const DEFAULT_THEME = 'dark'
 
 function readStoredTheme() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return stored === 'light' || stored === 'dark' ? stored : null
+    return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : null
   } catch {
     return null
   }
 }
+
+const systemTheme = () => (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
 
 function storeTheme(theme) {
   try {
@@ -19,16 +22,14 @@ function storeTheme(theme) {
 }
 
 export function resolveInitialTheme() {
-
-  if (typeof window === 'undefined') return 'dark'
-  return (
-    readStoredTheme() ??
-    (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-  )
+  if (typeof window === 'undefined') return DEFAULT_THEME
+  const stored = readStoredTheme()
+  if (stored === 'system') return systemTheme()
+  return stored ?? DEFAULT_THEME
 }
 
 // 'system' | 'light' | 'dark' — what the user picked, not what is showing.
-const readPreference = () => (typeof window === 'undefined' ? 'system' : readStoredTheme() ?? 'system')
+const readPreference = () => (typeof window === 'undefined' ? DEFAULT_THEME : readStoredTheme() ?? DEFAULT_THEME)
 
 export function useTheme() {
   const [theme, setTheme] = useState(resolveInitialTheme)
@@ -58,7 +59,7 @@ export function useTheme() {
     if (!media) return
 
     const onChange = (event) => {
-      if (readStoredTheme()) return
+      if (readStoredTheme() !== 'system') return
       setTheme(event.matches ? 'light' : 'dark')
     }
 
@@ -77,12 +78,9 @@ export function useTheme() {
 
   const setPreference = useCallback((pref) => {
     if (pref === 'system') {
-      try {
-        localStorage.removeItem(STORAGE_KEY)
-      } catch {
-      }
+      storeTheme('system')
       setPreferenceState('system')
-      setTheme(window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      setTheme(systemTheme())
       return
     }
     if (pref !== 'light' && pref !== 'dark') return

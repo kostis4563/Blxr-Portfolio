@@ -865,7 +865,7 @@ function SecurityTab({ user, prefs, setPref }) {
 }
 
 const SWATCH = {
-  light: { bg: '#fafaf9', surface: '#ffffff', line: '#e7e5e4', ink: '#a8a29e', strong: '#1c1917' },
+  light: { bg: '#f4f3f0', surface: '#ffffff', line: '#dbd8d2', ink: '#97918a', strong: '#17150f' },
   dark: { bg: '#0a0a0a', surface: '#161616', line: '#2a2a2a', ink: '#525252', strong: '#e5e5e5' },
 }
 
@@ -928,7 +928,7 @@ function AppearanceTab({ themePreference, onSetTheme, sidebarCollapsed, onSetSid
 
   return (
     <>
-      <Section id="theme" title="Theme" description="System follows your operating system and switches automatically.">
+      <Section id="theme" title="Theme" description="Dark by default. System follows your operating system and switches automatically.">
         <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-3 px-5 py-4">
           <ThemeTile value="system" label="System" current={themePreference} onSelect={onSetTheme} />
           <ThemeTile value="light" label="Light" current={themePreference} onSelect={onSetTheme} />

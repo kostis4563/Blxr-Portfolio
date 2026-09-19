@@ -696,7 +696,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
                     <div
                       key={row}
                       style={{ gridRow: row, gridColumn: "1 / -1" }}
-                      className="rounded-[2px] bg-surface-raised animate-pulse"
+                      className="rounded-[2px] bg-surface-hover animate-pulse"
                     />
                   ))
                 : grid.map((day, idx) => {
