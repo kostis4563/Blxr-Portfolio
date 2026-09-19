@@ -263,8 +263,13 @@ function refreshTop(country, limit) {
   return inflight
 }
 
+const TOP_WARM_RETRY_MS = 60_000
+
 function warmTop() {
-  refreshTop(TOP_WARM_KEY.country, TOP_WARM_KEY.limit).catch((err) => log.warn('upstream', 'top chart warm-up failed', { detail: err?.message }))
+  refreshTop(TOP_WARM_KEY.country, TOP_WARM_KEY.limit).catch((err) => {
+    log.warn('upstream', 'top chart warm-up failed', { detail: err?.message })
+    setTimeout(warmTop, TOP_WARM_RETRY_MS).unref()
+  })
 }
 
 const HITS_FILE = path.join(STATE_DIR, 'hits.json')
@@ -318,6 +323,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
 }
 
 process.on('uncaughtException', (err) => {
+  console.error(err)
   log.error('server', err, { detail: 'uncaught exception — process exited' })
   saveAll()
   process.exit(1)
@@ -1989,6 +1995,17 @@ server.requestTimeout = 30_000
 server.keepAliveTimeout = 5_000
 server.maxHeadersCount = 64
 server.maxRequestsPerSocket = 1000
+
+server.on('error', (err) => {
+  if (err?.code === 'EADDRINUSE') {
+    console.error(`port ${PORT} is already in use — another server is still running (lsof -nP -iTCP:${PORT} -sTCP:LISTEN), or set PORT to something else`)
+  } else {
+    console.error(`could not listen on ${HOST}:${PORT}:`, err?.message || err)
+  }
+  log.error('server', err, { detail: `listen on ${HOST}:${PORT} failed — process exited` })
+  saveAll()
+  process.exit(1)
+})
 
 server.listen(PORT, HOST, () => {
   console.log(`blxr music search proxy on http://${HOST}:${PORT}`)

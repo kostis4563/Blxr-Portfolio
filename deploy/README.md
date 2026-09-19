@@ -97,6 +97,11 @@ Keep these **off** — they break this site:
 
 Brotli, Early Hints, edge caching: fine, worth having.
 
+Web Analytics (the `static.cloudflareinsights.com/beacon.min.js` tag) is
+also fine: it is an external script, so the CSP allows it by origin
+(`script-src` for the tag, `connect-src https://cloudflareinsights.com` for
+the RUM post). Turn it off in Cloudflare and both entries can go.
+
 ### Early Hints
 
 Speed -> Optimization -> Early Hints (off by default, origin can't enable it

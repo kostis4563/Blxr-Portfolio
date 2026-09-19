@@ -114,7 +114,8 @@ web/src/
     ├── github-stats.js  Dashboard → Stats (/api/github/stats)
     ├── youtube-engine.js
     ├── lyrics.js        LRCLIB
-    ├── i18n.jsx
+    ├── i18n.js          table loader, translate(), useI18n
+    ├── i18n-provider.jsx  <I18nProvider>, mounted by root.jsx
     ├── i18n-tables.js
     ├── languages.js
     ├── locales/         generated, gitignored
