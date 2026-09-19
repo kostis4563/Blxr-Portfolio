@@ -3,6 +3,7 @@ import { translate } from './i18n'
 import { projectsList } from './projects'
 import { libraryList, findLibraryItem } from './library'
 import { NOW_UPDATED } from './now'
+import { USES_UPDATED } from './uses'
 import { CV_UPDATED } from './cv'
 import {
   alternatesFor,
@@ -35,6 +36,10 @@ const REVIEWS_DESCRIPTION =
 const NOW_DESCRIPTION =
   'What Blxr is doing right now: building websites for clients, learning Node, PostgreSQL ' +
   'and React, and finishing the IB with a Computer Science focus.'
+
+const USES_DESCRIPTION =
+  'The desk, the machine and the software behind blxr.net: a MacBook Air, a 240 Hz display, ' +
+  'the editor, terminal, fonts, hosting and music.'
 
 const CV_DESCRIPTION =
   'CV of Blxr, a full stack developer in Athens: experience, selected projects, education, skills and certifications. Printable.'
@@ -114,6 +119,16 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'uses') {
+    return {
+      ...base,
+      title: lang === DEFAULT_LANG
+        ? 'Uses — The Setup Behind blxr.net'
+        : `${pick('Uses', 'uses.title')} — ${SITE_NAME}`,
+      description: pick(USES_DESCRIPTION, 'uses.tagline'),
+    }
+  }
+
   if (route.name === 'cv') {
     return {
       ...base,
@@ -162,6 +177,7 @@ export function metaFor(pathname) {
 export function lastmodFor(pathname) {
   const route = parseRoute(pathname)
   if (route.name === 'now') return NOW_UPDATED
+  if (route.name === 'uses') return USES_UPDATED
   if (route.name === 'cv') return CV_UPDATED
   return null
 }
@@ -320,6 +336,19 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'uses') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Uses',
+      description: USES_DESCRIPTION,
+      url: `${SITE_URL}/uses`,
+      dateModified: USES_UPDATED,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'cv') {
     return {
       '@context': 'https://schema.org',
@@ -371,6 +400,8 @@ function crumbsFor(route, lang) {
     items.push({ name: t('rev.title', 'Reviews'), item: urlOf('/reviews') })
   } else if (route.name === 'now') {
     items.push({ name: t('now.title', 'Now'), item: urlOf('/now') })
+  } else if (route.name === 'uses') {
+    items.push({ name: t('uses.title', 'Uses'), item: urlOf('/uses') })
   } else if (route.name === 'cv') {
     items.push({ name: t('cv.title', 'CV'), item: urlOf('/cv') })
   } else if (route.name === 'library') {

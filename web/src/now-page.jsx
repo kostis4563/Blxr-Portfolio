@@ -1,7 +1,7 @@
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { useI18n, LOCALE_TAGS } from './lib/i18n'
-import { link, HOME_PATH, PROJECTS_PATH, REVIEWS_PATH } from './lib/router'
+import { link, HOME_PATH, PROJECTS_PATH, REVIEWS_PATH, USES_PATH } from './lib/router'
 import { CONTACT_EMAIL, GITHUB_URL } from './lib/profile'
 import { MailTo, Sensitive, useMounted } from './components/sensitive'
 import {
@@ -228,6 +228,10 @@ export default function NowPage({ theme, onToggleTheme }) {
             </a>
             <a {...link(REVIEWS_PATH)} className="group inline-flex items-center gap-1.5 transition-colors duration-200 hover:text-ink-strong">
               <span>{t('rev.title')}</span>
+              <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+            </a>
+            <a {...link(USES_PATH)} className="group inline-flex items-center gap-1.5 transition-colors duration-200 hover:text-ink-strong">
+              <span>{t('uses.title')}</span>
               <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">→</span>
             </a>
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="group inline-flex items-center gap-1.5 transition-colors duration-200 hover:text-ink-strong">

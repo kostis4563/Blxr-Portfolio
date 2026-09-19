@@ -9,6 +9,7 @@ import ProjectsPageImpl from '#ssr-page/projects'
 import LibraryPageImpl from '#ssr-page/library'
 import ReviewsPageImpl from '#ssr-page/reviews'
 import NowPageImpl from '#ssr-page/now'
+import UsesPageImpl from '#ssr-page/uses'
 import CvPageImpl from '#ssr-page/cv'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
@@ -36,6 +37,7 @@ const ProjectsPage = routePage(ProjectsPageImpl, () => import('#client-page/proj
 const LibraryPage = routePage(LibraryPageImpl, () => import('#client-page/library'))
 const ReviewsPage = routePage(ReviewsPageImpl, () => import('#client-page/reviews'))
 const NowPage = routePage(NowPageImpl, () => import('#client-page/now'))
+const UsesPage = routePage(UsesPageImpl, () => import('#client-page/uses'))
 const CvPage = routePage(CvPageImpl, () => import('#client-page/cv'))
 const LoginPage = routePage(LoginPageImpl, () => import('#client-page/login'))
 const DashboardPage = routePage(DashboardPageImpl, () => import('#client-page/dashboard'))
@@ -375,6 +377,17 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <NowPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'uses') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <UsesPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>

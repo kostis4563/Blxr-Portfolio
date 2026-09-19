@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, NOW_PATH, CV_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, NOW_PATH, USES_PATH, CV_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList, SHORT_KEY } from './projects'
 import { libraryList } from './library'
@@ -59,6 +59,16 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
       href: NOW_PATH,
       run: () => navigate(NOW_PATH),
       keywords: 'now currently learning building studying ib status',
+    },
+    {
+      id: 'page-uses',
+      group: jump,
+      label: t('uses.title'),
+      hint: t('uses.kicker'),
+      icon: 'monitor',
+      href: USES_PATH,
+      run: () => navigate(USES_PATH),
+      keywords: 'uses setup gear stack editor machine laptop terminal fonts hosting music tools software hardware',
     },
     {
       id: 'page-cv',

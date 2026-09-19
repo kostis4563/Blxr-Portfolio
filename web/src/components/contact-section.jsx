@@ -4,7 +4,7 @@ import { Sensitive, useMounted } from './sensitive'
 import { useI18n } from '../lib/i18n'
 import { useAuth } from '../lib/supabase'
 import { loginUrlFor } from '../lib/auth'
-import { link, dashboardPath, REVIEWS_PATH, NOW_PATH, CV_PATH } from '../lib/router'
+import { link, dashboardPath, REVIEWS_PATH, NOW_PATH, USES_PATH, CV_PATH } from '../lib/router'
 import { CONTACT_EMAIL, SOCIALS, SOCIAL_ICON_PATHS } from '../lib/profile'
 
 const MESSAGES_PATH = dashboardPath('messages')
@@ -188,6 +188,7 @@ export default function ContactSection() {
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <a {...link(REVIEWS_PATH)} className={ARROW_LINK}><span>{t('rev.cta')}</span><Arrow /></a>
             <a {...link(NOW_PATH)} className={ARROW_LINK}><span>{t('now.cta')}</span><Arrow /></a>
+            <a {...link(USES_PATH)} className={ARROW_LINK}><span>{t('uses.cta')}</span><Arrow /></a>
             <a {...link(CV_PATH)} className={ARROW_LINK}><span>{t('cv.cta')}</span><Arrow /></a>
           </div>
         </Row>
