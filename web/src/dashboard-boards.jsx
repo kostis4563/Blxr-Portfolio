@@ -478,14 +478,11 @@ export default function DashboardBoards({ hash }) {
       if (!quiet) setLoading(true)
       try {
         if (openId) {
-          const result = await api.fetchBoard(openId)
+          const [result, rows] = await Promise.all([api.fetchBoard(openId), index ? null : api.fetchBoards(false)])
           if (!live.current) return
           setBoard(result.board)
           setCards(result.cards)
-          if (!index) {
-            const rows = await api.fetchBoards(false)
-            if (live.current) setIndex(rows)
-          }
+          if (rows) setIndex(rows)
         } else {
           const rows = await api.fetchBoards(tab === 'archive')
           if (!live.current) return

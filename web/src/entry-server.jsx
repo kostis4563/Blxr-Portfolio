@@ -1,6 +1,6 @@
 import { renderToString } from 'react-dom/server'
 import Root from './root.jsx'
-import { langOf, localizedPaths, setServerPath, staticPaths } from './lib/router'
+import { langOf, localizedPaths, parseRoute, setServerPath, staticPaths } from './lib/router'
 import { preloadTable } from './lib/i18n'
 import { LANGUAGES } from './lib/languages'
 import { headTags } from './lib/seo'
@@ -17,7 +17,7 @@ export async function render(path = '/') {
   }
 }
 
-export { staticPaths, localizedPaths }
+export { staticPaths, localizedPaths, parseRoute }
 
 export { metaFor, lastmodFor } from './lib/seo'
 

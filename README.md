@@ -159,7 +159,7 @@ Routing lives entirely in `lib/router.js`; valid ids come from `lib/projects.js`
 | 1 | `build-locales.js` | compiles `lib/i18n-tables.js` into `lib/locales/<code>.js` |
 | 2 | `vite build` | client bundle |
 | 3 | `vite build --ssr entry-server` | SSR bundle |
-| 4 | `prerender.js` | renders every route/language to its own `.html`, writes `sitemap.xml`, hashes inline scripts for the CSP, deletes the SSR bundle |
+| 4 | `prerender.js` | renders every route/language to its own `.html`, writes `sitemap.xml` (each url's `<lastmod>` is the last git commit that touched the page's sources, so it does not reset on every deploy), hashes inline scripts for the CSP, deletes the SSR bundle |
 | 5 | `compress.js` | writes `.gz` / `.br` next to every compressible file |
 
 `npm run build:protected` additionally runs the app chunk through an obfuscator.

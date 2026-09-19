@@ -305,6 +305,18 @@ Deleting an account cascades to its boards and their cards. The files in
 storage are cleared by the app when a board is deleted from the dashboard,
 and are orphaned if the whole account is deleted instead.
 
+**Speed.** Every policy in the three SQL files reads the caller as
+`(select auth.uid())` and `(select public.is_board_admin())` rather than the
+bare call, so Postgres evaluates them once per query instead of once per row
+— for the admin account that used to mean a look-up in `auth.mfa_factors`
+for every card counted. `board_cards_live_idx` carries the columns the board
+list's counters and the open board need, so neither touches the table, and
+`board_cards_agenda_idx` is keyed on `due` because row security's
+`owner = … or admin` cannot use an owner key. All of this is created by
+re-running [`profiles.sql`](profiles.sql), [`boards.sql`](boards.sql) and
+[`messages.sql`](messages.sql); the old `board_cards_due_idx` is dropped by
+the boards file.
+
 ## 12. Messages
 
 `/dashboard#messages` is a direct line, the way a DM is: every account gets

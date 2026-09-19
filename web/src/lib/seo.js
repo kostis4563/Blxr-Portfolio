@@ -19,11 +19,12 @@ export const SITE_NAME = 'blxr'
 const OG_IMAGE = `${SITE_URL}/og.png`
 
 const HOME_DESCRIPTION =
-  "Blxr — a student in Athens doing the IB Diploma Programme, building backend and web tooling " +
-  'with Go, JavaScript and Python. Security tooling projects, skills and contact.'
+  'Blxr — IB Diploma student in Athens building backend and web tooling with Go, JavaScript ' +
+  'and Python. Security tooling projects, skills, CV and contact.'
 
 const PROJECTS_DESCRIPTION =
-  'Everything I have built, with case studies, stacks and source.'
+  'Everything Blxr has built — security tooling, web apps and mobile apps — with case studies, ' +
+  'stacks and source code.'
 
 const LIBRARY_DESCRIPTION =
   'The UIs and scripts built for FiveM servers — interfaces, HUDs and standalone resources.'
@@ -32,7 +33,8 @@ const REVIEWS_DESCRIPTION =
   'What clients and collaborators say about working with Blxr. Worked with me? Leave a review.'
 
 const NOW_DESCRIPTION =
-  "What Blxr is doing right now: building websites and other products for clients, learning Node, PostgreSQL and React, and finishing the IB with a Computer Science focus."
+  'What Blxr is doing right now: building websites for clients, learning Node, PostgreSQL ' +
+  'and React, and finishing the IB with a Computer Science focus.'
 
 const CV_DESCRIPTION =
   'CV of Blxr, a full stack developer in Athens: experience, selected projects, education, skills and certifications. Printable.'
@@ -49,7 +51,9 @@ export function metaFor(pathname) {
     return {
       ...base,
       title:
-        lang === DEFAULT_LANG ? 'Blxr — Student Developer Portfolio, Projects & CV' : 'Blxr Portfolio',
+        lang === DEFAULT_LANG
+          ? 'Blxr — Student Developer Portfolio, Projects & CV'
+          : `Blxr — ${translate(lang, 'hero.bio2').replace(/[.。]$/, '')}`,
 
       description:
         lang === DEFAULT_LANG
@@ -61,7 +65,9 @@ export function metaFor(pathname) {
   if (route.name === 'projects') {
     return {
       ...base,
-      title: `${pick('Projects', 'proj.archiveTitle')} — ${SITE_NAME}`,
+      title: lang === DEFAULT_LANG
+        ? `Projects — Security Tooling, Web & Mobile Apps by Blxr`
+        : `${pick('Projects', 'proj.archiveTitle')} — ${SITE_NAME}`,
       description: pick(PROJECTS_DESCRIPTION, 'home.libraryTagline'),
     }
   }
@@ -80,7 +86,9 @@ export function metaFor(pathname) {
   if (route.name === 'library') {
     return {
       ...base,
-      title: `${pick('FiveM Library', 'lib.title')} — ${SITE_NAME}`,
+      title: lang === DEFAULT_LANG
+        ? 'FiveM Library — UIs, HUDs & Scripts by Blxr'
+        : `${pick('FiveM Library', 'lib.title')} — ${SITE_NAME}`,
       description: pick(LIBRARY_DESCRIPTION, 'lib.tagline'),
       noindex: libraryList.every((entry) => entry.placeholder),
     }
@@ -89,7 +97,9 @@ export function metaFor(pathname) {
   if (route.name === 'reviews') {
     return {
       ...base,
-      title: `${pick('Reviews', 'rev.title')} — ${SITE_NAME}`,
+      title: lang === DEFAULT_LANG
+        ? 'Reviews — What Clients Say About Working With Blxr'
+        : `${pick('Reviews', 'rev.title')} — ${SITE_NAME}`,
       description: pick(REVIEWS_DESCRIPTION, 'rev.tagline'),
     }
   }
@@ -97,7 +107,9 @@ export function metaFor(pathname) {
   if (route.name === 'now') {
     return {
       ...base,
-      title: `${pick('Now', 'now.title')} — ${SITE_NAME}`,
+      title: lang === DEFAULT_LANG
+        ? 'Now — What Blxr Is Building and Learning'
+        : `${pick('Now', 'now.title')} — ${SITE_NAME}`,
       description: pick(NOW_DESCRIPTION, 'now.tagline'),
     }
   }
@@ -105,7 +117,9 @@ export function metaFor(pathname) {
   if (route.name === 'cv') {
     return {
       ...base,
-      title: `${pick('CV', 'cv.title')} — ${SITE_NAME}`,
+      title: lang === DEFAULT_LANG
+        ? 'CV — Blxr, Full Stack Developer in Athens'
+        : `${pick('CV', 'cv.title')} — ${SITE_NAME}`,
       description: pick(CV_DESCRIPTION, 'cv.tagline'),
     }
   }
@@ -217,7 +231,7 @@ function jsonLdFor(path) {
       url: 'https://amitista.com',
     },
     knowsAbout: ['Go', 'JavaScript', 'Python', 'Security tooling'],
-    sameAs: ['https://github.com/kostis4563'],
+    sameAs: ['https://github.com/kostis4563', 'https://discord.com/users/981607036192190534'],
   }
 
   if (route.name === 'home') {
@@ -404,7 +418,10 @@ export function headTags(pathname) {
     `<title>${escapeAttr(title)}</title>`,
     `<meta name="description" content="${escapeAttr(description)}" />`,
     `<meta name="author" content="${SITE_NAME}" />`,
-    noindex ? '<meta name="robots" content="noindex" />' : `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
+    noindex
+      ? '<meta name="robots" content="noindex" />'
+      : '<meta name="robots" content="index, follow, max-image-preview:large" />',
+    noindex ? '' : `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
 
     ...(noindex
       ? []

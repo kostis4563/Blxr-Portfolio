@@ -1,9 +1,3 @@
--- Public profiles: built at /dashboard#profile, shown at /u/<handle>.
--- Run once in Supabase → SQL editor. Safe to re-run.
---
--- The browser talks to this table directly with the publishable key; row
--- level security is what keeps one user out of another's row.
-
 create table if not exists public.profiles (
   id            uuid primary key references auth.users (id) on delete cascade,
   handle        text not null unique,
@@ -43,8 +37,6 @@ create table if not exists public.profiles (
   constraint profiles_visibility       check (visibility in ('public', 'unlisted', 'private'))
 );
 
--- v2: design and content options. `add column if not exists` keeps the file
--- re-runnable on a project that already has the v1 table.
 alter table public.profiles
   add column if not exists status       text not null default '',
   add column if not exists now_text     text not null default '',
@@ -79,6 +71,14 @@ language sql immutable as $$
   select candidate is not null
      and char_length(candidate) <= max_len
      and candidate ~ '^https?://[^[:space:]<>"''`]+$';
+$$;
+
+create or replace function public.text_items_ok(items text[], max_len integer)
+returns boolean
+language sql immutable as $$
+  select not exists (
+    select 1 from unnest(items) s where s is null or char_length(s) not between 1 and max_len
+  );
 $$;
 
 create or replace function public.profile_links_ok(links jsonb)
@@ -121,9 +121,7 @@ begin
       add constraint profiles_website_url check (website = '' or public.http_url_ok(website, 200)) not valid,
       add constraint profiles_links_ok     check (public.profile_links_ok(links)) not valid,
       add constraint profiles_showcase_ok  check (public.profile_showcase_ok(showcase)) not valid,
-      add constraint profiles_skills_shape check (
-        not exists (select 1 from unnest(skills) s where s is null or char_length(s) not between 1 and 24)
-      ) not valid,
+      add constraint profiles_skills_shape check (public.text_items_ok(skills, 24)) not valid,
       add constraint profiles_sections_shape check (sections <@ '{about,now,showcase,links,skills}'::text[]) not valid;
   end if;
 end $$;
@@ -148,19 +146,19 @@ alter table public.profiles enable row level security;
 
 drop policy if exists "profiles: read published or own" on public.profiles;
 create policy "profiles: read published or own" on public.profiles
-  for select using (visibility <> 'private' or auth.uid() = id);
+  for select using (visibility <> 'private' or (select auth.uid()) = id);
 
 drop policy if exists "profiles: insert own" on public.profiles;
 create policy "profiles: insert own" on public.profiles
-  for insert with check (auth.uid() = id);
+  for insert with check ((select auth.uid()) = id);
 
 drop policy if exists "profiles: update own" on public.profiles;
 create policy "profiles: update own" on public.profiles
-  for update using (auth.uid() = id) with check (auth.uid() = id);
+  for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 
 drop policy if exists "profiles: delete own" on public.profiles;
 create policy "profiles: delete own" on public.profiles
-  for delete using (auth.uid() = id);
+  for delete using ((select auth.uid()) = id);
 
 -- Handle availability. Private profiles are invisible through RLS, so a plain
 -- select would call a taken handle free; this runs as the owner and only
@@ -194,12 +192,12 @@ create policy "avatars: public read" on storage.objects
 
 drop policy if exists "avatars: insert own folder" on storage.objects;
 create policy "avatars: insert own folder" on storage.objects
-  for insert with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  for insert with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "avatars: update own folder" on storage.objects;
 create policy "avatars: update own folder" on storage.objects
-  for update using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  for update using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "avatars: delete own folder" on storage.objects;
 create policy "avatars: delete own folder" on storage.objects
-  for delete using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  for delete using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);

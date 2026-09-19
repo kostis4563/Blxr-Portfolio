@@ -1,4 +1,6 @@
 import { readFile, writeFile, rm, mkdir, readdir } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { createHash } from 'node:crypto'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, resolve, join } from 'node:path'
@@ -17,9 +19,17 @@ const HTML_RE = /<html[^>]*>/
 const EMAIL_OFF = '<!--email_off-->'
 const EMAIL_ON = '<!--email_on-->'
 
-const { render, localizedPaths, metaFor, lastmodFor, NOT_FOUND_PATH, LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH } = await import(
-  pathToFileURL(ssrEntry).href
-)
+const {
+  render,
+  localizedPaths,
+  metaFor,
+  lastmodFor,
+  parseRoute,
+  NOT_FOUND_PATH,
+  LOGIN_PATH,
+  DASHBOARD_PATH,
+  PROFILE_BASE_PATH,
+} = await import(pathToFileURL(ssrEntry).href)
 
 const template = await readFile(indexPath, 'utf8')
 if (!ROOT_RE.test(template)) {
@@ -101,7 +111,40 @@ const SITE_URL = 'https://blxr.net'
 const buildDate = new Date().toISOString().slice(0, 10)
 const indexable = localizedPaths().filter((path) => !metaFor(path).noindex)
 
-const lastmodForPath = (path) => lastmodFor(path) || buildDate
+const exec = promisify(execFile)
+const SHARED_SOURCES = ['src/lib/i18n-tables.js', 'src/lib/seo.js', 'src/root.jsx']
+const ROUTE_SOURCES = {
+  home: ['src/app.jsx', 'src/components', 'src/lib/projects.js', 'src/lib/skills.js'],
+  projects: ['src/projects-page.jsx', 'src/lib/projects.js', 'src/components/project-cover.jsx'],
+  library: ['src/library-page.jsx', 'src/lib/library.js'],
+  reviews: ['src/reviews-page.jsx'],
+}
+
+const repo = resolve(here, '..')
+const git = (...args) =>
+  exec('git', ['-c', `safe.directory=${repo}`, ...args], { cwd: here }).then(({ stdout }) => stdout.trim())
+
+async function gitDate(files) {
+  try {
+    if ((await git('rev-parse', '--is-shallow-repository')) === 'true') return null
+    const date = await git('log', '-1', '--format=%cs', '--', ...files)
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null
+  } catch {
+    return null
+  }
+}
+
+const routeDates = new Map()
+for (const [name, files] of Object.entries(ROUTE_SOURCES)) {
+  routeDates.set(name, await gitDate([...files, ...SHARED_SOURCES]))
+}
+const fromGit = [...routeDates.values()].some(Boolean)
+if (!fromGit) {
+  console.warn('prerender: no git history for lastmod, using the build date (shallow clone?)')
+}
+
+const lastmodForPath = (path) =>
+  lastmodFor(path) || routeDates.get(parseRoute(metaFor(path).route).name) || buildDate
 
 const priorityFor = (path) => {
   const { lang, route } = metaFor(path)
@@ -164,6 +207,7 @@ console.log(
   `prerender: ${indexable.length} urls -> sitemap.xml` +
     (localizedPaths().length - indexable.length
       ? ` (${localizedPaths().length - indexable.length} noindex, omitted)`
-      : ''),
+      : '') +
+    (fromGit ? `, lastmod from git` : ''),
 )
 console.log(`prerender: ${hashes.size} inline-script hashes -> csp-script-hashes.txt`)

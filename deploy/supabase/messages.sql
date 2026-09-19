@@ -181,37 +181,37 @@ alter table public.messages enable row level security;
 
 drop policy if exists "threads: own or owner" on public.threads;
 create policy "threads: own or owner" on public.threads
-  for select using (member = auth.uid() or public.is_site_owner());
+  for select using (member = (select auth.uid()) or (select public.is_site_owner()));
 
 drop policy if exists "threads: open own" on public.threads;
 create policy "threads: open own" on public.threads
-  for insert with check (member = auth.uid());
+  for insert with check (member = (select auth.uid()));
 
 drop policy if exists "threads: mark own" on public.threads;
 create policy "threads: mark own" on public.threads
-  for update using (member = auth.uid() or public.is_site_owner())
-  with check (member = auth.uid() or public.is_site_owner());
+  for update using (member = (select auth.uid()) or (select public.is_site_owner()))
+  with check (member = (select auth.uid()) or (select public.is_site_owner()));
 
 drop policy if exists "threads: clear own" on public.threads;
 create policy "threads: clear own" on public.threads
-  for delete using (member = auth.uid() or public.is_site_owner());
+  for delete using (member = (select auth.uid()) or (select public.is_site_owner()));
 
 drop policy if exists "messages: read own thread" on public.messages;
 create policy "messages: read own thread" on public.messages
   for select using (exists (
-    select 1 from public.threads t where t.id = thread_id and (t.member = auth.uid() or public.is_site_owner())
+    select 1 from public.threads t where t.id = thread_id and (t.member = (select auth.uid()) or (select public.is_site_owner()))
   ));
 
 drop policy if exists "messages: send in own thread" on public.messages;
 create policy "messages: send in own thread" on public.messages
-  for insert with check (author = auth.uid() and exists (
-    select 1 from public.threads t where t.id = thread_id and (t.member = auth.uid() or public.is_site_owner())
+  for insert with check (author = (select auth.uid()) and exists (
+    select 1 from public.threads t where t.id = thread_id and (t.member = (select auth.uid()) or (select public.is_site_owner()))
   ));
 
 drop policy if exists "messages: change in own thread" on public.messages;
 create policy "messages: change in own thread" on public.messages
   for update using (exists (
-    select 1 from public.threads t where t.id = thread_id and (t.member = auth.uid() or public.is_site_owner())
+    select 1 from public.threads t where t.id = thread_id and (t.member = (select auth.uid()) or (select public.is_site_owner()))
   ));
 
 create or replace function public.messages_open()
@@ -348,7 +348,7 @@ begin
         realtime.topic() = 'messages:lobby'
         or exists (
           select 1 from public.threads t
-          where realtime.topic() = 'thread:' || t.id::text and (t.member = auth.uid() or public.is_site_owner())
+          where realtime.topic() = 'thread:' || t.id::text and (t.member = (select auth.uid()) or (select public.is_site_owner()))
         )
       )
   $p$;
@@ -357,10 +357,10 @@ begin
   execute $p$
     create policy "messages: speak on own channels" on realtime.messages
       for insert to authenticated with check (
-        (realtime.topic() = 'messages:lobby' and public.is_site_owner())
+        (realtime.topic() = 'messages:lobby' and (select public.is_site_owner()))
         or exists (
           select 1 from public.threads t
-          where realtime.topic() = 'thread:' || t.id::text and (t.member = auth.uid() or public.is_site_owner())
+          where realtime.topic() = 'thread:' || t.id::text and (t.member = (select auth.uid()) or (select public.is_site_owner()))
         )
       )
   $p$;
@@ -377,19 +377,19 @@ drop policy if exists "messages: read own thread files" on storage.objects;
 create policy "messages: read own thread files" on storage.objects
   for select using (bucket_id = 'messages' and exists (
     select 1 from public.threads t
-    where t.id::text = (storage.foldername(name))[1] and (t.member = auth.uid() or public.is_site_owner())
+    where t.id::text = (storage.foldername(name))[1] and (t.member = (select auth.uid()) or (select public.is_site_owner()))
   ));
 
 drop policy if exists "messages: add own thread files" on storage.objects;
 create policy "messages: add own thread files" on storage.objects
   for insert with check (bucket_id = 'messages' and exists (
     select 1 from public.threads t
-    where t.id::text = (storage.foldername(name))[1] and (t.member = auth.uid() or public.is_site_owner())
+    where t.id::text = (storage.foldername(name))[1] and (t.member = (select auth.uid()) or (select public.is_site_owner()))
   ));
 
 drop policy if exists "messages: remove own thread files" on storage.objects;
 create policy "messages: remove own thread files" on storage.objects
   for delete using (bucket_id = 'messages' and exists (
     select 1 from public.threads t
-    where t.id::text = (storage.foldername(name))[1] and (t.member = auth.uid() or public.is_site_owner())
+    where t.id::text = (storage.foldername(name))[1] and (t.member = (select auth.uid()) or (select public.is_site_owner()))
   ));

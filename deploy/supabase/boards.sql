@@ -95,6 +95,14 @@ language sql immutable as $$
      and candidate ~ '^https?://[^[:space:]<>"''`]+$';
 $$;
 
+create or replace function public.text_items_ok(items text[], max_len integer)
+returns boolean
+language sql immutable as $$
+  select not exists (
+    select 1 from unnest(items) s where s is null or char_length(s) not between 1 and max_len
+  );
+$$;
+
 create or replace function public.card_links_ok(links jsonb)
 returns boolean
 language sql immutable as $$
@@ -197,9 +205,7 @@ begin
       add constraint cards_files_ok     check (public.card_files_ok(files, board_id)) not valid,
       add constraint cards_checklist_ok check (public.card_checklist_ok(checklist)) not valid,
       add constraint cards_comments_ok  check (public.card_comments_ok(comments)) not valid,
-      add constraint cards_labels_shape check (
-        not exists (select 1 from unnest(labels) l where l is null or char_length(l) not between 1 and 40)
-      ) not valid;
+      add constraint cards_labels_shape check (public.text_items_ok(labels, 40)) not valid;
     alter table public.boards
       add constraint boards_lists_ok check (public.board_lists_ok(lists)) not valid,
       add constraint boards_art_ok   check (public.board_art_ok(art, id)) not valid;
@@ -209,7 +215,15 @@ end $$;
 create index if not exists board_cards_board_idx on public.board_cards (board_id, list_id, position);
 create index if not exists board_cards_owner_idx on public.board_cards (owner);
 create index if not exists board_cards_bin_idx on public.board_cards (deleted_at) where deleted_at is not null;
-create index if not exists board_cards_due_idx on public.board_cards (owner, due) where due is not null and not done;
+
+create index if not exists board_cards_live_idx on public.board_cards (board_id, position)
+  include (owner, archived, done, due)
+  where deleted_at is null;
+
+drop index if exists public.board_cards_due_idx;
+create index if not exists board_cards_agenda_idx on public.board_cards (due)
+  include (owner)
+  where due is not null and not done and not archived and deleted_at is null;
 
 create or replace function public.boards_touch()
 returns trigger language plpgsql as $$
@@ -263,40 +277,40 @@ alter table public.board_cards enable row level security;
 
 drop policy if exists "boards: read own" on public.boards;
 create policy "boards: read own" on public.boards
-  for select using (auth.uid() = owner or public.is_board_admin());
+  for select using ((select auth.uid()) = owner or (select public.is_board_admin()));
 
 drop policy if exists "boards: insert own" on public.boards;
 create policy "boards: insert own" on public.boards
-  for insert with check (auth.uid() = owner);
+  for insert with check ((select auth.uid()) = owner);
 
 drop policy if exists "boards: update own" on public.boards;
 create policy "boards: update own" on public.boards
-  for update using (auth.uid() = owner or public.is_board_admin())
-  with check (auth.uid() = owner or public.is_board_admin());
+  for update using ((select auth.uid()) = owner or (select public.is_board_admin()))
+  with check ((select auth.uid()) = owner or (select public.is_board_admin()));
 
 drop policy if exists "boards: delete own" on public.boards;
 create policy "boards: delete own" on public.boards
-  for delete using (auth.uid() = owner or public.is_board_admin());
+  for delete using ((select auth.uid()) = owner or (select public.is_board_admin()));
 
 drop policy if exists "cards: read own" on public.board_cards;
 create policy "cards: read own" on public.board_cards
-  for select using (auth.uid() = owner or public.is_board_admin());
+  for select using ((select auth.uid()) = owner or (select public.is_board_admin()));
 
 drop policy if exists "cards: insert own" on public.board_cards;
 create policy "cards: insert own" on public.board_cards
   for insert with check (
-    public.is_board_admin()
-    or exists (select 1 from public.boards b where b.id = board_id and b.owner = auth.uid())
+    (select public.is_board_admin())
+    or exists (select 1 from public.boards b where b.id = board_id and b.owner = (select auth.uid()))
   );
 
 drop policy if exists "cards: update own" on public.board_cards;
 create policy "cards: update own" on public.board_cards
-  for update using (auth.uid() = owner or public.is_board_admin())
-  with check (auth.uid() = owner or public.is_board_admin());
+  for update using ((select auth.uid()) = owner or (select public.is_board_admin()))
+  with check ((select auth.uid()) = owner or (select public.is_board_admin()));
 
 drop policy if exists "cards: delete own" on public.board_cards;
 create policy "cards: delete own" on public.board_cards
-  for delete using (auth.uid() = owner or public.is_board_admin());
+  for delete using ((select auth.uid()) = owner or (select public.is_board_admin()));
 
 create or replace view public.board_index
 with (security_invoker = on) as
@@ -370,26 +384,26 @@ drop policy if exists "boards: read own files" on storage.objects;
 create policy "boards: read own files" on storage.objects
   for select using (
     bucket_id = 'boards'
-    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_board_admin())
+    and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.is_board_admin()))
   );
 
 drop policy if exists "boards: insert own files" on storage.objects;
 create policy "boards: insert own files" on storage.objects
   for insert with check (
     bucket_id = 'boards'
-    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_board_admin())
+    and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.is_board_admin()))
   );
 
 drop policy if exists "boards: update own files" on storage.objects;
 create policy "boards: update own files" on storage.objects
   for update using (
     bucket_id = 'boards'
-    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_board_admin())
+    and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.is_board_admin()))
   );
 
 drop policy if exists "boards: delete own files" on storage.objects;
 create policy "boards: delete own files" on storage.objects
   for delete using (
     bucket_id = 'boards'
-    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_board_admin())
+    and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.is_board_admin()))
   );
