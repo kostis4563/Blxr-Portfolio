@@ -25,6 +25,7 @@ export const IMAGES = {
   '/icons/adobe.svg': { v: 'b99b4171', ext: '.svg', widths: [] },
   '/icons/apple.svg': { v: '0b8ffab7', ext: '.svg', widths: [] },
   '/icons/apple_dark.svg': { v: '78342798', ext: '.svg', widths: [] },
+  '/icons/bootstrap.svg': { v: '87ba6632', ext: '.svg', widths: [] },
   '/icons/c-plusplus.svg': { v: '2b9ea95a', ext: '.svg', widths: [] },
   '/icons/canva.svg': { v: '242bb82e', ext: '.svg', widths: [] },
   '/icons/cloudflare.svg': { v: 'b8dff311', ext: '.svg', widths: [] },
