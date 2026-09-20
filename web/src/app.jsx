@@ -745,7 +745,7 @@ function App() {
         </section>
 
         <section id="skills" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-shake">
+          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             {t('home.skills')}
           </h2>
 
@@ -962,7 +962,7 @@ function App() {
         </section>
 
         <section id="education" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-watom">
+          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             {t('home.education')}
           </h2>
 
