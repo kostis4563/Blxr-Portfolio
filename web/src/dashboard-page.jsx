@@ -11,8 +11,10 @@ import DashboardLogs from './dashboard-logs'
 import { navigate, useRouteHash, dashboardPath, DASHBOARD_PATH } from './lib/router'
 import { Bone, Loading } from './components/skeleton'
 import { useAuth, profileOf } from './lib/supabase'
-import { loginUrlFor, mfaRequired } from './lib/auth'
+import { loginUrlFor, mfaRequired, isGuest } from './lib/auth'
 import { itemForHash, isSiteOwner, SIDEBAR_STORAGE_KEY, BLURBS } from './lib/dashboard'
+import { CLAIM_HASH, lockedForGuest } from './lib/guest'
+import { GuestBar, MembersOnly, ClaimDialog, useGuestWork } from './components/guest'
 
 function readCollapsed() {
   try {
@@ -56,7 +58,9 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
   const item = itemForHash(hash)
   const { session } = useAuth()
   const user = profileOf(session?.user)
+  const guest = isGuest(session?.user)
   const [verified, setVerified] = useState(undefined)
+  const [claiming, setClaiming] = useState(false)
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -90,6 +94,12 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
   useEffect(() => { setMobileOpen(false) }, [hash])
 
   useEffect(() => {
+    if (hash !== CLAIM_HASH) return
+    if (guest) setClaiming(true)
+    navigate(dashboardPath(), { replace: true })
+  }, [hash, guest])
+
+  useEffect(() => {
     document.documentElement.dataset.view = 'dashboard'
     return () => { delete document.documentElement.dataset.view }
   }, [])
@@ -112,6 +122,10 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
 
   const top = item.parent || item
   const hidden = Boolean(top.owner) && Boolean(user) && !isSiteOwner(user)
+  const locked = guest && lockedForGuest(item.path)
+  const work = useGuestWork(guest ? hash : null)
+  const openClaim = useCallback(() => setClaiming(true), [])
+  const closeClaim = useCallback(() => setClaiming(false), [])
 
   useEffect(() => {
     if (hidden) navigate(dashboardPath(), { replace: true })
@@ -141,6 +155,7 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
         <DashboardTopbar item={item} theme={theme} onToggleTheme={onToggleTheme} onOpenMobile={() => setMobileOpen(true)} />
 
         <main className={`mx-auto w-full flex-1 px-4 py-6 sm:px-8 sm:py-8 ${top.subnav && !top.roomy ? 'max-w-[820px]' : top.wide ? 'max-w-[1440px]' : 'max-w-[1080px]'}`}>
+          {guest && <GuestBar user={user} boards={work} onClaim={openClaim} />}
           {!inside && (
             <div key={top.id} className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 animate-rise-in">
               <div className="min-w-0">
@@ -149,7 +164,9 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
               </div>
             </div>
           )}
-          {top.id === 'settings' ? (
+          {locked ? (
+            <MembersOnly path={item.path} onClaim={openClaim} />
+          ) : top.id === 'settings' ? (
             <DashboardSettings
               item={item}
               user={session.user}
@@ -163,7 +180,7 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
           ) : top.id === 'stats' ? (
             <DashboardStats />
           ) : top.id === 'boards' ? (
-            <DashboardBoards hash={hash} />
+            <DashboardBoards hash={hash} guest={guest} onClaim={openClaim} />
           ) : top.id === 'messages' ? (
             <DashboardMessages hash={hash} user={session.user} />
           ) : top.id === 'reviewpanel' ? (
@@ -173,6 +190,8 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
           ) : null}
         </main>
       </div>
+
+      {guest && <ClaimDialog open={claiming} onClose={closeClaim} boards={work} />}
     </div>
   )
 }

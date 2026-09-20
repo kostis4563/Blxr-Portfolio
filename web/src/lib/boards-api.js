@@ -1,4 +1,5 @@
 import { supabase, currentSession } from './supabase'
+import { isGuest } from './auth'
 import { LIMITS, STARTING_LISTS, shortId, sortCards, positionFor, needsRenumber, POSITION_STEP } from './boards'
 import { extensionFor } from './boards-files'
 
@@ -46,6 +47,9 @@ function lift(error, what) {
     if (text.includes('note_len')) return new BoardError(`A board description has to fit in ${LIMITS.note} characters.`)
     if (text.includes('notes_len')) return new BoardError(`Card notes have to fit in ${LIMITS.notes} characters.`)
     return new BoardError('That value is outside what a board accepts.')
+  }
+  if (text.includes('guest_board_limit')) {
+    return new BoardError('Guests keep one board — claim your account for more.', { status: 403 })
   }
   if (error.code === '42501' || error.code === 'PGRST301') {
     return new BoardError('That board is not yours to change.', { status: 403 })
@@ -477,7 +481,10 @@ export function removeLink(card, linkId) {
 
 const folderFor = (boardId) => `${myId()}/${boardId}`
 
+const GUEST_UPLOAD = 'Files are for members — claim your account to attach them.'
+
 async function upload(path, blob, contentType) {
+  if (isGuest(currentSession()?.user)) throw new BoardError(GUEST_UPLOAD, { status: 403 })
   const { error } = await client().storage.from(BUCKET).upload(path, blob, { contentType, upsert: true })
   if (error) {
     if (String(error.message || '').toLowerCase().includes('bucket not found')) {

@@ -142,6 +142,15 @@ create trigger profiles_touch before update on public.profiles
 
 -- Row level security ---------------------------------------------------------
 
+create or replace function public.is_guest()
+returns boolean
+language sql stable as $$
+  select coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false);
+$$;
+
+revoke all on function public.is_guest() from public;
+grant execute on function public.is_guest() to authenticated;
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "profiles: read published or own" on public.profiles;
@@ -150,7 +159,7 @@ create policy "profiles: read published or own" on public.profiles
 
 drop policy if exists "profiles: insert own" on public.profiles;
 create policy "profiles: insert own" on public.profiles
-  for insert with check ((select auth.uid()) = id);
+  for insert with check ((select auth.uid()) = id and not (select public.is_guest()));
 
 drop policy if exists "profiles: update own" on public.profiles;
 create policy "profiles: update own" on public.profiles
@@ -192,7 +201,7 @@ create policy "avatars: public read" on storage.objects
 
 drop policy if exists "avatars: insert own folder" on storage.objects;
 create policy "avatars: insert own folder" on storage.objects
-  for insert with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  for insert with check (bucket_id = 'avatars' and not (select public.is_guest()) and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "avatars: update own folder" on storage.objects;
 create policy "avatars: update own folder" on storage.objects

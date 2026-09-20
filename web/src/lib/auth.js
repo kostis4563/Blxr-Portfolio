@@ -16,7 +16,6 @@ export class AuthError extends Error {
 
 export const AUTH_PROVIDERS = ['google', 'discord', 'github']
 
-// Supabase error codes → the codes the login page knows how to word.
 const CODE_MAP = {
   invalid_credentials: 'invalid_credentials',
   email_not_confirmed: 'email_not_confirmed',
@@ -42,6 +41,7 @@ const CODE_MAP = {
   email_address_not_authorized: 'invalid',
   insufficient_aal: 'needs_mfa',
   reauthentication_needed: 'reauth',
+  anonymous_provider_disabled: 'guest_disabled',
 }
 
 function wrap(error) {
@@ -57,6 +57,7 @@ function wrap(error) {
     else if (msg.includes('invalid totp code') || msg.includes('invalid mfa code')) code = 'bad_code'
     else if (msg.includes('manual linking')) code = 'linking_disabled'
     else if (msg.includes('mfa') && msg.includes('not enabled')) code = 'mfa_disabled'
+    else if (msg.includes('anonymous sign-ins are disabled')) code = 'guest_disabled'
     else if (error.status === 422) code = 'invalid'
     else code = 'failed'
   }
@@ -89,8 +90,6 @@ export async function authLogin({ email, password, remember = true, captchaToken
   return data?.user ?? null
 }
 
-// Returns { user, confirmed }: `confirmed` is false when Supabase wants the
-// address verified first, in which case there is no session yet.
 export async function authRegister({ name, email, password, captchaToken }) {
   setRemember(true)
   const data = await run((sb) =>
@@ -100,16 +99,12 @@ export async function authRegister({ name, email, password, captchaToken }) {
       options: { data: { name }, emailRedirectTo: callbackUrl(DASHBOARD_PATH), ...(captchaToken ? { captchaToken } : {}) },
     }),
   )
-  // Supabase returns a user with an empty identities list for an existing email
-  // rather than an error, so the response can't be used to enumerate accounts.
   if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
     throw new AuthError('email_taken', { fields: ['email'] })
   }
   return { user: data?.user ?? null, confirmed: Boolean(data?.session) }
 }
 
-// The link lands on /login; supabase-js raises PASSWORD_RECOVERY there and the
-// page switches to the new-password form.
 export function authRequestReset(email, { captchaToken } = {}) {
   return run((sb) => sb.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl(LOGIN_PATH), ...(captchaToken ? { captchaToken } : {}) }))
 }
@@ -122,11 +117,30 @@ export async function authUpdatePassword(password) {
   return data?.user ?? null
 }
 
-// Full-page redirect to the provider; Supabase lands back on /login?next=…
-// with a ?code= that the client exchanges on load.
 export function authSignInWith(provider, next = DASHBOARD_PATH) {
   setRemember(true)
   return run((sb) => sb.auth.signInWithOAuth({ provider, options: { redirectTo: callbackUrl(next) } }))
+}
+
+export const isGuest = (user) => Boolean(user?.is_anonymous)
+
+export const GUEST_BOARD_LIMIT = 1
+
+export async function authContinueAsGuest({ captchaToken } = {}) {
+  setRemember(true)
+  const data = await run((sb) => sb.auth.signInAnonymously({ options: captchaToken ? { captchaToken } : undefined }))
+  return data?.user ?? null
+}
+
+export async function authClaimWithPassword({ name, email, password }) {
+  const data = await run((sb) =>
+    sb.auth.updateUser({ email, password, data: { name } }, { emailRedirectTo: callbackUrl(DASHBOARD_PATH) }),
+  )
+  return data?.user ?? null
+}
+
+export function authClaimWith(provider, next = DASHBOARD_PATH) {
+  return run((sb) => sb.auth.linkIdentity({ provider, options: { redirectTo: callbackUrl(next) } }))
 }
 
 export async function authSignOut() {
@@ -135,27 +149,20 @@ export async function authSignOut() {
   await sb.auth.signOut().catch(() => {})
 }
 
-// Keeps this session, revokes every other one for the account.
 export function authSignOutOthers() {
   return run((sb) => sb.auth.signOut({ scope: 'others' }))
 }
 
-// --- settings ----------------------------------------------------------------
-
-// `data` is merged into user_metadata one key deep, so send whole objects.
 export async function authUpdateProfile(data) {
   const res = await run((sb) => sb.auth.updateUser({ data }))
   return res?.user ?? null
 }
 
-// Supabase mails both addresses; the change applies once each is confirmed.
 export async function authUpdateEmail(email) {
   const res = await run((sb) => sb.auth.updateUser({ email }, { emailRedirectTo: callbackUrl(SETTINGS_ACCOUNT_PATH) }))
   return res?.user ?? null
 }
 
-// Confirms the current password before a change, on a side client so the
-// real session (and its MFA level) is left alone.
 export async function authVerifyPassword(email, password, { captchaToken } = {}) {
   const probe = probeClient()
   if (!probe) throw new AuthError('not_configured')
@@ -169,27 +176,20 @@ export async function authVerifyPassword(email, password, { captchaToken } = {})
   await probe.auth.signOut({ scope: 'local' }).catch(() => {})
 }
 
-// Redirects to the provider; Supabase lands back on the account settings.
 export function authLinkIdentity(provider) {
   return run((sb) => sb.auth.linkIdentity({ provider, options: { redirectTo: callbackUrl(SETTINGS_ACCOUNT_PATH) } }))
 }
 
-// unlinkIdentity does not refresh the stored user, so the identities list
-// would go stale; a session refresh pulls the new copy and notifies the store.
 export async function authUnlinkIdentity(identity) {
   await run((sb) => sb.auth.unlinkIdentity(identity))
   await run((sb) => sb.auth.refreshSession()).catch(() => {})
 }
-
-// --- two-factor (TOTP) -------------------------------------------------------
 
 export async function mfaFactors() {
   const data = await run((sb) => sb.auth.mfa.listFactors())
   return (data?.totp || []).filter((f) => f.status === 'verified')
 }
 
-// Starts enrolment; leftover unverified factors from abandoned attempts are
-// cleared first so Supabase's per-user limit is not hit.
 export async function mfaEnroll() {
   const sb = client()
   const { data } = await sb.auth.mfa.listFactors()
@@ -198,12 +198,10 @@ export async function mfaEnroll() {
   return { id: factor.id, qr: svgDataUri(factor.totp.qr_code), secret: factor.totp.secret, uri: factor.totp.uri }
 }
 
-// supabase-js hands back `data:image/svg+xml;utf-8,<svg …>` with the markup
-// unescaped; a `#` inside (colours) would be read as a fragment. Re-encode.
 function svgDataUri(value) {
   const raw = String(value || '')
   let svg = raw.startsWith('data:') ? raw.slice(raw.indexOf(',') + 1) : raw
-  try { svg = decodeURIComponent(svg) } catch { /* already plain */ }
+  try { svg = decodeURIComponent(svg) } catch {}
   return `data:image/svg+xml;utf-8,${encodeURIComponent(svg)}`
 }
 
@@ -215,8 +213,6 @@ export function mfaUnenroll(factorId) {
   return run((sb) => sb.auth.mfa.unenroll({ factorId }))
 }
 
-// True when the account has a verified factor the current session has not
-// passed yet. Reads the session JWT, no network.
 export async function mfaRequired() {
   const sb = supabase()
   if (!sb) return false
@@ -224,26 +220,22 @@ export async function mfaRequired() {
   return Boolean(data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2')
 }
 
-// Sign-in step two: verifies a code against the first TOTP factor.
 export async function mfaChallenge(code) {
   const factors = await mfaFactors()
   if (!factors.length) throw new AuthError('no_factor')
   return mfaVerify(factors[0].id, code)
 }
 
-// --- danger zone ----------------------------------------------------------------
-
 export async function authDeleteAccount() {
   const token = currentSession()?.access_token
   if (!token) throw new AuthError('failed', { status: 401 })
   const res = await deleteAccountRequest(token)
   if (res.status === 204) {
-    // The row is gone server-side; drop the local copy without calling Supabase.
     await client().auth.signOut({ scope: 'local' }).catch(() => {})
     return
   }
   let body = null
-  try { body = await res.json() } catch { /* not json */ }
+  try { body = await res.json() } catch {}
   if (res.status === 503) throw new AuthError('delete_disabled', { status: 503 })
   if (res.status === 401) throw new AuthError(body?.error === 'needs_mfa' ? 'needs_mfa' : 'reauth', { status: 401 })
   if (res.status === 429) throw new AuthError('locked', { status: 429, retryAfter: Number(res.headers.get('retry-after')) || 60 })
@@ -252,7 +244,6 @@ export async function authDeleteAccount() {
 
 export { isSupabaseConfigured }
 
-// /login?next=… — `next` may carry a hash, so it rides inside the query.
 function callbackUrl(next) {
   const origin = typeof window === 'undefined' ? '' : window.location.origin
   const url = new URL(LOGIN_PATH, origin || 'http://localhost')

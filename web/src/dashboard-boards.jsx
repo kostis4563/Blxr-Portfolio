@@ -51,6 +51,8 @@ import {
   shade,
   tally,
 } from './lib/boards'
+import { GUEST_BOARD_LIMIT } from './lib/auth'
+import { GuestBoardCap } from './components/guest'
 import * as api from './lib/boards-api'
 import { dashboardPath, navigate } from './lib/router'
 
@@ -431,8 +433,9 @@ function BulkBar({ board, picked, cards, onRun, onClear, busy }) {
   )
 }
 
-export default function DashboardBoards({ hash }) {
+export default function DashboardBoards({ hash, guest = false, onClaim }) {
   const route = readHash(hash)
+  const maxBoards = guest ? GUEST_BOARD_LIMIT : LIMITS.boards
   const { tab, board: openId, card: openCard } = route
 
   const [index, setIndex] = useState(null)
@@ -1071,7 +1074,7 @@ export default function DashboardBoards({ hash }) {
 
         <span className="flex-1" />
 
-        <button type="button" disabled={busy || (index || []).length >= LIMITS.boards} onClick={() => setCreating(true)} className={BTN_SOLID}>
+        <button type="button" disabled={busy || (index || []).length >= maxBoards} onClick={() => setCreating(true)} className={BTN_SOLID}>
           <Icon name="plus" className="h-3.5 w-3.5" />
           New board
         </button>
@@ -1130,8 +1133,12 @@ export default function DashboardBoards({ hash }) {
         />
       )}
 
-      {index && listed.length > 0 && (index || []).length >= LIMITS.boards && (
-        <p className="text-[11.5px] text-ink-faint">{LIMITS.boards} boards is the most one account keeps. Archive one to make room.</p>
+      {index && listed.length > 0 && (index || []).length >= maxBoards && (
+        guest ? (
+          <GuestBoardCap onClaim={onClaim} max={LIMITS.boards} />
+        ) : (
+          <p className="text-[11.5px] text-ink-faint">{LIMITS.boards} boards is the most one account keeps. Archive one to make room.</p>
+        )
       )}
 
       {creating && <NewBoard busy={busy} onClose={() => setCreating(false)} onCreate={createBoard} />}

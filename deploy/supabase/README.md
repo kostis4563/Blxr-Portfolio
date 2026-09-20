@@ -432,6 +432,48 @@ app already expects these; none of them changes a line of code.
   `https://blxr.net/**` in production. Remove the `localhost` entry when you
   are not developing; it is the one place an open redirect could come from.
 
+## 14. Guests
+
+`/login` has a quiet "Continue as guest" under the sign-in button. It uses
+Supabase's **anonymous sign-in**: the guest gets a real session whose JWT
+carries `is_anonymous: true`, so row-level security and the dashboard work
+unchanged, and the account can later be *claimed* in place — same user id,
+so a board made as a guest carries over.
+
+1. Supabase → **Authentication → Sign In / Providers → Anonymous sign-ins**:
+   enable. Until it is on, the link says "Guest access is turned off right
+   now." Keep the captcha (§13) on; anonymous sign-ins send a token too.
+2. Re-run [`boards.sql`](boards.sql), [`profiles.sql`](profiles.sql) and
+   [`messages.sql`](messages.sql). Each defines `is_guest()` and uses it:
+   one board per guest (a trigger, `guest_board_limit`), no uploads to the
+   `boards` and `avatars` buckets, no profile row, no thread to the owner.
+   The app refuses the same things first with a nicer message and shows the
+   locked sections behind a "members only" panel rather than hiding them.
+3. Claiming through a provider is `linkIdentity()`, which needs
+   **Allow manual linking** (§8). Claiming with an email goes through
+   `updateUser({ email, password })`: the password applies at once, the
+   address once its confirmation link is opened (the `change-email`
+   template), and only then does `is_anonymous` drop. The app shows the
+   pending address in the guest strip until that happens.
+
+**What a guest can do.** Boards (one, no attachments), Stats, Appearance
+settings. Everything else stays visible with a lock and a specific reason:
+messages need a name on the other end, a handle is one per member, the
+account pages hang off an email.
+
+**Clean-up.** Guest accounts that are never claimed pile up in `auth.users`.
+Nothing in the app depends on them once the browser forgets the session, so
+sweep them now and then from the SQL editor (or schedule it with pg_cron):
+
+```sql
+delete from auth.users
+ where is_anonymous is true
+   and created_at < now() - interval '30 days';
+```
+
+Their boards cascade with them. A claimed account is no longer anonymous
+and is never touched by this.
+
 ## Notes
 
 - Until a provider is enabled in Supabase its button says "That sign-in

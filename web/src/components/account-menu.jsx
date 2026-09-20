@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Icon } from './icon'
 import { link, navigate, HOME_PATH, LOGIN_PATH } from '../lib/router'
 import { authSignOut } from '../lib/auth'
+import { CLAIM_PATH } from '../lib/guest'
 import { Sensitive } from './sensitive'
-const PROVIDER_LABEL = { email: 'Email', google: 'Google', discord: 'Discord', apple: 'Apple', github: 'GitHub' }
+const PROVIDER_LABEL = { email: 'Email', google: 'Google', discord: 'Discord', apple: 'Apple', github: 'GitHub', guest: 'Guest' }
 
 const MENU = 'absolute z-50 w-[240px] rounded-xl border border-line bg-surface shadow-xl animate-menu-in'
 const MENU_ITEM =
@@ -50,6 +51,17 @@ export function Avatar({ user, size }) {
       />
     )
   }
+  if (user.guest) {
+    return (
+      <span
+        aria-hidden="true"
+        style={{ width: px, height: px, fontSize: `${Math.round(size * 0.42)}px` }}
+        className="grid shrink-0 place-items-center rounded-full border border-dashed border-line-strong font-semibold text-ink-subtle"
+      >
+        ?
+      </span>
+    )
+  }
   return (
     <span
       aria-hidden="true"
@@ -62,6 +74,7 @@ export function Avatar({ user, size }) {
 }
 
 const SITE_ITEMS = [{ path: HOME_PATH, icon: 'arrowUpRight', label: 'View site' }]
+const CLAIM_ITEM = { path: CLAIM_PATH, icon: 'key', label: 'Keep my work' }
 
 export default function AccountMenu({ user, theme, onToggleTheme, placement = 'down', items = SITE_ITEMS, trigger }) {
   const [open, setOpen] = useState(false)
@@ -93,7 +106,11 @@ export default function AccountMenu({ user, theme, onToggleTheme, placement = 'd
                   {PROVIDER_LABEL[user.provider] || user.provider}
                 </span>
               </p>
-              <Sensitive as="p" className="truncate text-[12px] text-ink-muted">{user.email}</Sensitive>
+              {user.guest ? (
+                <p className="truncate text-[12px] text-ink-muted">Nothing saved to a name yet</p>
+              ) : (
+                <Sensitive as="p" className="truncate text-[12px] text-ink-muted">{user.email}</Sensitive>
+              )}
             </div>
           </div>
           <div className="border-t border-line p-1.5">
@@ -104,7 +121,7 @@ export default function AccountMenu({ user, theme, onToggleTheme, placement = 'd
             </button>
           </div>
           <div className="border-t border-line p-1.5">
-            {items.map((item) => (
+            {(user.guest ? [CLAIM_ITEM, ...items] : items).map((item) => (
               <a key={item.path} role="menuitem" {...link(item.path, closeThen(close, item.path))} className={MENU_ITEM}>
                 <Icon name={item.icon} className="h-4 w-4 text-ink-muted" />
                 <span className="flex-1 text-left">{item.label}</span>
@@ -114,8 +131,9 @@ export default function AccountMenu({ user, theme, onToggleTheme, placement = 'd
               </a>
             ))}
             <button role="menuitem" type="button" onClick={signOut} disabled={signingOut} className={`${MENU_ITEM} disabled:opacity-50`}>
-              <Icon name="logout" className="h-4 w-4 text-ink-muted" /> {signingOut ? 'Signing out…' : 'Sign out'}
+              <Icon name="logout" className="h-4 w-4 text-ink-muted" /> {signingOut ? 'Leaving…' : user.guest ? 'Leave guest session' : 'Sign out'}
             </button>
+            {user.guest && <p className="px-2.5 pb-1 pt-0.5 text-[11px] leading-snug text-ink-faint">Leaving ends the session; the guest board goes with it.</p>}
           </div>
         </div>
       )}

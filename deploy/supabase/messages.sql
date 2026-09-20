@@ -21,6 +21,16 @@ $$;
 revoke all on function public.is_site_owner() from public;
 grant execute on function public.is_site_owner() to authenticated;
 
+create or replace function public.is_guest()
+returns boolean
+language sql stable as $$
+  select coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false);
+$$;
+
+revoke all on function public.is_guest() from public;
+grant execute on function public.is_guest() to authenticated;
+
+
 create table if not exists public.threads (
   id              uuid primary key default gen_random_uuid(),
   member          uuid not null unique references auth.users (id) on delete cascade,
@@ -185,7 +195,7 @@ create policy "threads: own or owner" on public.threads
 
 drop policy if exists "threads: open own" on public.threads;
 create policy "threads: open own" on public.threads
-  for insert with check (member = (select auth.uid()));
+  for insert with check (member = (select auth.uid()) and not (select public.is_guest()));
 
 drop policy if exists "threads: mark own" on public.threads;
 create policy "threads: mark own" on public.threads
@@ -222,6 +232,9 @@ declare
 begin
   if auth.uid() is null then
     raise exception 'sign in first';
+  end if;
+  if public.is_guest() then
+    raise exception 'members only';
   end if;
   if public.is_site_owner() then
     raise exception 'the owner reads the inbox instead';

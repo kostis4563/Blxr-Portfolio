@@ -22,6 +22,15 @@ $$;
 revoke all on function public.is_board_admin() from public;
 grant execute on function public.is_board_admin() to authenticated;
 
+create or replace function public.is_guest()
+returns boolean
+language sql stable as $$
+  select coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false);
+$$;
+
+revoke all on function public.is_guest() from public;
+grant execute on function public.is_guest() to authenticated;
+
 create table if not exists public.boards (
   id          uuid primary key default gen_random_uuid(),
   owner       uuid not null references auth.users (id) on delete cascade,
@@ -272,6 +281,20 @@ drop trigger if exists board_cards_stamp on public.board_cards;
 create trigger board_cards_stamp before insert or update on public.board_cards
   for each row execute function public.board_cards_stamp();
 
+create or replace function public.boards_guest_cap()
+returns trigger
+language plpgsql as $$
+begin
+  if public.is_guest() and (select count(*) from public.boards where owner = auth.uid()) >= 1 then
+    raise exception 'guest_board_limit';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists boards_guest_cap on public.boards;
+create trigger boards_guest_cap before insert on public.boards
+  for each row execute function public.boards_guest_cap();
+
 alter table public.boards enable row level security;
 alter table public.board_cards enable row level security;
 
@@ -391,6 +414,7 @@ drop policy if exists "boards: insert own files" on storage.objects;
 create policy "boards: insert own files" on storage.objects
   for insert with check (
     bucket_id = 'boards'
+    and not (select public.is_guest())
     and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.is_board_admin()))
   );
 
@@ -398,6 +422,7 @@ drop policy if exists "boards: update own files" on storage.objects;
 create policy "boards: update own files" on storage.objects
   for update using (
     bucket_id = 'boards'
+    and not (select public.is_guest())
     and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.is_board_admin()))
   );
 

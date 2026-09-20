@@ -8,6 +8,7 @@ import { imageProps } from '../lib/images'
 import { Icon } from './icon'
 import AccountMenu, { Avatar } from './account-menu'
 import { Sensitive } from './sensitive'
+import { lockedForGuest } from '../lib/guest'
 
 export { Icon }
 
@@ -30,7 +31,9 @@ const ICON_BTN =
 
 const BRANCH = 'relative before:absolute before:-left-3 before:inset-y-0 before:border-l before:border-line before:content-[""]'
 
-function ChildLink({ item, parent, active, onNavigate }) {
+const LOCK = <Icon name="lock" className="h-3 w-3 text-ink-faint" />
+
+function ChildLink({ item, parent, active, onNavigate, locked }) {
   const path = `${parent.id}/${item.id}`
   return (
     <li className={BRANCH}>
@@ -41,13 +44,15 @@ function ChildLink({ item, parent, active, onNavigate }) {
         className={`${ITEM} h-8 text-[13px] ${active ? ACTIVE : IDLE}`}
       >
         <span className="flex-1 truncate">{item.label}</span>
+        {locked && LOCK}
       </a>
     </li>
   )
 }
 
-function NavItem({ item: given, activePath, rail, open, onToggle, onNavigate, pinned = false }) {
+function NavItem({ item: given, activePath, rail, open, onToggle, onNavigate, pinned = false, guest = false }) {
   const unread = useUnread()
+  const locked = guest && lockedForGuest(given.id)
   const item = given.id === 'messages' ? { ...given, count: unread > 0 ? badgeOf(unread) : undefined } : given
   const hasChildren = Boolean(item.children) && !item.subnav
   const inside = activePath === item.id || activePath.startsWith(`${item.id}/`)
@@ -65,6 +70,7 @@ function NavItem({ item: given, activePath, rail, open, onToggle, onNavigate, pi
           <span className="flex-1 truncate text-left">{item.label}</span>
           {item.count !== undefined && <span className={COUNT}>{item.count}</span>}
           {item.tag && <span className={TAG}>{item.tag}</span>}
+          {locked && LOCK}
           {hasChildren && (
             <Icon
               name="chevronDown"
@@ -112,6 +118,7 @@ function NavItem({ item: given, activePath, rail, open, onToggle, onNavigate, pi
                   parent={item}
                   active={activePath === `${item.id}/${child.id}`}
                   onNavigate={onNavigate}
+                  locked={guest && lockedForGuest(`${item.id}/${child.id}`)}
                 />
               ))}
             </ul>
@@ -140,7 +147,8 @@ function NavItem({ item: given, activePath, rail, open, onToggle, onNavigate, pi
                       aria-current={on ? 'page' : undefined}
                       className={`${ITEM} h-8 text-[13px] ${on ? `${ACTIVE} bg-surface-hover` : IDLE}`}
                     >
-                      {child.label}
+                      <span className="flex-1 truncate">{child.label}</span>
+                      {guest && lockedForGuest(path) && LOCK}
                     </a>
                   </li>
                 )
@@ -253,7 +261,11 @@ export default function DashboardSidebar({
         <Avatar user={user} size={26} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium leading-tight text-ink-strong">{user.name}</span>
-          <Sensitive interactive={false} className="block truncate text-[11.5px] leading-tight text-ink-subtle">{user.email}</Sensitive>
+          {user.guest ? (
+            <span className="block truncate text-[11.5px] leading-tight text-ink-subtle">Browsing as a guest</span>
+          ) : (
+            <Sensitive interactive={false} className="block truncate text-[11.5px] leading-tight text-ink-subtle">{user.email}</Sensitive>
+          )}
         </span>
         <Icon name="chevronsUpDown" className="h-3.5 w-3.5 text-ink-faint" />
       </button>
@@ -347,6 +359,7 @@ export default function DashboardSidebar({
                     open={openGroups.has(item.id)}
                     onToggle={toggleGroup}
                     onNavigate={go}
+                    guest={user.guest}
                   />
                 ))}
               </ul>
@@ -366,6 +379,7 @@ export default function DashboardSidebar({
                 onToggle={toggleGroup}
                 onNavigate={go}
                 pinned
+                guest={user.guest}
               />
             ))}
           </ul>

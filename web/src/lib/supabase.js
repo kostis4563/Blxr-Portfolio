@@ -2,11 +2,8 @@ import { useSyncExternalStore } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 const URL = import.meta.env.VITE_SUPABASE_URL
-// New projects hand out sb_publishable_… keys; the legacy anon JWT works the same.
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Set to 'local' or 'session' by "Keep me signed in" before a sign-in; decides
-// where supabase-js stores the session from then on.
 const PERSIST_KEY = 'blxr-auth-persist'
 
 export const isSupabaseConfigured = () => Boolean(URL && ANON_KEY)
@@ -23,12 +20,9 @@ export function setRemember(remember) {
   try {
     localStorage.setItem(PERSIST_KEY, remember ? 'local' : 'session')
   } catch {
-    // private mode
   }
 }
 
-// supabase-js takes one storage for the client's lifetime, so this adapter
-// reads from either store and writes to whichever `setRemember` picked.
 const storage = {
   getItem(key) {
     try {
@@ -44,7 +38,6 @@ const storage = {
       ;(target === localStorage ? sessionStorage : localStorage).removeItem(key)
       target.setItem(key, value)
     } catch {
-      // storage full or blocked
     }
   },
   removeItem(key) {
@@ -52,14 +45,12 @@ const storage = {
       localStorage.removeItem(key)
       sessionStorage.removeItem(key)
     } catch {
-      // ignore
     }
   },
 }
 
 let client = null
 
-// Browser-only: the prerender never talks to Supabase.
 export function supabase() {
   if (typeof window === 'undefined' || !isSupabaseConfigured()) return null
   if (!client) {
@@ -70,19 +61,12 @@ export function supabase() {
   return client
 }
 
-// A throwaway client for checking a password without touching the real
-// session: nothing is persisted and it has its own storage key, so the
-// cross-tab broadcast never reaches the main client.
 export function probeClient() {
   if (typeof window === 'undefined' || !isSupabaseConfigured()) return null
   return createClient(URL, ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'blxr-auth-probe' },
   })
 }
-
-// --- auth store -----------------------------------------------------------
-// `session` is undefined while the first getSession() is in flight, then
-// Session | null. `recovery` flips on when a password-reset link lands.
 
 let state = { session: undefined, recovery: false }
 let started = false
@@ -125,16 +109,18 @@ export function useAuth() {
 export const currentSession = () => state.session
 export const clearRecovery = () => { if (state.recovery) update({ recovery: false }) }
 
-// Shape the UI needs from a Supabase user, with OAuth metadata folded in.
 export function profileOf(user) {
   if (!user) return null
   const meta = user.user_metadata || {}
   const email = user.email || ''
+  const guest = Boolean(user.is_anonymous)
   return {
     id: user.id,
-    name: meta.name || meta.full_name || meta.user_name || meta.preferred_username || email.split('@')[0] || 'Account',
+    name: guest ? 'Guest' : meta.name || meta.full_name || meta.user_name || meta.preferred_username || email.split('@')[0] || 'Account',
     email,
-    avatar: meta.avatar_url || meta.picture || null,
-    provider: user.app_metadata?.provider || 'email',
+    avatar: guest ? null : meta.avatar_url || meta.picture || null,
+    provider: guest ? 'guest' : user.app_metadata?.provider || 'email',
+    guest,
+    pendingEmail: guest ? user.new_email || '' : '',
   }
 }

@@ -1,33 +1,16 @@
 import { useState, useEffect, useId, useRef } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { link, navigate, useRouteHash, HOME_PATH, LOGIN_PATH, REGISTER_PATH, RESET_PATH, UPDATE_PASSWORD_PATH, VERIFY_PATH, DASHBOARD_PATH } from './lib/router'
-import { authLogin, authRegister, authRequestReset, authUpdatePassword, authSignInWith, authSignOut, mfaRequired, mfaChallenge, AUTH_PROVIDERS } from './lib/auth'
+import { authLogin, authRegister, authRequestReset, authUpdatePassword, authSignOut, authContinueAsGuest, isGuest, mfaRequired, mfaChallenge } from './lib/auth'
 import { useAuth, clearRecovery } from './lib/supabase'
-import { SOCIAL_ICON_PATHS } from './lib/profile'
-import { PASSWORD_MIN, passwordProblem, strengthOf } from './lib/password'
+import { PASSWORD_MIN, passwordProblem } from './lib/password'
 import { Captcha } from './components/captcha'
-
-const LABEL = 'text-[11px] font-mono font-semibold text-ink-subtle uppercase tracking-wider'
-const INPUT =
-  'w-full rounded-xl border border-line bg-surface-raised/60 px-3.5 py-2.5 text-[13.5px] text-ink-strong placeholder:text-ink-faint transition-colors hover:border-line-strong focus:border-line-strong focus:bg-surface focus:outline-none aria-[invalid=true]:border-red-500/60'
-const CTA =
-  'inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-surface-inverted px-5 text-[13px] font-medium text-ink-on-inverted outline-none transition-[transform,opacity] duration-200 hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0'
-const PROVIDER =
-  'flex h-10 cursor-pointer items-center justify-center rounded-xl border border-line bg-surface-raised/60 text-ink-muted outline-none transition-colors duration-200 hover:border-line-strong hover:text-ink-strong focus-visible:border-line-strong focus-visible:text-ink-strong'
-const SWITCH = 'cursor-pointer font-medium text-ink-strong underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink-strong'
-const QUIET = 'cursor-pointer text-[11px] text-ink-subtle transition-colors hover:text-ink-strong'
+import { Icon } from './components/icon'
+import { LABEL, INPUT, CTA, SWITCH, QUIET, Field, PasswordInput, Strength, Providers, Divider } from './components/auth-ui'
 
 export { PASSWORD_MIN }
 const NAME_MAX = 32
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-const PROVIDER_ICONS = {
-  google:
-    'M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z',
-  discord: SOCIAL_ICON_PATHS.Discord,
-  github: SOCIAL_ICON_PATHS.GitHub,
-}
-const PROVIDER_NAMES = { google: 'Google', discord: 'Discord', github: 'GitHub' }
 
 const MODES = {
   login: {
@@ -94,14 +77,15 @@ function messageFor(err, mode) {
   if (code === 'code_expired') return 'That code expired — enter the current one.'
   if (code === 'no_factor') return 'No authenticator is set up for this account.'
   if (code === 'captcha') return 'The verification check did not pass. Reload the page and try again.'
+  if (code === 'guest_disabled') return 'Guest access is turned off right now. Create an account instead.'
   if (mode === 'verify') return 'Could not verify the code.'
+  if (mode === 'guest') return 'Could not open a guest session.'
   if (mode === 'login') return 'Could not sign in.'
   if (mode === 'register') return 'Could not create the account.'
   if (mode === 'update') return 'Could not update the password.'
   return 'Could not send the reset link.'
 }
 
-// Supabase bounces failed links and provider sign-ins back with ?error=…&error_code=…
 function messageForCallback(params) {
   const code = params.get('error_code') || params.get('error')
   if (!code) return null
@@ -136,108 +120,48 @@ function validate(mode, form, accountEmail = '') {
   return errors
 }
 
-const STRENGTH_LABEL = ['', 'Weak', 'Okay', 'Good', 'Strong']
-const STRENGTH_COLOR = ['', 'bg-red-500', 'bg-amber-500', 'bg-emerald-500', 'bg-emerald-500']
+const PERKS = [
+  { icon: 'kanban', title: 'Boards', body: 'Columns, cards and due dates. Private to you.' },
+  { icon: 'message', title: 'A line to me', body: 'One private thread, straight to the owner.' },
+  { icon: 'user', title: 'Your page', body: 'blxr.net/u/you — links, skills, what you are up to.' },
+]
 
-function Field({ label, error, hint, children }) {
+function Perks() {
   return (
-    <label className="flex flex-col gap-2">
-      <span className="flex items-baseline justify-between gap-3">
-        <span className={LABEL}>{label}</span>
-        {hint}
-      </span>
-      {children}
-      {error && <span role="alert" className="text-[12px] text-red-500">{error}</span>}
-    </label>
-  )
-}
-
-function PasswordInput({ id, value, onChange, autoComplete, invalid, autoFocus }) {
-  const [shown, setShown] = useState(false)
-  const [caps, setCaps] = useState(false)
-  const watchCaps = (e) => setCaps(Boolean(e.getModifierState?.('CapsLock')))
-  return (
-    <>
-      <span className="relative">
-        <input
-          id={id}
-          type={shown ? 'text' : 'password'}
-          autoComplete={autoComplete}
-          autoFocus={autoFocus}
-          value={value}
-          onChange={onChange}
-          onKeyDown={watchCaps}
-          onKeyUp={watchCaps}
-          onBlur={() => setCaps(false)}
-          aria-invalid={invalid || undefined}
-          className={`${INPUT} pe-16`}
-        />
-        <button
-          type="button"
-          onClick={() => setShown((v) => !v)}
-          aria-pressed={shown}
-          className="absolute inset-y-0 end-0 cursor-pointer px-3.5 font-mono text-[11px] uppercase tracking-wider text-ink-subtle transition-colors hover:text-ink-strong"
-        >
-          {shown ? 'Hide' : 'Show'}
-        </button>
-      </span>
-      {caps && <span className="text-[11px] text-amber-500">Caps Lock is on.</span>}
-    </>
-  )
-}
-
-function Strength({ password }) {
-  const score = strengthOf(password)
-  return (
-    <span className="flex items-center gap-2" aria-live="polite">
-      <span className="flex flex-1 gap-1">
-        {[1, 2, 3, 4].map((n) => (
-          <span key={n} className={`h-1 flex-1 rounded-full transition-colors ${n <= score ? STRENGTH_COLOR[score] : 'bg-surface-hover'}`} />
-        ))}
-      </span>
-      <span className="w-[6ch] text-right font-mono text-[10px] uppercase tracking-wider text-ink-faint">{STRENGTH_LABEL[score]}</span>
-    </span>
-  )
-}
-
-function Providers({ next, disabled, onStart, onError }) {
-  const [pending, setPending] = useState(null)
-  // Back from the provider restores this page from bfcache with `pending` still set.
-  useEffect(() => {
-    const onShow = (e) => { if (e.persisted) setPending(null) }
-    window.addEventListener('pageshow', onShow)
-    return () => window.removeEventListener('pageshow', onShow)
-  }, [])
-  const go = async (provider) => {
-    if (pending) return
-    setPending(provider)
-    onStart?.()
-    try {
-      await authSignInWith(provider, next)
-      // Supabase now owns the page; it navigates to the provider.
-    } catch (err) {
-      setPending(null)
-      onError?.(err)
-    }
-  }
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {AUTH_PROVIDERS.map((provider) => (
-        <button
-          key={provider}
-          type="button"
-          onClick={() => go(provider)}
-          disabled={disabled || Boolean(pending)}
-          className={`${PROVIDER} disabled:cursor-not-allowed disabled:opacity-50 ${pending === provider ? 'border-line-strong text-ink-strong' : ''}`}
-          aria-label={`Continue with ${PROVIDER_NAMES[provider]}`}
-          title={`Continue with ${PROVIDER_NAMES[provider]}`}
-        >
-          <svg className="h-[16px] w-[16px]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d={PROVIDER_ICONS[provider]} />
-          </svg>
-        </button>
+    <ul className="flex flex-col">
+      {PERKS.map((perk, i) => (
+        <li key={perk.title} className="flex items-start gap-3.5 border-t border-dashed border-line py-3.5 first:border-t-0 first:pt-0">
+          <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-line bg-surface-raised/60 text-ink-muted">
+            <Icon name={perk.icon} className="h-[14px] w-[14px]" />
+          </span>
+          <span className="min-w-0">
+            <span className="flex items-baseline gap-2">
+              <span className="text-[13.5px] font-semibold text-ink-strong">{perk.title}</span>
+              <span className="font-mono text-[10px] text-ink-faint">0{i + 1}</span>
+            </span>
+            <span className="mt-0.5 block text-[12.5px] leading-relaxed text-ink-muted">{perk.body}</span>
+          </span>
+        </li>
       ))}
-    </div>
+    </ul>
+  )
+}
+
+function GuestDoor({ onClick, busy, disabled }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-dashed border-line-strong px-4 py-3.5 text-left outline-none transition-colors hover:border-ink-strong/60 hover:bg-surface-raised/40 focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-dashed border-line-strong font-semibold text-ink-subtle transition-colors group-hover:text-ink-strong">?</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13.5px] font-medium text-ink-strong">{busy ? 'Opening a guest session…' : 'Just looking? Continue as guest'}</span>
+        <span className="mt-0.5 block text-[12px] leading-relaxed text-ink-muted">No email. Try one board, claim it as yours whenever you like.</span>
+      </span>
+      <span aria-hidden="true" className="text-ink-faint transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+    </button>
   )
 }
 
@@ -251,20 +175,8 @@ function Notice({ title, children, tone = 'ok' }) {
   )
 }
 
-function Divider({ children }) {
-  return (
-    <div className="flex items-center gap-3" aria-hidden="true">
-      <span className="h-px flex-1 border-t border-dashed border-line" />
-      <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">{children}</span>
-      <span className="h-px flex-1 border-t border-dashed border-line" />
-    </div>
-  )
-}
-
 const EMPTY = { name: '', email: '', password: '', confirm: '', code: '', remember: true }
 
-// Same-origin paths only: no `//host`, no backslashes (browsers read `/\host` as
-// `//host`), and never /login itself, which would strand the user on the form.
 const safeNext = (to) => (to && /^\/(?![/\\])/.test(to) && !to.includes('\\') && !to.startsWith(LOGIN_PATH) ? to : null)
 
 export default function LoginPage({ theme, onToggleTheme }) {
@@ -273,6 +185,7 @@ export default function LoginPage({ theme, onToggleTheme }) {
   const copy = MODES[mode]
   const id = useId()
   const { session, recovery } = useAuth()
+  const guest = isGuest(session?.user)
 
   const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState({})
@@ -281,9 +194,9 @@ export default function LoginPage({ theme, onToggleTheme }) {
   const [notice, setNotice] = useState(null)
   const [next, setNext] = useState(DASHBOARD_PATH)
   const [leaving, setLeaving] = useState(false)
+  const [guestBusy, setGuestBusy] = useState(false)
   const captcha = useRef(null)
 
-  // Keep the email when hopping between forms; drop everything else.
   useEffect(() => {
     setForm((f) => ({ ...EMPTY, email: f.email }))
     setErrors({})
@@ -291,7 +204,6 @@ export default function LoginPage({ theme, onToggleTheme }) {
     setNotice(null)
   }, [mode])
 
-  // Supabase (or a guarded page) lands here with ?next=… and maybe an error.
   useEffect(() => {
     const url = new URL(window.location.href)
     const params = url.searchParams
@@ -307,15 +219,13 @@ export default function LoginPage({ theme, onToggleTheme }) {
     }
   }, [])
 
-  // A reset link signs the user in and flags recovery: send them to the new-password form.
   useEffect(() => {
     if (recovery && mode !== 'update') navigate(UPDATE_PASSWORD_PATH, { replace: true })
   }, [recovery, mode])
 
-  // Already signed in (or just finished an OAuth round-trip)? Move along —
-  // unless two-factor is on and this session has not passed it yet.
   useEffect(() => {
     if (!session || recovery || mode === 'update' || leaving) return
+    if (guest && (mode === 'login' || mode === 'register' || mode === 'reset')) return
     let cancelled = false
     mfaRequired().then((needed) => {
       if (cancelled) return
@@ -327,9 +237,8 @@ export default function LoginPage({ theme, onToggleTheme }) {
       navigate(next, { replace: true })
     })
     return () => { cancelled = true }
-  }, [session, recovery, mode, next, leaving])
+  }, [session, recovery, mode, next, leaving, guest])
 
-  // #verify with nothing to verify: back to the sign-in form.
   useEffect(() => {
     if (mode === 'verify' && session === null) navigate(LOGIN_PATH, { replace: true })
   }, [mode, session])
@@ -392,7 +301,24 @@ export default function LoginPage({ theme, onToggleTheme }) {
     }
   }
 
-  // #update without a reset session: nothing to update.
+  const continueAsGuest = async () => {
+    if (busy || guestBusy) return
+    setGuestBusy(true)
+    setError(null)
+    try {
+      const captchaToken = captcha.current ? await captcha.current.run() : undefined
+      await authContinueAsGuest({ captchaToken })
+      setLeaving(true)
+      navigate(next, { replace: true })
+    } catch (err) {
+      setError(messageFor(err, 'guest'))
+    } finally {
+      setGuestBusy(false)
+    }
+  }
+
+  const wide = mode === 'login' || mode === 'register'
+
   const updateLocked = mode === 'update' && session === null
   const tagline =
     mode !== 'update' ? copy.tagline
@@ -412,17 +338,38 @@ export default function LoginPage({ theme, onToggleTheme }) {
         </div>
       </header>
 
-      <main className="flex min-h-screen w-full flex-1 items-center justify-center px-5 pt-20 pb-16 animate-rise-in">
+      <main className={`mx-auto flex min-h-screen w-full max-w-[960px] flex-1 px-5 pt-20 pb-16 animate-rise-in sm:px-8 ${wide ? 'flex-col justify-center md:grid md:grid-cols-[minmax(0,1fr)_400px] md:items-center md:gap-14' : 'items-center justify-center'}`}>
+        {wide && (
+          <section className="mb-10 md:mb-0">
+            <p className={`${LABEL} mb-3`}>{copy.eyebrow}</p>
+            <h1 className="text-[32px] font-extrabold leading-[1.1] tracking-[-0.03em] text-ink-strong sm:text-[38px]">{copy.title}</h1>
+            <p className="mt-3 max-w-[380px] text-[14px] leading-relaxed text-ink-muted">{tagline}</p>
+            <div className="mt-8 hidden md:block">
+              <p className={`${LABEL} mb-4`}>What an account is for</p>
+              <Perks />
+            </div>
+            {!guest && (
+              <div className="mt-8 hidden md:block">
+                <GuestDoor onClick={continueAsGuest} busy={guestBusy} disabled={busy || guestBusy} />
+              </div>
+            )}
+          </section>
+        )}
+
         <form
           key={mode}
           onSubmit={submit}
           noValidate
           aria-busy={leaving || undefined}
-          className={`w-full max-w-[400px] rounded-2xl border border-line bg-surface-raised/40 p-7 transition-opacity ${leaving ? 'pointer-events-none opacity-60' : ''}`}
+          className={`w-full max-w-[400px] rounded-2xl border border-line bg-surface-raised/40 p-7 transition-opacity ${wide ? 'mx-auto md:mx-0' : ''} ${leaving ? 'pointer-events-none opacity-60' : ''}`}
         >
-          <p className={`${LABEL} mb-2`}>{copy.eyebrow}</p>
-          <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">{copy.title}</h1>
-          <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{tagline}</p>
+          {!wide && (
+            <>
+              <p className={`${LABEL} mb-2`}>{copy.eyebrow}</p>
+              <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">{copy.title}</h1>
+              <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{tagline}</p>
+            </>
+          )}
 
           {notice?.kind === 'reset' ? (
             <Notice title="Check your inbox">
@@ -438,8 +385,18 @@ export default function LoginPage({ theme, onToggleTheme }) {
             </Notice>
           ) : (
             <>
+              {guest && (mode === 'login' || mode === 'register') && (
+                <div className="mb-6 rounded-xl border border-line bg-surface px-4 py-3.5 text-[12.5px] leading-relaxed">
+                  <p className="font-medium text-ink-strong">You are browsing as a guest.</p>
+                  <p className="mt-1 text-ink-muted">
+                    Signing in here switches to that account and leaves your guest board behind. To keep it,{' '}
+                    <a {...link(`${DASHBOARD_PATH}#claim`)} className={SWITCH}>claim the guest account</a> instead.
+                  </p>
+                </div>
+              )}
+
               {(mode === 'login' || mode === 'register') && (
-                <div className="mt-6 flex flex-col gap-5">
+                <div className="flex flex-col gap-5">
                   <Providers next={next} disabled={busy} onStart={() => setError(null)} onError={fail} />
                   <Divider>or with email</Divider>
                 </div>
@@ -559,10 +516,33 @@ export default function LoginPage({ theme, onToggleTheme }) {
 
               {(mode === 'login' || mode === 'register' || mode === 'reset') && <Captcha handle={captcha} />}
 
-              <button type="submit" disabled={busy} className={`${CTA} mt-6`}>
+              <button type="submit" disabled={busy || guestBusy} className={`${CTA} mt-6`}>
                 <span>{busy ? copy.busy : copy.cta}</span>
                 {!busy && <span aria-hidden="true">→</span>}
               </button>
+
+              {mode === 'login' && !guest && (
+                <div className="mt-4 text-center md:hidden">
+                  <button
+                    type="button"
+                    onClick={continueAsGuest}
+                    disabled={busy || guestBusy}
+                    className="cursor-pointer text-[12.5px] text-ink-muted transition-colors hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {guestBusy ? 'Opening a guest session…' : <>Just looking? <span className={SWITCH}>Continue as guest</span></>}
+                  </button>
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-ink-faint">
+                    No email needed. You can try a board and claim it as yours later.
+                  </p>
+                </div>
+              )}
+
+              {mode === 'login' && guest && (
+                <p className="mt-4 text-center text-[12px] text-ink-muted">
+                  Or{' '}
+                  <a {...link(DASHBOARD_PATH)} className={SWITCH}>back to the dashboard</a> as a guest.
+                </p>
+              )}
             </>
           )}
 
