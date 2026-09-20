@@ -19,7 +19,7 @@ export const SKILL_CATEGORIES = [
     nameKey: 'skills.frameworks',
     items: [
       { name: 'React', icon: '/icons/react_dark.svg', level: 'advanced', desc: 'React is a JavaScript library for building user interfaces.' },
-      { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'learning', desc: 'Bootstrap is a framework for building responsive websites.' },
+      { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'basic', desc: 'Bootstrap is a framework for building responsive websites.' },
       { name: 'discord.js', icon: '/icons/discordjs.svg', level: 'advanced', desc: 'Node.js library for Discord bots' },
     ],
   },
