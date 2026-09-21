@@ -1408,25 +1408,24 @@ async function supabaseUser(req) {
 const mfaSatisfied = (user) => !user.mfaEnrolled || user.aal2
 const emailConfirmed = (user) => typeof user.email_confirmed_at === 'string' || typeof user.confirmed_at === 'string'
 
-const DISCORD_CLIENT_ID = (process.env.DISCORD_CLIENT_ID || '').trim()
-const DISCORD_CLIENT_SECRET = (process.env.DISCORD_CLIENT_SECRET || '').trim()
-const DISCORD_SITE_URL = (process.env.SITE_URL || '').replace(/\/$/, '')
-const discordConfigured = () => Boolean(DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET && DISCORD_SITE_URL)
+const DISCORD_BOT_TOKEN = (process.env.DISCORD_BOT_TOKEN || '').trim()
 const DISCORD_API = 'https://discord.com/api/v10'
 const DISCORD_CDN = 'https://cdn.discordapp.com'
-const DISCORD_REDIRECT = `${DISCORD_SITE_URL}/api/discord/callback`
+const DISCORD_LOOKUP = 'https://japi.rest/discord/v1/user'
 const DISCORD_ID_RE = /^\d{17,20}$/
 const DISCORD_HASH_RE = /^a?_?[a-f0-9]{32}$/
 const DISCORD_ASSET_RE = /^[a-z0-9_./-]{1,120}$/i
-const DISCORD_STATE_RE = /^[a-f0-9]{48}$/
-const DISCORD_STATE_TTL_MS = 10 * 60_000
-const DISCORD_STATES_MAX = 500
+const DISCORD_CACHE_TTL_MS = 10 * 60_000
+const DISCORD_CACHE_MAX = 200
 
-const discordStates = new Map()
+const discordCache = new Map()
 
-function sweepDiscordStates(now = Date.now()) {
-  for (const [k, v] of discordStates) if (now - v.at > DISCORD_STATE_TTL_MS) discordStates.delete(k)
-  while (discordStates.size > DISCORD_STATES_MAX) discordStates.delete(discordStates.keys().next().value)
+class DiscordError extends Error {
+  constructor(code, status) {
+    super(code)
+    this.code = code
+    this.status = status
+  }
 }
 
 const discordImage = (kind, id, hash, size) =>
@@ -1473,53 +1472,56 @@ function discordProfile(user) {
   }
 }
 
-function discordAuthorizeUrl(state) {
-  const params = new URLSearchParams({
-    client_id: DISCORD_CLIENT_ID,
-    response_type: 'code',
-    scope: 'identify',
-    redirect_uri: DISCORD_REDIRECT,
-    state,
-    prompt: 'none',
-  })
-  return `https://discord.com/oauth2/authorize?${params}`
+function discordStatus(res, what) {
+  if (res.status === 404) throw new DiscordError('not_found', 404)
+  if (res.status === 429) throw new DiscordError('rate_limited', 429)
+  if (!res.ok) throw new Error(`${what} ${res.status}`)
 }
 
-async function discordToken(path, form) {
-  const body = new URLSearchParams({ client_id: DISCORD_CLIENT_ID, client_secret: DISCORD_CLIENT_SECRET, ...form })
-  const res = await withTimeout((signal) =>
-    fetch(`${DISCORD_API}/oauth2/token${path}`, { method: 'POST', signal, body, headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' } }),
-  )
-  return res
-}
-
-async function discordExchange(code) {
-  const tokenRes = await discordToken('', { grant_type: 'authorization_code', code, redirect_uri: DISCORD_REDIRECT })
-  if (!tokenRes.ok) throw new Error(`discord token ${tokenRes.status}`)
-  const token = await tokenRes.json().catch(() => null)
-  const access = typeof token?.access_token === 'string' ? token.access_token : ''
-  if (!access) throw new Error('discord token: no access_token')
-  try {
-    const res = await withTimeout((signal) => fetch(`${DISCORD_API}/users/@me`, { signal, headers: { authorization: `Bearer ${access}`, accept: 'application/json' } }))
-    if (!res.ok) throw new Error(`discord /users/@me ${res.status}`)
+// Discord's own user endpoint: any bot token works, it need not share a
+// server with the user. Public profile fields only — no OAuth, no linking.
+async function discordFromApi(id) {
+  return withTimeout(async (signal) => {
+    const res = await fetch(`${DISCORD_API}/users/${id}`, {
+      signal,
+      headers: { authorization: `Bot ${DISCORD_BOT_TOKEN}`, accept: 'application/json', 'user-agent': 'blxr.net (https://blxr.net, 1.0)' },
+    })
+    discordStatus(res, 'discord')
     const body = await res.json().catch(() => null)
-    if (!body || !DISCORD_ID_RE.test(String(body.id || ''))) throw new Error('discord /users/@me: bad body')
+    if (!body || !DISCORD_ID_RE.test(String(body.id || ''))) throw new Error('discord /users: bad body')
     return discordProfile(body)
-  } finally {
-    discordToken('/revoke', { token: access, token_type_hint: 'access_token' }).catch(() => {})
-  }
+  })
 }
 
-function discordPopupPage(res, ok, text) {
-  const title = ok ? 'Connected' : 'Could not connect'
-  res.writeHead(200, {
-    ...NO_STORE,
-    'content-type': 'text/html; charset=utf-8',
-    'x-frame-options': 'DENY',
+// Without a bot token, a public lookup mirror relays the same user object.
+async function discordFromMirror(id) {
+  return withTimeout(async (signal) => {
+    const res = await fetch(`${DISCORD_LOOKUP}/${id}`, { signal, headers: { accept: 'application/json', 'user-agent': 'blxr.net' } })
+    const json = res.ok || res.status === 400 ? await res.json().catch(() => null) : null
+    if (json?.data?.code === 10013 || json?.code === 10013) throw new DiscordError('not_found', 404)
+    discordStatus(res, 'discord mirror')
+    const body = json?.data
+    if (!body || !DISCORD_ID_RE.test(String(body.id || ''))) throw new Error('discord mirror: bad body')
+    return discordProfile(body)
   })
-  res.end(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · blxr</title>` +
-    `<style>html{color-scheme:light dark}body{margin:0;min-height:100vh;display:grid;place-items:center;font:15px/1.5 system-ui,sans-serif;background:#0b0b0c;color:#e6e6e8;text-align:center;padding:24px}@media(prefers-color-scheme:light){body{background:#fafafa;color:#18181b}}p{margin:.25em 0;opacity:.7}h1{font-size:18px;margin:0 0 .25em}</style></head>` +
-    `<body><div><h1>${title}</h1><p>${text}</p></div></body></html>`)
+}
+
+async function discordUser(id) {
+  const hit = discordCache.get(id)
+  if (hit && Date.now() - hit.at < DISCORD_CACHE_TTL_MS) return hit.data
+  let data
+  if (DISCORD_BOT_TOKEN) {
+    try {
+      data = await discordFromApi(id)
+    } catch (err) {
+      if (err instanceof DiscordError) throw err
+      log.warn('upstream', `discord lookup via the API failed for ${id}, using the mirror`, { detail: err?.message })
+    }
+  }
+  if (!data) data = await discordFromMirror(id)
+  discordCache.set(id, { at: Date.now(), data })
+  if (discordCache.size > DISCORD_CACHE_MAX) discordCache.delete(discordCache.keys().next().value)
+  return data
 }
 
 const SITE_OWNER_EMAIL = (process.env.SITE_OWNER_EMAIL || STATS_OWNER_EMAIL || '').trim().toLowerCase()
@@ -1607,10 +1609,10 @@ function systemReport() {
       mail: mailConfigured(),
       accountDelete: Boolean(SUPABASE_SECRET_KEY),
       github: Boolean(GH_TOKEN),
-      discord: discordConfigured(),
+      discord: true,
     },
     state: { dir: STATE_DIR, files, reviews: reviews.length, invites: invites.length, hitDays: Object.keys(hits).length, vitalDays: Object.keys(vitals).length, logs: logSize() },
-    caches: { search: cache.size, top: topCache.size, contributions: ghCache.size, stats: ghStatsCache.size, discord: discordStates.size, sessions: userCache.size, rateLimits: rateLimitSize() },
+    caches: { search: cache.size, top: topCache.size, contributions: ghCache.size, stats: ghStatsCache.size, discord: discordCache.size, sessions: userCache.size, rateLimits: rateLimitSize() },
     guard: { origins: [...ALLOWED_ORIGINS] },
     mirrors: [...PIPED, ...INVIDIOUS].map((base) => ({ base, kind: PIPED.includes(base) ? 'piped' : 'invidious', down: !mirrorUp(base), until: mirrorUp(base) ? null : new Date(mirrorDownUntil.get(base)).toISOString() })),
     reviews: { paused: settings.paused, approval: settings.approval, blockedTerms: settings.blockedTerms.length, pending: reviews.filter((r) => r.pending).length },
@@ -1632,12 +1634,11 @@ function bucketsFor(req, pathname) {
     pathname.startsWith('/api/account/') ||
     (pathname.startsWith('/api/reviews/invites') && (authed || req.method !== 'GET')) ||
     (pathname === '/api/github/stats' && authed) ||
-    pathname === '/api/discord/start' ||
-    pathname.startsWith('/api/discord/result/')
+    pathname === '/api/discord/user'
   ) {
     out.push('auth')
   }
-  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname === '/api/discord/callback') out.push('upstream')
+  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname === '/api/discord/user') out.push('upstream')
   if ((pathname === '/api/reviews' && req.method === 'POST') || (/^\/api\/reviews\/[a-z0-9]{8}$/.test(pathname) && req.method === 'PATCH')) out.push('write')
   if (pathname === '/api/hit' || pathname === '/api/logs/client' || (pathname === '/api/vitals' && req.method === 'POST')) out.push('beacon')
   out.push('all')
@@ -1692,17 +1693,6 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(204, NO_STORE)
       return res.end()
-    }
-
-    if (url.pathname === '/api/discord/start') {
-      if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
-      if (!discordConfigured()) return json(res, 503, { error: 'discord_disabled' }, NO_STORE)
-      const user = await supabaseUser(req)
-      if (!user) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
-      sweepDiscordStates()
-      const state = crypto.randomBytes(24).toString('hex')
-      discordStates.set(state, { userId: user.id, at: Date.now() })
-      return json(res, 200, { url: discordAuthorizeUrl(state), state }, NO_STORE)
     }
 
     if (url.pathname === '/api/account/delete') {
@@ -2084,43 +2074,20 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    if (url.pathname === '/api/discord/callback') {
+    if (url.pathname === '/api/discord/user') {
       if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
-      const state = url.searchParams.get('state') || ''
-      const entry = DISCORD_STATE_RE.test(state) ? discordStates.get(state) : null
-      if (!entry || Date.now() - entry.at > DISCORD_STATE_TTL_MS || entry.user || entry.error) {
-        return discordPopupPage(res, false, 'This link has expired. Close the window and try again from the dashboard.')
-      }
-      const code = url.searchParams.get('code') || ''
-      if (!code || url.searchParams.get('error')) {
-        entry.error = 'denied'
-        return discordPopupPage(res, false, 'Discord did not authorise the request. You can close this window.')
-      }
+      // Signed-in dashboard users only, so the bot token never fronts an
+      // anonymous lookup proxy. Local runs without Supabase skip this.
+      if (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && !(await supabaseUser(req))) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+      const id = (url.searchParams.get('id') || '').trim()
+      if (!DISCORD_ID_RE.test(id)) return json(res, 400, { error: 'bad_id' }, NO_STORE)
       try {
-        entry.user = await discordExchange(code)
+        return json(res, 200, { user: await discordUser(id) }, NO_STORE)
       } catch (err) {
-        entry.error = 'discord_failed'
-        log.warn('upstream', 'discord exchange failed', { detail: err?.message })
-        return discordPopupPage(res, false, 'Discord did not answer. Close this window and try again.')
+        if (err instanceof DiscordError) return json(res, err.status, { error: err.code }, NO_STORE)
+        log.warn('upstream', `discord lookup failed for ${id}`, { detail: err?.message })
+        return json(res, 502, { error: 'discord_failed' }, NO_STORE)
       }
-      return discordPopupPage(res, true, 'Back in the dashboard, pick what to import. You can close this window.')
-    }
-
-    if (url.pathname.startsWith('/api/discord/result/')) {
-      if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
-      const state = url.pathname.slice('/api/discord/result/'.length)
-      if (!DISCORD_STATE_RE.test(state)) return json(res, 400, { error: 'bad_state' }, NO_STORE)
-      const user = await supabaseUser(req)
-      if (!user) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
-      const entry = discordStates.get(state)
-      if (!entry || entry.userId !== user.id || Date.now() - entry.at > DISCORD_STATE_TTL_MS) return json(res, 404, { error: 'expired' }, NO_STORE)
-      if (entry.error) {
-        discordStates.delete(state)
-        return json(res, entry.error === 'denied' ? 403 : 502, { error: entry.error }, NO_STORE)
-      }
-      if (!entry.user) return json(res, 200, { pending: true }, NO_STORE)
-      discordStates.delete(state)
-      return json(res, 200, { user: entry.user }, NO_STORE)
     }
 
     if (url.pathname === '/api/github/contributions') {

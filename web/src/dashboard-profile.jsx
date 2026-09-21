@@ -11,11 +11,11 @@ import { useDevicePrefs } from './lib/prefs'
 import { profileOf } from './lib/supabase'
 import { profilePath } from './lib/router'
 import {
-  LIMITS, ACCENTS, VISIBILITY, LAYOUTS, PATTERNS, AVATAR_SHAPES, PAGE_THEMES, SECTIONS, DEFAULT_SECTIONS, DECORATIONS, NAMEPLATES, HEX_RE,
+  LIMITS, ACCENTS, VISIBILITY, LAYOUTS, PATTERNS, AVATAR_SHAPES, PAGE_THEMES, SECTIONS, DEFAULT_SECTIONS, DECORATIONS, NAMEPLATES, HEX_RE, DISCORD_ID_RE,
   draftFromUser, handleProblem, normalizeUrl, profileUrl, hostOf, accentOf, paletteColor, nameplateImage,
   fetchMyProfile, checkHandle, saveProfile, deleteProfile, uploadAvatar, removeAvatar, uploadCover, removeCover,
 } from './lib/profiles'
-import { IMPORT_FIELDS, IMPORT_GROUPS, availableImports, applyImports, connectDiscord } from './lib/discord'
+import { IMPORT_FIELDS, IMPORT_GROUPS, availableImports, applyImports, lookupDiscord } from './lib/discord'
 
 const MESSAGES = {
   handle_taken: 'That handle is already taken.',
@@ -28,11 +28,8 @@ const MESSAGES = {
   offline: 'You appear to be offline.',
   invalid: 'Please check the highlighted fields.',
   not_configured: 'Accounts are not set up on this build.',
-  discord_disabled: 'Discord import is not enabled on this build — set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET on the server.',
-  popup_blocked: 'Your browser blocked the popup. Allow popups for this site and try again.',
-  closed: 'The Discord window was closed before finishing.',
-  denied: 'Discord was not authorised. Nothing was imported.',
-  expired: 'That took too long — try again.',
+  bad_id: 'That doesn\u2019t look like a Discord user ID — it is 17 to 20 digits.',
+  not_found: 'No Discord user has that ID.',
   rate_limited: 'Too many attempts right now. Try again in a moment.',
   unauthorized: 'Your session has expired. Sign in again and retry.',
   discord_failed: 'Discord did not answer. Try again in a moment.',
@@ -249,6 +246,7 @@ function ImportPreview({ user }) {
 }
 
 function ImportDialog({ open, onClose, form, onApply }) {
+  const dialogId = useId()
   const [status, setStatus] = useState({ kind: 'idle' })
   const [chosen, setChosen] = useState(() => new Set())
   const abortRef = useRef(null)
@@ -263,23 +261,28 @@ function ImportDialog({ open, onClose, form, onApply }) {
     setStatus({ kind: 'idle' })
   }, [open])
 
-  const connect = async () => {
+  const [userId, setUserId] = useState(() => form.discordId || '')
+  const cleanId = userId.replace(/\D/g, '')
+  const validId = DISCORD_ID_RE.test(cleanId)
+
+  const lookup = async () => {
+    if (!validId || status.kind === 'waiting') return
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
     setStatus({ kind: 'waiting' })
     try {
-      const u = await connectDiscord({ signal: ctrl.signal })
+      const u = await lookupDiscord(cleanId, { signal: ctrl.signal })
       setChosen(new Set(availableImports(u).map((f) => f.id)))
       setStatus({ kind: 'found', user: u })
     } catch (err) {
       if (err?.name === 'AbortError') return
-      setStatus({ kind: 'error', text: messageFor(err, 'Could not connect to Discord.') })
+      setStatus({ kind: 'error', text: messageFor(err, 'Could not reach Discord.') })
     } finally {
       if (abortRef.current === ctrl) abortRef.current = null
     }
   }
-  const cancelConnect = () => {
+  const reset = () => {
     abortRef.current?.abort()
     abortRef.current = null
     setStatus({ kind: 'idle' })
@@ -305,8 +308,8 @@ function ImportDialog({ open, onClose, form, onApply }) {
       open={open}
       onClose={onClose}
       size="wide"
-      title="Add from Discord"
-      description="Sign in with Discord in a popup, then pick what to bring over. Nothing is saved until you hit Save changes."
+      title="Import from Discord"
+      description="Paste your Discord user ID, then pick what to bring over. Nothing is saved until you hit Save changes."
       footer={
         <>
           <button type="button" onClick={onClose} className={BTN_GHOST}>Cancel</button>
@@ -319,32 +322,50 @@ function ImportDialog({ open, onClose, form, onApply }) {
       <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_280px]">
         <div className="flex min-w-0 flex-col gap-4">
           {!found && (
-            <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-line px-4 py-5">
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-[#5865f2]/15 text-[#5865f2]"><DiscordMark className="h-5 w-5" /></span>
-              <div>
-                <p className="text-[13.5px] font-medium text-ink-strong">{waiting ? 'Waiting for Discord…' : 'Connect your Discord account'}</p>
-                <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-muted">
-                  {waiting
-                    ? 'Finish signing in in the popup. This closes it for you when it is done.'
-                    : 'Discord only shares what is public on your profile: name, photo, banner, decoration, nameplate and server tag. No messages, no servers.'}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={waiting ? cancelConnect : connect} data-autofocus className={waiting ? BTN_GHOST : BTN_SECONDARY}>
-                  {waiting ? <Spinner /> : <DiscordMark />}
-                  {waiting ? 'Cancel' : status.kind === 'error' ? 'Try again' : 'Connect Discord'}
-                </button>
-              </div>
-              {status.kind === 'error' && <p role="alert" className="text-[12px] text-red-500 animate-menu-in">{status.text}</p>}
+            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-line px-4 py-4">
+              <Field label="Discord user ID" htmlFor={`${dialogId}-id`} error={status.kind === 'error' ? status.text : undefined}>
+                <div className={`flex h-9 w-full items-stretch overflow-hidden rounded-lg border bg-surface-raised/60 transition-colors focus-within:border-line-strong focus-within:bg-surface hover:border-line-strong ${status.kind === 'error' ? 'border-red-500/60' : 'border-line'}`}>
+                  <span className="grid w-9 shrink-0 place-items-center border-r border-line text-[#5865f2]"><DiscordMark /></span>
+                  <input
+                    id={`${dialogId}-id`}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={24}
+                    placeholder="981607036192190534"
+                    value={userId}
+                    onChange={(e) => { setUserId(e.target.value); if (status.kind === 'error') setStatus({ kind: 'idle' }) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookup() } }}
+                    disabled={waiting}
+                    data-autofocus
+                    aria-invalid={status.kind === 'error' || undefined}
+                    className="min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-ink-strong placeholder:text-ink-faint focus:outline-none disabled:opacity-60"
+                  />
+                  <button
+                    type="button"
+                    onClick={lookup}
+                    disabled={waiting || !validId}
+                    className="flex shrink-0 cursor-pointer select-none items-center gap-1.5 border-l border-line px-3 text-[12.5px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-strong focus-visible:bg-surface-hover focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {waiting ? <Spinner className="h-3 w-3" /> : <Icon name="search" className="h-3 w-3" />}
+                    {waiting ? 'Looking up' : 'Look up'}
+                  </button>
+                </div>
+              </Field>
+              <p className="text-[12px] leading-relaxed text-ink-muted">
+                Discord → Settings → Advanced → turn on <span className="font-medium text-ink-strong">Developer Mode</span>, then right-click your name → <span className="font-medium text-ink-strong">Copy User ID</span>.
+                Only what is public on your profile comes over: name, photo, banner, decoration, nameplate and server tag.
+              </p>
             </div>
           )}
 
           {found && (
             <div className="flex flex-col gap-3 animate-rise-in">
               <div className="flex items-center justify-between gap-2">
-                <p className={LABEL}>Connected</p>
-                <button type="button" onClick={connect} className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>
-                  <Icon name="refresh" className="h-3.5 w-3.5" /> Use another account
+                <p className={LABEL}>Found</p>
+                <button type="button" onClick={reset} className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>
+                  <Icon name="arrowLeft" className="h-3.5 w-3.5" /> Different ID
                 </button>
               </div>
               <ImportPreview user={found} />
@@ -970,9 +991,9 @@ function Editor({ user }) {
         <div key={tab} className="settings-stagger flex flex-col gap-5">
           {tab === 'basics' && (
             <Section id="identity" title="Identity" description="Who you are, at a glance. The handle becomes your URL.">
-              <Row label="Add from Discord" description={form.discordId ? `Linked to Discord ID ${form.discordId}. Connect again to refresh.` : 'Sign in with Discord and pull your name, photo, banner, decoration, nameplate and server tag.'}>
-                <button type="button" onClick={() => setImportOpen(true)} className={BTN_SECONDARY}>
-                  <DiscordMark /> {form.discordId ? 'Re-import' : 'Add from Discord'}
+              <Row label="Import from Discord" description={form.discordId ? `Discord ID ${form.discordId}. Import again to refresh.` : 'Just your user ID — pulls name, photo, banner, decoration, nameplate and server tag.'}>
+                <button type="button" onClick={() => setImportOpen(true)} className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>
+                  <DiscordMark className="h-3 w-3" /> {form.discordId ? 'Re-import' : 'Import'}
                 </button>
               </Row>
               <ImageRow
@@ -1096,7 +1117,7 @@ function Editor({ user }) {
                   <Segmented label="Page theme" value={form.theme} onChange={(v) => set('theme', v)} options={PAGE_THEMES.map((t) => ({ value: t.id, label: t.label, icon: t.icon }))} />
                 </Row>
               </Section>
-              <Section id="flair" title="Flair" description="Little extras around your name and photo. The Discord ones come from Add from Discord on the Basics tab.">
+              <Section id="flair" title="Flair" description="Little extras around your name and photo. The Discord ones come from Import from Discord on the Basics tab.">
                 <Row label="Avatar decoration" description="Drawn around the photo." align="start" wide>
                   <div role="radiogroup" aria-label="Avatar decoration" className="grid w-full grid-cols-2 gap-2 sm:grid-cols-5">
                     {DECORATIONS.filter((d) => d.id !== 'image' || form.decorationUrl).map((d) => (

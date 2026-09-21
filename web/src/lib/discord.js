@@ -24,49 +24,14 @@ async function request(path, { method = 'GET', signal } = {}) {
   return data
 }
 
-export async function connectDiscord({ signal } = {}) {
-  const popup = window.open('about:blank', 'blxr-discord', 'popup,width=520,height=720')
-  if (!popup) throw new DiscordError('popup_blocked')
-  let state
-  try {
-    const started = await request('/api/discord/start', { method: 'POST', signal })
-    if (!started?.url || !started?.state) throw new DiscordError('failed')
-    state = started.state
-    popup.location = started.url
-  } catch (err) {
-    popup.close()
-    throw err
-  }
-  return new Promise((resolve, reject) => {
-    let done = false
-    const finish = (fn, value) => {
-      if (done) return
-      done = true
-      clearInterval(timer)
-      clearTimeout(deadline)
-      signal?.removeEventListener('abort', onAbort)
-      try { popup.close() } catch {}
-      fn(value)
-    }
-    const onAbort = () => finish(reject, new DOMException('Aborted', 'AbortError'))
-    signal?.addEventListener('abort', onAbort, { once: true })
-    const deadline = setTimeout(() => finish(reject, new DiscordError('expired')), 10 * 60_000)
-    let polling = false
-    const timer = setInterval(async () => {
-      if (polling) return
-      polling = true
-      try {
-        const data = await request(`/api/discord/result/${state}`)
-        if (data?.user && DISCORD_ID_RE.test(String(data.user.id || ''))) return finish(resolve, data.user)
-        if (!data?.pending) return finish(reject, new DiscordError('failed'))
-        if (popup.closed) finish(reject, new DiscordError('closed'))
-      } catch (err) {
-        if (err?.code !== 'offline') finish(reject, err)
-      } finally {
-        polling = false
-      }
-    }, 1200)
-  })
+// Public profile by user ID. No OAuth: the server asks Discord's API (or a
+// public mirror) and hands back the normalised user object.
+export async function lookupDiscord(id, { signal } = {}) {
+  const clean = String(id || '').replace(/\D/g, '')
+  if (!DISCORD_ID_RE.test(clean)) throw new DiscordError('bad_id', { status: 400 })
+  const data = await request(`/api/discord/user?id=${clean}`, { signal })
+  if (!data?.user || !DISCORD_ID_RE.test(String(data.user.id || ''))) throw new DiscordError('failed')
+  return data.user
 }
 
 export const IMPORT_FIELDS = [
