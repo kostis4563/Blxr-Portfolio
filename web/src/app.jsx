@@ -493,7 +493,7 @@ function App() {
           {}
           <p className="max-w-[54ch] text-[15px] text-ink-muted leading-[1.6] animate-fade-in-up delay-150">
             I'm Kostis. I build the whole thing: the backend, the interface on top of it, and the Linux box it ships to.
-            Most of it so far has been security tooling for FiveM communities, plus client work through a studio I run.
+            Most of it so far has been security tooling and Detectors, plus client work through a studio I run.
           </p>
 
           {}
