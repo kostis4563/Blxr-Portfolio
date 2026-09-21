@@ -493,10 +493,6 @@ function MusicSection({ t }) {
         <div aria-hidden="true" className="mt-4 h-[3px] w-full overflow-hidden rounded-full bg-surface-hover">
           <span className="block h-full w-full origin-left rounded-full bg-ink-subtle animate-progress motion-reduce:animate-none motion-reduce:scale-x-[0.4]" />
         </div>
-        <a {...link(HOME_PATH)} className={`${FOOT_LINK} mt-4 text-[12.5px] font-medium text-ink-muted`}>
-          <span>{t('uses.music.widget')}</span>
-          <span aria-hidden="true" className={FOOT_ARROW}>→</span>
-        </a>
       </div>
     </section>
   )
@@ -509,7 +505,7 @@ export default function UsesPage({ theme, onToggleTheme }) {
 
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
-      <header className="w-full max-w-[880px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-line top-0 flex items-center px-5 sm:px-8">
+      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-line top-0 flex items-center px-5 sm:px-8">
         <div className="w-full flex items-center justify-between">
           <a
             {...link(HOME_PATH)}
@@ -529,7 +525,7 @@ export default function UsesPage({ theme, onToggleTheme }) {
         </div>
       </header>
 
-      <main ref={mainRef} className="w-full max-w-[880px] mx-auto px-5 sm:px-8 pt-24 pb-20 flex flex-col items-start gap-12 min-h-screen bg-bg">
+      <main ref={mainRef} className="w-full max-w-[960px] mx-auto px-5 sm:px-8 pt-24 pb-20 flex flex-col items-start gap-12 min-h-screen bg-bg">
         <div className="w-full flex flex-col gap-3 text-left sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-[560px]">
             <p className={`${KICKER} mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 animate-rise-in`}>

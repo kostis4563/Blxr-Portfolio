@@ -14,7 +14,7 @@ const LEVEL_CLASSES = [
 
 const ROLLING = "last";
 
-const MAX_CELL = 10;
+const MAX_CELL = 13;
 
 const MIN_CELL = 3;
 const MIN_GAP = 1;
@@ -824,7 +824,8 @@ export default function GitHubContributions({ username, since, activeSince, mini
             {LEVEL_CLASSES.map((cls, i) => (
               <span
                 key={i}
-                className={`w-[9px] h-[9px] rounded-[2px] ring-1 ring-inset ring-[var(--hairline)] ${cls}`}
+                className={`rounded-[2px] ring-1 ring-inset ring-[var(--hairline)] ${cls}`}
+                style={{ width: Math.min(cellSize, 11), height: Math.min(cellSize, 11) }}
               />
             ))}
             <span className="hidden sm:inline ml-0.5">{t("gh.more")}</span>

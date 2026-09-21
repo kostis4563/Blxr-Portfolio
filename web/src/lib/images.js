@@ -33,7 +33,7 @@ export function imageUrl(src, width) {
 
 export const SIZES = {
     contentColumn: '(min-width: 768px) 720px, calc(100vw - 48px)',
-    archiveCover: '(min-width: 880px) 816px, calc(100vw - 40px)',
+    archiveCover: '(min-width: 960px) 896px, (min-width: 640px) calc(100vw - 64px), calc(100vw - 40px)',
     mark: '24px',
     avatar: '64px',
 }

@@ -661,53 +661,6 @@ body {
   to { transform: translateX(100%); }
 }
 
-@keyframes music-launch-in {
-  from { opacity: 0; transform: translateY(12px) scale(0.8); }
-  to { opacity: 1; transform: none; }
-}
-.music-launch {
-  animation: music-launch-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-}
-
-@keyframes music-glow-pulse {
-  0%, 100% { opacity: 0.3; transform: scale(0.9); }
-  50% { opacity: 0.6; transform: scale(1.08); }
-}
-.music-art-glow {
-  animation: music-glow-pulse 3.4s ease-in-out infinite;
-}
-
-@keyframes music-art-in {
-  from { opacity: 0; transform: scale(1.08); }
-  to { opacity: 1; transform: none; }
-}
-.music-art-in {
-  animation: music-art-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-@keyframes music-hero-in {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: none; }
-}
-.music-hero-in {
-  animation: music-hero-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes music-icon-pop {
-  0% { opacity: 0; transform: scale(0.55); }
-  60% { transform: scale(1.14); }
-  100% { opacity: 1; transform: scale(1); }
-}
-.music-icon-pop {
-  animation: music-icon-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes music-spin {
-  to { transform: rotate(360deg); }
-}
-.music-spin {
-  animation: music-spin 9s linear infinite;
-}
-
 @keyframes lyric-roll {
   from { opacity: 0; transform: translateY(0.5em); }
   to { opacity: 1; transform: none; }
@@ -916,40 +869,6 @@ body {
   background: var(--color-ink-muted);
 }
 
-.music-widget :focus-visible {
-  outline: 2px solid var(--color-ink-muted);
-  outline-offset: 2px;
-}
-
-.music-range {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--color-line);
-  accent-color: var(--color-ink-strong);
-}
-.music-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--color-ink-strong);
-  cursor: pointer;
-}
-.music-range::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border: none;
-  border-radius: 999px;
-  background: var(--color-ink-strong);
-  cursor: pointer;
-}
-.music-range:disabled {
-  opacity: 0.5;
-}
-
 @keyframes gh-cell-in {
   from {
     opacity: 0;
@@ -969,24 +888,6 @@ body {
 }
 .cmd-scroll::-webkit-scrollbar {
   display: none;
-}
-
-.music-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-line-strong) transparent;
-}
-.music-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-.music-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.music-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-line-strong);
-  border-radius: 3px;
-}
-.music-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--color-ink-muted);
 }
 
 @property --in {
@@ -1102,17 +1003,6 @@ body {
   text-decoration-color: color-mix(in srgb, var(--color-brand-indigo) 75%, transparent);
   text-decoration-thickness: 1.5px;
   text-underline-offset: 5px;
-}
-
-:root[data-view='dashboard'] .music-widget {
-  left: auto;
-  right: 1rem;
-}
-
-:root[data-view='dashboard'] .music-widget [role='dialog'] {
-  left: auto;
-  right: 0;
-  transform-origin: bottom right;
 }
 
 .sensitive {

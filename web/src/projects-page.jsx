@@ -90,7 +90,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
 
-      <header className="w-full max-w-[880px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-line top-0 flex items-center px-5 sm:px-8">
+      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-line top-0 flex items-center px-5 sm:px-8">
         <div className="w-full flex items-center justify-between">
           <a
             {...link('/', onBack)}
@@ -110,7 +110,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
         </div>
       </header>
 
-      <main className="w-full max-w-[880px] mx-auto px-5 sm:px-8 pt-24 pb-24 flex flex-col items-start min-h-screen bg-bg animate-rise-in">
+      <main className="w-full max-w-[960px] mx-auto px-5 sm:px-8 pt-24 pb-24 flex flex-col items-start min-h-screen bg-bg animate-rise-in">
 
         <div className="w-full flex items-baseline justify-between gap-6">
           <div className="max-w-[560px] text-left">
@@ -295,7 +295,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                                   className={`overflow-hidden rounded-lg bg-surface-raised ${wide ? 'sm:col-span-2 aspect-[2/1]' : 'aspect-[4/3]'}`}
                                 >
                                   <img
-                                    {...imageProps(item.src, wide ? '(min-width: 880px) 632px, calc(100vw - 40px)' : '(min-width: 880px) 310px, calc(100vw - 40px)')}
+                                    {...imageProps(item.src, wide ? '(min-width: 960px) 712px, calc(100vw - 40px)' : '(min-width: 960px) 350px, calc(100vw - 40px)')}
                                     alt={item.alt}
                                     loading="lazy"
                                     decoding="async"

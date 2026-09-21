@@ -1,30 +1,8 @@
 import { analyticsAllowed } from './prefs'
 
-const BASE = '/api/music'
 const REVIEWS = '/api/reviews'
 
-export const SEARCH_LIMIT_MAX = 20
-export const TOP_LIMIT_MAX = 15
-
-async function getJson(path, signal) {
-  const res = await fetch(`${BASE}${path}`, { signal })
-
-  if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`)
-  return res.json()
-}
-
 const itemsOf = (data) => (Array.isArray(data?.items) ? data.items : [])
-
-export async function searchTracks(q, { limit = 12, signal } = {}) {
-  const params = new URLSearchParams({ q, limit: String(limit) })
-  return itemsOf(await getJson(`/search?${params}`, signal))
-}
-
-export async function fetchTopChart({ limit = 10, country, signal } = {}) {
-  const params = new URLSearchParams({ limit: String(limit) })
-  if (country) params.set('country', country)
-  return itemsOf(await getJson(`/top?${params}`, signal))
-}
 
 export function recordHit(path) {
   if (typeof navigator === 'undefined' || !navigator.sendBeacon) return
@@ -155,13 +133,4 @@ export function panelDeleteReview(id, { signal, bearer } = {}) {
 export async function panelSaveSettings(settings, { signal, bearer } = {}) {
   const data = await reviewRequest('/panel/settings', { method: 'PUT', body: settings, signal, bearer })
   return data?.settings ?? null
-}
-
-export async function checkHealth({ signal } = {}) {
-  try {
-    const data = await getJson('/health', signal)
-    return data?.ok === true
-  } catch {
-    return false
-  }
 }

@@ -159,7 +159,7 @@ export default defineConfig(({ command, mode, isSsrBuild }) => ({
 
             {
               name: 'app',
-              test: /[\\/]src[\\/](?!lib[\\/](locales[\\/]|quote-portrait\.js)|components[\\/](music-widget|command-palette\.jsx|dashboard-[^/]+\.jsx)|dashboard-[^/]+\.jsx$|(projects|library|reviews|now|uses|cv|login|dashboard|public-profile|not-found)-page\.jsx$)/,
+              test: /[\\/]src[\\/](?!lib[\\/](locales[\\/]|quote-portrait\.js)|components[\\/](command-palette\.jsx|dashboard-[^/]+\.jsx)|dashboard-[^/]+\.jsx$|(projects|library|reviews|now|uses|cv|login|dashboard|public-profile|not-found)-page\.jsx$)/,
             },
           ],
         },

@@ -440,7 +440,7 @@ function App() {
 
       <header
         id="main-header"
-        className="w-full max-w-[768px] bg-bg backdrop-blur-none md:bg-bg/90 md:backdrop-blur-md text-ink h-[60px] fixed top-0 left-1/2 -translate-x-1/2 z-50 border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
+        className="w-full max-w-[960px] bg-bg backdrop-blur-none md:bg-bg/90 md:backdrop-blur-md text-ink h-[60px] fixed top-0 left-1/2 -translate-x-1/2 z-50 border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
       >
         <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-3">
           {}
@@ -501,7 +501,7 @@ function App() {
       </header>
 
       {}
-      <main className={`w-full max-w-[768px] mx-auto px-6 pt-24 pb-6 flex flex-col items-start border-l border-dashed border-r border-line min-h-screen bg-bg ${isReturningHome ? '' : 'animate-rise-in'}`}>
+      <main className={`w-full max-w-[960px] mx-auto px-6 pt-24 pb-6 flex flex-col items-start border-l border-dashed border-r border-line min-h-screen bg-bg ${isReturningHome ? '' : 'animate-rise-in'}`}>
 
         <section className="flex flex-col items-start text-left w-[calc(100%+3rem)] border-b border-dashed border-line -mx-6 px-6 pb-12">
 
@@ -630,7 +630,7 @@ function App() {
                       <div className="project-panel group relative grid grid-cols-1 gap-2 rounded-[20px] border border-line bg-surface p-2 sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
                         <div className="project-media relative aspect-[16/11] min-w-0 overflow-hidden rounded-[13px] bg-surface-raised sm:aspect-auto sm:min-h-[248px]">
                           <img
-                            {...imageProps(project.image, '(min-width: 768px) 320px, calc(100vw - 48px)')}
+                            {...imageProps(project.image, '(min-width: 960px) 404px, (min-width: 640px) 45vw, calc(100vw - 48px)')}
                             alt={project.imageAlt ?? `${project.title} cover`}
                             loading={idx === 0 ? 'eager' : 'lazy'}
                             fetchPriority={idx === 0 ? 'high' : undefined}
@@ -758,13 +758,13 @@ function App() {
             {skillCategories.map((category, idx) => (
               <div
                 key={idx}
-                className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-6 w-full"
+                className="grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-2 sm:gap-6 w-full"
               >
                 <span className="text-ink-subtle font-medium select-none">
                   {category.name}
                 </span>
 
-                <div className="sm:col-span-3 flex flex-wrap gap-x-5 gap-y-3">
+                <div className="flex flex-wrap gap-x-5 gap-y-3">
                   {category.items.map((skill, skillIdx) => {
                     const level = skill.level ? skillLevels[skill.level] : null
                     return (
@@ -835,12 +835,12 @@ function App() {
           </div>
 
           <details ref={toolboxRef} className="toolbox group/more relative z-30 mt-5 border-t border-dashed border-line pt-3.5">
-            <summary className="-mx-2 grid min-h-10 w-[calc(100%+1rem)] grid-cols-1 items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 list-none cursor-pointer outline-none transition-[background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:border-line hover:bg-surface-hover/60 active:scale-[0.995] focus-visible:border-line-strong focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg sm:grid-cols-4 sm:gap-6 motion-reduce:transition-none motion-reduce:active:scale-100 [&::-webkit-details-marker]:hidden">
+            <summary className="-mx-2 grid min-h-10 w-[calc(100%+1rem)] grid-cols-1 items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 list-none cursor-pointer outline-none transition-[background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:border-line hover:bg-surface-hover/60 active:scale-[0.995] focus-visible:border-line-strong focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg sm:grid-cols-[7.5rem_1fr] sm:gap-6 motion-reduce:transition-none motion-reduce:active:scale-100 [&::-webkit-details-marker]:hidden">
               <span className="text-ink-subtle font-medium select-none transition-colors duration-200 group-hover/more:text-ink-secondary group-open/more:text-ink-secondary">
                 {t('home.toolbox')}
               </span>
 
-              <span className="sm:col-span-3 inline-flex min-w-0 items-center gap-2.5 text-[12.5px] font-medium text-ink-muted transition-colors duration-200 group-hover/more:text-ink-strong group-open/more:text-ink-strong">
+              <span className="inline-flex min-w-0 items-center gap-2.5 text-[12.5px] font-medium text-ink-muted transition-colors duration-200 group-hover/more:text-ink-strong group-open/more:text-ink-strong">
                 <span className="flex shrink-0 -space-x-1" aria-hidden="true">
                   {toolboxPreview.map((tool, toolIdx) => (
                     <span
