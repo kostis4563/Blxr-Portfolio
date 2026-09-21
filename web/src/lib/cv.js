@@ -2,7 +2,7 @@ import { CONTACT_EMAIL, GITHUB_URL, GITHUB_USERNAME, DISCORD_URL } from './profi
 
 export const CV_UPDATED = '2026-09-18'
 
-export const CV_NAME = 'Blxr'
+export const CV_NAME = 'Kostis Nomikos'
 export const CV_HANDLE = GITHUB_USERNAME
 export const CV_LOCATION = 'Athens, Greece'
 export const CV_TIMEZONE = 'EET / EEST (UTC+2 / UTC+3)'
