@@ -89,6 +89,7 @@
   --animate-packet: packet 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   --animate-progress: progress 32s linear infinite;
   --animate-float: float 5s ease-in-out infinite;
+  --animate-halo: halo 7s linear infinite;
 
   @keyframes typeline {
     0% { transform: scaleX(0); }
@@ -114,6 +115,9 @@
     to { transform: scaleX(1); }
   }
 
+  @keyframes halo {
+    to { transform: rotate(360deg); }
+  }
   @keyframes float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-3px); }

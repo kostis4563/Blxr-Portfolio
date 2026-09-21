@@ -3,10 +3,6 @@ import { AuthError } from './auth'
 import { profilePath } from './router'
 import { SITE_URL } from './seo'
 
-// Public profiles live in `public.profiles` (deploy/supabase/profiles.sql) and
-// are read straight from the browser; RLS decides who sees what. The form
-// works in camelCase, the table in snake_case — `toRow`/`fromRow` translate.
-
 export const HANDLE_RE = /^[a-z0-9_]{3,20}$/
 export const RESERVED_HANDLES = new Set([
   'admin', 'administrator', 'api', 'blxr', 'dashboard', 'help', 'login', 'me', 'mod',
@@ -31,6 +27,7 @@ export const LIMITS = {
   showcase: 4,
   showcaseTitle: 40,
   showcaseDescription: 120,
+  tag: 4,
 }
 
 export const VISIBILITY = [
@@ -39,8 +36,6 @@ export const VISIBILITY = [
   { value: 'private', label: 'Private', description: 'Only you. Nothing is shown.' },
 ]
 
-// Banner gradient + ring colour. `ink` follows the theme; the rest are fixed
-// so a profile looks the same to everyone.
 export const ACCENTS = [
   { id: 'ink', label: 'Mono', from: 'var(--color-ink-subtle)', to: 'var(--color-ink-strong)', swatch: 'var(--color-ink-strong)' },
   { id: 'violet', label: 'Violet', from: '#a78bfa', to: '#6d28d9', swatch: '#8b5cf6' },
@@ -50,7 +45,50 @@ export const ACCENTS = [
   { id: 'amber', label: 'Amber', from: '#fbbf24', to: '#b45309', swatch: '#f59e0b' },
   { id: 'rose', label: 'Rose', from: '#fb7185', to: '#be123c', swatch: '#f43f5e' },
 ]
-export const accentOf = (id) => ACCENTS.find((a) => a.id === id) || ACCENTS[0]
+export const HEX_RE = /^#[0-9a-f]{6}$/
+const CUSTOM_ACCENT_HEX = '#5865f2'
+
+export function accentOf(source) {
+  const id = typeof source === 'string' ? source : source?.accent
+  if (id === 'custom') {
+    const hex = typeof source === 'object' && HEX_RE.test(source?.accentHex || '') ? source.accentHex : CUSTOM_ACCENT_HEX
+    return { id: 'custom', label: 'Custom', from: shadeHex(hex, 0.22), to: shadeHex(hex, -0.28), swatch: hex }
+  }
+  return ACCENTS.find((a) => a.id === id) || ACCENTS[0]
+}
+
+export function shadeHex(hex, amount) {
+  const n = parseInt(hex.slice(1), 16)
+  const mix = (c) => Math.round(amount > 0 ? c + (255 - c) * amount : c * (1 + amount))
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(mix)
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
+}
+
+export const DECORATIONS = [
+  { id: 'none', label: 'None', description: 'Just the photo.' },
+  { id: 'ring', label: 'Ring', description: 'A thin ring in the accent colour.' },
+  { id: 'glow', label: 'Glow', description: 'A soft accent glow behind it.' },
+  { id: 'halo', label: 'Halo', description: 'A slowly turning gradient.' },
+  { id: 'image', label: 'Discord', description: 'The decoration on your Discord account.' },
+]
+
+export const NAMEPLATES = [
+  { id: 'none', label: 'None' },
+  { id: 'accent', label: 'Accent' },
+  { id: 'image', label: 'Discord' },
+]
+export const NAMEPLATE_PALETTES = {
+  crimson: '#d12a3a', berry: '#b83280', sky: '#38bdf8', teal: '#14b8a6', forest: '#16a34a', bubble_gum: '#f472b6',
+  violet: '#8b5cf6', cobalt: '#3b82f6', clover: '#22c55e', lemon: '#eab308', white: '#e5e7eb', none: '#94a3b8',
+}
+export const paletteColor = (name) => NAMEPLATE_PALETTES[name] || NAMEPLATE_PALETTES.none
+const DISCORD_CDN = 'https://cdn.discordapp.com'
+export const nameplateImage = (asset) => (asset ? `${DISCORD_CDN}/assets/collectibles/${asset}static.png` : null)
+export const nameplateVideo = (asset) => (asset ? `${DISCORD_CDN}/assets/collectibles/${asset}asset.webm` : null)
+export const DISCORD_ID_RE = /^\d{17,20}$/
+const DECORATION_URL_RE = /^https:\/\/cdn\.discordapp\.com\/avatar-decoration-presets\/[A-Za-z0-9_./-]+\.png(\?[A-Za-z0-9_=&]*)?$/
+const TAG_BADGE_URL_RE = /^https:\/\/cdn\.discordapp\.com\/guild-tag-badges\/\d{17,20}\/[a-f0-9]{32}\.png(\?[A-Za-z0-9_=&]*)?$/
+const NAMEPLATE_ASSET_RE = /^nameplates\/[A-Za-z0-9_./-]{1,120}$/
 
 export const LAYOUTS = [
   { id: 'card', label: 'Card', description: 'Banner and details in one card.' },
@@ -71,8 +109,7 @@ export const PAGE_THEMES = [
   { id: 'light', label: 'Light', icon: 'sun' },
   { id: 'dark', label: 'Dark', icon: 'moon' },
 ]
-// Everything below the header, in the order the owner picks. Hidden ones are
-// simply left out of `sections`.
+
 export const SECTIONS = [
   { id: 'about', label: 'About', description: 'Bio, location, website.' },
   { id: 'now', label: 'Now', description: 'What you are up to at the moment.' },
@@ -105,11 +142,19 @@ export const EMPTY_PROFILE = {
   theme: 'system',
   sections: DEFAULT_SECTIONS,
   visibility: 'private',
+  discordId: null,
+  decoration: 'none',
+  decorationUrl: null,
+  nameplate: 'none',
+  nameplateAsset: null,
+  nameplatePalette: null,
+  tagText: '',
+  tagBadgeUrl: null,
+  accentHex: null,
 }
 
 export const profileUrl = (handle) => `${SITE_URL}${profilePath(handle)}`
 
-// A starting point for a first profile, from what the account already knows.
 export function draftFromUser(user) {
   const meta = user?.user_metadata || {}
   const email = user?.email || ''
@@ -138,7 +183,6 @@ export function suggestHandle(source) {
 
 export const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\/[^\s<>"'`]+$/i.test(value)
 
-// '' for empty, null when it is not a usable http(s) URL, else the clean URL.
 export function normalizeUrl(raw) {
   const value = String(raw || '').trim()
   if (!value) return ''
@@ -172,7 +216,8 @@ export function fromRow(row) {
     location: row.location || '',
     website: isHttpUrl(row.website) ? row.website : '',
     avatar: row.avatar_url || null,
-    accent: row.accent || 'ink',
+    accent: row.accent === 'custom' && HEX_RE.test(row.accent_hex || '') ? 'custom' : ACCENTS.some((a) => a.id === row.accent) ? row.accent : 'ink',
+    accentHex: HEX_RE.test(row.accent_hex || '') ? row.accent_hex : null,
     openToWork: Boolean(row.open_to_work),
     links: Array.isArray(row.links) ? row.links.filter((l) => l && isHttpUrl(l.url)) : [],
     skills: Array.isArray(row.skills) ? row.skills : [],
@@ -188,6 +233,14 @@ export function fromRow(row) {
     theme: PAGE_THEMES.some((t) => t.id === row.theme) ? row.theme : 'system',
     sections: Array.isArray(row.sections) ? row.sections.filter((id) => DEFAULT_SECTIONS.includes(id)) : DEFAULT_SECTIONS,
     visibility: row.visibility || 'private',
+    discordId: DISCORD_ID_RE.test(row.discord_id || '') ? row.discord_id : null,
+    decoration: DECORATIONS.some((d) => d.id === row.decoration) ? row.decoration : 'none',
+    decorationUrl: DECORATION_URL_RE.test(row.decoration_url || '') ? row.decoration_url : null,
+    nameplate: NAMEPLATES.some((n) => n.id === row.nameplate) ? row.nameplate : 'none',
+    nameplateAsset: NAMEPLATE_ASSET_RE.test(row.nameplate_asset || '') ? row.nameplate_asset : null,
+    nameplatePalette: /^[a-z_]{1,24}$/.test(row.nameplate_palette || '') ? row.nameplate_palette : null,
+    tagText: typeof row.tag_text === 'string' ? row.tag_text.slice(0, LIMITS.tag) : '',
+    tagBadgeUrl: TAG_BADGE_URL_RE.test(row.tag_badge_url || '') ? row.tag_badge_url : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -218,10 +271,17 @@ export function toRow(id, p) {
     theme: p.theme,
     sections: p.sections,
     visibility: p.visibility,
+    discord_id: p.discordId || null,
+    decoration: p.decoration === 'image' && !p.decorationUrl ? 'none' : p.decoration,
+    decoration_url: p.decorationUrl || null,
+    nameplate: p.nameplate === 'image' && !p.nameplateAsset ? 'none' : p.nameplate,
+    nameplate_asset: p.nameplateAsset || null,
+    nameplate_palette: p.nameplatePalette || null,
+    tag_text: p.tagText || '',
+    tag_badge_url: p.tagBadgeUrl || null,
+    accent_hex: p.accent === 'custom' ? p.accentHex : null,
   }
 }
-
-// --- errors --------------------------------------------------------------------
 
 function wrap(error) {
   if (!error) return null
@@ -229,6 +289,7 @@ function wrap(error) {
   let code = 'failed'
   if (error.code === '23505') code = 'handle_taken'
   else if (error.code === '42P01' || error.code === 'PGRST205' || msg.includes('relation "public.profiles"')) code = 'profiles_not_set_up'
+  else if (error.code === 'PGRST204' || error.code === '42703') code = 'profiles_outdated'
   else if (error.code === '42501' || error.code === 'PGRST301' || error.status === 401 || error.status === 403) code = 'forbidden'
   else if (error.code === '23514' || error.code === '22P02') code = 'invalid'
   else if (msg.includes('bucket not found') || (msg.includes('bucket') && msg.includes('not'))) code = 'uploads_disabled'
@@ -256,8 +317,6 @@ async function run(fn) {
   return result?.data ?? null
 }
 
-// --- reads ---------------------------------------------------------------------
-
 export async function fetchMyProfile(userId) {
   const row = await run((sb) => sb.from('profiles').select('*').eq('id', userId).maybeSingle())
   return fromRow(row)
@@ -270,8 +329,6 @@ export async function fetchProfileByHandle(handle) {
   return fromRow(row)
 }
 
-// true / false, or null when the check itself is unavailable (the save still
-// fails cleanly on the unique index in that case).
 export async function checkHandle(handle) {
   try {
     const free = await run((sb) => sb.rpc('handle_available', { candidate: handle }))
@@ -281,8 +338,6 @@ export async function checkHandle(handle) {
   }
 }
 
-// --- writes --------------------------------------------------------------------
-
 export async function saveProfile(userId, profile) {
   const row = await run((sb) => sb.from('profiles').upsert(toRow(userId, profile), { onConflict: 'id' }).select('*').single())
   return fromRow(row)
@@ -290,14 +345,8 @@ export async function saveProfile(userId, profile) {
 
 export async function deleteProfile(userId) {
   await run((sb) => sb.from('profiles').delete().eq('id', userId))
-  await removeFiles(userId, '').catch(() => {}) // every image in the folder
+  await removeFiles(userId, '').catch(() => {})
 }
-
-// --- images --------------------------------------------------------------------
-// Avatars and covers share the `avatars` bucket, one folder per user:
-//   <uid>/avatar-<ts>.webp   320×320
-//   <uid>/cover-<ts>.webp    1200×480
-// Resized in the browser so uploads are a few KB, never megabytes.
 
 const BUCKET = 'avatars'
 const SIZES = { avatar: [320, 320], cover: [1200, 480] }
@@ -305,7 +354,6 @@ const SIZES = { avatar: [320, 320], cover: [1200, 480] }
 async function resizeWebp(file, [w, h]) {
   const bitmap = await createImageBitmap(file).catch(() => null)
   if (!bitmap) throw new AuthError('bad_image')
-  // Cover-crop to the target ratio, then scale.
   const scale = Math.max(w / bitmap.width, h / bitmap.height)
   const sw = Math.min(bitmap.width, w / scale)
   const sh = Math.min(bitmap.height, h / scale)
@@ -346,9 +394,6 @@ export const uploadCover = (userId, file) => uploadImage(userId, file, 'cover')
 export const removeAvatar = (userId) => removeFiles(userId, 'avatar-').catch(() => {})
 export const removeCover = (userId) => removeFiles(userId, 'cover-').catch(() => {})
 
-// --- links ---------------------------------------------------------------------
-
-// Brand icons for the links row. Everything else gets a generic globe.
 const LINK_KINDS = [
   { id: 'github', label: 'GitHub', hosts: ['github.com'] },
   { id: 'discord', label: 'Discord', hosts: ['discord.com', 'discord.gg', 'discordapp.com'] },

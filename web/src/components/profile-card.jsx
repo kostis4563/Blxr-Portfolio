@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import { Icon } from './dashboard-sidebar'
 import { SOCIAL_ICON_PATHS } from '../lib/profile'
-import { accentOf, linkKind, hostOf, DEFAULT_SECTIONS } from '../lib/profiles'
-
-// The profile as other people see it. The dashboard renders the same card as
-// a live preview (`compact`), so what you edit is exactly what ships.
+import { accentOf, linkKind, hostOf, paletteColor, nameplateImage, nameplateVideo, DEFAULT_SECTIONS } from '../lib/profiles'
 
 const BRAND_PATHS = {
   github: SOCIAL_ICON_PATHS.GitHub,
@@ -32,7 +29,7 @@ const SHAPE = { circle: '9999px', rounded: '26%' }
 
 export function ProfileAvatar({ profile, size }) {
   const [broken, setBroken] = useState(false)
-  const accent = accentOf(profile.accent)
+  const accent = accentOf(profile)
   const radius = SHAPE[profile.avatarShape] || SHAPE.circle
   const px = `${size}px`
   if (profile.avatar && !broken) {
@@ -64,6 +61,118 @@ export function ProfileAvatar({ profile, size }) {
   )
 }
 
+export function DecoratedAvatar({ profile, size, frame = 'surface', ring = false }) {
+  const accent = accentOf(profile)
+  const kind = profile.decoration || 'none'
+  const radius = profile.avatarShape === 'rounded' ? '30%' : '9999px'
+  const gradient = `linear-gradient(135deg, ${accent.from}, ${accent.to})`
+  const frameBg = frame === 'bg' ? 'bg-bg' : 'bg-surface'
+  const gap = Math.max(3, Math.round(size * 0.05))
+  const glow = kind === 'glow' ? `0 0 ${Math.round(size * 0.35)}px ${Math.round(size * 0.04)}px ${accent.swatch}` : undefined
+
+  const photo = (
+    <span className="relative block" style={{ width: size, height: size }}>
+      <ProfileAvatar profile={profile} size={size} />
+      {kind === 'image' && profile.decorationUrl && (
+        <img
+          src={profile.decorationUrl}
+          alt=""
+          aria-hidden="true"
+          referrerPolicy="no-referrer"
+          className="pointer-events-none absolute max-w-none select-none"
+          style={{ width: size * 1.2, height: size * 1.2, left: -size * 0.1, top: -size * 0.1 }}
+        />
+      )}
+    </span>
+  )
+
+  if (kind === 'ring' || kind === 'halo' || ring) {
+    const band = Math.max(2, Math.round(size * 0.04))
+    return (
+      <span className="relative inline-block shrink-0" style={{ borderRadius: radius, padding: band, boxShadow: glow }}>
+        <span
+          aria-hidden="true"
+          className={`absolute inset-0 ${kind === 'halo' ? 'animate-halo' : ''}`}
+          style={{
+            borderRadius: radius,
+            backgroundImage: kind === 'halo' ? `conic-gradient(from 0deg, ${accent.from}, ${accent.to}, transparent 62%, ${accent.from})` : gradient,
+          }}
+        />
+        <span className={`relative block ${frameBg}`} style={{ borderRadius: radius, padding: gap }}>
+          {photo}
+        </span>
+      </span>
+    )
+  }
+
+  return (
+    <span
+      className={`relative inline-block shrink-0 ${frameBg} ${frame === 'surface' ? 'ring-1 ring-line' : ''}`}
+      style={{
+        borderRadius: radius,
+        padding: gap,
+        boxShadow: glow,
+      }}
+    >
+      {photo}
+    </span>
+  )
+}
+
+function Nameplate({ profile }) {
+  const [clip, setClip] = useState(false)
+  const kind = profile.nameplate || 'none'
+  if (kind === 'image' && profile.nameplateAsset) {
+    const color = paletteColor(profile.nameplatePalette)
+    const still = nameplateImage(profile.nameplateAsset)
+    return (
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+        <span className="absolute inset-0" style={{ backgroundImage: `linear-gradient(90deg, transparent 0%, ${color}1f 60%, ${color}4d 100%)` }} />
+        <img
+          src={still}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="absolute inset-y-0 right-0 h-full w-auto max-w-none select-none"
+          style={{ maskImage: 'linear-gradient(90deg, transparent, black 45%)', WebkitMaskImage: 'linear-gradient(90deg, transparent, black 45%)' }}
+        />
+        <video
+          src={nameplateVideo(profile.nameplateAsset)}
+          autoPlay
+          muted
+          loop
+          playsInline
+          onCanPlay={() => setClip(true)}
+          className={`absolute inset-y-0 right-0 h-full w-auto max-w-none transition-opacity duration-500 ${clip ? 'opacity-100' : 'opacity-0'}`}
+          style={{ maskImage: 'linear-gradient(90deg, transparent, black 45%)', WebkitMaskImage: 'linear-gradient(90deg, transparent, black 45%)' }}
+        />
+      </span>
+    )
+  }
+  if (kind === 'accent') {
+    const accent = accentOf(profile)
+    return (
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+        <span className="absolute inset-0 opacity-20" style={{ backgroundImage: `linear-gradient(90deg, transparent 0%, ${accent.from} 60%, ${accent.to} 100%)` }} />
+        <span className="absolute inset-y-0 right-0 w-1" style={{ backgroundImage: `linear-gradient(${accent.from}, ${accent.to})` }} />
+      </span>
+    )
+  }
+  return null
+}
+
+function Tag({ profile, compact }) {
+  if (!profile.tagText) return null
+  return (
+    <span
+      title="Server tag"
+      className={`inline-flex shrink-0 items-center gap-1 self-center rounded-md border border-line bg-surface-raised/70 font-mono font-semibold uppercase tracking-wide text-ink ${compact ? 'h-[18px] px-1 text-[10px]' : 'h-[22px] px-1.5 text-[11.5px]'}`}
+    >
+      {profile.tagBadgeUrl && <img src={profile.tagBadgeUrl} alt="" referrerPolicy="no-referrer" className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />}
+      {profile.tagText}
+    </span>
+  )
+}
+
 const PATTERN_STYLE = {
   dots: { backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.45) 1px, transparent 0)', backgroundSize: '14px 14px', opacity: 0.35 },
   grid: { backgroundImage: 'linear-gradient(rgba(255,255,255,0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.35) 1px, transparent 1px)', backgroundSize: '22px 22px', opacity: 0.35 },
@@ -71,7 +180,7 @@ const PATTERN_STYLE = {
 }
 
 function Banner({ profile, className }) {
-  const accent = accentOf(profile.accent)
+  const accent = accentOf(profile)
   const pattern = PATTERN_STYLE[profile.pattern] || null
   return (
     <div
@@ -99,8 +208,6 @@ const joinedLabel = (iso) => {
 function SectionLabel({ children, compact, centered }) {
   return <p className={`font-mono font-semibold uppercase tracking-wider text-ink-subtle ${centered ? 'text-center' : ''} ${compact ? 'mb-2 text-[9.5px]' : 'mb-3 text-[10.5px]'}`}>{children}</p>
 }
-
-// --- sections ------------------------------------------------------------------
 
 function About({ profile, compact, joined, centered }) {
   const website = profile.website ? { href: profile.website, host: hostOf(profile.website) } : null
@@ -133,7 +240,7 @@ function About({ profile, compact, joined, centered }) {
 
 function Now({ profile, compact, centered }) {
   if (!profile.now) return null
-  const accent = accentOf(profile.accent)
+  const accent = accentOf(profile)
   return (
     <div>
       <SectionLabel compact={compact} centered={centered}>Now</SectionLabel>
@@ -221,10 +328,8 @@ function Skills({ profile, compact, centered }) {
 
 const SECTION_VIEWS = { about: About, now: Now, showcase: Showcase, links: Links, skills: Skills }
 
-// --- header --------------------------------------------------------------------
-
 function Pills({ profile, compact, centered }) {
-  const accent = accentOf(profile.accent)
+  const accent = accentOf(profile)
   if (!profile.openToWork && !profile.status) return null
   const pill = compact ? 'h-6 px-2 text-[11px]' : 'h-7 px-2.5 text-[12px]'
   return (
@@ -251,13 +356,20 @@ function Pills({ profile, compact, centered }) {
 function Identity({ profile, compact, centered }) {
   const name = profile.name.trim() || 'Your name'
   const handle = profile.handle || 'handle'
+  const plated = profile.nameplate === 'accent' || (profile.nameplate === 'image' && profile.nameplateAsset)
   return (
     <div className={centered ? 'text-center' : ''}>
-      <h1 className={`break-words font-semibold tracking-tight text-ink-strong ${compact ? 'text-[17px]' : centered ? 'text-[26px] sm:text-[28px]' : 'text-[24px] sm:text-[26px]'}`}>{name}</h1>
-      <p className={`mt-0.5 flex flex-wrap items-center gap-x-2 text-ink-muted ${centered ? 'justify-center' : ''} ${compact ? 'text-[12.5px]' : 'text-[14px]'}`}>
-        <span className="font-mono">@{handle}</span>
-        {profile.pronouns && (<><span aria-hidden="true" className="text-ink-faint">·</span><span>{profile.pronouns}</span></>)}
-      </p>
+      <div className={`relative ${plated ? (compact ? '-mx-2 px-2 py-1.5' : '-mx-3 px-3 py-2') : ''}`}>
+        {plated && <Nameplate profile={profile} />}
+        <div className={`relative flex flex-wrap items-center gap-x-2 gap-y-1 ${centered ? 'justify-center' : ''}`}>
+          <h1 className={`break-words font-semibold tracking-tight text-ink-strong ${compact ? 'text-[17px]' : centered ? 'text-[26px] sm:text-[28px]' : 'text-[24px] sm:text-[26px]'}`}>{name}</h1>
+          <Tag profile={profile} compact={compact} />
+        </div>
+        <p className={`relative mt-0.5 flex flex-wrap items-center gap-x-2 text-ink-muted ${centered ? 'justify-center' : ''} ${compact ? 'text-[12.5px]' : 'text-[14px]'}`}>
+          <span className="font-mono">@{handle}</span>
+          {profile.pronouns && (<><span aria-hidden="true" className="text-ink-faint">·</span><span>{profile.pronouns}</span></>)}
+        </p>
+      </div>
       {profile.headline && <p className={`mt-2 font-medium text-ink ${compact ? 'text-[13px]' : 'text-[15px]'}`}>{profile.headline}</p>}
       <Pills profile={profile} compact={compact} centered={centered} />
     </div>
@@ -272,8 +384,6 @@ function Sections({ profile, compact, centered, joined }) {
       return View ? <View key={id} profile={profile} compact={compact} centered={centered} joined={joined} /> : null
     })
     .filter(Boolean)
-  // Empty sections render null; we still need to know which ones are visible
-  // to draw dividers, so probe by rendering into a wrapper with `empty:hidden`.
   return (
     <div className={`flex flex-col ${compact ? 'gap-4' : 'gap-6'}`}>
       {blocks.map((block) => (
@@ -283,22 +393,17 @@ function Sections({ profile, compact, centered, joined }) {
   )
 }
 
-// --- layouts -------------------------------------------------------------------
-
 export default function ProfileCard({ profile, compact = false, className = '' }) {
   const joined = joinedLabel(profile.createdAt)
   const layout = profile.layout || 'card'
-  const accent = accentOf(profile.accent)
 
   if (layout === 'minimal') {
     const size = compact ? 72 : 112
     return (
       <div className={`w-full ${className}`}>
         <div className={`mx-auto flex w-full flex-col ${compact ? 'max-w-full px-1 py-2' : 'max-w-[560px]'}`}>
-          <span className="mx-auto rounded-full p-[3px]" style={{ backgroundImage: `linear-gradient(135deg, ${accent.from}, ${accent.to})`, borderRadius: profile.avatarShape === 'rounded' ? '28%' : '9999px' }}>
-            <span className="block bg-bg p-[3px]" style={{ borderRadius: 'inherit' }}>
-              <ProfileAvatar profile={profile} size={size} />
-            </span>
+          <span className="mx-auto">
+            <DecoratedAvatar profile={profile} size={size} frame="bg" ring />
           </span>
           <div className={compact ? 'mt-3' : 'mt-5'}>
             <Identity profile={profile} compact={compact} centered />
@@ -318,9 +423,7 @@ export default function ProfileCard({ profile, compact = false, className = '' }
         <Banner profile={profile} className={compact ? 'h-[84px] rounded-xl' : 'h-44 sm:h-56 md:h-64'} />
         <div className={`mx-auto w-full ${compact ? 'px-2' : 'max-w-[640px] px-5 sm:px-6'}`}>
           <div className="relative z-10 flex items-end" style={{ marginTop: `-${Math.round(size / 2)}px` }}>
-            <span className="bg-bg p-1" style={{ borderRadius: profile.avatarShape === 'rounded' ? '30%' : '9999px' }}>
-              <ProfileAvatar profile={profile} size={size} />
-            </span>
+            <DecoratedAvatar profile={profile} size={size} frame="bg" />
           </div>
           <div className={compact ? 'mt-3' : 'mt-4'}>
             <Identity profile={profile} compact={compact} />
@@ -339,9 +442,7 @@ export default function ProfileCard({ profile, compact = false, className = '' }
       <Banner profile={profile} className={compact ? 'h-[72px]' : 'h-28 sm:h-36'} />
       <div className={compact ? 'px-4 pb-4' : 'px-6 pb-6 sm:px-8 sm:pb-8'}>
         <div className="relative z-10 flex items-end" style={{ marginTop: `-${Math.round(size / 2)}px` }}>
-          <span className="bg-surface p-1 ring-1 ring-line" style={{ borderRadius: profile.avatarShape === 'rounded' ? '30%' : '9999px' }}>
-            <ProfileAvatar profile={profile} size={size} />
-          </span>
+          <DecoratedAvatar profile={profile} size={size} />
         </div>
         <div className={compact ? 'mt-3' : 'mt-4'}>
           <Identity profile={profile} compact={compact} />

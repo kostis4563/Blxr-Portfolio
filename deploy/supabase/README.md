@@ -219,6 +219,30 @@ Deleting an account (§8) cascades to its profile row; the avatar file is
 removed by the app when the profile is deleted from the dashboard, and is
 orphaned (harmless, 1 MB max) if the whole account is deleted instead.
 
+### Add from Discord
+
+Dashboard → Profile → **Add from Discord** lets a member pull their Discord
+name, photo, banner, accent colour, avatar decoration, nameplate and server
+tag into the profile. It uses Discord's OAuth2 — the member signs in to
+Discord in a popup and the server reads their own profile once — so it needs
+a Discord *application*, **not a bot** (never open the Bot tab). The flair
+columns come from re-running [`profiles.sql`](profiles.sql).
+
+1. [discord.com/developers/applications](https://discord.com/developers/applications)
+   → **New Application** → name `blxr` (or reuse the one from §6).
+2. **OAuth2** in the left menu. Copy the **Client ID**; **Reset Secret** and
+   copy the **Client Secret** (shown once). Under **Redirects** add
+   `https://blxr.net/api/discord/callback` and **Save Changes**. (§6's
+   Supabase callback can sit next to it — one application serves both.)
+3. GitHub → repo **Settings → Secrets and variables → Actions**: add
+   `BLXR_DISCORD_CLIENT_ID` and `BLXR_DISCORD_CLIENT_SECRET`. The deploy
+   workflow writes them to the server as `DISCORD_CLIENT_ID` /
+   `DISCORD_CLIENT_SECRET` on the next push to `main`.
+
+Until both reach the server the button says the import is not enabled. The
+popup asks only for `identify`; the token is revoked as soon as the profile
+has been read. See `server/README.md` → Discord for the routes.
+
 ## 10. Developer stats
 
 `/dashboard#stats` shows your GitHub activity — commits, files edited and

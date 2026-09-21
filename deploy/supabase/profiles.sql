@@ -29,7 +29,6 @@ create table if not exists public.profiles (
   constraint profiles_location_len     check (char_length(location) <= 64),
   constraint profiles_website_len      check (char_length(website) <= 200),
   constraint profiles_avatar_len       check (avatar_url is null or char_length(avatar_url) <= 400),
-  -- Only our own bucket or a sign-in provider's CDN (what the CSP allows).
   constraint profiles_avatar_host      check (avatar_url is null or avatar_url ~ '^https://(lh3\.googleusercontent\.com/|avatars\.githubusercontent\.com/|cdn\.discordapp\.com/|[a-z0-9-]+\.supabase\.co/storage/v1/object/public/avatars/)'),
   constraint profiles_accent           check (accent in ('ink', 'violet', 'blue', 'teal', 'green', 'amber', 'rose')),
   constraint profiles_links_shape      check (jsonb_typeof(links) = 'array' and jsonb_array_length(links) <= 6),
@@ -64,6 +63,40 @@ begin
       add constraint profiles_sections_len  check (coalesce(array_length(sections, 1), 0) <= 5);
   end if;
 end $$;
+
+alter table public.profiles
+  add column if not exists discord_id        text,
+  add column if not exists decoration        text not null default 'none',
+  add column if not exists decoration_url    text,
+  add column if not exists nameplate         text not null default 'none',
+  add column if not exists nameplate_asset   text,
+  add column if not exists nameplate_palette text,
+  add column if not exists tag_text          text not null default '',
+  add column if not exists tag_badge_url     text,
+  add column if not exists accent_hex        text;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_decoration') then
+    alter table public.profiles
+      add constraint profiles_discord_id      check (discord_id is null or discord_id ~ '^[0-9]{17,20}$'),
+      add constraint profiles_decoration      check (decoration in ('none', 'ring', 'glow', 'halo', 'image')),
+      add constraint profiles_decoration_url  check (decoration_url is null or (char_length(decoration_url) <= 400 and decoration_url ~ '^https://cdn\.discordapp\.com/avatar-decoration-presets/[A-Za-z0-9_./-]+\.png(\?[A-Za-z0-9_=&]*)?$')),
+      add constraint profiles_nameplate       check (nameplate in ('none', 'accent', 'image')),
+      add constraint profiles_nameplate_asset check (nameplate_asset is null or nameplate_asset ~ '^nameplates/[A-Za-z0-9_./-]{1,120}$'),
+      add constraint profiles_nameplate_palette check (nameplate_palette is null or nameplate_palette ~ '^[a-z_]{1,24}$'),
+      add constraint profiles_tag_text        check (char_length(tag_text) <= 4),
+      add constraint profiles_tag_badge_url   check (tag_badge_url is null or (char_length(tag_badge_url) <= 400 and tag_badge_url ~ '^https://cdn\.discordapp\.com/guild-tag-badges/[0-9]{17,20}/[a-f0-9]{32}\.png(\?[A-Za-z0-9_=&]*)?$')),
+      add constraint profiles_accent_hex      check (accent_hex is null or accent_hex ~ '^#[0-9a-f]{6}$');
+  end if;
+end $$;
+
+alter table public.profiles drop constraint if exists profiles_accent;
+alter table public.profiles
+  add constraint profiles_accent check (accent in ('ink', 'violet', 'blue', 'teal', 'green', 'amber', 'rose', 'custom'));
+alter table public.profiles drop constraint if exists profiles_cover_host;
+alter table public.profiles
+  add constraint profiles_cover_host check (cover_url is null or cover_url ~ '^https://(cdn\.discordapp\.com/banners/|[a-z0-9-]+\.supabase\.co/storage/v1/object/public/avatars/)');
 
 create or replace function public.http_url_ok(candidate text, max_len integer default 400)
 returns boolean
@@ -128,7 +161,6 @@ end $$;
 
 create index if not exists profiles_visibility_idx on public.profiles (visibility) where visibility = 'public';
 
--- Keep updated_at honest.
 create or replace function public.profiles_touch()
 returns trigger language plpgsql as $$
 begin
@@ -139,8 +171,6 @@ end $$;
 drop trigger if exists profiles_touch on public.profiles;
 create trigger profiles_touch before update on public.profiles
   for each row execute function public.profiles_touch();
-
--- Row level security ---------------------------------------------------------
 
 create or replace function public.is_guest()
 returns boolean
@@ -169,9 +199,6 @@ drop policy if exists "profiles: delete own" on public.profiles;
 create policy "profiles: delete own" on public.profiles
   for delete using ((select auth.uid()) = id);
 
--- Handle availability. Private profiles are invisible through RLS, so a plain
--- select would call a taken handle free; this runs as the owner and only
--- answers yes/no. Your own current handle counts as available.
 create or replace function public.handle_available(candidate text)
 returns boolean
 language sql stable security definer set search_path = public as $$
@@ -183,10 +210,6 @@ $$;
 
 revoke all on function public.handle_available(text) from public;
 grant execute on function public.handle_available(text) to anon, authenticated;
-
--- Avatars --------------------------------------------------------------------
--- One public bucket; each user may only write inside a folder named after
--- their user id. The app resizes to 320px WebP before uploading.
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('avatars', 'avatars', true, 1048576, array['image/webp', 'image/jpeg', 'image/png'])

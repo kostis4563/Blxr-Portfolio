@@ -10,7 +10,7 @@ export const SKILL_CATEGORIES = [
     nameKey: 'skills.languages',
     items: [
       { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable', desc: 'Scripting language for the web' },
-      { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', desc: 'General-purpose scripting & automation' },
+      { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', desc: 'General purpose scripting & automation' },
       { name: 'CSS', icon: '/icons/css.svg', level: 'advanced', desc: 'Styling & layout for the web' },
       { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced', desc: 'Markup that structures web pages' },
     ],
@@ -18,9 +18,9 @@ export const SKILL_CATEGORIES = [
   {
     nameKey: 'skills.frameworks',
     items: [
-      { name: 'React', icon: '/icons/react_dark.svg', level: 'advanced', desc: 'React is a JavaScript library for building user interfaces.' },
-      { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'basic', desc: 'Bootstrap is a framework for building responsive websites.' },
-      { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'basic', desc: 'Utility-first CSS framework' },
+      { name: 'React', icon: '/icons/react_dark.svg', level: 'comfortable', desc: 'React is a JavaScript library for building user interfaces.' },
+      { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'comfortable', desc: 'Bootstrap is a framework for building responsive websites.' },
+      { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'comfortable', desc: 'Utility-first CSS framework' },
       { name: 'discord.js', icon: '/icons/discordjs.svg', level: 'advanced', desc: 'Node.js library for Discord bots' },
     ],
   },

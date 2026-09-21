@@ -93,6 +93,8 @@ web/src/
     ├── library.js
     ├── reviews.js       limits, summary maths, plural/relative-time helpers
     ├── profile.js
+    ├── profiles.js      member profiles: model, limits, flair, Supabase reads/writes
+    ├── discord.js       Dashboard → Profile → Add from Discord (OAuth popup via /api/discord/*)
     ├── now.js           /now content + last-updated stamp
     ├── cv.js            /cv content + last-updated stamp
     ├── palette.js       command palette state

@@ -321,7 +321,7 @@ export function CopyButton({ text, label = 'Copy' }) {
   )
 }
 
-export function Modal({ open, title, description, onClose, children, footer, tone = 'default', busy = false }) {
+export function Modal({ open, title, description, onClose, children, footer, tone = 'default', busy = false, size = 'default' }) {
   const panel = useRef(null)
   const titleId = useId()
 
@@ -366,13 +366,13 @@ export function Modal({ open, title, description, onClose, children, footer, ton
         aria-modal="true"
         aria-labelledby={titleId}
         aria-busy={busy || undefined}
-        className={`relative w-full max-w-[440px] rounded-2xl border bg-surface shadow-2xl animate-panel-in ${tone === 'danger' ? 'border-red-500/30' : 'border-line'}`}
+        className={`relative flex w-full max-h-[calc(100dvh-2rem)] flex-col rounded-2xl border bg-surface shadow-2xl animate-panel-in ${size === 'wide' ? 'max-w-[840px]' : 'max-w-[440px]'} ${tone === 'danger' ? 'border-red-500/30' : 'border-line'}`}
       >
         <div className="px-5 pt-5">
           <h2 id={titleId} className="text-[15px] font-semibold tracking-tight text-ink-strong">{title}</h2>
           {description && <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">{description}</p>}
         </div>
-        {children && <div className="px-5 pt-4">{children}</div>}
+        {children && <div className="min-h-0 overflow-y-auto px-5 pt-4">{children}</div>}
         <div className="flex flex-wrap items-center justify-end gap-2 px-5 pb-5 pt-5">{footer}</div>
       </div>
     </div>,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, useId } from 'react'
 import { Icon } from './components/dashboard-sidebar'
-import ProfileCard, { ProfileAvatar, LinkIcon } from './components/profile-card'
+import ProfileCard, { ProfileAvatar, DecoratedAvatar, LinkIcon } from './components/profile-card'
+import { SOCIAL_ICON_PATHS } from './lib/profile'
 import {
   Section, Row, Field, Badge, Toggle, Segmented, Modal, CopyButton, ErrorNote, InfoNote, TabStrip,
   ToastProvider, DensityProvider, useToast, INPUT, TEXTAREA, LABEL, BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER, BTN_GHOST,
@@ -10,14 +11,16 @@ import { useDevicePrefs } from './lib/prefs'
 import { profileOf } from './lib/supabase'
 import { profilePath } from './lib/router'
 import {
-  LIMITS, ACCENTS, VISIBILITY, LAYOUTS, PATTERNS, AVATAR_SHAPES, PAGE_THEMES, SECTIONS, DEFAULT_SECTIONS,
-  draftFromUser, handleProblem, normalizeUrl, profileUrl, hostOf, accentOf,
+  LIMITS, ACCENTS, VISIBILITY, LAYOUTS, PATTERNS, AVATAR_SHAPES, PAGE_THEMES, SECTIONS, DEFAULT_SECTIONS, DECORATIONS, NAMEPLATES, HEX_RE,
+  draftFromUser, handleProblem, normalizeUrl, profileUrl, hostOf, accentOf, paletteColor, nameplateImage,
   fetchMyProfile, checkHandle, saveProfile, deleteProfile, uploadAvatar, removeAvatar, uploadCover, removeCover,
 } from './lib/profiles'
+import { IMPORT_FIELDS, IMPORT_GROUPS, availableImports, applyImports, connectDiscord } from './lib/discord'
 
 const MESSAGES = {
   handle_taken: 'That handle is already taken.',
   profiles_not_set_up: 'Profiles are not set up on this project yet — run deploy/supabase/profiles.sql in the Supabase SQL editor.',
+  profiles_outdated: 'The profiles table is missing newer columns — re-run deploy/supabase/profiles.sql in the Supabase SQL editor.',
   uploads_disabled: 'Photo uploads are not enabled yet — the avatars bucket is created by deploy/supabase/profiles.sql.',
   too_large: 'That image is too large. Try one under 12 MB.',
   bad_image: 'That file could not be read as an image.',
@@ -25,12 +28,20 @@ const MESSAGES = {
   offline: 'You appear to be offline.',
   invalid: 'Please check the highlighted fields.',
   not_configured: 'Accounts are not set up on this build.',
+  discord_disabled: 'Discord import is not enabled on this build — set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET on the server.',
+  popup_blocked: 'Your browser blocked the popup. Allow popups for this site and try again.',
+  closed: 'The Discord window was closed before finishing.',
+  denied: 'Discord was not authorised. Nothing was imported.',
+  expired: 'That took too long — try again.',
+  rate_limited: 'Too many attempts right now. Try again in a moment.',
+  unauthorized: 'Your session has expired. Sign in again and retry.',
+  discord_failed: 'Discord did not answer. Try again in a moment.',
 }
 const messageFor = (err, fallback) => MESSAGES[err?.code] || fallback
 
 let keySeq = 0
 const withKeys = (list) => list.map((item) => ({ ...item, _k: ++keySeq }))
-const stripKeys = (list) => list.map(({ _k, ...rest }) => rest) // eslint-disable-line no-unused-vars
+const stripKeys = (list) => list.map((item) => { const rest = { ...item }; delete rest._k; return rest })
 const keyed = (p) => ({ ...p, links: withKeys(p.links), showcase: withKeys(p.showcase) })
 
 const fingerprint = (p) => JSON.stringify({ ...p, links: stripKeys(p.links), showcase: stripKeys(p.showcase), createdAt: undefined, updatedAt: undefined })
@@ -46,7 +57,12 @@ const FIELD_TAB = {
   name: 'basics', handle: 'basics', headline: 'basics', pronouns: 'basics', status: 'basics',
   bio: 'about', now: 'about', location: 'about', website: 'about',
   links: 'content', showcase: 'content',
+  tagText: 'design', accentHex: 'design',
 }
+
+const DiscordMark = ({ className = 'h-3.5 w-3.5' }) => (
+  <svg className={`${className} shrink-0`} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={SOCIAL_ICON_PATHS.Discord} /></svg>
+)
 
 function Skeleton() {
   return (
@@ -134,28 +150,270 @@ function HandleInput({ id, value, onChange, status, invalid }) {
   )
 }
 
-function Swatches({ value, onChange }) {
+const SWATCH = 'grid h-8 w-8 cursor-pointer place-items-center rounded-full outline-none ring-offset-2 ring-offset-surface transition-[transform,box-shadow] duration-200 ease-[cubic-bezier(0.34,1.4,0.64,1)] hover:scale-110 focus-visible:ring-2 focus-visible:ring-ink-strong/40'
+
+function Swatches({ value, hex, onChange, onHex }) {
+  const custom = accentOf({ accent: 'custom', accentHex: hex })
+  const on = value === 'custom'
   return (
-    <div role="radiogroup" aria-label="Accent colour" className="flex flex-wrap gap-2">
-      {ACCENTS.map((a) => {
-        const on = a.id === value
-        return (
-          <button
-            key={a.id}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            aria-label={a.label}
-            title={a.label}
-            onClick={() => onChange(a.id)}
-            style={{ backgroundImage: `linear-gradient(135deg, ${a.from}, ${a.to})` }}
-            className={`grid h-8 w-8 cursor-pointer place-items-center rounded-full outline-none ring-offset-2 ring-offset-surface transition-[transform,box-shadow] duration-200 ease-[cubic-bezier(0.34,1.4,0.64,1)] hover:scale-110 focus-visible:ring-2 focus-visible:ring-ink-strong/40 ${on ? 'scale-110 ring-2 ring-ink-strong' : ''}`}
-          >
-            {on && <Icon name="check" className="h-3.5 w-3.5 text-white drop-shadow animate-menu-in" strokeWidth={2.6} />}
-          </button>
-        )
-      })}
+    <div className="flex flex-col gap-2">
+      <div role="radiogroup" aria-label="Accent colour" className="flex flex-wrap gap-2">
+        {ACCENTS.map((a) => {
+          const picked = a.id === value
+          return (
+            <button
+              key={a.id}
+              type="button"
+              role="radio"
+              aria-checked={picked}
+              aria-label={a.label}
+              title={a.label}
+              onClick={() => onChange(a.id)}
+              style={{ backgroundImage: `linear-gradient(135deg, ${a.from}, ${a.to})` }}
+              className={`${SWATCH} ${picked ? 'scale-110 ring-2 ring-ink-strong' : ''}`}
+            >
+              {picked && <Icon name="check" className="h-3.5 w-3.5 text-white drop-shadow animate-menu-in" strokeWidth={2.6} />}
+            </button>
+          )
+        })}
+        <label
+          title="Custom colour"
+          style={{ backgroundImage: on ? `linear-gradient(135deg, ${custom.from}, ${custom.to})` : 'conic-gradient(#f43f5e, #f59e0b, #22c55e, #3b82f6, #8b5cf6, #f43f5e)' }}
+          className={`${SWATCH} relative focus-within:ring-2 focus-within:ring-ink-strong/40 ${on ? 'scale-110 ring-2 ring-ink-strong' : ''}`}
+        >
+          <input
+            type="color"
+            aria-label="Custom accent colour"
+            value={HEX_RE.test(hex || '') ? hex : custom.swatch}
+            onChange={(e) => onHex(e.target.value.toLowerCase())}
+            onClick={() => !on && onChange('custom')}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+          {on ? <Icon name="check" className="h-3.5 w-3.5 text-white drop-shadow animate-menu-in" strokeWidth={2.6} /> : <Icon name="plus" className="h-3.5 w-3.5 text-white drop-shadow" strokeWidth={2.6} />}
+        </label>
+      </div>
+      {on && (
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[12px] text-ink-muted">Custom</span>
+          <input
+            type="text"
+            aria-label="Custom accent hex"
+            value={hex || ''}
+            maxLength={7}
+            spellCheck={false}
+            placeholder="#5865f2"
+            onChange={(e) => onHex(e.target.value.trim().toLowerCase())}
+            className={`${INPUT} h-7 w-24 font-mono text-[12px]`}
+          />
+        </div>
+      )}
     </div>
+  )
+}
+
+function ImportPreview({ user }) {
+  const plate = user.nameplate?.asset ? nameplateImage(user.nameplate.asset) : null
+  const color = paletteColor(user.nameplate?.palette)
+  return (
+    <div className="overflow-hidden rounded-xl border border-line bg-surface-raised/40">
+      <div className="relative h-14" style={{ background: user.accent || 'var(--color-surface-raised)' }}>
+        {user.banner && <img src={user.banner} alt="" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover" />}
+      </div>
+      <div className="-mt-6 px-3 pb-3">
+        <DecoratedAvatar
+          profile={{ avatar: user.avatar, decoration: user.decoration ? 'image' : 'none', decorationUrl: user.decoration?.url, accent: 'ink', avatarShape: 'circle', name: user.displayName }}
+          size={48}
+        />
+        <div className="relative mt-1.5 overflow-hidden rounded-lg px-1.5 py-1">
+          {plate && (
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0">
+              <span className="absolute inset-0" style={{ backgroundImage: `linear-gradient(90deg, transparent, ${color}33)` }} />
+              <img src={plate} alt="" referrerPolicy="no-referrer" className="absolute inset-y-0 right-0 h-full w-auto max-w-none" style={{ maskImage: 'linear-gradient(90deg, transparent, black 45%)', WebkitMaskImage: 'linear-gradient(90deg, transparent, black 45%)' }} />
+            </span>
+          )}
+          <p className="relative flex items-center gap-1.5 text-[14px] font-semibold text-ink-strong">
+            <span className="truncate">{user.displayName || user.username}</span>
+            {user.tag?.text && (
+              <span className="inline-flex h-[18px] shrink-0 items-center gap-1 rounded-md border border-line bg-surface px-1 font-mono text-[10px] font-semibold uppercase text-ink">
+                {user.tag.badge && <img src={user.tag.badge} alt="" referrerPolicy="no-referrer" className="h-3 w-3" />}
+                {user.tag.text}
+              </span>
+            )}
+            {user.bot && <Badge tone="warn">Bot</Badge>}
+          </p>
+          <p className="relative truncate font-mono text-[12px] text-ink-muted">@{user.username}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ImportDialog({ open, onClose, form, onApply }) {
+  const [status, setStatus] = useState({ kind: 'idle' })
+  const [chosen, setChosen] = useState(() => new Set())
+  const abortRef = useRef(null)
+  const found = status.kind === 'found' ? status.user : null
+  const offered = useMemo(() => (found ? availableImports(found) : []), [found])
+  const allOn = offered.length > 0 && offered.every((f) => chosen.has(f.id))
+
+  useEffect(() => {
+    if (open) return undefined
+    abortRef.current?.abort()
+    abortRef.current = null
+    setStatus({ kind: 'idle' })
+  }, [open])
+
+  const connect = async () => {
+    abortRef.current?.abort()
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+    setStatus({ kind: 'waiting' })
+    try {
+      const u = await connectDiscord({ signal: ctrl.signal })
+      setChosen(new Set(availableImports(u).map((f) => f.id)))
+      setStatus({ kind: 'found', user: u })
+    } catch (err) {
+      if (err?.name === 'AbortError') return
+      setStatus({ kind: 'error', text: messageFor(err, 'Could not connect to Discord.') })
+    } finally {
+      if (abortRef.current === ctrl) abortRef.current = null
+    }
+  }
+  const cancelConnect = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setStatus({ kind: 'idle' })
+  }
+
+  const toggle = (fid, on) => setChosen((prev) => {
+    const next = new Set(prev)
+    if (on) next.add(fid)
+    else next.delete(fid)
+    return next
+  })
+  const preview = useMemo(() => (found ? applyImports(form, found, chosen) : form), [form, found, chosen])
+
+  const apply = () => {
+    if (!found) return
+    onApply(found, chosen)
+    onClose()
+  }
+
+  const waiting = status.kind === 'waiting'
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="wide"
+      title="Add from Discord"
+      description="Sign in with Discord in a popup, then pick what to bring over. Nothing is saved until you hit Save changes."
+      footer={
+        <>
+          <button type="button" onClick={onClose} className={BTN_GHOST}>Cancel</button>
+          <button type="button" onClick={apply} disabled={!found || chosen.size === 0} className={BTN_PRIMARY}>
+            <DiscordMark /> Import {found && chosen.size ? `${chosen.size} ${chosen.size === 1 ? 'thing' : 'things'}` : ''}
+          </button>
+        </>
+      }
+    >
+      <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          {!found && (
+            <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-line px-4 py-5">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[#5865f2]/15 text-[#5865f2]"><DiscordMark className="h-5 w-5" /></span>
+              <div>
+                <p className="text-[13.5px] font-medium text-ink-strong">{waiting ? 'Waiting for Discord…' : 'Connect your Discord account'}</p>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-muted">
+                  {waiting
+                    ? 'Finish signing in in the popup. This closes it for you when it is done.'
+                    : 'Discord only shares what is public on your profile: name, photo, banner, decoration, nameplate and server tag. No messages, no servers.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={waiting ? cancelConnect : connect} data-autofocus className={waiting ? BTN_GHOST : BTN_SECONDARY}>
+                  {waiting ? <Spinner /> : <DiscordMark />}
+                  {waiting ? 'Cancel' : status.kind === 'error' ? 'Try again' : 'Connect Discord'}
+                </button>
+              </div>
+              {status.kind === 'error' && <p role="alert" className="text-[12px] text-red-500 animate-menu-in">{status.text}</p>}
+            </div>
+          )}
+
+          {found && (
+            <div className="flex flex-col gap-3 animate-rise-in">
+              <div className="flex items-center justify-between gap-2">
+                <p className={LABEL}>Connected</p>
+                <button type="button" onClick={connect} className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>
+                  <Icon name="refresh" className="h-3.5 w-3.5" /> Use another account
+                </button>
+              </div>
+              <ImportPreview user={found} />
+              <div className="flex items-center justify-between">
+                <p className={LABEL}>What to import</p>
+                <button type="button" onClick={() => setChosen(allOn ? new Set() : new Set(offered.map((f) => f.id)))} className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>
+                  {allOn ? 'Select none' : 'Select all'}
+                </button>
+              </div>
+              <div className="flex flex-col gap-3">
+                {IMPORT_GROUPS.map((g) => {
+                  const rows = IMPORT_FIELDS.filter((f) => f.group === g.id && f.has(found))
+                  if (!rows.length) return null
+                  return (
+                    <div key={g.id}>
+                      <p className="mb-1 text-[11px] font-medium text-ink-subtle">{g.label}</p>
+                      <ul className="flex flex-col overflow-hidden rounded-lg border border-line">
+                        {rows.map((f) => (
+                          <li key={f.id} className="flex items-center gap-3 border-b border-line bg-surface px-3 py-2 last:border-b-0">
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[13px] font-medium text-ink-strong">{f.label}</span>
+                              <span className="block truncate text-[11.5px] text-ink-muted">{f.preview(found)}</span>
+                            </span>
+                            <Toggle checked={chosen.has(f.id)} onChange={(v) => toggle(f.id, v)} label={`Import ${f.label}`} />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })}
+                {fields_missing(found).length > 0 && (
+                  <p className="text-[11.5px] text-ink-faint">Not on this account: {fields_missing(found).join(', ').toLowerCase()}.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <aside className="hidden flex-col gap-2 md:flex">
+          <p className={LABEL}>Live preview</p>
+          <div className={`transition-opacity ${found ? '' : 'opacity-60'}`}>
+            <div className={preview.layout === 'card' ? '' : 'rounded-2xl border border-line bg-bg p-3'}>
+              <ProfileCard key={found?.id || 'none'} profile={{ ...preview, links: preview.links.filter((l) => l.url) }} compact />
+            </div>
+          </div>
+          <p className="text-[11px] leading-relaxed text-ink-faint">{found ? 'Toggle things on the left to see them land.' : 'Your card, as it is now.'}</p>
+        </aside>
+      </div>
+    </Modal>
+  )
+}
+
+const fields_missing = (u) => IMPORT_FIELDS.filter((f) => !f.has(u) && f.id !== 'handle' && f.id !== 'link').map((f) => f.label)
+
+function FlairTile({ current, option, accent, onSelect, sample }) {
+  const on = current === option.id
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      onClick={() => onSelect(option.id)}
+      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 text-center outline-none transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ink-strong/30 ${on ? 'border-ink-strong' : 'border-line hover:border-line-strong'}`}
+    >
+      <span className="grid h-14 place-items-center">{sample}</span>
+      <span className="text-[12.5px] font-medium text-ink-strong">{option.label}</span>
+      {option.description && <span className="text-[10.5px] leading-snug text-ink-muted">{option.description}</span>}
+      <span className="sr-only">{accent.label}</span>
+    </button>
   )
 }
 
@@ -493,6 +751,8 @@ function Editor({ user }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [handleStatus, setHandleStatus] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const closeImport = useCallback(() => setImportOpen(false), [])
 
   useEffect(() => {
     let cancelled = false
@@ -530,7 +790,6 @@ function Editor({ user }) {
       setHandleStatus(free === null ? null : free ? { kind: 'ok', text: 'Available' } : { kind: 'taken', text: 'Taken' })
     }, 400)
     return () => { cancelled = true; clearTimeout(t) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handle, saved?.handle])
 
   const validate = () => {
@@ -547,6 +806,10 @@ function Editor({ user }) {
     const website = normalizeUrl(form.website)
     if (website === null) next.website = 'Enter a valid URL.'
     else if (website.length > LIMITS.website) next.website = 'That URL is too long.'
+    const tagText = form.tagText.trim().toUpperCase()
+    if (tagText.length > LIMITS.tag) next.tagText = `Up to ${LIMITS.tag} characters.`
+    else if (tagText && !/^[A-Z0-9]+$/.test(tagText)) next.tagText = 'Letters and numbers only.'
+    if (form.accent === 'custom' && !HEX_RE.test(form.accentHex || '')) next.accentHex = 'Enter a colour like #5865f2.'
 
     const linkErrors = {}
     const links = []
@@ -590,7 +853,18 @@ function Editor({ user }) {
       showcase,
       skills: form.skills.slice(0, LIMITS.skills),
       sections: form.sections.length ? form.sections : DEFAULT_SECTIONS,
+      tagText,
+      tagBadgeUrl: tagText ? form.tagBadgeUrl : null,
+      decoration: form.decoration === 'image' && !form.decorationUrl ? 'none' : form.decoration,
+      nameplate: form.nameplate === 'image' && !form.nameplateAsset ? 'none' : form.nameplate,
     }
+  }
+
+  const importFromDiscord = (discordUser, chosen) => {
+    setForm((f) => keyed(applyImports({ ...f, links: stripKeys(f.links), showcase: stripKeys(f.showcase) }, discordUser, chosen)))
+    setErrors({})
+    setError(null)
+    toast(`Imported from Discord — save to apply`)
   }
 
   const save = async (e) => {
@@ -677,7 +951,7 @@ function Editor({ user }) {
   const live = saved && saved.visibility !== 'private'
   const visibility = VISIBILITY.find((v) => v.value === form.visibility) || VISIBILITY[2]
   const canUseAccountPhoto = account.avatar && form.avatar !== account.avatar
-  const accent = accentOf(form.accent)
+  const accent = accentOf(form)
   const flagged = new Set(Object.keys(errors).filter((k) => errors[k]).map((k) => FIELD_TAB[k]))
   const tabs = TABS.map((t) => ({ ...t, badge: flagged.has(t.id) }))
   const grid = 'grid gap-4 px-5 py-4 sm:grid-cols-2'
@@ -696,6 +970,11 @@ function Editor({ user }) {
         <div key={tab} className="settings-stagger flex flex-col gap-5">
           {tab === 'basics' && (
             <Section id="identity" title="Identity" description="Who you are, at a glance. The handle becomes your URL.">
+              <Row label="Add from Discord" description={form.discordId ? `Linked to Discord ID ${form.discordId}. Connect again to refresh.` : 'Sign in with Discord and pull your name, photo, banner, decoration, nameplate and server tag.'}>
+                <button type="button" onClick={() => setImportOpen(true)} className={BTN_SECONDARY}>
+                  <DiscordMark /> {form.discordId ? 'Re-import' : 'Add from Discord'}
+                </button>
+              </Row>
               <ImageRow
                 label="Photo"
                 description="Square works best. Resized to 320px before upload."
@@ -788,7 +1067,10 @@ function Editor({ user }) {
               </Section>
               <Section id="banner" title="Banner" description="Colour, texture and an optional cover photo. Minimal layout uses the colour for the avatar ring only.">
                 <Row label="Accent" description="Fixed colours look the same to everyone; Mono follows their theme." align="start">
-                  <Swatches value={form.accent} onChange={(v) => set('accent', v)} />
+                  <div className="flex flex-col gap-1.5">
+                    <Swatches value={form.accent} hex={form.accentHex} onChange={(v) => set('accent', v)} onHex={(v) => { set('accentHex', v); if (form.accent !== 'custom') set('accent', 'custom') }} />
+                    {errors.accentHex && <p role="alert" className="text-[12px] text-red-500">{errors.accentHex}</p>}
+                  </div>
                 </Row>
                 <Row label="Texture" description="Drawn over the colour when there is no cover photo.">
                   <Segmented label="Texture" value={form.pattern} onChange={(v) => set('pattern', v)} options={PATTERNS.map((p) => ({ value: p.id, label: p.label }))} />
@@ -812,6 +1094,78 @@ function Editor({ user }) {
                 </Row>
                 <Row label="Page theme" description="Force light or dark for visitors, or follow their own setting.">
                   <Segmented label="Page theme" value={form.theme} onChange={(v) => set('theme', v)} options={PAGE_THEMES.map((t) => ({ value: t.id, label: t.label, icon: t.icon }))} />
+                </Row>
+              </Section>
+              <Section id="flair" title="Flair" description="Little extras around your name and photo. The Discord ones come from Add from Discord on the Basics tab.">
+                <Row label="Avatar decoration" description="Drawn around the photo." align="start" wide>
+                  <div role="radiogroup" aria-label="Avatar decoration" className="grid w-full grid-cols-2 gap-2 sm:grid-cols-5">
+                    {DECORATIONS.filter((d) => d.id !== 'image' || form.decorationUrl).map((d) => (
+                      <FlairTile
+                        key={d.id}
+                        option={d}
+                        current={form.decoration}
+                        accent={accent}
+                        onSelect={(v) => set('decoration', v)}
+                        sample={<DecoratedAvatar profile={{ ...form, decoration: d.id }} size={36} />}
+                      />
+                    ))}
+                  </div>
+                  {form.decorationUrl && (
+                    <button type="button" onClick={() => { set('decorationUrl', null); if (form.decoration === 'image') set('decoration', 'none') }} className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>
+                      <Icon name="trash" className="h-3.5 w-3.5" /> Forget the Discord decoration
+                    </button>
+                  )}
+                </Row>
+                <Row label="Nameplate" description="A strip behind your name." align="start" wide>
+                  <div role="radiogroup" aria-label="Nameplate" className="grid w-full grid-cols-3 gap-2">
+                    {NAMEPLATES.filter((n) => n.id !== 'image' || form.nameplateAsset).map((n) => (
+                      <FlairTile
+                        key={n.id}
+                        option={n}
+                        current={form.nameplate}
+                        accent={accent}
+                        onSelect={(v) => set('nameplate', v)}
+                        sample={
+                          <span className="relative block h-9 w-full min-w-[96px] overflow-hidden rounded-md border border-line bg-surface">
+                            {n.id === 'accent' && <span className="absolute inset-0 opacity-25" style={{ backgroundImage: `linear-gradient(90deg, transparent, ${accent.from}, ${accent.to})` }} />}
+                            {n.id === 'image' && form.nameplateAsset && (
+                              <>
+                                <span className="absolute inset-0" style={{ backgroundImage: `linear-gradient(90deg, transparent, ${paletteColor(form.nameplatePalette)}44)` }} />
+                                <img src={nameplateImage(form.nameplateAsset)} alt="" referrerPolicy="no-referrer" className="absolute inset-y-0 right-0 h-full w-auto max-w-none" style={{ maskImage: 'linear-gradient(90deg, transparent, black 45%)', WebkitMaskImage: 'linear-gradient(90deg, transparent, black 45%)' }} />
+                              </>
+                            )}
+                            <span className="absolute left-2 top-1/2 h-1.5 w-10 -translate-y-1/2 rounded bg-ink-muted" />
+                          </span>
+                        }
+                      />
+                    ))}
+                  </div>
+                  {form.nameplateAsset && (
+                    <button type="button" onClick={() => { set('nameplateAsset', null); set('nameplatePalette', null); if (form.nameplate === 'image') set('nameplate', 'none') }} className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>
+                      <Icon name="trash" className="h-3.5 w-3.5" /> Forget the Discord nameplate
+                    </button>
+                  )}
+                </Row>
+                <Row label="Server tag" description={`Up to ${LIMITS.tag} letters next to your name, like Discord's. The badge only comes from an import.`} htmlFor={`${id}-tag`} align="start">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      {form.tagBadgeUrl && <img src={form.tagBadgeUrl} alt="" referrerPolicy="no-referrer" className="h-5 w-5 rounded" />}
+                      <input
+                        id={`${id}-tag`}
+                        type="text"
+                        autoComplete="off"
+                        spellCheck={false}
+                        maxLength={LIMITS.tag}
+                        placeholder="BLXR"
+                        value={form.tagText}
+                        onChange={(e) => set('tagText', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                        aria-invalid={Boolean(errors.tagText) || undefined}
+                        className={`${INPUT} w-24 font-mono uppercase`}
+                      />
+                      {form.tagBadgeUrl && <button type="button" onClick={() => set('tagBadgeUrl', null)} className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>Drop badge</button>}
+                    </div>
+                    {errors.tagText && <p role="alert" className="text-[12px] text-red-500">{errors.tagText}</p>}
+                  </div>
                 </Row>
               </Section>
             </>
@@ -894,6 +1248,7 @@ function Editor({ user }) {
       </aside>
 
       <DeleteDialog open={confirmDelete} onClose={() => !deleting && setConfirmDelete(false)} onConfirm={destroy} busy={deleting} />
+      <ImportDialog open={importOpen} onClose={closeImport} form={form} onApply={importFromDiscord} />
     </form>
   )
 }
