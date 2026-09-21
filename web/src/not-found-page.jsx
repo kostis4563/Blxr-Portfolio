@@ -2,21 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import NotFoundMatrix from './components/not-found-matrix'
-import { useI18n } from './lib/i18n'
 import {
   link,
   navigate,
   normalizePath,
-  localizePath,
-  splitLocale,
-  currentLang,
   canGoBack,
   backOr,
   HOME_PATH,
   PROJECTS_PATH,
   LIBRARY_PATH,
   REVIEWS_PATH,
-  NOW_PATH,
   USES_PATH,
   CV_PATH,
   projectPath,
@@ -42,23 +37,21 @@ function obviousFix(route) {
 }
 
 export default function NotFoundPage({ theme, onToggleTheme }) {
-  const { t } = useI18n()
   const paletteOpen = usePaletteOpen()
 
   const catalogue = useMemo(
     () => [
-      { path: HOME_PATH, label: t('cmd.home') },
-      { path: PROJECTS_PATH, label: t('proj.archiveTitle') },
+      { path: HOME_PATH, label: 'Home' },
+      { path: PROJECTS_PATH, label: 'Projects Archive' },
       ...projectsList.map((p) => ({ path: projectPath(p.id), label: p.title })),
-      { path: LIBRARY_PATH, label: t('lib.title') },
+      { path: LIBRARY_PATH, label: 'FiveM Library' },
       ...libraryList.map((entry) => ({ path: libraryPath(entry.id), label: entry.title })),
-      { path: REVIEWS_PATH, label: t('rev.title') },
-      { path: NOW_PATH, label: t('now.title') },
-      { path: USES_PATH, label: t('uses.title') },
-      { path: CV_PATH, label: t('cv.title') },
-      ...SECTIONS.map((s) => ({ path: `/${s.id}`, label: t(s.key), section: s.id })),
+      { path: REVIEWS_PATH, label: 'Reviews' },
+      { path: USES_PATH, label: 'Uses' },
+      { path: CV_PATH, label: 'CV' },
+      ...SECTIONS.map((s) => ({ path: `/${s.id}`, label: s.label, section: s.id })),
     ],
-    [t],
+    [],
   )
 
   const pages = useMemo(() => catalogue.filter((e) => !e.section), [catalogue])
@@ -76,7 +69,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
   const inputRef = useRef(null)
 
   useEffect(() => {
-    const { route } = splitLocale(window.location.pathname)
+    const route = normalizePath(window.location.pathname)
     let referrer = null
     try {
       if (document.referrer) {
@@ -107,7 +100,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
 
   const suggestions = hasMatches
     ? matches
-    : pages.filter((e) => [HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, NOW_PATH].includes(e.path))
+    : pages.filter((e) => [HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH].includes(e.path))
 
   useEffect(() => {
     setSelected((s) => Math.min(s, Math.max(0, suggestions.length - 1)))
@@ -253,7 +246,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
             className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
           >
             <span>←</span>
-            <span>{t('proj.backHome')}</span>
+            <span>Back to Home</span>
           </a>
           {}
           <div className="flex items-center gap-4">
@@ -273,11 +266,11 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
         <NotFoundMatrix figure={exact ? '200' : '404'} className="mb-4" />
 
         <h1 className="text-[28px] sm:text-[34px] font-extrabold text-ink-strong tracking-[-0.03em] leading-[1.15] mb-3">
-          {t('nf.title')}
+          Page not found
         </h1>
 
         <p className="text-[15px] text-ink-muted font-normal leading-relaxed max-w-[46ch]">
-          {t('nf.body')}
+          That address does not lead anywhere on this site.
         </p>
 
         {}
@@ -286,7 +279,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
             <div className="animate-fade-in-up">
               <div className="flex items-center justify-between gap-4 mb-2">
                 <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-faint">
-                  {t('nf.asked')}
+                  You asked for
                 </p>
                 {!editing && (
                   <button
@@ -298,14 +291,14 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
                       <path d="M12 20h9" />
                       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
                     </svg>
-                    <span>{t('nf.fix')}</span>
+                    <span>Fix the address</span>
                     <kbd aria-hidden="true" className="hidden sm:inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded border border-line-strong text-[9.5px] text-ink-faint normal-case tracking-normal">/</kbd>
                   </button>
                 )}
               </div>
 
               {}
-              <p dir="ltr" className="font-mono text-[13px] sm:text-[14px] leading-[1.9] break-all text-left rtl:text-right">
+              <p className="font-mono text-[13px] sm:text-[14px] leading-[1.9] break-all text-left">
                 <span className="text-ink-faint">{asked.host}</span>
                 {editing ? (
                   <span className="nf-field" data-value={value}>
@@ -319,7 +312,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
                       autoCapitalize="off"
                       autoCorrect="off"
                       autoComplete="off"
-                      aria-label={t('nf.fix')}
+                      aria-label="Fix the address"
                       className="nf-input text-ink-strong"
                     />
                   </span>
@@ -327,7 +320,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
                   <button
                     type="button"
                     onClick={startEditing}
-                    title={t('nf.fix')}
+                    title="Fix the address"
                     className="text-left cursor-text"
                   >
                     <span className="text-ink-subtle">{split.known}</span>
@@ -342,23 +335,23 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
               <p className="mt-1.5 text-[13px] leading-relaxed min-h-[1.25rem]" aria-live="polite">
                 {redirecting ? (
                   <span className="text-brand-indigo">
-                    {t('nf.redirecting', { label: obvious.label, n: countdown })}
+                    Taking you to {obvious.label} in {countdown}s
                     {' · '}
                     <button
                       type="button"
                       onClick={() => setCountdown(null)}
                       className="underline underline-offset-4 decoration-brand-indigo/50 hover:decoration-brand-indigo cursor-pointer"
                     >
-                      {t('nf.stay')}
+                      Stay here
                     </button>
                   </span>
                 ) : exact ? (
-                  <span className="text-brand-indigo">{t('nf.exists')}</span>
+                  <span className="text-brand-indigo">That page exists — press Enter to open it</span>
                 ) : asked.referrer ? (
                   <span className="text-ink-subtle">
                     {asked.referrer.internal
-                      ? t('nf.fromInternal')
-                      : t('nf.fromExternal', { host: asked.referrer.host })}
+                      ? 'That was a link on this site, so this one is on me.'
+                      : `You followed a link from ${asked.referrer.host} that is out of date.`}
                   </span>
                 ) : null}
               </p>
@@ -371,7 +364,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
           {asked && (
             <div className="animate-fade-in-up delay-150 w-full">
               <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-faint mb-2" aria-live="polite">
-                {hasMatches ? t('nf.didYouMean') : t('nf.instead')}
+                {hasMatches ? 'Did you mean' : 'Places that do exist'}
               </p>
               <ul className="w-full border-t border-dashed border-line">
                 {suggestions.map((entry, i) => (
@@ -390,7 +383,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
               {wasAt.length > 0 && (
                 <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
                   <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-faint">
-                    {t('nf.recent')}
+                    Where you were
                   </span>
                   {wasAt.map((entry) => (
                     <a
@@ -399,8 +392,8 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
                       className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-line-strong bg-surface-raised text-[12.5px] font-medium text-ink-secondary hover:text-ink-strong transition-colors cursor-pointer"
                     >
                       <span>{entry.label}</span>
-                      <span dir="ltr" className="font-mono text-[11px] text-ink-faint">
-                        {localizePath(entry.path, currentLang())}
+                      <span className="font-mono text-[11px] text-ink-faint">
+                        {entry.path}
                       </span>
                     </a>
                   ))}
@@ -416,14 +409,14 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
                   className="inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-subtle hover:text-ink-strong transition-colors cursor-pointer"
                 >
                   <span aria-hidden="true" className={`inline-block transition-transform duration-200 ${showAll ? 'rotate-90' : ''}`}>›</span>
-                  <span>{showAll ? t('nf.hidePages') : t('nf.allPages')}</span>
+                  <span>{showAll ? 'Hide' : 'Show every page'}</span>
                 </button>
                 {showAll && (
                   <div className="mt-3 grid gap-4 sm:grid-cols-2 animate-fade-in-up">
-                    <PageGroup title={t('nf.pages')} entries={pages.filter((e) => [HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, NOW_PATH].includes(e.path))} />
-                    <PageGroup title={t('nf.sections')} entries={catalogue.filter((e) => e.section)} />
-                    <PageGroup title={t('home.projects')} entries={pages.filter((e) => e.path.startsWith(PROJECTS_PATH + '/'))} />
-                    <PageGroup title={t('lib.title')} entries={pages.filter((e) => e.path.startsWith(LIBRARY_PATH + '/'))} />
+                    <PageGroup title="Pages" entries={pages.filter((e) => [HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH].includes(e.path))} />
+                    <PageGroup title="On the home page" entries={catalogue.filter((e) => e.section)} />
+                    <PageGroup title="Projects" entries={pages.filter((e) => e.path.startsWith(PROJECTS_PATH + '/'))} />
+                    <PageGroup title="FiveM Library" entries={pages.filter((e) => e.path.startsWith(LIBRARY_PATH + '/'))} />
                   </div>
                 )}
               </div>
@@ -436,7 +429,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
             {...link(HOME_PATH)}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-ink-strong text-ink-inverse text-[13px] font-semibold hover:bg-ink-secondary transition-colors cursor-pointer"
           >
-            <span>{t('proj.backHome')}</span>
+            <span>Back to Home</span>
             <span>→</span>
           </a>
           <button
@@ -444,8 +437,8 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
             onClick={openPalette}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-raised border border-line-strong text-ink-secondary hover:text-ink-strong text-[13px] font-semibold transition-colors cursor-pointer"
           >
-            <span>{t('nf.search')}</span>
-            <kbd dir="ltr" aria-hidden="true" className="hidden sm:inline font-mono text-[10px] tracking-[0.04em] text-ink-subtle">
+            <span>Search the site</span>
+            <kbd aria-hidden="true" className="hidden sm:inline font-mono text-[10px] tracking-[0.04em] text-ink-subtle">
               {mac ? '⌘K' : 'Ctrl K'}
             </kbd>
           </button>
@@ -457,7 +450,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-raised border border-line-strong text-ink-secondary hover:text-ink-strong text-[13px] font-semibold transition-colors cursor-pointer"
             >
               <span aria-hidden="true">←</span>
-              <span>{t('nf.back')}</span>
+              <span>Go back</span>
             </button>
           )}
           {}
@@ -466,7 +459,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
               href={reportHref}
               className="ml-1 text-[13px] font-medium text-ink-subtle hover:text-ink-strong underline decoration-line-strong underline-offset-4 transition-colors"
             >
-              {t('nf.report')}
+              Report this link
             </a>
           )}
         </div>
@@ -478,8 +471,8 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
 
 function SuggestionLink({ entry, index, selected, onHover }) {
   const href = entry.section
-    ? `${localizePath(HOME_PATH, currentLang())}#${entry.section}`
-    : localizePath(entry.path, currentLang())
+    ? `${HOME_PATH}#${entry.section}`
+    : entry.path
   const props = entry.section
     ? {
         href,
@@ -517,7 +510,7 @@ function SuggestionLink({ entry, index, selected, onHover }) {
       </span>
       <span className="flex items-center gap-3 shrink-0">
         {}
-        <span dir="ltr" className="font-mono text-[12px] text-ink-subtle">{href}</span>
+        <span className="font-mono text-[12px] text-ink-subtle">{href}</span>
         <span
           aria-hidden="true"
           className={`hidden sm:inline font-mono text-[11px] transition-all duration-200 ${
@@ -540,7 +533,7 @@ function PageGroup({ title, entries }) {
         {entries.map((entry) => {
           const props = entry.section
             ? {
-                href: `${localizePath(HOME_PATH, currentLang())}#${entry.section}`,
+                href: `${HOME_PATH}#${entry.section}`,
                 onClick: (e) => {
                   if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
                   e.preventDefault()

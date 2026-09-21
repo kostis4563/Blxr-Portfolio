@@ -2,9 +2,8 @@ import { useEffect } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { Icon } from './components/icon'
-import { useI18n, LOCALE_TAGS } from './lib/i18n'
-import { link, HOME_PATH, PROJECTS_PATH, NOW_PATH, projectPath } from './lib/router'
-import { projectsList, SHORT_KEY } from './lib/projects'
+import { link, HOME_PATH, PROJECTS_PATH, projectPath } from './lib/router'
+import { projectsList } from './lib/projects'
 import { MailTo, Sensitive, useMounted } from './components/sensitive'
 import {
   CV_UPDATED,
@@ -33,13 +32,10 @@ const LINK = 'text-ink-secondary underline decoration-line-strong underline-offs
 
 const MAX_LEVEL = 4
 
-// A piece of CV copy is either a plain string or `{ key, fallback }`.
-const useCopy = (t) => (value) => (value && typeof value === 'object' ? t(value.key, null, value.fallback) : value)
-
-function formatUpdated(iso, lang) {
+function formatUpdated(iso) {
   const date = new Date(`${iso}T00:00:00Z`)
   try {
-    return new Intl.DateTimeFormat(LOCALE_TAGS[lang] || 'en', {
+    return new Intl.DateTimeFormat('en-US', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -50,9 +46,9 @@ function formatUpdated(iso, lang) {
   }
 }
 
-function formatPeriod(period, t) {
+function formatPeriod(period) {
   if (!period) return ''
-  const end = period.present ? t('common.present') : period.to
+  const end = period.present ? 'Present' : period.to
   if (!end || end === period.from) return period.from
   return `${period.from} – ${end}`
 }
@@ -124,17 +120,17 @@ function ContactRow({ item, mounted }) {
   )
 }
 
-function ExperienceRow({ entry, copy, t }) {
-  const org = copy(entry.org)
+function ExperienceRow({ entry }) {
+  const org = entry.org
   return (
     <li className={ROW}>
       <div className={PERIOD}>
-        <div>{formatPeriod(entry.period, t)}</div>
+        <div>{formatPeriod(entry.period)}</div>
         {entry.location && <div className="mt-1 text-[10.5px] text-ink-faint">{entry.location}</div>}
       </div>
       <div className="min-w-0">
         <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-ink-strong">
-          {copy(entry.role)}
+          {entry.role}
           <span className="font-normal text-ink-subtle"> · </span>
           {entry.url ? (
             <ExternalLink href={entry.url} className="font-normal text-ink-muted transition-colors duration-200 hover:text-ink-strong">
@@ -144,7 +140,7 @@ function ExperienceRow({ entry, copy, t }) {
             <span className="font-normal text-ink-muted">{org}</span>
           )}
         </h3>
-        {entry.summary && <p className="mt-1.5 max-w-[600px] text-[13px] leading-relaxed text-ink-muted">{copy(entry.summary)}</p>}
+        {entry.summary && <p className="mt-1.5 max-w-[600px] text-[13px] leading-relaxed text-ink-muted">{entry.summary}</p>}
         {entry.bullets?.length > 0 && (
           <ul className="mt-3 flex flex-col gap-1.5">
             {entry.bullets.map((bullet) => (
@@ -156,7 +152,7 @@ function ExperienceRow({ entry, copy, t }) {
           </ul>
         )}
         {entry.stack?.length > 0 && (
-          <ul className="mt-3.5 flex flex-wrap gap-1.5" aria-label={t('cv.stack')}>
+          <ul className="mt-3.5 flex flex-wrap gap-1.5" aria-label="Stack">
             {entry.stack.map((tag) => (
               <li key={tag} className={CHIP}>
                 {tag}
@@ -169,7 +165,7 @@ function ExperienceRow({ entry, copy, t }) {
   )
 }
 
-function ProjectRow({ project, t }) {
+function ProjectRow({ project }) {
   const source = project.github
   const site = project.url && !/youtube\.com|youtu\.be/.test(project.url) ? project.url : null
   return (
@@ -181,11 +177,11 @@ function ProjectRow({ project, t }) {
             {project.title}
           </a>
           <span className="font-mono text-[10.5px] font-normal uppercase tracking-wider text-ink-subtle">
-            {t(`cat.${project.category}`, null, project.category)}
+            {project.category}
           </span>
         </h3>
         <p className="mt-1.5 max-w-[600px] text-[13px] leading-relaxed text-ink-muted">
-          {t(SHORT_KEY[project.id], null, project.shortDescription)}
+          {project.shortDescription}
         </p>
         <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
           {site && (
@@ -202,7 +198,7 @@ function ProjectRow({ project, t }) {
           )}
         </div>
         {project.tags?.length > 0 && (
-          <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={t('cv.stack')}>
+          <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Stack">
             {project.tags.map((tag) => (
               <li key={tag} className={CHIP}>
                 {tag}
@@ -216,11 +212,9 @@ function ProjectRow({ project, t }) {
 }
 
 export default function CvPage({ theme, onToggleTheme }) {
-  const { t, lang } = useI18n()
-  const copy = useCopy(t)
   const mounted = useMounted()
   const themedIcon = themedIconFor(theme)
-  const updated = formatUpdated(CV_UPDATED, lang)
+  const updated = formatUpdated(CV_UPDATED)
 
   const projects = CV_PROJECT_IDS.map((id) => projectsList.find((project) => project.id === id)).filter(Boolean)
 
@@ -242,7 +236,7 @@ export default function CvPage({ theme, onToggleTheme }) {
             className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
           >
             <span>←</span>
-            <span>{t('proj.backHome')}</span>
+            <span>Back to Home</span>
           </a>
           <div className="flex items-center gap-4">
             <button
@@ -251,7 +245,7 @@ export default function CvPage({ theme, onToggleTheme }) {
               className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200"
             >
               <Icon name="download" className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('cv.print')}</span>
+              <span className="hidden sm:inline">Print</span>
             </button>
             <CommandButton className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-strong transition-colors duration-200" />
             <ThemeToggle
@@ -270,7 +264,7 @@ export default function CvPage({ theme, onToggleTheme }) {
         {/* Identity */}
         <section aria-labelledby="cv-name" className="w-full mb-14 text-left">
           <p className={`${KICKER} mb-4 flex flex-wrap items-center gap-x-2 gap-y-1`}>
-            <span>{t('cv.kicker')}</span>
+            <span>Curriculum vitae</span>
             <span aria-hidden="true">/</span>
             <span>{CV_LOCATION}</span>
           </p>
@@ -280,8 +274,8 @@ export default function CvPage({ theme, onToggleTheme }) {
                 {CV_NAME}
                 <span className="ms-3 align-middle font-mono text-[13px] font-normal tracking-normal text-ink-subtle">@{CV_HANDLE}</span>
               </h1>
-              <p className="mt-3 text-[16px] font-medium leading-snug text-ink-secondary">{copy(CV_ROLE)}</p>
-              <p className="mt-1 text-[13.5px] text-ink-muted">{copy(CV_STATUS)}</p>
+              <p className="mt-3 text-[16px] font-medium leading-snug text-ink-secondary">{CV_ROLE}</p>
+              <p className="mt-1 text-[13.5px] text-ink-muted">{CV_STATUS}</p>
               <p className="mt-5 text-[14px] leading-relaxed text-ink-muted">{CV_SUMMARY}</p>
             </div>
 
@@ -290,7 +284,7 @@ export default function CvPage({ theme, onToggleTheme }) {
                 <ContactRow key={item.label} item={item} mounted={mounted} />
               ))}
               <div className="flex items-baseline gap-3">
-                <dt className="w-[64px] shrink-0 font-mono text-[10.5px] uppercase tracking-wider text-ink-subtle">{t('cv.timezone')}</dt>
+                <dt className="w-[64px] shrink-0 font-mono text-[10.5px] uppercase tracking-wider text-ink-subtle">Time</dt>
                 <dd className="text-[13px] text-ink-secondary">{CV_TIMEZONE}</dd>
               </div>
             </dl>
@@ -298,7 +292,7 @@ export default function CvPage({ theme, onToggleTheme }) {
 
           <dl className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-ink-subtle">
             <div className="flex items-center gap-2">
-              <dt className="font-mono uppercase tracking-wider text-[10.5px]">{t('cv.updated')}</dt>
+              <dt className="font-mono uppercase tracking-wider text-[10.5px]">Updated</dt>
               <dd>
                 <time dateTime={CV_UPDATED} className="text-ink-secondary">
                   {updated}
@@ -306,11 +300,11 @@ export default function CvPage({ theme, onToggleTheme }) {
               </dd>
             </div>
             <div className="flex items-center gap-2 print:hidden">
-              <dt className="sr-only">{t('cv.print')}</dt>
+              <dt className="sr-only">Print</dt>
               <dd>
                 <button type="button" onClick={print} className={`${LINK} inline-flex items-center gap-1.5`}>
                   <Icon name="download" className="h-3.5 w-3.5" />
-                  <span>{t('cv.printHint')}</span>
+                  <span>Print or save as PDF</span>
                 </button>
               </dd>
             </div>
@@ -319,47 +313,47 @@ export default function CvPage({ theme, onToggleTheme }) {
 
         {/* Experience */}
         <section aria-labelledby="cv-experience" className="w-full mb-14">
-          <SectionHeading id="cv-experience" kicker="01" title={t('home.experience')} />
+          <SectionHeading id="cv-experience" kicker="01" title="Experience" />
           <ol className="w-full">
             {CV_EXPERIENCE.map((entry, index) => (
-              <ExperienceRow key={index} entry={entry} copy={copy} t={t} />
+              <ExperienceRow key={index} entry={entry} />
             ))}
           </ol>
         </section>
 
         {/* Projects */}
         <section aria-labelledby="cv-projects" className="w-full mb-14">
-          <SectionHeading id="cv-projects" kicker="02" title={t('cv.projects')} />
+          <SectionHeading id="cv-projects" kicker="02" title="Selected projects" />
           <ol className="w-full">
             {projects.map((project) => (
-              <ProjectRow key={project.id} project={project} t={t} />
+              <ProjectRow key={project.id} project={project} />
             ))}
           </ol>
           <a {...link(PROJECTS_PATH)} className="group mt-5 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-muted transition-colors duration-200 hover:text-ink-strong print:hidden">
-            <span>{t('home.browseAll')}</span>
+            <span>Browse all</span>
             <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">→</span>
           </a>
         </section>
 
         {/* Education */}
         <section aria-labelledby="cv-education" className="w-full mb-14">
-          <SectionHeading id="cv-education" kicker="03" title={t('cv.education')} />
+          <SectionHeading id="cv-education" kicker="03" title="Education" />
           <ol className="w-full">
             {CV_EDUCATION.map((entry, index) => (
               <li key={index} className={ROW}>
-                <div className={PERIOD}>{formatPeriod(entry.period, t)}</div>
+                <div className={PERIOD}>{formatPeriod(entry.period)}</div>
                 <div className="min-w-0">
                   <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-ink-strong">
-                    {copy(entry.degree)}
+                    {entry.degree}
                     <span className="font-normal text-ink-subtle"> · </span>
-                    <span className="font-normal text-ink-muted">{copy(entry.org)}</span>
+                    <span className="font-normal text-ink-muted">{entry.org}</span>
                   </h3>
                   {entry.note && <p className="mt-1.5 max-w-[600px] text-[13px] leading-relaxed text-ink-muted">{entry.note}</p>}
                   {entry.highlights?.length > 0 && (
                     <ul className="mt-3.5 flex flex-wrap gap-1.5">
                       {entry.highlights.map((subject) => (
                         <li key={subject.key || subject} className="rounded-md border border-line bg-surface-raised/60 px-2.5 py-1 text-[11.5px] text-ink-muted">
-                          {copy(subject)}
+                          {subject}
                         </li>
                       ))}
                     </ul>
@@ -372,11 +366,11 @@ export default function CvPage({ theme, onToggleTheme }) {
 
         {/* Skills */}
         <section aria-labelledby="cv-skills" className="w-full mb-14">
-          <SectionHeading id="cv-skills" kicker="04" title={t('home.skills')} />
+          <SectionHeading id="cv-skills" kicker="04" title="Skills" />
           <div className="w-full">
             {CV_SKILLS.map((group) => (
-              <div key={group.nameKey} className={ROW}>
-                <div className={`${PERIOD} uppercase tracking-wider`}>{t(group.nameKey)}</div>
+              <div key={group.name} className={ROW}>
+                <div className={`${PERIOD} uppercase tracking-wider`}>{group.name}</div>
                 <ul className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
                   {group.items.map((item) => (
                     <li key={item.name} className="flex items-center justify-between gap-4 text-[13px] text-ink-secondary">
@@ -384,15 +378,15 @@ export default function CvPage({ theme, onToggleTheme }) {
                         <img src={themedIcon(item.icon)} alt="" width="14" height="14" loading="lazy" className="h-3.5 w-3.5 shrink-0 print:hidden" />
                         {item.name}
                       </span>
-                      {item.level && <LevelMeter level={item.level} label={t(SKILL_LEVELS[item.level].key)} />}
+                      {item.level && <LevelMeter level={item.level} label={SKILL_LEVELS[item.level].label} />}
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
             {CV_TOOLS.map((group) => (
-              <div key={group.nameKey} className={ROW}>
-                <div className={`${PERIOD} uppercase tracking-wider`}>{t(group.nameKey)}</div>
+              <div key={group.name} className={ROW}>
+                <div className={`${PERIOD} uppercase tracking-wider`}>{group.name}</div>
                 <ul className="flex flex-wrap gap-x-5 gap-y-2">
                   {group.items.map((item) => (
                     <li key={item.name} className="inline-flex items-center gap-2 text-[13px] text-ink-secondary">
@@ -408,7 +402,7 @@ export default function CvPage({ theme, onToggleTheme }) {
 
         {/* Languages */}
         <section aria-labelledby="cv-languages" className="w-full mb-14">
-          <SectionHeading id="cv-languages" kicker="05" title={t('cv.languages')} />
+          <SectionHeading id="cv-languages" kicker="05" title="Languages" />
           <ul className="w-full max-w-[640px]">
             {CV_LANGUAGES.map((item) => (
               <li key={item.name} className="flex items-baseline justify-between gap-4 border-b border-dashed border-line py-3 last:border-b-0 text-[13px]">
@@ -422,19 +416,19 @@ export default function CvPage({ theme, onToggleTheme }) {
         {/* Footer */}
         <footer className="w-full max-w-[640px] border-t border-dashed border-line pt-8 print:hidden">
           <p className="text-[13px] leading-relaxed text-ink-muted">
-            {t('cv.footer')}{' '}
-            <a {...link(NOW_PATH)} className={LINK}>
-              /now
+            This is the formal version. For what I am working on at the moment, see{' '}
+            <a {...link(PROJECTS_PATH)} className={LINK}>
+              /projects
             </a>
             .
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] font-medium text-ink-muted">
             <a {...link(PROJECTS_PATH)} className="group inline-flex items-center gap-1.5 transition-colors duration-200 hover:text-ink-strong">
-              <span>{t('proj.archiveTitle')}</span>
+              <span>Projects Archive</span>
               <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">→</span>
             </a>
             <button type="button" onClick={print} className="group inline-flex items-center gap-1.5 transition-colors duration-200 hover:text-ink-strong">
-              <span>{t('cv.print')}</span>
+              <span>Print</span>
               <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">→</span>
             </button>
           </div>

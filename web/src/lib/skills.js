@@ -1,8 +1,16 @@
 import { projectsList } from './projects'
 import { libraryList } from './library'
+
+export const SKILL_LEVELS = {
+  advanced: { label: 'Advanced', rank: 4, bar: 'bg-emerald-400' },
+  comfortable: { label: 'Comfortable', rank: 3, bar: 'bg-sky-400' },
+  basic: { label: 'Basic', rank: 2, bar: 'bg-zinc-300' },
+  learning: { label: 'Learning', rank: 1, bar: 'bg-amber-400' },
+}
+
 export const SKILL_CATEGORIES = [
   {
-    nameKey: 'skills.languages',
+    name: 'Languages',
     items: [
       { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable', desc: 'Scripting language for the web' },
       { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', desc: 'General purpose scripting & automation' },
@@ -11,14 +19,14 @@ export const SKILL_CATEGORIES = [
     ],
   },
   {
-    nameKey: 'skills.frameworks',
+    name: 'Frameworks',
     items: [
       { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'comfortable', desc: 'Bootstrap is a framework for building responsive websites.' },
       { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'comfortable', desc: 'Utility-first CSS framework' },
     ],
   },
   {
-    nameKey: 'skills.infrastructure',
+    name: 'Infrastructure',
     items: [
       { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable', desc: 'Process manager for Node.js' },
       { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', desc: 'CDN, DNS & edge security' },
@@ -27,7 +35,7 @@ export const SKILL_CATEGORIES = [
 ]
 export const TOOL_CATEGORIES = [
   {
-    nameKey: 'tools.development',
+    name: 'Workflow',
     wide: false,
     items: [
       { name: 'Git', icon: '/icons/git.svg', desc: 'Version control for code' },
@@ -36,7 +44,7 @@ export const TOOL_CATEGORIES = [
     ],
   },
   {
-    nameKey: 'tools.design',
+    name: 'Design',
     wide: false,
     items: [
       { name: 'Figma', icon: '/icons/figma.svg', desc: 'Interface design & prototyping' },
@@ -47,7 +55,7 @@ export const TOOL_CATEGORIES = [
     ],
   },
   {
-    nameKey: 'skills.editors',
+    name: 'Editors',
     wide: true,
     items: [
       { name: 'VS Code', icon: '/icons/vscode.svg', desc: 'Code editor' },
@@ -56,7 +64,7 @@ export const TOOL_CATEGORIES = [
     ],
   },
   {
-    nameKey: 'skills.systems',
+    name: 'Systems',
     wide: true,
     items: [
       { name: 'macOS', icon: '/icons/apple_dark.svg', desc: "Apple's desktop OS" },
@@ -66,11 +74,11 @@ export const TOOL_CATEGORIES = [
 ]
 
 export const CERTIFICATIONS = [
-  { name: 'JavaScript', tierKey: 'tier.intermediate', issuer: 'HackerRank', date: null, url: null, featured: true },
-  { name: 'JavaScript', tierKey: 'tier.basic', issuer: 'HackerRank', date: null, url: null },
-  { name: 'Python', tierKey: 'tier.basic', issuer: 'HackerRank', date: null, url: null },
-  { name: 'Go', tierKey: 'tier.basic', issuer: 'HackerRank', date: null, url: null },
-  { name: 'CSS', tierKey: 'tier.basic', issuer: 'HackerRank', date: null, url: null },
+  { name: 'JavaScript', tier: 'Intermediate', issuer: 'HackerRank', date: null, url: null, featured: true },
+  { name: 'JavaScript', tier: 'Basic', issuer: 'HackerRank', date: null, url: null },
+  { name: 'Python', tier: 'Basic', issuer: 'HackerRank', date: null, url: null },
+  { name: 'Go', tier: 'Basic', issuer: 'HackerRank', date: null, url: null },
+  { name: 'CSS', tier: 'Basic', issuer: 'HackerRank', date: null, url: null },
 ]
 
 export const FEATURED_CERTIFICATIONS = CERTIFICATIONS.filter((cert) => cert.featured)

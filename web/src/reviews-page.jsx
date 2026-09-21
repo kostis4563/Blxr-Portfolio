@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { Stars, StarPicker } from './components/star-rating'
-import { useI18n } from './lib/i18n'
 import { link, useRouteHash, HOME_PATH } from './lib/router'
 import { fetchReviews, submitReview, editReview, fetchInvite } from './lib/api'
 import { CONTACT_EMAIL } from './lib/profile'
@@ -95,11 +94,11 @@ function LoadingState() {
   )
 }
 
-function Summary({ summary, filter, onFilter, t, plural }) {
+function Summary({ summary, filter, onFilter }) {
   const { count, average, distribution } = summary
   return (
     <section
-      aria-label={t('rev.breakdown')}
+      aria-label="Rating breakdown"
       className="mb-8 grid w-full grid-cols-1 gap-8 rounded-2xl border border-line bg-surface-raised/40 p-6 sm:grid-cols-[auto_1fr] sm:gap-12 sm:p-7"
     >
       <div className="flex flex-col items-start">
@@ -110,10 +109,10 @@ function Summary({ summary, filter, onFilter, t, plural }) {
           <span className="text-[14px] font-medium text-ink-subtle">/ 5</span>
         </div>
         <Stars value={average} size={16} className="mt-3.5" />
-        <p className="mt-2.5 text-[12px] text-ink-muted">{plural('rev.basedOn', count)}</p>
+        <p className="mt-2.5 text-[12px] text-ink-muted">{`based on ${reviewCount(count)}`}</p>
       </div>
 
-      <div className="flex flex-col justify-center gap-1" role="group" aria-label={t('rev.breakdown')}>
+      <div className="flex flex-col justify-center gap-1" role="group" aria-label="Rating breakdown">
         {RATINGS.map((n) => {
           const c = distribution[n]
           const pct = count ? (c / count) * 100 : 0
@@ -124,7 +123,7 @@ function Summary({ summary, filter, onFilter, t, plural }) {
               type="button"
               disabled={!c}
               aria-pressed={active}
-              aria-label={t('rev.onlyStars', { n })}
+              aria-label={`Only ${n} star reviews`}
               onClick={() => onFilter(active ? null : n)}
               className="group -mx-1.5 grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg px-1.5 py-1 text-left transition-colors enabled:cursor-pointer enabled:hover:bg-surface-hover disabled:cursor-default"
             >
@@ -151,7 +150,7 @@ function Summary({ summary, filter, onFilter, t, plural }) {
   )
 }
 
-function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, editMinutes = 0, onEdit, t }) {
+function ReviewCard({ item, isOwn, highlighted, copied, onCopyId, editMinutes = 0, onEdit }) {
   return (
     <article id={`review-${item.id}`} className={`border-b border-line py-6 ${highlighted ? 'animate-rise-in' : ''}`}>
       <div className="flex items-start gap-3.5">
@@ -166,26 +165,26 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, editMinu
             <h3 className="max-w-full truncate text-[14.5px] font-semibold tracking-tight text-ink-strong">{item.name}</h3>
             {item.pinned && (
               <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-px font-mono text-[10px] uppercase tracking-wider text-amber-500">
-                {t('rev.featured')}
+                Featured
               </span>
             )}
             {isOwn && (
               <span className="rounded-md border border-line bg-surface-raised px-1.5 py-px font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-                {t('rev.you')}
+                You
               </span>
             )}
             {item.pending && (
               <span className="rounded-md border border-dashed border-line-strong px-1.5 py-px font-mono text-[10px] uppercase tracking-wider text-ink-subtle">
-                {t('rev.pending')}
+                Awaiting approval
               </span>
             )}
             <time
               dateTime={item.at}
-              title={absoluteTime(item.at, lang)}
+              title={absoluteTime(item.at)}
               className="ms-auto whitespace-nowrap font-mono text-[11px] text-ink-subtle"
             >
-              {relativeTime(item.at, lang)}
-              {item.editedAt && <span className="text-ink-faint"> · {t('rev.edited')}</span>}
+              {relativeTime(item.at)}
+              {item.editedAt && <span className="text-ink-faint"> · edited</span>}
             </time>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -200,8 +199,8 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, editMinu
       {item.reply && (
         <div className="mt-4 rounded-xl border border-line bg-surface-raised/40 px-4 py-3 sm:ms-[52px]">
           <p className="font-mono text-[10.5px] uppercase tracking-wider text-ink-subtle">
-            {t('rev.reply')}
-            <span className="ms-2 normal-case tracking-normal text-ink-faint">{relativeTime(item.reply.at, lang)}</span>
+            Reply from Blxr
+            <span className="ms-2 normal-case tracking-normal text-ink-faint">{relativeTime(item.reply.at)}</span>
           </p>
           <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-ink-secondary">{item.reply.text}</p>
         </div>
@@ -211,11 +210,11 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, editMinu
         <button
           type="button"
           onClick={() => onCopyId(item.id)}
-          title={t('rev.copyId')}
-          aria-label={t('rev.copyId')}
+          title="Copy review id"
+          aria-label="Copy review id"
           className="cursor-pointer font-mono text-[10.5px] text-ink-faint transition-colors hover:text-ink-muted"
         >
-          {copied ? t('contact.copied') : `#${item.id}`}
+          {copied ? 'Copied' : `#${item.id}`}
         </button>
         {isOwn && editMinutes > 0 && (
           <button
@@ -223,8 +222,8 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, editMinu
             onClick={() => onEdit(item)}
             className="inline-flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-ink-muted transition-colors hover:text-ink-strong"
           >
-            <span>{t('rev.edit')}</span>
-            <span className="font-mono text-[10.5px] text-ink-faint">{t('rev.edit.left', { n: editMinutes })}</span>
+            <span>Edit</span>
+            <span className="font-mono text-[10.5px] text-ink-faint">{editMinutes} min left</span>
           </button>
         )}
       </div>
@@ -232,12 +231,12 @@ function ReviewCard({ item, lang, isOwn, highlighted, copied, onCopyId, editMinu
   )
 }
 
-function OwnNote({ own, editMinutes = 0, onEdit, t }) {
+function OwnNote({ own, editMinutes = 0, onEdit }) {
   const subject = encodeURIComponent(`Review #${own.id}`)
   return (
     <div className="rounded-2xl border border-dashed border-line-strong p-6 sm:p-7">
-      <p className="text-[14.5px] font-semibold tracking-tight text-ink-strong">{t('rev.own.title')}</p>
-      <p className="mt-1.5 max-w-[52ch] text-[13px] leading-relaxed text-ink-muted">{t('rev.own.body')}</p>
+      <p className="text-[14.5px] font-semibold tracking-tight text-ink-strong">You already left a review.</p>
+      <p className="mt-1.5 max-w-[52ch] text-[13px] leading-relaxed text-ink-muted">To change or remove it, send me an email. There is no account to log into, on purpose.</p>
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
         {editMinutes > 0 && (
           <button
@@ -245,15 +244,15 @@ function OwnNote({ own, editMinutes = 0, onEdit, t }) {
             onClick={onEdit}
             className="inline-flex cursor-pointer items-center gap-1.5 text-[12.5px] font-medium text-ink-strong transition-colors hover:text-ink-muted"
           >
-            <span>{t('rev.edit')}</span>
-            <span className="font-mono text-[10.5px] text-ink-faint">{t('rev.edit.left', { n: editMinutes })}</span>
+            <span>Edit</span>
+            <span className="font-mono text-[10.5px] text-ink-faint">{editMinutes} min left</span>
           </button>
         )}
         <a
           href={`mailto:${CONTACT_EMAIL}?subject=${subject}`}
           className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-secondary transition-colors hover:text-ink-strong"
         >
-          <span>{t('cmd.sendEmail')}</span>
+          <span>Send an email</span>
           <span aria-hidden="true">→</span>
         </a>
       </div>
@@ -261,7 +260,7 @@ function OwnNote({ own, editMinutes = 0, onEdit, t }) {
   )
 }
 
-function SuccessNote({ published, onView, edited = false, t }) {
+function SuccessNote({ published, onView, edited = false }) {
   return (
     <div className="animate-rise-in rounded-2xl border border-line bg-surface-raised/40 p-6 sm:p-7">
       <div className="flex items-start gap-3.5">
@@ -272,15 +271,15 @@ function SuccessNote({ published, onView, edited = false, t }) {
         </span>
         <div className="min-w-0">
           <p className="text-[16px] font-semibold tracking-tight text-ink-strong">
-            {edited ? t('rev.edit.saved') : t('rev.success.title', { name: published.name })}
+            {edited ? 'Saved. Your changes are live.' : `Thank you, ${published.name}.`}
           </p>
-          {!edited && <p className="mt-1 text-[13px] text-ink-muted">{published.pending ? t('rev.success.pending') : t('rev.success.body')}</p>}
+          {!edited && <p className="mt-1 text-[13px] text-ink-muted">{published.pending ? 'Your review will appear once it has been approved.' : 'Your review is live.'}</p>}
           <button
             type="button"
             onClick={onView}
             className="mt-4 inline-flex cursor-pointer items-center gap-1.5 text-[12.5px] font-medium text-ink-secondary transition-colors hover:text-ink-strong"
           >
-            <span>{t('rev.success.view')}</span>
+            <span>See it</span>
             <span aria-hidden="true">↑</span>
           </button>
         </div>
@@ -289,24 +288,23 @@ function SuccessNote({ published, onView, edited = false, t }) {
   )
 }
 
-function InviteNote({ invite, t }) {
+function InviteNote({ invite }) {
   if (invite.status === 'pending') {
     return (
       <div className="mb-6 rounded-2xl border border-line bg-surface-raised/40 p-5 sm:p-6">
-        <p className="text-[14.5px] font-semibold tracking-tight text-ink-strong">{t('rev.invite.hello', { name: invite.name })}</p>
-        <p className="mt-1.5 max-w-[56ch] text-[13px] leading-relaxed text-ink-muted">{t('rev.invite.body')}</p>
+        <p className="text-[14.5px] font-semibold tracking-tight text-ink-strong">Hi {invite.name}, this link is yours.</p>
+        <p className="mt-1.5 max-w-[56ch] text-[13px] leading-relaxed text-ink-muted">Your name is already filled in. Add a rating and a few words. It takes a minute.</p>
       </div>
     )
   }
   return (
     <p className="mb-6 rounded-xl border border-dashed border-line-strong px-4 py-3 text-[12.5px] text-ink-muted">
-      {invite.status === 'used' ? t('rev.invite.used') : t('rev.invite.expired')}
+      {invite.status === 'used' ? 'This invite link has already been used.' : 'This invite link has expired.'}
     </p>
   )
 }
 
 function InviteDialog({ invite, busy, error, onSubmit, onEdit, onClose }) {
-  const { t } = useI18n()
 
   useEffect(() => {
     const onKey = (e) => {
@@ -342,15 +340,15 @@ function InviteDialog({ invite, busy, error, onSubmit, onEdit, onClose }) {
         <div className="flex items-start gap-3 border-b border-line px-6 py-5">
           <div className="min-w-0">
             <h2 id="invite-dialog-title" className="text-[17px] font-bold tracking-tight text-ink-strong">
-              {t('rev.invite.hello', { name: invite.name })}
+              Hi {invite.name}, this link is yours.
             </h2>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">{t('rev.invite.ready')}</p>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">This review is ready to publish under your name. Publish it as it is, or edit it first.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            aria-label={t('rev.edit.cancel')}
+            aria-label="Cancel"
             className="ms-auto flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
           >
             ✕
@@ -371,7 +369,7 @@ function InviteDialog({ invite, busy, error, onSubmit, onEdit, onClose }) {
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line px-6 py-4">
           <button type="button" disabled={busy} onClick={onSubmit} className={CTA}>
-            <span>{busy ? t('rev.form.submitting') : t('rev.form.submit')}</span>
+            <span>{busy ? 'Publishing…' : 'Publish review'}</span>
             {!busy && <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>}
           </button>
           <button
@@ -380,7 +378,7 @@ function InviteDialog({ invite, busy, error, onSubmit, onEdit, onClose }) {
             onClick={onEdit}
             className="cursor-pointer text-[13px] font-medium text-ink-secondary transition-colors hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {t('rev.edit')}
+            Edit
           </button>
           <button
             type="button"
@@ -388,7 +386,7 @@ function InviteDialog({ invite, busy, error, onSubmit, onEdit, onClose }) {
             onClick={onClose}
             className="cursor-pointer text-[13px] font-medium text-ink-muted transition-colors hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {t('rev.edit.cancel')}
+            Cancel
           </button>
         </div>
       </div>
@@ -397,9 +395,9 @@ function InviteDialog({ invite, busy, error, onSubmit, onEdit, onClose }) {
   )
 }
 
-function retryPhrase(seconds, lang) {
+function retryPhrase(seconds) {
   try {
-    const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'always' })
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'always' })
     if (seconds >= 86_400) return rtf.format(Math.ceil(seconds / 86_400), 'day')
     if (seconds >= 3600) return rtf.format(Math.ceil(seconds / 3600), 'hour')
     return rtf.format(Math.max(1, Math.ceil(seconds / 60)), 'minute')
@@ -411,7 +409,6 @@ function retryPhrase(seconds, lang) {
 const EMPTY_DRAFT = { name: '', role: '', rating: 0, text: '', website: '' }
 
 function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, onView, editing = null, onCancelEdit, invite = null }) {
-  const { t, lang } = useI18n()
   const [draft, setDraft] = useState(() =>
     editing
       ? { name: editing.name, role: editing.role || '', rating: editing.rating, text: editing.text, website: '' }
@@ -441,10 +438,10 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
     if (!visible(field)) return null
     const kind = kindOf(field)
     if (field === 'rating') return null
-    if (kind === 'link') return t('rev.error.link')
-    if (kind === 'blocked') return t('rev.error.blocked')
+    if (kind === 'link') return 'Links aren’t allowed in reviews.'
+    if (kind === 'blocked') return 'That wording can’t be published here.'
     const { min, max } = REVIEW_LIMITS[field]
-    return min ? t('rev.error.length', { min, max }) : t('rev.error.max', { max })
+    return min ? `Use ${min}–${max} characters.` : `Up to ${max} characters.`
   }
 
   const onSubmit = async (event) => {
@@ -489,7 +486,7 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
         setServerErrors(Object.fromEntries(fields.map((field) => [field, code === 'invalid' ? 'length' : code])))
         setServerError({ code })
       } else if (code === 'rate_limited') {
-        setServerError({ code, when: retryPhrase(err.retryAfter || 3 * 86_400, lang) })
+        setServerError({ code, when: retryPhrase(err.retryAfter || 3 * 86_400) })
       } else if (code === 'busy' || code === 'full' || code === 'paused') {
         setServerError({ code: 'later' })
       } else if (code === 'edit_window' || code === 'not_yours') {
@@ -502,29 +499,29 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
     }
   }
 
-  if (status === 'done' && published) return <SuccessNote published={published} edited={Boolean(editing)} onView={() => onView(published.id)} t={t} />
-  if (own && !editing && invite?.status !== 'pending') return <OwnNote own={own} editMinutes={ownEditMinutes} onEdit={onEditOwn} t={t} />
+  if (status === 'done' && published) return <SuccessNote published={published} edited={Boolean(editing)} onView={() => onView(published.id)} />
+  if (own && !editing && invite?.status !== 'pending') return <OwnNote own={own} editMinutes={ownEditMinutes} onEdit={onEditOwn} />
 
   const textLength = draft.text.trim().length
   const sending = status === 'sending'
   const alert =
     serverError &&
     {
-      invalid: t('rev.error.invalid'),
-      link: t('rev.error.link'),
-      blocked: t('rev.error.blocked'),
-      rate_limited: t('rev.error.rateLimited', { when: serverError.when }),
-      later: t('rev.error.later'),
-      editWindow: t('rev.error.editWindow'),
-      inviteUsed: t('rev.invite.used'),
-      inviteExpired: t('rev.invite.expired'),
-      generic: t('rev.error.generic'),
+      invalid: 'Please check the highlighted fields.',
+      link: 'Links aren’t allowed in reviews.',
+      blocked: 'That wording can’t be published here.',
+      rate_limited: `You sent a review recently. Try again ${serverError.when}.`,
+      later: 'Not taking new reviews right now. Try again later.',
+      editWindow: 'Reviews can only be edited within 15 minutes of posting.',
+      inviteUsed: 'This invite link has already been used.',
+      inviteExpired: 'This invite link has expired.',
+      generic: 'Something went wrong. Please try again.',
     }[serverError.code]
 
   return (
     <form onSubmit={onSubmit} noValidate className="relative flex flex-col gap-6">
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field id="rev-name" label={t('rev.form.name')} error={fieldError('name')}>
+        <Field id="rev-name" label="Your name" error={fieldError('name')}>
           <input
             id="rev-name"
             ref={nameRef}
@@ -539,7 +536,7 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
             className={inputClass(visible('name'))}
           />
         </Field>
-        <Field id="rev-role" label={t('rev.form.role')} hint={t('rev.form.optional')} error={fieldError('role')}>
+        <Field id="rev-role" label="Role or company" hint="optional" error={fieldError('role')}>
           <input
             id="rev-role"
             type="text"
@@ -554,13 +551,13 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
         </Field>
       </div>
 
-      <Field id="rev-rating" group label={t('rev.form.rating')} error={fieldError('rating')}>
+      <Field id="rev-rating" group label="Your rating" error={fieldError('rating')}>
         <StarPicker value={draft.rating} onChange={set('rating')} invalid={visible('rating')} labelledBy="rev-rating-label" />
       </Field>
 
       <Field
         id="rev-text"
-        label={t('rev.form.text')}
+        label="Your review"
         counter={{ text: `${textLength}/${REVIEW_LIMITS.text.max}`, over: textLength > REVIEW_LIMITS.text.max }}
         error={fieldError('text')}
       >
@@ -571,7 +568,7 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
           value={draft.text}
           onChange={(e) => set('text')(e.target.value)}
           onBlur={touch('text')}
-          placeholder={t('rev.form.textPlaceholder')}
+          placeholder="What did we work on, and how did it go?"
           aria-invalid={Boolean(visible('text')) || undefined}
           aria-describedby={visible('text') ? 'rev-text-error' : undefined}
           className={`${inputClass(visible('text'))} min-h-[120px] resize-y leading-relaxed`}
@@ -595,16 +592,16 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <button type="submit" disabled={sending} className={CTA}>
-            <span>{sending ? t('rev.form.submitting') : editing ? t('rev.edit.save') : t('rev.form.submit')}</span>
+            <span>{sending ? 'Publishing…' : editing ? 'Save changes' : 'Publish review'}</span>
             {!sending && <span className="inline-block transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>}
           </button>
           {editing && (
             <button type="button" onClick={onCancelEdit} className="cursor-pointer text-[12.5px] font-medium text-ink-muted transition-colors hover:text-ink-strong">
-              {t('rev.edit.cancel')}
+              Cancel
             </button>
           )}
         </div>
-        <p className="max-w-[44ch] text-[11.5px] leading-relaxed text-ink-faint">{t('rev.form.notice')}</p>
+        <p className="max-w-[44ch] text-[11.5px] leading-relaxed text-ink-faint">Published instantly. Your name, rating and text are public; nothing else is stored.</p>
       </div>
 
       {alert && (
@@ -616,21 +613,11 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
   )
 }
 
-function usePlural() {
-  const { t, lang } = useI18n()
-  return (key, n) => {
-    let form = 'other'
-    try {
-      form = new Intl.PluralRules(lang).select(n)
-    } catch {
-    }
-    return t(`${key}.${form}`, { n }, t(key, { n }))
-  }
-}
+const reviewCount = (n) => `${n} ${n === 1 ? 'review' : 'reviews'}`
+
+const SORT_LABELS = { newest: 'Newest', highest: 'Highest rated', lowest: 'Lowest rated' }
 
 export default function ReviewsPage({ theme, onToggleTheme }) {
-  const { t, lang } = useI18n()
-  const plural = usePlural()
   const hash = useRouteHash()
 
   const [status, setStatus] = useState('loading')
@@ -780,10 +767,10 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
       const code = err?.code
       setInviteError(
         code === 'invite_used' || code === 'invite_auto'
-          ? t('rev.invite.used')
+          ? 'This invite link has already been used.'
           : code === 'invite_expired' || code === 'invite_not_found'
-            ? t('rev.invite.expired')
-            : t('rev.invite.failed'),
+            ? 'This invite link has expired.'
+            : 'Could not publish it. Try again.',
       )
     } finally {
       setInviteBusy(false)
@@ -816,7 +803,7 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
             className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
           >
             <span>←</span>
-            <span>{t('proj.backHome')}</span>
+            <span>Back to Home</span>
           </a>
           <div className="flex items-center gap-4">
             <CommandButton className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-strong transition-colors duration-200" />
@@ -833,14 +820,14 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
 
         <div className="w-full max-w-[620px] mb-10 text-left">
           <p className="text-[11px] font-mono text-ink-subtle uppercase tracking-[0.18em] mb-4">
-            {t('rev.kicker')}
-            {ready && summary.count > 0 && ` / ${plural('rev.count', summary.count)}`}
+            Feedback
+            {ready && summary.count > 0 && ` / ${reviewCount(summary.count)}`}
           </p>
           <h1 className="text-[34px] sm:text-[40px] font-bold text-ink-strong tracking-[-0.035em] leading-tight mb-4">
-            {t('rev.title')}
+            Reviews
           </h1>
           <p className="text-[15px] sm:text-[16px] text-ink-muted font-normal leading-relaxed">
-            {t('rev.tagline')}
+            Worked with me on something? Leave a few words. Reviews go live right away and stay exactly as written.
           </p>
         </div>
 
@@ -848,7 +835,7 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
 
         {status === 'error' && (
           <div className="w-full rounded-2xl border border-line px-6 py-12 text-center">
-            <p className="text-[13.5px] text-ink-muted">{t('rev.error.load')}</p>
+            <p className="text-[13.5px] text-ink-muted">Reviews couldn’t be loaded.</p>
             <button
               type="button"
               onClick={() => {
@@ -857,17 +844,17 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
               }}
               className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line-strong bg-surface-raised px-4 py-2 text-[12.5px] font-semibold text-ink-secondary transition-colors hover:text-ink-strong"
             >
-              {t('rev.retry')}
+              Retry
             </button>
           </div>
         )}
 
         {ready && summary.count === 0 && (
           <div className="w-full rounded-2xl border border-dashed border-line-strong px-6 py-14 text-center">
-            <p className="text-[15px] font-semibold tracking-tight text-ink-strong">{t('rev.empty')}</p>
-            <p className="mt-1.5 text-[13px] text-ink-muted">{t('rev.emptyHint')}</p>
+            <p className="text-[15px] font-semibold tracking-tight text-ink-strong">No reviews yet.</p>
+            <p className="mt-1.5 text-[13px] text-ink-muted">The first one sets the tone.</p>
             <button type="button" onClick={focusForm} className={`${CTA} mt-6`}>
-              <span>{t('rev.write')}</span>
+              <span>Write a review</span>
               <span aria-hidden="true">↓</span>
             </button>
           </div>
@@ -875,10 +862,10 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
 
         {ready && summary.count > 0 && (
           <>
-            <Summary summary={summary} filter={filter} onFilter={changeFilter} t={t} plural={plural} />
+            <Summary summary={summary} filter={filter} onFilter={changeFilter} />
 
             <div className="mb-1 flex w-full flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none" role="group" aria-label={t('rev.sortBy')}>
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none" role="group" aria-label="Sort">
                 {SORTS.map((mode) => (
                   <button
                     key={mode}
@@ -889,7 +876,7 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
                       sort === mode ? 'bg-ink-strong text-ink-inverse font-semibold' : 'text-ink-muted hover:text-ink-strong'
                     }`}
                   >
-                    {t(`rev.sort.${mode}`)}
+                    {SORT_LABELS[mode]}
                   </button>
                 ))}
               </div>
@@ -901,18 +888,18 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
                     onClick={() => changeFilter(null)}
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[11.5px] font-medium text-ink-secondary transition-colors hover:border-line-strong hover:text-ink-strong"
                   >
-                    <span>{t('rev.onlyStars', { n: filter })}</span>
+                    <span>Only {filter} star reviews</span>
                     <span aria-hidden="true" className="text-ink-subtle">✕</span>
                   </button>
                 ) : (
-                  <span className="font-mono text-[11px] text-ink-subtle">{plural('rev.count', ordered.length)}</span>
+                  <span className="font-mono text-[11px] text-ink-subtle">{reviewCount(ordered.length)}</span>
                 )}
                 <button
                   type="button"
                   onClick={focusForm}
                   className="group inline-flex cursor-pointer items-center gap-1.5 text-[12.5px] font-medium text-ink-muted transition-colors hover:text-ink-strong"
                 >
-                  <span>{t('rev.write')}</span>
+                  <span>Write a review</span>
                   <span aria-hidden="true" className="transition-transform group-hover:translate-y-0.5">↓</span>
                 </button>
               </div>
@@ -923,14 +910,12 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
                 <li key={item.id}>
                   <ReviewCard
                     item={item}
-                    lang={lang}
                     isOwn={own?.id === item.id}
                     highlighted={highlight === item.id}
                     copied={copiedId === item.id}
                     onCopyId={copyId}
                     editMinutes={own?.id === item.id ? editMinutes : 0}
                     onEdit={startEdit}
-                    t={t}
                   />
                 </li>
               ))}
@@ -942,7 +927,7 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
                 onClick={() => setShown((n) => n + PAGE_SIZE)}
                 className="mt-6 inline-flex cursor-pointer items-center gap-2 self-center rounded-full border border-line-strong bg-surface-raised px-4 py-2 text-[12.5px] font-semibold text-ink-secondary transition-colors hover:text-ink-strong"
               >
-                <span>{t('rev.showMore')}</span>
+                <span>Show more</span>
                 <span className="font-mono text-[11px] text-ink-subtle">+{remaining}</span>
               </button>
             )}
@@ -957,15 +942,15 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
         >
           <div className="mb-7 max-w-[560px]">
             <h2 id="write-heading" className="text-[22px] font-bold tracking-tight text-ink-strong">
-              {editing || savedEdit ? t('rev.edit.title') : t('rev.write')}
+              {editing || savedEdit ? 'Edit your review' : 'Write a review'}
             </h2>
-            {!editing && !savedEdit && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">{t('rev.form.intro')}</p>}
+            {!editing && !savedEdit && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">Name, a rating and a few honest sentences. No account, no email, nothing to verify.</p>}
           </div>
-          {invite && !editing && !savedEdit && !justPublished && <InviteNote invite={invite} t={t} />}
+          {invite && !editing && !savedEdit && !justPublished && <InviteNote invite={invite} />}
           {savedEdit ? (
-            <SuccessNote published={savedEdit} edited onView={() => viewReview(savedEdit.id)} t={t} />
+            <SuccessNote published={savedEdit} edited onView={() => viewReview(savedEdit.id)} />
           ) : invitePublished ? (
-            <SuccessNote published={invitePublished} onView={() => viewReview(invitePublished.id)} t={t} />
+            <SuccessNote published={invitePublished} onView={() => viewReview(invitePublished.id)} />
           ) : (
             <ReviewForm
               key={editing ? `edit-${editing.id}` : invite ? `invite-${invite.token}` : 'new'}

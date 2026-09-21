@@ -1,18 +1,8 @@
-import { LANG_CODES, LOCALE_TAGS, DEFAULT_LANG } from './languages'
-import { translate } from './i18n'
 import { projectsList } from './projects'
 import { libraryList, findLibraryItem } from './library'
-import { NOW_UPDATED } from './now'
 import { USES_UPDATED } from './uses'
 import { CV_UPDATED } from './cv'
-import {
-  alternatesFor,
-  libraryPath,
-  localizePath,
-  parseRoute,
-  projectPath,
-  splitLocale,
-} from './router'
+import { libraryPath, normalizePath, parseRoute, projectPath } from './router'
 
 export const SITE_URL = 'https://blxr.net'
 export const SITE_NAME = 'blxr'
@@ -33,10 +23,6 @@ const LIBRARY_DESCRIPTION =
 const REVIEWS_DESCRIPTION =
   'What clients and collaborators say about working with Blxr. Worked with me? Leave a review.'
 
-const NOW_DESCRIPTION =
-  'What Blxr is doing right now: building websites for clients, learning Node, PostgreSQL ' +
-  'and React, and finishing the IB with a Computer Science focus.'
-
 const USES_DESCRIPTION =
   'The desk, the machine and the software behind blxr.net: a MacBook Air, a 240 Hz display, ' +
   'the editor, terminal, fonts, hosting and music.'
@@ -45,35 +31,23 @@ const CV_DESCRIPTION =
   'CV of Blxr, a full stack developer in Athens: experience, selected projects, education, skills and certifications. Printable.'
 
 export function metaFor(pathname) {
-  const { lang, route: routePath } = splitLocale(pathname)
-  const path = localizePath(routePath, lang)
-  const route = parseRoute(routePath)
-
-  const pick = (literal, key) => (lang === DEFAULT_LANG ? literal : translate(lang, key, null, literal))
-  const base = { path, lang, route: routePath }
+  const path = normalizePath(pathname)
+  const route = parseRoute(path)
+  const base = { path, route: path }
 
   if (route.name === 'home') {
     return {
       ...base,
-      title:
-        lang === DEFAULT_LANG
-          ? 'Blxr — Student Developer Portfolio, Projects & CV'
-          : `Blxr — ${translate(lang, 'hero.bio2').replace(/[.。]$/, '')}`,
-
-      description:
-        lang === DEFAULT_LANG
-          ? HOME_DESCRIPTION
-          : `${translate(lang, 'hero.bio1')} ${translate(lang, 'hero.bio2')}`,
+      title: 'Blxr — Student Developer Portfolio, Projects & CV',
+      description: HOME_DESCRIPTION,
     }
   }
 
   if (route.name === 'projects') {
     return {
       ...base,
-      title: lang === DEFAULT_LANG
-        ? `Projects — Security Tooling, Web & Mobile Apps by Blxr`
-        : `${pick('Projects', 'proj.archiveTitle')} — ${SITE_NAME}`,
-      description: pick(PROJECTS_DESCRIPTION, 'home.libraryTagline'),
+      title: 'Projects — Security Tooling, Web & Mobile Apps by Blxr',
+      description: PROJECTS_DESCRIPTION,
     }
   }
 
@@ -81,7 +55,7 @@ export function metaFor(pathname) {
     const item = findLibraryItem(route.itemId)
     return {
       ...base,
-      title: `${item.title} — ${pick('FiveM Library', 'lib.title')} — ${SITE_NAME}`,
+      title: `${item.title} — FiveM Library — ${SITE_NAME}`,
 
       description: item.shortDescription,
       noindex: Boolean(item.placeholder),
@@ -91,10 +65,8 @@ export function metaFor(pathname) {
   if (route.name === 'library') {
     return {
       ...base,
-      title: lang === DEFAULT_LANG
-        ? 'FiveM Library — UIs, HUDs & Scripts by Blxr'
-        : `${pick('FiveM Library', 'lib.title')} — ${SITE_NAME}`,
-      description: pick(LIBRARY_DESCRIPTION, 'lib.tagline'),
+      title: 'FiveM Library — UIs, HUDs & Scripts by Blxr',
+      description: LIBRARY_DESCRIPTION,
       noindex: libraryList.every((entry) => entry.placeholder),
     }
   }
@@ -102,40 +74,24 @@ export function metaFor(pathname) {
   if (route.name === 'reviews') {
     return {
       ...base,
-      title: lang === DEFAULT_LANG
-        ? 'Reviews — What Clients Say About Working With Blxr'
-        : `${pick('Reviews', 'rev.title')} — ${SITE_NAME}`,
-      description: pick(REVIEWS_DESCRIPTION, 'rev.tagline'),
-    }
-  }
-
-  if (route.name === 'now') {
-    return {
-      ...base,
-      title: lang === DEFAULT_LANG
-        ? 'Now — What Blxr Is Building and Learning'
-        : `${pick('Now', 'now.title')} — ${SITE_NAME}`,
-      description: pick(NOW_DESCRIPTION, 'now.tagline'),
+      title: 'Reviews — What Clients Say About Working With Blxr',
+      description: REVIEWS_DESCRIPTION,
     }
   }
 
   if (route.name === 'uses') {
     return {
       ...base,
-      title: lang === DEFAULT_LANG
-        ? 'Uses — The Setup Behind blxr.net'
-        : `${pick('Uses', 'uses.title')} — ${SITE_NAME}`,
-      description: pick(USES_DESCRIPTION, 'uses.tagline'),
+      title: 'Uses — The Setup Behind blxr.net',
+      description: USES_DESCRIPTION,
     }
   }
 
   if (route.name === 'cv') {
     return {
       ...base,
-      title: lang === DEFAULT_LANG
-        ? 'CV — Blxr, Full Stack Developer in Athens'
-        : `${pick('CV', 'cv.title')} — ${SITE_NAME}`,
-      description: pick(CV_DESCRIPTION, 'cv.tagline'),
+      title: 'CV — Blxr, Full Stack Developer in Athens',
+      description: CV_DESCRIPTION,
     }
   }
 
@@ -168,15 +124,14 @@ export function metaFor(pathname) {
 
   return {
     ...base,
-    title: `${pick('Not found', 'nf.title')} — ${SITE_NAME}`,
-    description: pick('That page does not exist on blxr.net.', 'nf.body'),
+    title: `Not found — ${SITE_NAME}`,
+    description: 'That page does not exist on blxr.net.',
     noindex: true,
   }
 }
 
 export function lastmodFor(pathname) {
   const route = parseRoute(pathname)
-  if (route.name === 'now') return NOW_UPDATED
   if (route.name === 'uses') return USES_UPDATED
   if (route.name === 'cv') return CV_UPDATED
   return null
@@ -261,7 +216,7 @@ function jsonLdFor(path) {
           url: SITE_URL,
           name: SITE_NAME,
 
-          inLanguage: LANG_CODES,
+          inLanguage: 'en',
           author: { '@id': `${SITE_URL}/#blxr` },
         },
         {
@@ -269,8 +224,8 @@ function jsonLdFor(path) {
           '@id': `${SITE_URL}/#profile`,
           url: SITE_URL,
           name: 'Blxr',
-          inLanguage: LANG_CODES,
-          dateModified: NOW_UPDATED,
+          inLanguage: 'en',
+          dateModified: CV_UPDATED,
           mainEntity: { '@id': `${SITE_URL}/#blxr` },
           author: { '@id': `${SITE_URL}/#blxr` },
         },
@@ -321,18 +276,6 @@ function jsonLdFor(path) {
       url: `${SITE_URL}/reviews`,
       author: { '@id': `${SITE_URL}/#blxr` },
       about: { '@id': `${SITE_URL}/#blxr` },
-    }
-  }
-
-  if (route.name === 'now') {
-    return {
-      '@context': 'https://schema.org',
-      '@type': 'ProfilePage',
-      name: 'Now',
-      description: NOW_DESCRIPTION,
-      url: `${SITE_URL}/now`,
-      dateModified: NOW_UPDATED,
-      mainEntity: { '@id': `${SITE_URL}/#blxr` },
     }
   }
 
@@ -387,26 +330,22 @@ function jsonLdFor(path) {
   return null
 }
 
-function crumbsFor(route, lang) {
+function crumbsFor(route) {
   if (route.name === 'home') return null
-  const urlOf = (r) => `${SITE_URL}${localizePath(r, lang)}`
-  const t = (key, literal) => (lang === DEFAULT_LANG ? literal : translate(lang, key, null, literal))
+  const urlOf = (r) => `${SITE_URL}${r}`
 
-  const items = [{ name: t('cmd.home', 'Home'), item: urlOf('/') }]
+  const items = [{ name: 'Home', item: urlOf('/') }]
 
   if (route.name === 'projects') {
-    items.push({ name: t('proj.archiveTitle', 'Projects'), item: urlOf('/projects') })
+    items.push({ name: 'Projects', item: urlOf('/projects') })
   } else if (route.name === 'reviews') {
-    items.push({ name: t('rev.title', 'Reviews'), item: urlOf('/reviews') })
-  } else if (route.name === 'now') {
-    items.push({ name: t('now.title', 'Now'), item: urlOf('/now') })
+    items.push({ name: 'Reviews', item: urlOf('/reviews') })
   } else if (route.name === 'uses') {
-    items.push({ name: t('uses.title', 'Uses'), item: urlOf('/uses') })
+    items.push({ name: 'Uses', item: urlOf('/uses') })
   } else if (route.name === 'cv') {
-    items.push({ name: t('cv.title', 'CV'), item: urlOf('/cv') })
+    items.push({ name: 'CV', item: urlOf('/cv') })
   } else if (route.name === 'library') {
-    const libraryName = t('lib.title', 'FiveM Library')
-    items.push({ name: libraryName, item: urlOf('/library') })
+    items.push({ name: 'FiveM Library', item: urlOf('/library') })
     if (route.itemId) {
       const item = findLibraryItem(route.itemId)
       if (item) items.push({ name: item.title, item: urlOf(`/library/${item.id}`) })
@@ -438,12 +377,12 @@ const escapeAttr = (s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 export function headTags(pathname) {
-  const { path, route, lang, title, description, noindex } = metaFor(pathname)
+  const { path, route, title, description, noindex } = metaFor(pathname)
   const canonical = `${SITE_URL}${path === '/' ? '/' : path}`
   const ogRoute = parseRoute(route)
   const ogItem = ogRoute.name === 'library' && ogRoute.itemId ? findLibraryItem(ogRoute.itemId) : null
   const ogImage = ogItem?.image ? `${SITE_URL}${ogItem.image}` : OG_IMAGE
-  const jsonLd = withCrumbs(jsonLdFor(route), crumbsFor(ogRoute, lang))
+  const jsonLd = withCrumbs(jsonLdFor(route), crumbsFor(ogRoute))
 
   const tags = [
     `<title>${escapeAttr(title)}</title>`,
@@ -454,28 +393,10 @@ export function headTags(pathname) {
       : '<meta name="robots" content="index, follow, max-image-preview:large" />',
     noindex ? '' : `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
 
-    ...(noindex
-      ? []
-      : [
-          ...alternatesFor(route).map(
-            ({ lang: code, path: altPath }) =>
-              `<link rel="alternate" hreflang="${code}" href="${escapeAttr(`${SITE_URL}${altPath === '/' ? '/' : altPath}`)}" />`,
-          ),
-          `<link rel="alternate" hreflang="x-default" href="${escapeAttr(`${SITE_URL}${route === '/' ? '/' : route}`)}" />`,
-        ]),
-
     `<meta property="og:type" content="${ogRoute.name === 'library' && ogRoute.itemId ? 'article' : 'website'}" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
 
-    `<meta property="og:locale" content="${(LOCALE_TAGS[lang] || lang).replace('-', '_')}" />`,
-    ...(noindex
-      ? []
-      : Object.keys(LOCALE_TAGS)
-          .filter((code) => code !== lang)
-          .map(
-            (code) =>
-              `<meta property="og:locale:alternate" content="${LOCALE_TAGS[code].replace('-', '_')}" />`,
-          )),
+    '<meta property="og:locale" content="en_US" />',
     `<meta property="og:title" content="${escapeAttr(title)}" />`,
     `<meta property="og:description" content="${escapeAttr(description)}" />`,
     `<meta property="og:url" content="${escapeAttr(canonical)}" />`,

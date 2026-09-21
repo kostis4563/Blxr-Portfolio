@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react'
-import { LANG_CODES, DEFAULT_LANG } from './languages'
 import { projectsList } from './projects'
 import { libraryList } from './library'
 import { imageProps, SIZES } from './images'
@@ -10,33 +9,12 @@ export function normalizePath(pathname) {
   return p || '/'
 }
 
-const LOCALE_RE = new RegExp(
-  `^/(${LANG_CODES.filter((code) => code !== DEFAULT_LANG).join('|')})(?=/|$)`,
-)
-
-export function splitLocale(pathname) {
-  const p = normalizePath(pathname)
-  const match = LOCALE_RE.exec(p)
-  if (!match) return { lang: DEFAULT_LANG, route: p }
-  return { lang: match[1], route: p.slice(match[0].length) || '/' }
-}
-
-export const langOf = (pathname) => splitLocale(pathname).lang
-export const routeOf = (pathname) => splitLocale(pathname).route
-
-export function localizePath(path, lang) {
-  const { route } = splitLocale(path)
-  if (lang === DEFAULT_LANG || !LANG_CODES.includes(lang)) return route
-  return route === '/' ? `/${lang}` : `/${lang}${route}`
-}
-
 export function parseRoute(path) {
-  const p = routeOf(path).split('#')[0].split('?')[0]
+  const p = normalizePath(path).split('#')[0].split('?')[0]
   if (p === '/') return { name: 'home' }
   if (p === '/projects') return { name: 'projects', projectId: null }
   if (p === '/library') return { name: 'library', itemId: null }
   if (p === '/reviews') return { name: 'reviews' }
-  if (p === '/now') return { name: 'now' }
   if (p === '/uses') return { name: 'uses' }
   if (p === '/cv') return { name: 'cv' }
   if (p === '/login') return { name: 'login' }
@@ -81,7 +59,7 @@ function heroImageFor(route) {
 
 export function warmRoute(to) {
   if (typeof document === 'undefined') return
-  const hero = heroImageFor(parseRoute(localizePath(to, currentLang())))
+  const hero = heroImageFor(parseRoute(to))
   if (!hero || warmed.has(hero.src)) return
   warmed.add(hero.src)
 
@@ -103,7 +81,6 @@ export const LIBRARY_PATH = '/library'
 export const libraryPath = (id) => `/library/${encodeURIComponent(id)}`
 export const REVIEWS_PATH = '/reviews'
 export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
-export const NOW_PATH = '/now'
 export const USES_PATH = '/uses'
 export const CV_PATH = '/cv'
 export const LOGIN_PATH = '/login'
@@ -122,16 +99,9 @@ export const staticPaths = () => [
   LIBRARY_PATH,
   ...libraryList.map((entry) => libraryPath(entry.id)),
   REVIEWS_PATH,
-  NOW_PATH,
   USES_PATH,
   CV_PATH,
 ]
-
-export const localizedPaths = () =>
-  LANG_CODES.flatMap((lang) => staticPaths().map((path) => localizePath(path, lang)))
-
-export const alternatesFor = (path) =>
-  LANG_CODES.map((lang) => ({ lang, path: localizePath(path, lang) }))
 
 const listeners = new Set()
 const emit = () => listeners.forEach((fn) => fn())
@@ -147,8 +117,6 @@ const getSnapshot = () =>
   typeof window === 'undefined' ? ssrPath : normalizePath(window.location.pathname)
 
 const getHash = () => (typeof window === 'undefined' ? '' : window.location.hash)
-
-export const currentLang = () => langOf(getSnapshot())
 
 let ownEntries = 0
 
@@ -170,13 +138,12 @@ export function useRouteHash() {
   return useSyncExternalStore(subscribe, getHash, () => '')
 }
 
-export function navigate(to, { replace = false, lang = currentLang() } = {}) {
-  const path = localizePath(to, lang)
-  if (path === getSnapshot() + getHash()) return
+export function navigate(to, { replace = false } = {}) {
+  if (to === getSnapshot() + getHash()) return
   if (replace) {
-    window.history.replaceState(null, '', path)
+    window.history.replaceState(null, '', to)
   } else {
-    window.history.pushState(null, '', path)
+    window.history.pushState(null, '', to)
     ownEntries += 1
   }
   emit()
@@ -184,7 +151,7 @@ export function navigate(to, { replace = false, lang = currentLang() } = {}) {
 
 export function link(to, onNavigate) {
   return {
-    href: localizePath(to, currentLang()),
+    href: to,
 
     onPointerEnter: () => warmRoute(to),
     onFocus: () => warmRoute(to),

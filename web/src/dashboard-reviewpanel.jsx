@@ -3,12 +3,10 @@ import ReviewPanel from './components/review-panel'
 import { SubTabs } from './components/settings-ui'
 import { Note } from './components/boards/ui'
 import { currentSession } from './lib/supabase'
-import { useI18n } from './lib/i18n'
 
 const bearer = () => ({ bearer: currentSession()?.access_token })
 
 export default function DashboardReviewPanel({ item }) {
-  const { lang } = useI18n()
   const [denied, setDenied] = useState(null)
   const [pending, setPending] = useState(0)
   const onData = useCallback((data) => setPending(data.stats.pending), [])
@@ -29,7 +27,7 @@ export default function DashboardReviewPanel({ item }) {
           <code className="font-mono text-[12px]">SUPABASE_PUBLISHABLE_KEY</code>. Restart the server after changing it.
         </Note>
       ) : (
-        <ReviewPanel tab={item.id} auth={bearer} lang={lang} onData={onData} onUnauthorized={onUnauthorized} />
+        <ReviewPanel tab={item.id} auth={bearer} onData={onData} onUnauthorized={onUnauthorized} />
       )}
     </div>
   )

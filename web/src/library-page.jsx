@@ -2,13 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import ProjectCover from './components/project-cover'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
-import { useI18n } from './lib/i18n'
 import {
   libraryList,
   findLibraryItem,
-  hasPlaceholders,
-  LIB_METRIC_KEY,
-  LIB_VALUE_KEY
+  hasPlaceholders
 } from './lib/library'
 import { link, backOr, libraryPath, LIBRARY_PATH, PROJECTS_PATH } from './lib/router'
 import { imageProps, SIZES } from './lib/images'
@@ -37,16 +34,12 @@ function EntryCover(
 const ENTRY_NUMBER = new Map(libraryList.map((entry, i) => [entry.id, String(i + 1).padStart(2, '0')]))
 
 export default function LibraryPage({ openItemId = null, theme, onToggleTheme }) {
-  const { t } = useI18n()
 
-  const tCategory = (c) => t(`cat.${c}`, null, c)
-  const tMetricLabel = (label) => t(LIB_METRIC_KEY[label], null, label)
-  const tMetricValue = (value) => t(LIB_VALUE_KEY[value], null, value)
 
   const tMetricSummary = (metric) =>
     /^\d+$/.test(metric.value)
-      ? `${metric.value} ${tMetricLabel(metric.label).toLowerCase()}`
-      : tMetricValue(metric.value)
+      ? `${metric.value} ${metric.label.toLowerCase()}`
+      : metric.value
 
   const selectedItem = findLibraryItem(openItemId)
   const [searchQuery, setSearchQuery] = useState(() =>
@@ -103,7 +96,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
             className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
           >
             <span>←</span>
-            <span>{t('lib.back')}</span>
+            <span>Back to Projects</span>
           </a>
           <div className="flex items-center gap-4">
             <CommandButton className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-strong transition-colors duration-200" />
@@ -121,13 +114,13 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
         {}
         <div className="w-full max-w-[620px] mb-12 text-left">
           <p className="text-[11px] font-mono text-ink-subtle uppercase tracking-[0.18em] mb-4">
-            FiveM / {t('lib.count', { n: libraryList.length })}
+            FiveM / {libraryList.length} resources
           </p>
           <h1 className="text-[34px] sm:text-[40px] font-bold text-ink-strong tracking-[-0.035em] leading-tight mb-4">
-            {t('lib.title')}
+            FiveM Library
           </h1>
           <p className="text-[15px] sm:text-[16px] text-ink-muted font-normal leading-relaxed">
-            {t('lib.tagline')}
+            Every UI and script I have built for FiveM, in one place.
           </p>
         </div>
 
@@ -136,7 +129,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
           <div className="w-full mb-6 rounded-xl border border-dashed border-line-strong bg-surface-raised px-4 py-3 flex items-start gap-2.5">
             <span aria-hidden="true" className="text-[13px] leading-[1.5] text-amber-400">●</span>
             <p className="text-[12.5px] text-ink-muted leading-relaxed">
-              {t('lib.placeholderNotice')}
+              These entries are placeholders — nothing here describes a real resource yet.
             </p>
           </div>
         )}
@@ -148,7 +141,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
             </svg>
             <input
               type="text"
-              placeholder={t('lib.searchPlaceholder')}
+              placeholder="Search resources..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-transparent border-b border-line pl-9 pr-3 py-2 text-[13px] text-ink-strong placeholder-neutral-500 focus:outline-none focus:border-ink-muted transition-colors"
@@ -168,7 +161,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
                       : 'text-ink-muted hover:text-ink-strong'
                   }`}
                 >
-                  {cat === 'All' ? t('proj.filterAll') : tCategory(cat)}
+                  {cat}
                 </button>
               ))}
             </div>
@@ -191,7 +184,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
 
                 {entry.placeholder && (
                   <span className="absolute top-2.5 right-3 text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/30 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
-                    {t('lib.badge.example')}
+                    Example
                   </span>
                 )}
               </div>
@@ -210,7 +203,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
 
                 {}
                 <div className="flex items-center gap-2 text-[10px] font-mono text-ink-subtle uppercase tracking-wider">
-                  <span>{tCategory(entry.category)}</span>
+                  <span>{entry.category}</span>
                   <span className="text-ink-faint">/</span>
                   <span>{entry.metrics.slice(0, 2).map(tMetricSummary).join(' · ')}</span>
                 </div>
@@ -220,7 +213,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
 
           {filteredItems.length === 0 && (
             <div className="col-span-full py-12 text-center text-ink-subtle text-[13px]">
-              {t('lib.noResults', { q: searchQuery })}
+              No resources found matching "{searchQuery}".
             </div>
           )}
         </div>
@@ -258,7 +251,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
                     {selectedItem.title}
                   </h2>
                   <span className="text-[11px] font-mono text-white/70 uppercase tracking-wider">
-                    {tCategory(selectedItem.category)} · {selectedItem.date} · {ENTRY_NUMBER.get(selectedItem.id)}
+                    {selectedItem.category} · {selectedItem.date} · {ENTRY_NUMBER.get(selectedItem.id)}
                   </span>
                 </div>
               </div>
@@ -271,7 +264,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
                 <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/[0.07] px-4 py-3 flex items-start gap-2.5">
                   <span aria-hidden="true" className="text-[13px] leading-[1.5] text-amber-500">●</span>
                   <p className="text-[12.5px] text-ink-secondary leading-relaxed">
-                    {t('lib.placeholderNotice')}
+                    These entries are placeholders — nothing here describes a real resource yet.
                   </p>
                 </div>
               )}
@@ -283,8 +276,8 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
                     key={i}
                     className={`flex-1 min-w-0 px-2 py-4 text-left ${i > 0 ? 'border-l border-line' : ''}`}
                   >
-                    <div className="text-[14px] font-bold text-ink-strong truncate">{tMetricValue(metric.value)}</div>
-                    <div className="mt-0.5 text-[10px] font-mono text-ink-subtle uppercase tracking-wider truncate">{tMetricLabel(metric.label)}</div>
+                    <div className="text-[14px] font-bold text-ink-strong truncate">{metric.value}</div>
+                    <div className="mt-0.5 text-[10px] font-mono text-ink-subtle uppercase tracking-wider truncate">{metric.label}</div>
                   </div>
                 ))}
               </div>
@@ -302,7 +295,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
 
               <div>
                 <h3 className="text-[11px] font-mono font-semibold text-ink-subtle uppercase tracking-wider mb-2">
-                  {t('proj.overview')}
+                  Overview
                 </h3>
                 <p className="text-ink-secondary text-[13.5px] leading-relaxed">
                   {selectedItem.fullDescription}
@@ -311,7 +304,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
 
               <div>
                 <h3 className="text-[11px] font-mono font-semibold text-ink-subtle uppercase tracking-wider mb-2.5">
-                  {t('proj.keyFeatures')}
+                  Key Features
                 </h3>
                 <ul className="space-y-2.5">
                   {selectedItem.features.map((feature, i) => (
@@ -325,7 +318,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
 
               <div>
                 <h3 className="text-[11px] font-mono font-semibold text-ink-subtle uppercase tracking-wider mb-2">
-                  {t('proj.technologies')}
+                  Technologies
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedItem.tags.map((tag, i) => (
@@ -363,7 +356,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-ink-strong text-ink-inverse text-[13px] font-semibold hover:bg-ink-secondary transition-colors"
                   >
-                    <span>{selectedItem.urlLabel ? t('proj.watchShowcase') : t('proj.liveDemo')}</span>
+                    <span>{selectedItem.urlLabel ? 'Watch showcase' : 'Live Demo'}</span>
                     <span>→</span>
                   </a>
                 )}

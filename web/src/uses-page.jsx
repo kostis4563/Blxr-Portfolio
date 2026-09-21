@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
-import { useI18n, LOCALE_TAGS } from './lib/i18n'
-import { link, HOME_PATH, NOW_PATH, CV_PATH } from './lib/router'
+import { link, HOME_PATH, CV_PATH } from './lib/router'
 import { GITHUB_URL } from './lib/profile'
 import { imageProps } from './lib/images'
 import { themedIconFor } from './lib/skills'
@@ -49,10 +48,10 @@ function useReveal(ref) {
 
 const delay = (ms) => ({ '--reveal-delay': `${ms}ms` })
 
-function formatUpdated(iso, lang) {
+function formatUpdated(iso) {
   const date = new Date(`${iso}T00:00:00Z`)
   try {
-    return new Intl.DateTimeFormat(LOCALE_TAGS[lang] || 'en', {
+    return new Intl.DateTimeFormat('en-US', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -244,13 +243,13 @@ function DeskCard({ item }) {
   )
 }
 
-function DeskSection({ t }) {
+function DeskSection() {
   const [active, setActive] = useState('laptop')
   const current = DESK.find((item) => item.id === active) || DESK[0]
 
   return (
     <section aria-labelledby="uses-desk" className="w-full">
-      <SectionHead id="uses-desk" index={1} title={t('uses.desk')} hint={t('uses.hint')} />
+      <SectionHead id="uses-desk" index={1} title="The desk" hint="Hover for details" />
       <div className={`${CARD} grid grid-cols-1 overflow-hidden md:grid-cols-[1fr_260px]`}>
         <div className="relative px-4 pt-5 pb-2 sm:px-6">
           <div className="animate-float motion-reduce:animate-none">
@@ -319,15 +318,15 @@ function Tile({ item, icon }) {
   )
 }
 
-function SoftwareSection({ t, theme }) {
+function SoftwareSection({ theme }) {
   const themedIcon = themedIconFor(theme)
   return (
     <section aria-labelledby="uses-software" className="w-full">
-      <SectionHead id="uses-software" index={2} title={t('uses.software')} />
+      <SectionHead id="uses-software" index={2} title="Software" />
       <div className="flex flex-col gap-7">
         {SOFTWARE.map((group) => (
           <div key={group.id}>
-            <h3 data-reveal className="mb-2.5 text-[12px] font-medium text-ink-subtle">{t(group.titleKey)}</h3>
+            <h3 data-reveal className="mb-2.5 text-[12px] font-medium text-ink-subtle">{group.title}</h3>
             <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {group.items.map((item, i) => (
                 <li key={item.name} data-reveal style={delay(60 + i * 55)}>
@@ -341,10 +340,10 @@ function SoftwareSection({ t, theme }) {
     </section>
   )
 }
-function TerminalSection({ t }) {
+function TerminalSection() {
   return (
     <section aria-labelledby="uses-terminal" className="flex min-w-0 flex-col">
-      <SectionHead id="uses-terminal" index={3} title={t('uses.terminal')} />
+      <SectionHead id="uses-terminal" index={3} title="Terminal" />
       <div data-reveal className={`${CARD} flex flex-1 flex-col overflow-hidden`}>
         <div className="flex items-center gap-2 border-b border-line bg-surface px-3.5 py-2.5">
           <span aria-hidden="true" className="flex gap-1.5">
@@ -410,13 +409,13 @@ function PipelineStep({ node, on, onActivate, branch, icon, index }) {
   )
 }
 
-function HostingSection({ t }) {
+function HostingSection() {
   const [active, setActive] = useState('push')
   const data = { id: 'data', name: DATA_STORE.name, sub: '/api/' }
 
   return (
     <section aria-labelledby="uses-hosting" className="flex min-w-0 flex-col">
-      <SectionHead id="uses-hosting" index={4} title={t('uses.hosting')} />
+      <SectionHead id="uses-hosting" index={4} title="Hosting" />
       <div data-reveal className={`${CARD} flex flex-1 flex-col p-4 sm:p-5`}>
         <div className="relative ml-2 pl-5">
           <span aria-hidden="true" className="absolute left-[3.5px] top-3 bottom-3 w-px">
@@ -436,10 +435,10 @@ function HostingSection({ t }) {
     </section>
   )
 }
-function FontsSection({ t }) {
+function FontsSection() {
   return (
     <section aria-labelledby="uses-fonts" className="flex min-w-0 flex-col">
-      <SectionHead id="uses-fonts" index={5} title={t('uses.fonts')} />
+      <SectionHead id="uses-fonts" index={5} title="Fonts" />
       <ul className="grid flex-1 grid-cols-2 gap-2.5">
         {FONTS.map((font, i) => (
           <li
@@ -467,10 +466,10 @@ function FontsSection({ t }) {
 }
 const EQ_DELAYS = [0, 180, 90, 260, 40]
 
-function MusicSection({ t }) {
+function MusicSection() {
   return (
     <section aria-labelledby="uses-music" className="flex min-w-0 flex-col">
-      <SectionHead id="uses-music" index={6} title={t('uses.music')} />
+      <SectionHead id="uses-music" index={6} title="Music" />
       <div data-reveal className={`${CARD} group/music flex flex-1 flex-col justify-between p-4 sm:p-5`}>
         <div className="flex items-center gap-3">
           <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface transition-transform duration-500 ${EASE} group-hover/music:rotate-[360deg]`}>
@@ -478,7 +477,7 @@ function MusicSection({ t }) {
           </span>
           <div className="min-w-0">
             <p className="text-[13.5px] font-semibold tracking-tight text-ink-strong">{MUSIC.app}</p>
-            <p className="font-mono text-[10px] uppercase tracking-wider text-ink-subtle">{t('uses.music.playing')}</p>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-ink-subtle">Usually playing</p>
           </div>
           <span aria-hidden="true" className="ml-auto flex h-6 items-end gap-[3px]">
             {EQ_DELAYS.map((d, i) => (
@@ -498,8 +497,7 @@ function MusicSection({ t }) {
   )
 }
 export default function UsesPage({ theme, onToggleTheme }) {
-  const { t, lang } = useI18n()
-  const updated = formatUpdated(USES_UPDATED, lang)
+  const updated = formatUpdated(USES_UPDATED)
   const mainRef = useRef(null)
   useReveal(mainRef)
 
@@ -512,7 +510,7 @@ export default function UsesPage({ theme, onToggleTheme }) {
             className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
           >
             <span>←</span>
-            <span>{t('proj.backHome')}</span>
+            <span>Back to Home</span>
           </a>
           <div className="flex items-center gap-4">
             <CommandButton className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-strong transition-colors duration-200" />
@@ -529,19 +527,19 @@ export default function UsesPage({ theme, onToggleTheme }) {
         <div className="w-full flex flex-col gap-3 text-left sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-[560px]">
             <p className={`${KICKER} mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 animate-rise-in`}>
-              <span>/ {t('uses.kicker')}</span>
+              <span>/ uses</span>
               <span aria-hidden="true">·</span>
               <span>macOS</span>
             </p>
             <h1 className="text-[32px] sm:text-[36px] font-bold text-ink-strong tracking-[-0.035em] leading-tight mb-2 animate-rise-in" style={{ animationDelay: '60ms' }}>
-              {t('uses.title')}
+              Uses
             </h1>
             <p className="text-[14.5px] sm:text-[15px] text-ink-muted font-normal leading-relaxed animate-rise-in" style={{ animationDelay: '120ms' }}>
               {USES_INTRO}
             </p>
           </div>
           <dl className="flex shrink-0 items-center gap-2 text-[12px] text-ink-subtle animate-rise-in" style={{ animationDelay: '180ms' }}>
-            <dt className="font-mono uppercase tracking-wider text-[10.5px]">{t('uses.updated')}</dt>
+            <dt className="font-mono uppercase tracking-wider text-[10.5px]">Updated</dt>
             <dd>
               <time dateTime={USES_UPDATED}>{updated}</time>
             </dd>
@@ -549,22 +547,22 @@ export default function UsesPage({ theme, onToggleTheme }) {
         </div>
 
         <div className="w-full animate-rise-in" style={{ animationDelay: '240ms' }}>
-          <DeskSection t={t} />
+          <DeskSection />
         </div>
-        <SoftwareSection t={t} theme={theme} />
+        <SoftwareSection theme={theme} />
 
         <div className="grid w-full grid-cols-1 gap-10 md:grid-cols-2 md:gap-8">
-          <TerminalSection t={t} />
-          <HostingSection t={t} />
+          <TerminalSection />
+          <HostingSection />
         </div>
 
         <div className="grid w-full grid-cols-1 gap-10 md:grid-cols-[1fr_300px] md:gap-8">
-          <FontsSection t={t} />
-          <MusicSection t={t} />
+          <FontsSection />
+          <MusicSection />
         </div>
         <footer data-reveal className="w-full max-w-[640px] border-t border-dashed border-line pt-7">
           <p className="text-[13px] leading-relaxed text-ink-muted">
-            {t('uses.footer.about')}{' '}
+            What is this? A uses page — the gear and software behind the work. There are hundreds more on{' '}
             <a
               href="https://uses.tech"
               target="_blank"
@@ -573,15 +571,11 @@ export default function UsesPage({ theme, onToggleTheme }) {
             >
               uses.tech
             </a>
-            . {t('uses.footer.now')}
+            .
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] font-medium text-ink-muted">
-            <a {...link(NOW_PATH)} className={FOOT_LINK}>
-              <span>{t('now.title')}</span>
-              <span aria-hidden="true" className={FOOT_ARROW}>→</span>
-            </a>
             <a {...link(CV_PATH)} className={FOOT_LINK}>
-              <span>{t('cv.title')}</span>
+              <span>CV</span>
               <span aria-hidden="true" className={FOOT_ARROW}>→</span>
             </a>
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" className={FOOT_LINK}>

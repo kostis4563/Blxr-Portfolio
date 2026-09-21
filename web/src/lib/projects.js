@@ -174,45 +174,7 @@ export const projectsList = [
   }
 ]
 
-export const BADGE_KEY = {
-  amitista: 'badge.clientWork',
-  'web-scanner': 'badge.openSource'
-}
-export const SHORT_KEY = {
-  amitista: 'proj.amitista.short',
-  async: 'proj.async.short',
-  'web-scanner': 'proj.webscanner.short',
-  padoofood: 'proj.delivo.short'
-}
-export const FULL_KEY = {
-  async: 'proj.async.full',
-  'web-scanner': 'proj.webscanner.full'
-}
-
-export const FEATURE_KEY = {
-  async: 'proj.async.feat',
-  'web-scanner': 'proj.webscanner.feat'
-}
-export const METRIC_KEY = {
-  Focus: 'proj.amitista.metric.focus',
-  'Based in': 'proj.amitista.metric.based',
-  Role: 'proj.amitista.metric.role',
-  'Detection Modules': 'proj.async.metric.modules',
-  'Forensic Categories': 'proj.async.metric.categories',
-  License: 'proj.async.metric.license',
-  'Secret Patterns': 'proj.webscanner.metric.patterns',
-  'Scan Modes': 'proj.webscanner.metric.modes',
-  Platform: 'proj.delivo.metric.platform',
-  Framework: 'proj.delivo.metric.framework',
-  Language: 'proj.delivo.metric.language'
-}
-
 export const isVideoLink = (url) => /(?:^|\/\/|\.)(?:youtube\.com|youtu\.be)\//.test(url ?? '')
-
-export const URL_LABEL_KEY = {
-  'Watch showcase': 'proj.watchShowcase',
-  'Visit site': 'proj.visitSite'
-}
 
 export const METRIC_VALUE_KEY = {
   Proprietary: 'metric.proprietary',

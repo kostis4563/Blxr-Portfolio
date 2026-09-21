@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { Icon } from './icon'
-import { useI18n } from '../lib/i18n'
 import { useAuth } from '../lib/supabase'
 import { loginUrlFor } from '../lib/auth'
-import { link, dashboardPath, REVIEWS_PATH, NOW_PATH, USES_PATH, CV_PATH } from '../lib/router'
+import { link, dashboardPath, REVIEWS_PATH, USES_PATH, CV_PATH } from '../lib/router'
 import { CONTACT_EMAIL, SOCIALS, SOCIAL_ICON_PATHS } from '../lib/profile'
 
 const MESSAGES_PATH = dashboardPath('messages')
@@ -24,7 +23,7 @@ function Row({ label, children }) {
 }
 
 // The address is the primary action: plain text, a mailto, and a copy button. No reveal step.
-function EmailCard({ t }) {
+function EmailCard() {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -38,11 +37,11 @@ function EmailCard({ t }) {
 
   return (
     <div className="rounded-2xl border border-line bg-surface-raised/60 p-5 sm:p-6">
-      <p className="text-[12px] font-watom text-ink-subtle">{t('contact.email.kicker')}</p>
+      <p className="text-[12px] font-watom text-ink-subtle">Email</p>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-3">
         <a
           href={`mailto:${CONTACT_EMAIL}`}
-          title={t('contact.email.open')}
+          title="Open in your mail app"
           className="min-w-0 break-all font-mono text-[17px] tracking-tight text-ink-strong underline-offset-4 transition-colors duration-200 hover:underline sm:text-[20px]"
         >
           {CONTACT_EMAIL}
@@ -60,16 +59,16 @@ function EmailCard({ t }) {
           ) : (
             <Icon name="copy" className="h-3.5 w-3.5 text-ink-subtle" strokeWidth={1.8} />
           )}
-          {copied ? t('contact.copied') : t('contact.copy')}
+          {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
     </div>
   )
 }
 
-function SocialsRow({ t }) {
+function SocialsRow() {
   return (
-    <Row label={t('contact.elsewhere')}>
+    <Row label="Elsewhere">
       <div className="flex flex-wrap gap-2">
         {SOCIALS.map((social) => {
           const Wrapper = social.url ? 'a' : 'span'
@@ -96,16 +95,15 @@ function SocialsRow({ t }) {
 }
 
 export default function ContactSection() {
-  const { t } = useI18n()
   const { session } = useAuth()
 
   return (
     <section id="contact" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-      <h2 className="mb-8 text-[20px] tracking-tight text-ink-strong font-vergilia">{t('home.contact')}</h2>
+      <h2 className="mb-8 text-[20px] tracking-tight text-ink-strong font-vergilia">Contact</h2>
 
-      <p className="mb-6 max-w-xl text-[13.5px] font-light leading-relaxed text-ink-muted">{t('contact.intro')}</p>
+      <p className="mb-6 max-w-xl text-[13.5px] font-light leading-relaxed text-ink-muted">Pick whichever is easier. I read everything that comes in, and a short message is completely fine. Happy to talk about anything on this page, or about whatever you're building.</p>
 
-      <EmailCard t={t} />
+      <EmailCard />
 
       {/* Second route: a private thread in the dashboard. Signed-out visitors go through login first. */}
       <a
@@ -113,23 +111,22 @@ export default function ContactSection() {
         className="group mt-3 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-line px-5 py-3.5 text-[13px] text-ink-muted transition-colors duration-200 hover:border-line-strong hover:text-ink-strong sm:px-6"
       >
         <Icon name="message" className="h-4 w-4 shrink-0 text-ink-subtle transition-colors duration-200 group-hover:text-ink-strong" strokeWidth={1.8} />
-        <span className="flex-1">{session ? t('contact.dm.open') : t('contact.dm.dashboard')}</span>
+        <span className="flex-1">{session ? 'Open your thread' : 'Or contact me through the dashboard'}</span>
         <Arrow />
       </a>
 
       <div className="mt-2">
-        <SocialsRow t={t} />
-        <Row label={t('contact.more')}>
+        <SocialsRow />
+        <Row label="More">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <a {...link(REVIEWS_PATH)} className={ARROW_LINK}><span>{t('rev.cta')}</span><Arrow /></a>
-            <a {...link(NOW_PATH)} className={ARROW_LINK}><span>{t('now.cta')}</span><Arrow /></a>
-            <a {...link(USES_PATH)} className={ARROW_LINK}><span>{t('uses.cta')}</span><Arrow /></a>
-            <a {...link(CV_PATH)} className={ARROW_LINK}><span>{t('cv.cta')}</span><Arrow /></a>
+            <a {...link(REVIEWS_PATH)} className={ARROW_LINK}><span>Worked with me? Leave a review</span><Arrow /></a>
+            <a {...link(USES_PATH)} className={ARROW_LINK}><span>See what I use</span><Arrow /></a>
+            <a {...link(CV_PATH)} className={ARROW_LINK}><span>Read my CV</span><Arrow /></a>
           </div>
         </Row>
       </div>
 
-      <p className="mt-6 text-[11.5px] text-ink-faint">{t('contact.based')}</p>
+      <p className="mt-6 text-[11.5px] text-ink-faint">Based in Athens, Greece · EET / EEST</p>
     </section>
   )
 }

@@ -69,7 +69,7 @@ npm run lint         # oxlint
 web/src/
 ├── main.jsx           client entry
 ├── entry-server.jsx   SSR entry, used by prerender.js
-├── root.jsx           provider tree (i18n, music widget)
+├── root.jsx           StrictMode wrapper around <App />
 ├── app.jsx            home page, route -> page switch
 ├── projects-page.jsx
 ├── library-page.jsx
@@ -116,11 +116,6 @@ web/src/
     ├── github-stats.js  Dashboard → Stats (/api/github/stats)
     ├── youtube-engine.js
     ├── lyrics.js        LRCLIB
-    ├── i18n.js          table loader, translate(), useI18n
-    ├── i18n-provider.jsx  <I18nProvider>, mounted by root.jsx
-    ├── i18n-tables.js
-    ├── languages.js
-    ├── locales/         generated, gitignored
     └── use-theme.js
 ```
 
@@ -142,13 +137,10 @@ web/src/
 | `/cv` | `cv.html` — printable CV, `Print` in the header uses the browser's print / save as PDF |
 | `/login` | `login.html` — sign in / register (`#register`) / reset (`#reset`) / new password (`#update`), English only, noindex |
 | `/dashboard` | `dashboard.html` — signed-in dashboard, sections via hash (`#settings/domains`, `#boards/<board>/<card>`), English only, noindex; bounces to `/login?next=…` without a session. `#reviewpanel/…` and `#logs/…` only exist for the owner account (`OWNER_EMAIL` in `lib/dashboard.js`, `SITE_OWNER_EMAIL` on the server) |
-| `/<lang>` | `<lang>.html` |
-| `/<lang>/projects` | `<lang>/projects.html` |
-| `/<lang>/projects/<id>` | `<lang>/projects/<id>.html` |
 | *anything else* | `404.html`, HTTP 404 |
 
-**32 languages**, English unprefixed. `/de/` and `/en/...` 301 to `/de` and `/...`.
-Routing lives entirely in `lib/router.js`; valid ids come from `lib/projects.js` / `lib/library.js`, language codes from `lib/languages.js`.
+English only. The old `/<lang>/…` URLs 301 to the plain path in nginx.
+Routing lives entirely in `lib/router.js`; valid ids come from `lib/projects.js` / `lib/library.js`.
 
 ---
 
@@ -158,11 +150,10 @@ Routing lives entirely in `lib/router.js`; valid ids come from `lib/projects.js`
 
 | # | Step | Does |
 | :-- | :-- | :-- |
-| 1 | `build-locales.js` | compiles `lib/i18n-tables.js` into `lib/locales/<code>.js` |
-| 2 | `vite build` | client bundle |
-| 3 | `vite build --ssr entry-server` | SSR bundle |
-| 4 | `prerender.js` | renders every route/language to its own `.html`, writes `sitemap.xml` (each url's `<lastmod>` is the last git commit that touched the page's sources, so it does not reset on every deploy), hashes inline scripts for the CSP, deletes the SSR bundle |
-| 5 | `compress.js` | writes `.gz` / `.br` next to every compressible file |
+| 1 | `vite build` | client bundle |
+| 2 | `vite build --ssr entry-server` | SSR bundle |
+| 3 | `prerender.js` | renders every route to its own `.html`, writes `sitemap.xml` (each url's `<lastmod>` is the last git commit that touched the page's sources, so it does not reset on every deploy), hashes inline scripts for the CSP, deletes the SSR bundle |
+| 4 | `compress.js` | writes `.gz` / `.br` next to every compressible file |
 
 `npm run build:protected` additionally runs the app chunk through an obfuscator.
 

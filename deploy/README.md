@@ -44,18 +44,14 @@ DRY_RUN=1 npm run deploy  # show the plan, touch nothing
 - **Deploy web + nginx together.** `blxr.conf` 404s missing files;
   `try_files $uri $uri.html` only works once the build's pages exist.
   `npm run deploy` runs both in the right order.
-- **`/de/` (trailing slash) and `/en/...` need explicit 301s** in
-  `blxr.conf` — everything else resolves through `try_files`. Check after any
-  config edit:
+- **Old language prefixes 301 to the plain path.** The site used to be
+  served under `/de/…`, `/el/…` and 30 other prefixes; those URLs may still be
+  indexed, so `blxr.conf` folds them back. Check after any config edit:
   ```bash
   curl -sI https://blxr.net/de/ | head -1
   curl -sI https://blxr.net/en/projects | head -1
-  curl -s https://blxr.net/de | grep -o '<html[^>]*>'
-  curl -s https://blxr.net/ar | grep -o '<html[^>]*>'
+  curl -sI https://blxr.net/ar | head -1
   ```
-- **Build is ~1500 files** (14 routes x 32 languages, `.gz` + `.br` twins,
-  ~32 MB). First deploy after a routing change moves a lot more files than
-  usual.
 - **`/api/` is rate-limited at the edge.** `blxr.conf` declares
   `limit_req_zone`/`limit_conn_zone` at the top of the file, which only
   works because `sites-enabled/*` is included from nginx's `http` block.

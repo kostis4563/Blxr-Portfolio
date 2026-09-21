@@ -57,13 +57,13 @@ const UNITS = [
   ['minute', 60],
 ]
 
-export function relativeTime(iso, lang, now = Date.now()) {
+export function relativeTime(iso, now = Date.now()) {
   const then = Date.parse(iso)
   if (Number.isNaN(then)) return ''
   const diff = (then - now) / 1000
   const abs = Math.abs(diff)
   try {
-    const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' })
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
     for (const [unit, seconds] of UNITS) {
       if (abs >= seconds) return rtf.format(Math.round(diff / seconds), unit)
     }
@@ -73,9 +73,9 @@ export function relativeTime(iso, lang, now = Date.now()) {
   }
 }
 
-export function absoluteTime(iso, lang) {
+export function absoluteTime(iso) {
   try {
-    return new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeStyle: 'short' }).format(new Date(iso))
+    return new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(iso))
   } catch {
     return iso
   }

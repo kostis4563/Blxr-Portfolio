@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, useId, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { useI18n } from '../lib/i18n'
 import { link } from '../lib/router'
 import { buildCommands, rankCommands, groupCommands } from '../lib/commands'
 import { usePaletteOpen, closePalette } from '../lib/palette'
@@ -54,7 +53,6 @@ function Key({ children, wide = false }) {
 }
 
 export default function CommandPalette({ theme, onToggleTheme }) {
-  const { t } = useI18n()
   const open = usePaletteOpen()
 
   const [query, setQuery] = useState('')
@@ -78,8 +76,8 @@ export default function CommandPalette({ theme, onToggleTheme }) {
   const { session } = useAuth()
   const signedIn = Boolean(session)
   const commands = useMemo(
-    () => buildCommands({ t, theme, toggleTheme: onToggleTheme, signedIn }),
-    [t, theme, onToggleTheme, signedIn]
+    () => buildCommands({ theme, toggleTheme: onToggleTheme, signedIn }),
+    [theme, onToggleTheme, signedIn]
   )
 
   const results = useMemo(
@@ -227,7 +225,7 @@ export default function CommandPalette({ theme, onToggleTheme }) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={t('cmd.open')}
+        aria-label="Command palette"
         className="panel-glass relative w-full max-w-[560px] overflow-hidden rounded-2xl bg-surface/[0.92] backdrop-blur-2xl backdrop-saturate-[1.7] shadow-[0_32px_80px_-20px_var(--shadow-cast),0_6px_18px_-8px_var(--shadow-cast-soft)] animate-cmd-in"
 
         onPointerDown={(e) => {
@@ -248,8 +246,8 @@ export default function CommandPalette({ theme, onToggleTheme }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKeyDown}
-            placeholder={t('cmd.placeholder')}
-            aria-label={t('cmd.open')}
+            placeholder="Search or jump to…"
+            aria-label="Command palette"
             role="combobox"
             aria-expanded="true"
             aria-controls={listId}
@@ -264,8 +262,8 @@ export default function CommandPalette({ theme, onToggleTheme }) {
             <button
               type="button"
               onClick={() => { setQuery(''); inputRef.current?.focus() }}
-              aria-label={t('lang.clear')}
-              title={t('lang.clear')}
+              aria-label="Clear"
+              title="Clear"
               className="shrink-0 w-6 h-6 rounded-full text-ink-subtle hover:text-ink-strong hover:bg-surface-hover flex items-center justify-center transition-colors duration-150 cursor-pointer"
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24" aria-hidden="true">
@@ -280,13 +278,13 @@ export default function CommandPalette({ theme, onToggleTheme }) {
           ref={listRef}
           id={listId}
           role="listbox"
-          aria-label={t('cmd.open')}
+          aria-label="Command palette"
           onScroll={syncEdges}
           className="cmd-scroll max-h-[min(56vh,413px)] overflow-y-auto overscroll-contain p-2"
         >
           {results.length === 0 && (
             <p className="px-4 py-8 text-center text-[12.5px] leading-relaxed text-ink-subtle">
-              {t('cmd.noResults', { q: query.trim() })}
+              Nothing matches “{query.trim()}”
             </p>
           )}
 

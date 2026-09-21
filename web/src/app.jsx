@@ -2,12 +2,10 @@ import { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 're
 
 const AUTOPLAY_MS = 6000
 import GitHubContributions from './components/github-contribution'
-import Testimonials from './components/testimonials'
 import ContactSection from './components/contact-section'
 import ProjectsPageImpl from '#ssr-page/projects'
 import LibraryPageImpl from '#ssr-page/library'
 import ReviewsPageImpl from '#ssr-page/reviews'
-import NowPageImpl from '#ssr-page/now'
 import UsesPageImpl from '#ssr-page/uses'
 import CvPageImpl from '#ssr-page/cv'
 import LoginPageImpl from '#ssr-page/login'
@@ -18,10 +16,9 @@ import ThemeToggle from './components/theme-toggle'
 import CommandPaletteHost from './components/command-palette-host'
 import NavMenu from './components/nav-menu'
 import { useTheme } from './lib/use-theme'
-import { useI18n } from './lib/i18n'
-import { projectsList, SHORT_KEY, METRIC_KEY, METRIC_VALUE_KEY } from './lib/projects'
+import { projectsList } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
-import { SKILL_CATEGORIES, TOOL_CATEGORIES, FEATURED_CERTIFICATIONS, themedIconFor, skillUsage } from './lib/skills'
+import { SKILL_CATEGORIES, TOOL_CATEGORIES, themedIconFor, skillUsage } from './lib/skills'
 import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
 import { CV_ROLE } from './lib/cv'
@@ -35,7 +32,6 @@ const routePage = (Static, loader) => (import.meta.env.SSR ? Static : lazy(loade
 const ProjectsPage = routePage(ProjectsPageImpl, () => import('#client-page/projects'))
 const LibraryPage = routePage(LibraryPageImpl, () => import('#client-page/library'))
 const ReviewsPage = routePage(ReviewsPageImpl, () => import('#client-page/reviews'))
-const NowPage = routePage(NowPageImpl, () => import('#client-page/now'))
 const UsesPage = routePage(UsesPageImpl, () => import('#client-page/uses'))
 const CvPage = routePage(CvPageImpl, () => import('#client-page/cv'))
 const LoginPage = routePage(LoginPageImpl, () => import('#client-page/login'))
@@ -68,7 +64,6 @@ function App() {
 
 
   const { theme, preference: themePreference, toggleTheme, setPreference: setThemePreference } = useTheme()
-  const { t } = useI18n()
 
   const homeScrollRef = useRef(0)
 
@@ -97,7 +92,7 @@ function App() {
 
   useEffect(() => {
     applyHead(path)
-  }, [path, t])
+  }, [path])
 
   useEffect(() => {
     if (route.redirect) navigate(route.redirect, { replace: true })
@@ -170,13 +165,9 @@ function App() {
     .filter(Boolean)
     .map((project) => ({
       ...project,
-      categoryLabel: t(`cat.${project.category}`, null, project.category),
-      description: t(SHORT_KEY[project.id], null, project.shortDescription),
+      categoryLabel: project.category,
+      description: project.shortDescription,
       metrics: (project.metrics ?? [])
-        .map((metric) => ({
-          label: t(METRIC_KEY[metric.label], null, metric.label),
-          value: t(METRIC_VALUE_KEY[metric.value], null, metric.value)
-        }))
         .filter((metric) => metric.value.length <= 18)
         .slice(0, 2)
     }))
@@ -267,21 +258,19 @@ function App() {
 
   const educationEntries = [
     {
-      period: `2025 – ${t('common.present')}`,
-      degree: t('edu.degree'),
-      org: t('edu.org'),
-      description: t('edu.desc'),
+      period: `2025 – Present`,
+      degree: 'International Baccalaureate Diploma Programme (IBDP)',
+      org: 'Athens',
+      description: 'A two year diploma with as much independent research and writing in it as actual coursework. My subjects lean heavily into computer science: how systems are put together underneath the frameworks, and why they were built that way. Most of what I build outside school started with something I picked up here.',
       subjects: [
-        t('edu.subj.se'),
-        t('edu.subj.cs'),
-        t('edu.subj.dsa'),
-        t('edu.subj.db'),
-        t('edu.subj.web')
+        'Software Engineering',
+        'Computer Systems',
+        'Data Structures & Algorithms',
+        'Databases',
+        'Web / Software Development Concepts'
       ]
     }
   ]
-
-  const certifications = FEATURED_CERTIFICATIONS.map((cert) => ({ ...cert, tier: t(cert.tierKey) }))
 
   const themedIcon = themedIconFor(theme)
 
@@ -293,12 +282,12 @@ function App() {
     return null
   }
   const skillCategories = SKILL_CATEGORIES.map((category) => ({
-    name: t(category.nameKey),
+    name: category.name,
     items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon), proof: skillProof(item.name) }))
   }))
 
   const toolCategories = TOOL_CATEGORIES.map((category) => ({
-    name: t(category.nameKey),
+    name: category.name,
     wide: category.wide,
     items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon) }))
   }))
@@ -316,9 +305,9 @@ function App() {
   // The primary nav. Text links from md up; below that the same list lives at the top of the ⋯ menu.
   const sectionLink = (id) => ({ href: `#${id}`, onClick: (event) => { event.preventDefault(); jumpToSection(id) } })
   const navLinks = [
-    { id: 'projects', label: t('home.projects'), ...sectionLink('projects') },
-    { id: 'about', label: t('nav.about'), ...sectionLink('skills') },
-    { id: 'contact', label: t('home.contact'), ...sectionLink('contact') },
+    { id: 'projects', label: 'Projects', ...sectionLink('projects') },
+    { id: 'about', label: 'About', ...sectionLink('skills') },
+    { id: 'contact', label: 'Contact', ...sectionLink('contact') },
   ]
 
   if (currentView === 'notFound') {
@@ -367,17 +356,6 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <ReviewsPage theme={theme} onToggleTheme={toggleTheme} />
-        </Suspense>
-        {palette}
-      </>
-    )
-  }
-
-  if (currentView === 'now') {
-    return (
-      <>
-        <Suspense fallback={<PageFallback />}>
-          <NowPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>
@@ -512,14 +490,36 @@ function App() {
 
           {}
           <p className="max-w-[56ch] text-[15px] text-ink-muted leading-[1.6] animate-fade-in-up delay-150">
-            {t(CV_ROLE.key, null, CV_ROLE.fallback)}
+            {CV_ROLE}
           </p>
 
           {}
-          <p className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-ink-subtle animate-fade-in-up delay-300">
-            <Icon name="pin" className="h-3.5 w-3.5" />
-            {t('hero.location')}
-          </p>
+          <dl className="mt-6 flex flex-col gap-2.5 text-[13.5px] leading-[1.55] animate-fade-in-up delay-300">
+            {[
+              { key: 'now', label: 'Currently', value: 'IB Diploma student in Athens, Greece' },
+              { key: 'building', label: 'Building', value: 'Backend systems and the interfaces on top of them: websites, applications and game servers' },
+              { key: 'studio', label: 'Studio', value: 'Not a house, but a home <3' }
+            ].map((fact) => (
+              <div key={fact.key} className="grid grid-cols-[5.5rem_1fr] gap-x-4 items-baseline">
+                <dt className="text-[12px] font-watom text-ink-subtle">{fact.label}</dt>
+                <dd className="text-ink-secondary">
+                  {fact.href ? (
+                    <a
+                      {...link(fact.href, fact.onClick)}
+                      className="group/fact inline-flex items-baseline gap-1 transition-colors duration-200 hover:text-ink-strong"
+                    >
+                      <span className="underline decoration-line underline-offset-4 transition-colors duration-200 group-hover/fact:decoration-line-strong">
+                        {fact.value}
+                      </span>
+                      <Icon name="arrowUpRight" className="h-3 w-3 self-center text-ink-faint" />
+                    </a>
+                  ) : (
+                    fact.value
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
 
           {}
           <div className="mt-7 flex items-center gap-2.5 animate-fade-in-up delay-450">
@@ -527,22 +527,15 @@ function App() {
               {...link(PROJECTS_PATH, () => openProject(null))}
               className="project-cta group inline-flex h-10 items-center gap-2 rounded-full bg-surface-inverted pl-5 pr-4 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
-              <span>{t('home.projects')}</span>
+              <span>Projects</span>
               <span className="project-arrow inline-block" aria-hidden="true">→</span>
             </a>
             <a
               {...link(CV_PATH)}
               className="inline-flex h-10 items-center rounded-full border border-line px-5 text-[13px] font-medium text-ink outline-none transition-colors duration-200 hover:border-line-strong hover:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
-              {t('cv.title')}
+              CV
             </a>
-          </div>
-
-          <div className="w-full mt-8">
-            <GitHubContributions
-              username={GITHUB_USERNAME} since={GITHUB_JOINED}
-              activeSince={GITHUB_ACTIVE_SINCE} minimal
-            />
           </div>
         </section>
 
@@ -558,7 +551,7 @@ function App() {
                 </span>
               </span>
               <h2 className="mt-3 text-[22px] leading-none tracking-[-0.02em] text-ink-strong sm:text-[26px] font-bagus">
-                {t('home.projects')}
+                Projects
               </h2>
             </div>
 
@@ -583,7 +576,7 @@ function App() {
                 className="project-track"
                 onScroll={handleCarouselScroll}
                 aria-roledescription="carousel"
-                aria-label={t('home.projects')}
+                aria-label="Projects"
               >
                 {featuredProjects.map((project, idx) => {
                   const active = idx === activeSlide
@@ -641,7 +634,7 @@ function App() {
                           <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed text-ink-muted">{project.description}</p>
 
                           <span className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-strong">
-                            <span className="project-underline">{t('proj.view')}</span>
+                            <span className="project-underline">View</span>
                             <span className="project-arrow inline-block" aria-hidden="true">→</span>
                           </span>
 
@@ -706,7 +699,7 @@ function App() {
               style={{ '--reveal-delay': '220ms' }}
               className="project-cta group relative mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-surface-inverted pl-5 pr-4 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
-              <span>{t('home.browseAll')}</span>
+              <span>Browse all</span>
               <span className="project-arrow inline-block" aria-hidden="true">→</span>
             </a>
           </div>
@@ -714,7 +707,7 @@ function App() {
 
         <section id="skills" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
-            {t('home.skills')}
+            Skills
           </h2>
 
           <div className="flex flex-col gap-5 w-full text-[14px]">
@@ -731,7 +724,7 @@ function App() {
                   {category.items.map((skill) => {
                     const Chip = skill.proof ? 'a' : 'span'
                     const chipProps = skill.proof
-                      ? { ...link(skill.proof.href), title: t('skills.usedIn', { n: skill.proof.count }), 'aria-label': `${skill.name} — ${t('skills.usedIn', { n: skill.proof.count })}` }
+                      ? { ...link(skill.proof.href), title: `Used in ${skill.proof.count} projects`, 'aria-label': `${skill.name} — Used in ${skill.proof.count} projects` }
                       : {}
                     return (
                       <Chip
@@ -763,7 +756,7 @@ function App() {
           <details ref={toolboxRef} className="toolbox group/more relative z-30 mt-5 border-t border-dashed border-line pt-3.5">
             <summary className="-mx-2 grid min-h-10 w-[calc(100%+1rem)] grid-cols-1 items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 list-none cursor-pointer outline-none transition-[background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:border-line hover:bg-surface-hover/60 active:scale-[0.995] focus-visible:border-line-strong focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg sm:grid-cols-[7.5rem_1fr] sm:gap-6 motion-reduce:transition-none motion-reduce:active:scale-100 [&::-webkit-details-marker]:hidden">
               <span className="text-ink-subtle font-medium select-none transition-colors duration-200 group-hover/more:text-ink-secondary group-open/more:text-ink-secondary">
-                {t('home.toolbox')}
+                More
               </span>
 
               <span className="inline-flex min-w-0 items-center gap-2.5 text-[12.5px] font-medium text-ink-muted transition-colors duration-200 group-hover/more:text-ink-strong group-open/more:text-ink-strong">
@@ -786,7 +779,7 @@ function App() {
                     </span>
                   ))}
                 </span>
-                <span className="truncate">{t('tools.collection')}</span>
+                <span className="truncate">Tools, editors &amp; systems</span>
                 <span className="shrink-0 rounded-md bg-surface-raised px-1.5 py-0.5 font-mono text-[9.5px] tabular-nums leading-none text-ink-subtle ring-1 ring-inset ring-line">
                   {toolboxCount}
                 </span>
@@ -803,7 +796,7 @@ function App() {
             </summary>
 
             <div className="absolute left-0 right-0 top-full z-40 pt-2">
-              <aside className="toolbox-panel relative max-h-[min(60vh,430px)] overflow-y-auto overscroll-contain rounded-[18px] border border-line-strong bg-surface/95 p-4 shadow-[0_28px_72px_-30px_var(--shadow-cast),0_8px_24px_-18px_var(--shadow-cast-soft)] backdrop-blur-xl [scrollbar-width:thin] sm:p-5" aria-label={t('tools.collection')}>
+              <aside className="toolbox-panel relative max-h-[min(60vh,430px)] overflow-y-auto overscroll-contain rounded-[18px] border border-line-strong bg-surface/95 p-4 shadow-[0_28px_72px_-30px_var(--shadow-cast),0_8px_24px_-18px_var(--shadow-cast-soft)] backdrop-blur-xl [scrollbar-width:thin] sm:p-5" aria-label="Tools, editors & systems">
                 <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-ink-faint/60 to-transparent" aria-hidden="true" />
 
                 <div className="mb-4 flex items-center gap-2.5 border-b border-dashed border-line pb-3">
@@ -823,7 +816,7 @@ function App() {
                       <path d="M3 13.4h18" />
                     </svg>
                   </span>
-                  <span className="text-[11.5px] font-semibold text-ink-secondary">{t('tools.collection')}</span>
+                  <span className="text-[11.5px] font-semibold text-ink-secondary">Tools, editors &amp; systems</span>
                   <span className="ml-auto font-mono text-[10px] tabular-nums text-ink-subtle">{toolboxCount}</span>
                 </div>
 
@@ -889,7 +882,7 @@ function App() {
 
         <section id="education" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
-            {t('home.education')}
+            Education
           </h2>
 
           {}
@@ -929,60 +922,28 @@ function App() {
                 </div>
               </div>
             ))}
-
-            {}
-            <div className="grid grid-cols-1 gap-2 py-4 sm:grid-cols-[7.5rem_1fr] sm:gap-6">
-              <div className="text-[12px] font-watom text-ink-subtle sm:pt-px">
-                {t('home.certifications')}
-              </div>
-
-              <div className="min-w-0">
-                <div className="flex flex-wrap gap-2">
-                  {certifications.map((cert, idx) => {
-                    const Wrapper = cert.url ? 'a' : 'span'
-                    const linkProps = cert.url
-                      ? { href: cert.url, target: '_blank', rel: 'noreferrer' }
-                      : {}
-
-                    return (
-                      <Wrapper
-                        key={idx}
-                        {...linkProps}
-                        title={`${cert.issuer} verified certificate${cert.date ? ` · ${cert.date}` : ''}`}
-                        className={`group/cert inline-flex items-baseline gap-1.5 rounded-lg border border-line bg-surface-raised/60 px-2.5 py-1 text-[12px] transition-colors duration-200 ${
-                          cert.url ? 'hover:border-line-strong' : ''
-                        }`}
-                      >
-                        <span className="font-medium text-ink-secondary transition-colors duration-200 group-hover/cert:text-ink-strong">
-                          {cert.name}
-                        </span>
-                        <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink-faint">
-                          {cert.tier}
-                        </span>
-                      </Wrapper>
-                    )
-                  })}
-                </div>
-                <p className="mt-3 text-[10.5px] text-ink-faint">{t('cert.note')}</p>
-              </div>
-            </div>
           </div>
         </section>
 
-        <Testimonials />
-
         <ContactSection />
+
+        <section aria-label="GitHub activity" className="w-[calc(100%+3rem)] -mx-6 mt-16 border-t border-dashed border-line px-6 pt-12 text-left">
+          <GitHubContributions
+            username={GITHUB_USERNAME} since={GITHUB_JOINED}
+            activeSince={GITHUB_ACTIVE_SINCE} minimal
+          />
+        </section>
 
         <footer className="w-[calc(100%+3rem)] -mx-6 mt-16 flex flex-col gap-3 border-t border-dashed border-line px-6 py-6 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
           <p>
             <span className="font-medium text-ink-strong">Blxr</span>
             <span aria-hidden="true" className="mx-2 text-ink-faint">·</span>
-            {t('hero.location')}
+            Athens, Greece
           </p>
           <nav aria-label="Footer" className="flex items-center gap-4">
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="transition-colors duration-200 hover:text-ink-strong">GitHub</a>
-            <a {...link(CV_PATH)} className="transition-colors duration-200 hover:text-ink-strong">{t('cv.title')}</a>
-            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors duration-200 hover:text-ink-strong">{t('contact.email.kicker')}</a>
+            <a {...link(CV_PATH)} className="transition-colors duration-200 hover:text-ink-strong">CV</a>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors duration-200 hover:text-ink-strong">Email</a>
           </nav>
         </footer>
 

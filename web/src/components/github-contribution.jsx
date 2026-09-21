@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useI18n, LOCALE_TAGS } from "../lib/i18n";
 import { fetchContributions, readCache } from "../lib/github";
 
 const LEVEL_CLASSES = [
@@ -107,10 +106,9 @@ const dayUrl = (username, date) =>
   `https://github.com/${encodeURIComponent(username)}?tab=overview&from=${date}&to=${date}`;
 
 export default function GitHubContributions({ username, since, activeSince, minimal = false }) {
-  const { t, lang } = useI18n();
-  const locale = LOCALE_TAGS[lang] || "en-US";
+  const locale = "en-US";
 
-  const WEEKDAYS = ["", t("gh.mon"), "", t("gh.wed"), "", t("gh.fri"), ""];
+  const WEEKDAYS = ["", 'Mon', "", 'Wed', "", 'Fri', ""];
 
   const [year, setYear] = React.useState(ROLLING);
   const [statsOpen, setStatsOpen] = React.useState(false);
@@ -239,7 +237,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
     observer.observe(rail);
     measure();
     return () => observer.disconnect();
-  }, [showRail, lang]);
+  }, [showRail]);
 
   const avail = rowWidth == null ? null : rowWidth - (showRail ? railWidth + RAIL_GAP : 0);
 
@@ -285,7 +283,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
       {
         key: "total",
 
-        label: year === ROLLING ? t("gh.inLastYear") : `${t("gh.contributions")} · ${year}`,
+        label: year === ROLLING ? 'contributions in the last year' : `contributions · ${year}`,
         value: total.toLocaleString(locale),
       },
     ];
@@ -294,17 +292,17 @@ export default function GitHubContributions({ username, since, activeSince, mini
       items.push(
         {
           key: "best",
-          label: t("gh.bestDay"),
+          label: 'best day',
           value: `${stats.best.count} · ${formatDay(stats.best.date, locale)}`,
         },
         {
           key: "streak",
-          label: t("gh.longestStreak"),
-          value: `${stats.longest} ${stats.longest === 1 ? t("gh.day") : t("gh.days")}`,
+          label: 'longest streak',
+          value: `${stats.longest} ${stats.longest === 1 ? 'day' : 'days'}`,
         },
         {
           key: "active",
-          label: stats.activeDays === 1 ? t("gh.activeDay") : t("gh.activeDays"),
+          label: stats.activeDays === 1 ? 'active day' : 'active days',
           value: String(stats.activeDays),
         },
       );
@@ -312,14 +310,14 @@ export default function GitHubContributions({ username, since, activeSince, mini
       if (stats.perWeek >= 0.05) {
         items.push({
           key: "perWeek",
-          label: t("gh.perWeek"),
+          label: 'per week',
           value: stats.perWeek.toLocaleString(locale, { maximumFractionDigits: 1 }),
         });
       }
       if (stats.busiest) {
         items.push({
           key: "busiest",
-          label: t("gh.busiest"),
+          label: 'most active on',
           value: formatWeekday(stats.busiest, locale),
         });
       }
@@ -328,12 +326,12 @@ export default function GitHubContributions({ username, since, activeSince, mini
     if (activeSince) {
       items.push({
         key: "first",
-        label: t("gh.firstCommit"),
+        label: 'first commit',
         value: formatDay(activeSince, locale),
       });
     }
     return items;
-  }, [stats, total, year, activeSince, locale, t]);
+  }, [stats, total, year, activeSince, locale]);
 
   const monthLabels = React.useMemo(() => {
     const labels = [];
@@ -471,14 +469,11 @@ export default function GitHubContributions({ username, since, activeSince, mini
   );
 
   const onGridKeyDown = (e) => {
-    const rtl = typeof document !== "undefined" && document.dir === "rtl";
-
-    const week = rtl ? -7 : 7;
     const deltas = {
       ArrowUp: -1,
       ArrowDown: 1,
-      ArrowLeft: -week,
-      ArrowRight: week,
+      ArrowLeft: -7,
+      ArrowRight: 7,
     };
     const from = tabIdx;
     if (from < 0) return;
@@ -522,7 +517,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
       {!minimal && (
         <div className="flex items-baseline justify-between gap-4 mb-3">
           <h3 className="flex items-baseline gap-1.5 text-[13px] font-medium text-ink-strong tracking-tight">
-            {t("gh.title")}
+            Contributions
 
             {}
             {statItems.length > 0 && (
@@ -531,7 +526,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
               >
                 <button
                   type="button"
-                  aria-label={t("gh.stats")}
+                  aria-label="Statistics"
 
                   aria-expanded={coarsePointer ? statsOpen : undefined}
                   onClick={() => setStatsOpen((open) => !open)}
@@ -585,12 +580,12 @@ export default function GitHubContributions({ username, since, activeSince, mini
                 role="tooltip"
                 className="pointer-events-none absolute top-full right-0 mt-2 z-30 px-2 py-1 rounded-md border border-line-strong bg-surface-inverted/95 backdrop-blur-sm shadow-lg shadow-[color:var(--shadow-cast)] text-[10.5px] font-medium tracking-tight whitespace-nowrap text-ink-on-inverted opacity-0 -translate-y-1 group-hover/since:opacity-100 group-hover/since:translate-y-0 group-focus-within/since:opacity-100 group-focus-within/since:translate-y-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
               >
-                {t("gh.accountCreated")}{" "}
+                Account created{' '}
                 <span className="text-ink-strong">{formatMonthYear(since, locale)}</span>
                 {activeSince && (
                   <>
                     <span className="text-ink-faint"> · </span>
-                    {t("gh.firstCommit")}{" "}
+                    first commit{' '}
                     <span className="text-ink-strong">{formatDay(activeSince, locale)}</span>
                   </>
                 )}
@@ -605,7 +600,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
       {!minimal && (
         <div
           role="group"
-          aria-label={t("gh.selectYear")}
+          aria-label="Select year"
           className="flex items-center gap-1 mb-4 -mx-1 px-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {windows.map((w) => {
@@ -622,7 +617,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
                     : "border-transparent text-ink-subtle hover:text-ink hover:bg-surface-hover/60"
                 }`}
               >
-                {w === ROLLING ? t("gh.lastYear") : w}
+                {w === ROLLING ? 'Last 12 months' : w}
               </button>
             );
           })}
@@ -677,7 +672,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
 
             <div
               role="group"
-              aria-label={t("gh.title")}
+              aria-label="Contributions"
               className={`grid grid-flow-col transition-opacity duration-200 ${
                 offline ? "opacity-70" : "opacity-100"
               }`}
@@ -733,7 +728,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
                   setActive(true);
                 };
 
-                const label = `${day.count} ${t("gh.contributions")} · ${formatDay(day.date, locale)}`;
+                const label = `${day.count} contributions · ${formatDay(day.date, locale)}`;
                 const cellClass = `relative block rounded-[2px] ring-inset ring-[var(--hairline)] ring-1 hover:z-20 hover:scale-[1.45] hover:ring-ink-strong hover:shadow-[0_1px_6px_var(--shadow-cast)] focus-visible:z-20 focus-visible:scale-[1.45] focus-visible:ring-ink-strong focus-visible:ring-2 outline-none transition-[transform,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:hover:scale-100 ${revealClass} ${LEVEL_CLASSES[day.level]}`;
 
                 const shared = {
@@ -764,7 +759,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
                     href={dayUrl(username, day.date)}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label={`${label} — ${t("gh.viewDay")}`}
+                    aria-label={`${label} — View this day on GitHub`}
                     {...shared}
                   />
                 ) : (
@@ -792,9 +787,9 @@ export default function GitHubContributions({ username, since, activeSince, mini
           }}
         >
           <span className="text-ink-strong">
-            {hovered.day.count === 0 ? t("gh.none") : hovered.day.count}
+            {hovered.day.count === 0 ? 'No' : hovered.day.count}
           </span>{" "}
-          {hovered.day.count === 1 ? t("gh.contribution") : t("gh.contributions")}
+          {hovered.day.count === 1 ? 'contribution' : 'contributions'}
           <span className="text-ink-subtle">
             {" "}
             · {formatDay(hovered.day.date, locale)}
@@ -811,16 +806,16 @@ export default function GitHubContributions({ username, since, activeSince, mini
               {}
               {activeSince && (
                 <span className="block">
-                  {t("gh.started")} {formatDay(activeSince, locale)}
+                  Started using GitHub actively on {formatDay(activeSince, locale)}
                 </span>
               )}
               {}
-              {offline && <span className="block">{t("gh.cached")}</span>}
+              {offline && <span className="block">Showing a saved copy</span>}
             </span>
           )}
 
           <span className="flex items-center gap-1 text-ink-faint shrink-0">
-            <span className="hidden sm:inline mr-0.5">{t("gh.less")}</span>
+            <span className="hidden sm:inline mr-0.5">Less</span>
             {LEVEL_CLASSES.map((cls, i) => (
               <span
                 key={i}
@@ -828,7 +823,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
                 style={{ width: Math.min(cellSize, 11), height: Math.min(cellSize, 11) }}
               />
             ))}
-            <span className="hidden sm:inline ml-0.5">{t("gh.more")}</span>
+            <span className="hidden sm:inline ml-0.5">More</span>
           </span>
         </div>
       )}

@@ -39,7 +39,7 @@ export const DESK = [
 export const SOFTWARE = [
   {
     id: 'editor',
-    titleKey: 'uses.editor',
+    title: 'Editor & code',
     items: [
       { name: 'VS Code', icon: '/icons/vscode.svg', href: 'https://code.visualstudio.com' },
       { name: 'Xcode', icon: '/icons/xcode.svg' },
@@ -49,7 +49,7 @@ export const SOFTWARE = [
   },
   {
     id: 'design',
-    titleKey: 'uses.design',
+    title: 'Design',
     items: [
       { name: 'Figma', icon: '/icons/figma.svg', href: 'https://www.figma.com' },
       { name: 'Photoshop', icon: '/icons/photoshop.svg' },
@@ -59,7 +59,7 @@ export const SOFTWARE = [
   },
   {
     id: 'everyday',
-    titleKey: 'uses.everyday',
+    title: 'Everyday',
     items: [
       { name: 'Raycast', icon: '/icons/raycast.svg', href: 'https://www.raycast.com' },
       { name: 'Chrome', icon: '/icons/chrome.svg' },

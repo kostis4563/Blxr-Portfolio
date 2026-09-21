@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Icon } from './icon'
 import { Avatar, useDismiss, MENU, MENU_ITEM } from './account-menu'
-import LanguagePicker from './language-picker'
 import { Sensitive } from './sensitive'
-import { useI18n } from '../lib/i18n'
 import { useAuth, profileOf } from '../lib/supabase'
 import { loginUrlFor, authSignOut } from '../lib/auth'
 import { useUnread } from '../lib/messages-unread'
@@ -60,7 +58,7 @@ function PageItems({ pages, close }) {
   )
 }
 
-function SiteItems({ t, close }) {
+function SiteItems({ close }) {
   const [mac, setMac] = useState(null)
   useEffect(() => { setMac(isMacLike()) }, [])
 
@@ -68,10 +66,9 @@ function SiteItems({ t, close }) {
     <div className="border-b border-line p-1.5">
       <button role="menuitem" type="button" onClick={closeThen(close, openPalette)} className={MENU_ITEM}>
         <Icon name="search" className="h-4 w-4 text-ink-muted" />
-        <span className="flex-1 text-left">{t('cmd.open')}</span>
-        <kbd dir="ltr" aria-hidden="true" className={HINT}>{mac === null ? '' : mac ? '⌘K' : 'Ctrl K'}</kbd>
+        <span className="flex-1 text-left">Command palette</span>
+        <kbd aria-hidden="true" className={HINT}>{mac === null ? '' : mac ? '⌘K' : 'Ctrl K'}</kbd>
       </button>
-      <LanguagePicker label={t('nav.language')} className={MENU_ITEM} />
       <a role="menuitem" href={DISCORD_URL} target="_blank" rel="noreferrer" onClick={close} className={MENU_ITEM}>
         <svg className="h-4 w-4 text-ink-muted" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path d={SOCIAL_ICON_PATHS.Discord} />
@@ -98,17 +95,17 @@ function DotsButton({ className, open, toggle, label }) {
   )
 }
 
-function SignedOut({ t, itemClass, pages }) {
+function SignedOut({ itemClass, pages }) {
   return (
-    <Menu trigger={({ open, toggle }) => <DotsButton className={itemClass} open={open} toggle={toggle} label={t('nav.more')} />}>
+    <Menu trigger={({ open, toggle }) => <DotsButton className={itemClass} open={open} toggle={toggle} label="More" />}>
       {(close) => (
         <>
           <PageItems pages={pages} close={close} />
-          <SiteItems t={t} close={close} />
+          <SiteItems close={close} />
           <div className="p-1.5">
             <a role="menuitem" {...go(close, loginUrlFor(DASHBOARD_PATH))} className={MENU_ITEM}>
               <Icon name="user" className="h-4 w-4 text-ink-muted" />
-              <span className="flex-1 text-left">{t('nav.signIn')}</span>
+              <span className="flex-1 text-left">Sign in</span>
             </a>
           </div>
         </>
@@ -117,13 +114,13 @@ function SignedOut({ t, itemClass, pages }) {
   )
 }
 
-function SignedIn({ t, user, itemClass, pages }) {
+function SignedIn({ user, itemClass, pages }) {
   const unread = useUnread()
   const [signingOut, setSigningOut] = useState(false)
 
   const items = [
-    { path: DASHBOARD_PATH, icon: 'grid', label: t('cmd.dashboard') },
-    { path: MESSAGES_PATH, icon: 'message', label: t('cmd.messages'), badge: unread > 0 ? badgeOf(unread) : null },
+    { path: DASHBOARD_PATH, icon: 'grid', label: 'Dashboard' },
+    { path: MESSAGES_PATH, icon: 'message', label: 'Messages', badge: unread > 0 ? badgeOf(unread) : null },
   ]
   if (user.guest) items.unshift({ path: CLAIM_PATH, icon: 'key', label: 'Keep my work' })
 
@@ -140,7 +137,7 @@ function SignedIn({ t, user, itemClass, pages }) {
       type="button"
       title={user.name}
       onClick={toggle}
-      aria-label={unread > 0 ? `${t('nav.account')}, ${unread} ${t('cmd.unread')}` : t('nav.account')}
+      aria-label={unread > 0 ? `Account, ${unread} unread` : 'Account'}
       aria-expanded={open}
       aria-haspopup="menu"
       className={`${itemClass} relative cursor-pointer rounded-lg outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/30 aria-expanded:bg-surface-hover`}
@@ -171,7 +168,7 @@ function SignedIn({ t, user, itemClass, pages }) {
             </div>
           </div>
           <PageItems pages={pages} close={close} />
-          <SiteItems t={t} close={close} />
+          <SiteItems close={close} />
           <div className="p-1.5">
             {items.map((item) => (
               <a key={item.path} role="menuitem" {...go(close, item.path)} className={MENU_ITEM}>
@@ -182,7 +179,7 @@ function SignedIn({ t, user, itemClass, pages }) {
             ))}
             <button role="menuitem" type="button" onClick={signOut(close)} disabled={signingOut} className={`${MENU_ITEM} disabled:opacity-50`}>
               <Icon name="logout" className="h-4 w-4 text-ink-muted" />
-              {signingOut ? 'Leaving…' : user.guest ? 'Leave guest session' : t('cmd.signOut')}
+              {signingOut ? 'Leaving…' : user.guest ? 'Leave guest session' : 'Sign out'}
             </button>
           </div>
         </>
@@ -193,10 +190,9 @@ function SignedIn({ t, user, itemClass, pages }) {
 }
 
 export default function NavMenu({ itemClass = '', pages = [] }) {
-  const { t } = useI18n()
   const { session } = useAuth()
   const user = profileOf(session?.user)
 
-  if (!user) return <SignedOut t={t} itemClass={itemClass} pages={pages} />
-  return <SignedIn t={t} user={user} itemClass={itemClass} pages={pages} />
+  if (!user) return <SignedOut itemClass={itemClass} pages={pages} />
+  return <SignedIn user={user} itemClass={itemClass} pages={pages} />
 }

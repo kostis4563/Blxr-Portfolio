@@ -1,23 +1,17 @@
 import { renderToString } from 'react-dom/server'
 import Root from './root.jsx'
-import { langOf, localizedPaths, parseRoute, setServerPath, staticPaths } from './lib/router'
-import { preloadTable } from './lib/i18n'
-import { LANGUAGES } from './lib/languages'
+import { parseRoute, setServerPath, staticPaths } from './lib/router'
 import { headTags } from './lib/seo'
 
 export async function render(path = '/') {
-  const lang = langOf(path)
-  await preloadTable(lang)
   setServerPath(path)
   return {
     html: renderToString(<Root />),
     head: headTags(path),
-    lang,
-    dir: LANGUAGES.find((l) => l.code === lang)?.dir === 'rtl' ? 'rtl' : 'ltr',
   }
 }
 
-export { staticPaths, localizedPaths, parseRoute }
+export { staticPaths, parseRoute }
 
 export { metaFor, lastmodFor } from './lib/seo'
 

@@ -500,77 +500,6 @@ body {
   box-shadow: 0 12px 24px -14px var(--shadow-cast);
 }
 
-.quote-rule {
-  position: absolute;
-  background: var(--color-line);
-  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.quote-rule-x {
-  left: 0;
-  right: 0;
-  height: 1px;
-  transform: scaleX(0);
-  transform-origin: left;
-}
-.quote-rule-x.bottom-0 {
-  transform-origin: right;
-}
-.quote-rule-y {
-  top: -24px;
-  bottom: -24px;
-  width: 1px;
-  transform: scaleY(0);
-  transform-origin: top;
-}
-.quote-rule-y.right-0 {
-  transform-origin: bottom;
-}
-[data-in] .quote-rule {
-  transform: none;
-}
-.quote-tick {
-  opacity: 0;
-  transition: opacity 500ms ease 700ms;
-}
-[data-in] .quote-tick {
-  opacity: 1;
-}
-.quote-photo {
-  clip-path: inset(0 100% 0 0);
-  transition: clip-path 900ms cubic-bezier(0.22, 1, 0.36, 1) 250ms;
-}
-[data-in] .quote-photo {
-  clip-path: inset(0);
-}
-.quote-progress {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 1px;
-  width: 100%;
-  background: var(--color-ink-strong);
-  transform-origin: left;
-  transform: scaleX(0);
-  animation: quote-progress var(--dwell, 7000ms) linear both;
-}
-[data-paused] .quote-progress {
-  animation-play-state: paused;
-}
-@keyframes quote-progress {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .quote-rule,
-  .quote-tick,
-  .quote-photo {
-    transition: none;
-    transform: none;
-    opacity: 1;
-    clip-path: none;
-  }
-}
-
 .reveal-pending {
   opacity: 0;
   transform: translateY(18px);
@@ -685,14 +614,6 @@ body {
   transform-origin: 50% 90%;
 }
 
-@keyframes lang-in {
-  from { opacity: 0; transform: scale(0.94) translateY(-8px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-.animate-lang-in {
-  animation: lang-in 0.28s cubic-bezier(0.34, 1.4, 0.5, 1);
-}
-
 @keyframes cmd-in {
   from { opacity: 0; transform: scale(0.97) translateY(-10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -760,37 +681,6 @@ body {
   z-index: 2;
 }
 
-.lang-row-sel {
-  isolation: isolate;
-}
-.lang-row-sel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--color-ink-strong) 13%, transparent) 0%,
-    color-mix(in srgb, var(--color-ink-strong) 4%, transparent) 45%,
-    transparent 75%
-  );
-  pointer-events: none;
-}
-[dir='rtl'] .lang-row-sel::before {
-  background: linear-gradient(
-    to left,
-    color-mix(in srgb, var(--color-ink-strong) 13%, transparent) 0%,
-    color-mix(in srgb, var(--color-ink-strong) 4%, transparent) 45%,
-    transparent 75%
-  );
-}
-
-.lang-accent {
-  background: var(--color-ink-strong);
-  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--color-ink-strong) 50%, transparent);
-}
-
 .hero-title {
   color: var(--color-ink-strong);
 }
@@ -839,10 +729,6 @@ body {
   width: 0.09em;
   background: var(--hl-caret);
   animation: hl-blink 0.8s ease-in-out infinite alternate;
-}
-
-[dir='rtl'] .hl-word::before {
-  background: linear-gradient(to left, transparent, var(--hl-bg-via), var(--hl-bg-to));
 }
 
 @keyframes hl-blink {

@@ -242,22 +242,4 @@ export const LIBRARY_CATEGORIES = [...new Set(libraryList.map((entry) => entry.c
 
 export const hasPlaceholders = libraryList.some((entry) => entry.placeholder)
 
-export const LIB_METRIC_KEY = {
-  Framework: 'lib.metric.framework',
-  Type: 'lib.metric.type',
-  Status: 'lib.metric.status',
-  Stack: 'lib.metric.stack',
-  Base: 'lib.metric.base',
-  States: 'lib.metric.states',
-  Tracks: 'lib.metric.tracks',
-  Actions: 'lib.metric.actions',
-  Slots: 'lib.metric.slots'
-}
-
-export const LIB_VALUE_KEY = {
-  Placeholder: 'lib.value.placeholder',
-  Standalone: 'lib.value.standalone',
-  Server: 'lib.value.server'
-}
-
 export const findLibraryItem = (id) => libraryList.find((entry) => entry.id === id) ?? null

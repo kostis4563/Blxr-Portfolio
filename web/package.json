@@ -5,11 +5,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "locales": "node build-locales.js",
-    "predev": "npm run locales",
     "dev": "vite",
-    "prebuild": "npm run locales",
-    "prebuild:protected": "npm run locales",
     "build:client": "vite build",
     "build:server": "vite build --ssr src/entry-server.jsx --outDir dist-ssr --emptyOutDir",
     "prerender": "node prerender.js",
@@ -24,8 +20,7 @@
     "gsap": "^3.15.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "tailwindcss": "^4.3.3",
-    "three": "^0.186.0"
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

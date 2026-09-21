@@ -29,7 +29,6 @@ dist-ssr
 web/csp-script-hashes.txt
 web/early-hints.conf
 
-web/src/lib/locales/
 deploy/.env-overrides
 
 # local server state (STATE_DIRECTORY in server/.env)

@@ -12,8 +12,6 @@ import {
   authSignOutOthers, authDeleteAccount, mfaFactors, mfaEnroll, mfaVerify, mfaUnenroll, AUTH_PROVIDERS,
 } from './lib/auth'
 import { useDevicePrefs, setDevicePref, mergeAccountPrefs, DATE_FORMATS, timeZones, localTimeZone, formatDate } from './lib/prefs'
-import { LANGUAGES } from './lib/languages'
-import { useI18n } from './lib/i18n'
 import { clearRecent } from './lib/recent'
 import { SOCIAL_ICON_PATHS } from './lib/profile'
 import { normalizeUrl } from './lib/profiles'
@@ -455,7 +453,6 @@ function ConnectedAccounts({ user }) {
 }
 
 function RegionalPreferences({ prefs, setPref }) {
-  const { lang, setLang } = useI18n()
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000)
@@ -466,14 +463,7 @@ function RegionalPreferences({ prefs, setPref }) {
   const locale = prefs.locale
 
   return (
-    <Section id="regional" title="Language & region" description={`Preview: ${formatDate(now, locale)}`}>
-      <Row label="Site language" description="Used on the public site. The dashboard is English for now.">
-        <Select value={lang} onChange={(code) => setLang(code, { redirect: false })} ariaLabel="Site language" className="w-[200px]">
-          {LANGUAGES.map((l) => (
-            <option key={l.code} value={l.code}>{l.name}{l.code !== 'en' ? ` · ${l.english}` : ''}</option>
-          ))}
-        </Select>
-      </Row>
+    <Section id="regional" title="Region" description={`Preview: ${formatDate(now, locale)}`}>
       <Row label="Time zone" description="Times in the dashboard and in emails.">
         <Select value={locale.timezone} onChange={(v) => setPref('locale', 'timezone', v)} ariaLabel="Time zone" className="w-[240px]">
           <option value="auto">Automatic · {local}</option>

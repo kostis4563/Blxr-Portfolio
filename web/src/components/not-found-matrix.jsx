@@ -207,8 +207,6 @@ export default function NotFoundMatrix({ figure = '404', className = '' }) {
         ref={gridRef}
         role="img"
         aria-label={figure}
-
-        dir="ltr"
         className={life ? 'nf-grid is-life' : 'nf-grid'}
 
         style={{

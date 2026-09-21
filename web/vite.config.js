@@ -6,7 +6,7 @@ import JavaScriptObfuscator from 'javascript-obfuscator'
 
 const obfuscate = process.env.OBFUSCATE === '1'
 
-const ROUTE_PAGES = ['projects', 'library', 'reviews', 'now', 'uses', 'cv', 'login', 'dashboard', 'public-profile', 'not-found']
+const ROUTE_PAGES = ['projects', 'library', 'reviews', 'uses', 'cv', 'login', 'dashboard', 'public-profile', 'not-found']
 
 const pageSource = (name) => fileURLToPath(new URL(`./src/${name}-page.jsx`, import.meta.url))
 const stubPage = fileURLToPath(new URL('./src/stub-page.js', import.meta.url))
@@ -154,12 +154,11 @@ export default defineConfig(({ command, mode, isSsrBuild }) => ({
           groups: [
 
             { name: 'gsap', test: /[\\/]node_modules[\\/]gsap[\\/]/ },
-            { name: 'three', test: /[\\/]node_modules[\\/]three[\\/]/ },
             { name: 'vendor', test: /node_modules/ },
 
             {
               name: 'app',
-              test: /[\\/]src[\\/](?!lib[\\/](locales[\\/]|quote-portrait\.js)|components[\\/](command-palette\.jsx|dashboard-[^/]+\.jsx)|dashboard-[^/]+\.jsx$|(projects|library|reviews|now|uses|cv|login|dashboard|public-profile|not-found)-page\.jsx$)/,
+              test: /[\\/]src[\\/](?!components[\\/](command-palette\.jsx|dashboard-[^/]+\.jsx)|dashboard-[^/]+\.jsx$|(projects|library|reviews|now|uses|cv|login|dashboard|public-profile|not-found)-page\.jsx$)/,
             },
           ],
         },

@@ -1,22 +1,22 @@
-import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, NOW_PATH, USES_PATH, CV_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
-import { projectsList, SHORT_KEY } from './projects'
+import { projectsList } from './projects'
 import { libraryList } from './library'
 import { SECTIONS, jumpToSection } from './palette'
 import { fold } from './text-match'
 import { CONTACT_EMAIL, SOCIALS } from './profile'
 
-export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
-  const jump = t('cmd.group.jump')
-  const actions = t('cmd.group.actions')
-  const links = t('cmd.group.links')
-  const projects = t('home.projects')
+export function buildCommands({ theme, toggleTheme, signedIn = false }) {
+  const jump = 'Jump to'
+  const actions = 'Actions'
+  const links = 'Links'
+  const projects = 'Projects'
 
   const commands = [
     {
       id: 'page-home',
       group: jump,
-      label: t('cmd.home'),
+      label: 'Home',
       icon: 'home',
       href: HOME_PATH,
       run: () => navigate(HOME_PATH),
@@ -24,8 +24,8 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     {
       id: 'page-projects',
       group: jump,
-      label: t('proj.archiveTitle'),
-      hint: t('home.projectsCount', { n: projectsList.length }),
+      label: 'Projects Archive',
+      hint: `${projectsList.length} projects`,
       icon: 'archive',
       href: PROJECTS_PATH,
       run: () => navigate(PROJECTS_PATH),
@@ -33,8 +33,8 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     {
       id: 'page-library',
       group: jump,
-      label: t('lib.title'),
-      hint: t('lib.count', { n: libraryList.length }),
+      label: 'FiveM Library',
+      hint: `${libraryList.length} resources`,
       icon: 'archive',
       href: LIBRARY_PATH,
       run: () => navigate(LIBRARY_PATH),
@@ -43,28 +43,18 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     {
       id: 'page-reviews',
       group: jump,
-      label: t('rev.title'),
-      hint: t('rev.kicker'),
+      label: 'Reviews',
+      hint: 'Feedback',
       icon: 'star',
       href: REVIEWS_PATH,
       run: () => navigate(REVIEWS_PATH),
       keywords: 'reviews testimonials feedback rating stars',
     },
     {
-      id: 'page-now',
-      group: jump,
-      label: t('now.title'),
-      hint: t('now.kicker'),
-      icon: 'activity',
-      href: NOW_PATH,
-      run: () => navigate(NOW_PATH),
-      keywords: 'now currently learning building studying ib status',
-    },
-    {
       id: 'page-uses',
       group: jump,
-      label: t('uses.title'),
-      hint: t('uses.kicker'),
+      label: 'Uses',
+      hint: 'uses',
       icon: 'monitor',
       href: USES_PATH,
       run: () => navigate(USES_PATH),
@@ -73,8 +63,8 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     {
       id: 'page-cv',
       group: jump,
-      label: t('cv.title'),
-      hint: t('cv.kicker'),
+      label: 'CV',
+      hint: 'Curriculum vitae',
       icon: 'file',
       href: CV_PATH,
       run: () => navigate(CV_PATH),
@@ -84,7 +74,7 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     ...SECTIONS.map((section) => ({
       id: `section-${section.id}`,
       group: jump,
-      label: t(section.key),
+      label: section.label,
       icon: 'section',
       href: `${HOME_PATH}#${section.id}`,
       run: () => jumpToSection(section.id),
@@ -94,21 +84,21 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
       id: `project-${project.id}`,
       group: projects,
       label: project.title,
-      hint: t(`cat.${project.category}`, null, project.category),
+      hint: project.category,
       icon: 'project',
       href: projectPath(project.id),
       run: () => navigate(projectPath(project.id)),
 
-      keywords: `${project.tags.join(' ')} ${t(SHORT_KEY[project.id], null, project.shortDescription)}`,
+      keywords: `${project.tags.join(' ')} ${project.shortDescription}`,
     })),
 
     ...libraryList
       .filter((entry) => !entry.placeholder)
       .map((entry) => ({
         id: `library-${entry.id}`,
-        group: t('lib.title'),
+        group: 'FiveM Library',
         label: entry.title,
-        hint: t(`cat.${entry.category}`, null, entry.category),
+        hint: entry.category,
         icon: 'project',
         href: libraryPath(entry.id),
         run: () => navigate(libraryPath(entry.id)),
@@ -119,7 +109,7 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
       id: 'action-theme',
       group: actions,
 
-      label: theme === 'dark' ? t('cmd.themeLight') : t('cmd.themeDark'),
+      label: theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme',
       icon: theme === 'dark' ? 'sun' : 'moon',
       run: toggleTheme,
       keywords: 'theme dark light',
@@ -127,7 +117,7 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     {
       id: 'action-write-review',
       group: actions,
-      label: t('rev.write'),
+      label: 'Write a review',
       icon: 'star',
       href: WRITE_REVIEW_PATH,
       run: () => navigate(WRITE_REVIEW_PATH),
@@ -137,7 +127,7 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
       ? {
           id: 'page-dashboard',
           group: jump,
-          label: t('cmd.dashboard'),
+          label: 'Dashboard',
           icon: 'grid',
           href: DASHBOARD_PATH,
           run: () => navigate(DASHBOARD_PATH),
@@ -146,8 +136,8 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
       : {
           id: 'action-sign-in',
           group: actions,
-          label: t('cmd.signIn'),
-          hint: t('contact.dm.note'),
+          label: 'Sign in',
+          hint: 'Or contact me through the dashboard',
           icon: 'user',
           href: loginUrlFor(DASHBOARD_PATH),
           run: () => navigate(loginUrlFor(DASHBOARD_PATH)),
@@ -156,7 +146,7 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     {
       id: 'action-send-message',
       group: actions,
-      label: t('cmd.sendMessage'),
+      label: 'Send me a message',
       icon: 'message',
       href: dashboardPath('messages'),
       run: () => navigate(dashboardPath('messages')),
@@ -165,7 +155,7 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     signedIn && {
       id: 'action-sign-out',
       group: actions,
-      label: t('cmd.signOut'),
+      label: 'Sign out',
       icon: 'logout',
       run: () => authSignOut().then(() => navigate(LOGIN_PATH, { replace: true })),
       keywords: 'logout sign out',
@@ -173,12 +163,12 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     {
       id: 'action-copy-email',
       group: actions,
-      label: t('cmd.copyEmail'),
+      label: 'Copy email address',
       hint: CONTACT_EMAIL,
       icon: 'copy',
 
       run: () => navigator.clipboard?.writeText(CONTACT_EMAIL).catch(() => {}),
-      flash: t('contact.copied'),
+      flash: 'Copied',
     },
 
     ...SOCIALS.filter((social) => social.url).map((social) => ({
@@ -193,7 +183,7 @@ export function buildCommands({ t, theme, toggleTheme, signedIn = false }) {
     {
       id: 'link-email',
       group: links,
-      label: t('cmd.sendEmail'),
+      label: 'Send an email',
       hint: CONTACT_EMAIL,
       icon: 'mail',
       href: `mailto:${CONTACT_EMAIL}`,

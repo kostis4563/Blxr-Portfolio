@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useI18n } from '../lib/i18n'
 
 const STAR = 'M12 2.6l2.9 6.2 6.7.7-5 4.6 1.4 6.7L12 17.4l-6 3.4 1.4-6.7-5-4.6 6.7-.7z'
 const SLOTS = [1, 2, 3, 4, 5]
+const RATING_LABELS = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Very good', 5: 'Excellent' }
 
 function Star({ filled, className = '', style }) {
   return (
@@ -22,14 +22,13 @@ function Star({ filled, className = '', style }) {
 }
 
 export function Stars({ value, size = 13, className = '' }) {
-  const { t } = useI18n()
   const clamped = Math.max(0, Math.min(5, Number(value) || 0))
   const style = { width: size, height: size }
 
   return (
     <span
       role="img"
-      aria-label={t('rev.stars', { n: clamped })}
+      aria-label={`${clamped} out of 5 stars`}
       className={`relative inline-flex shrink-0 leading-none ${className}`}
     >
       <span className="flex gap-[2px] text-ink-faint" aria-hidden="true">
@@ -47,7 +46,6 @@ export function Stars({ value, size = 13, className = '' }) {
 }
 
 export function StarPicker({ value, onChange, invalid = false, name = 'rating', labelledBy }) {
-  const { t } = useI18n()
   const [hover, setHover] = useState(0)
   const shown = hover || value || 0
 
@@ -55,7 +53,7 @@ export function StarPicker({ value, onChange, invalid = false, name = 'rating', 
     <div
       role="radiogroup"
       aria-labelledby={labelledBy}
-      aria-label={labelledBy ? undefined : t('rev.form.rating')}
+      aria-label={labelledBy ? undefined : 'Your rating'}
       aria-invalid={invalid || undefined}
       className="flex flex-wrap items-center gap-x-4 gap-y-2"
       onPointerLeave={() => setHover(0)}
@@ -77,7 +75,7 @@ export function StarPicker({ value, onChange, invalid = false, name = 'rating', 
                 value={n}
                 checked={value === n}
                 onChange={() => onChange(n)}
-                aria-label={`${n} — ${t(`rev.rating.${n}`)}`}
+                aria-label={`${n} — ${RATING_LABELS[n]}`}
                 className="sr-only"
               />
               <Star
@@ -95,7 +93,7 @@ export function StarPicker({ value, onChange, invalid = false, name = 'rating', 
           shown ? 'text-ink-secondary' : invalid ? 'text-red-500' : 'text-ink-faint'
         }`}
       >
-        {shown ? t(`rev.rating.${shown}`) : t('rev.form.pickRating')}
+        {shown ? RATING_LABELS[shown] : 'Pick a rating'}
       </span>
     </div>
   )

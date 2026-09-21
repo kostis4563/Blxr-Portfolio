@@ -21,7 +21,7 @@ const EMAIL_ON = '<!--email_on-->'
 
 const {
   render,
-  localizedPaths,
+  staticPaths,
   metaFor,
   lastmodFor,
   parseRoute,
@@ -48,33 +48,20 @@ function outputFileFor(path) {
   return resolve(dist, `${path.replace(/^\//, '')}.html`)
 }
 
-const LOCALE_CHUNK_RE = /^([a-z]{2})-[A-Za-z0-9_-]+\.js$/
-const localeChunks = new Map()
-for (const name of await readdir(resolve(dist, 'assets'))) {
-  const match = LOCALE_CHUNK_RE.exec(name)
-  if (match) localeChunks.set(match[1], `/assets/${name}`)
-}
-
-function localePreloadFor(lang) {
-  const href = localeChunks.get(lang)
-  return href ? `<link rel="modulepreload" crossorigin href="${href}">` : ''
-}
-
-const pages = [...localizedPaths(), NOT_FOUND_PATH, LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH]
+const pages = [...staticPaths(), NOT_FOUND_PATH, LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH]
 const written = []
 
 for (const path of pages) {
-  const { html, head, lang, dir } = await render(path)
+  const { html, head } = await render(path)
   const out = template
-    .replace(HTML_RE, () => `<html lang="${lang}" dir="${dir}">`)
+    .replace(HTML_RE, () => '<html lang="en" dir="ltr">')
     .replace(TITLE_RE, () => head)
-    .replace('</head>', () => `${localePreloadFor(lang)}</head>`)
     .replace(ROOT_RE, () => `${EMAIL_OFF}<div id="root">${html}</div>${EMAIL_ON}`)
 
   const file = outputFileFor(path)
   await mkdir(dirname(file), { recursive: true })
   await writeFile(file, out)
-  written.push({ path, file, lang, bytes: out.length })
+  written.push({ path, file, bytes: out.length })
 }
 
 const templateHead = template.slice(0, template.indexOf('</head>'))
@@ -109,10 +96,10 @@ console.log(`prerender: ${hints.length} early-hint links -> early-hints.conf`)
 
 const SITE_URL = 'https://blxr.net'
 const buildDate = new Date().toISOString().slice(0, 10)
-const indexable = localizedPaths().filter((path) => !metaFor(path).noindex)
+const indexable = staticPaths().filter((path) => !metaFor(path).noindex)
 
 const exec = promisify(execFile)
-const SHARED_SOURCES = ['src/lib/i18n-tables.js', 'src/lib/seo.js', 'src/root.jsx']
+const SHARED_SOURCES = ['src/lib/seo.js', 'src/root.jsx']
 const ROUTE_SOURCES = {
   home: ['src/app.jsx', 'src/components', 'src/lib/projects.js', 'src/lib/skills.js'],
   projects: ['src/projects-page.jsx', 'src/lib/projects.js', 'src/components/project-cover.jsx'],
@@ -146,11 +133,7 @@ if (!fromGit) {
 const lastmodForPath = (path) =>
   lastmodFor(path) || routeDates.get(parseRoute(metaFor(path).route).name) || buildDate
 
-const priorityFor = (path) => {
-  const { lang, route } = metaFor(path)
-  if (lang === 'en') return route === '/' ? '1.0' : '0.8'
-  return route === '/' ? '0.7' : '0.5'
-}
+const priorityFor = (path) => (metaFor(path).route === '/' ? '1.0' : '0.8')
 const sitemap = [
   '<?xml version="1.0" encoding="UTF-8"?>',
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
@@ -183,30 +166,16 @@ await writeFile(join(here, 'csp-script-hashes.txt'), [...hashes].join(' '))
 await rm(resolve(here, 'dist-ssr'), { recursive: true, force: true })
 
 const kb = (n) => `${Math.round(n / 1024)} KB`
-for (const { path, file, lang, bytes } of written) {
-  if (lang !== 'en') continue
+for (const { path, file, bytes } of written) {
   console.log(`prerender: ${path.padEnd(20)} -> ${file.replace(`${dist}/`, '')} (${bytes} bytes)`)
 }
-const byLang = new Map()
-for (const page of written) {
-  const entry = byLang.get(page.lang) || { pages: 0, bytes: 0 }
-  entry.pages += 1
-  entry.bytes += page.bytes
-  byLang.set(page.lang, entry)
-}
-const translated = [...byLang].filter(([lang]) => lang !== 'en')
-for (const [lang, { pages: count, bytes }] of translated) {
-  console.log(`prerender: ${lang.padEnd(20)} -> ${String(count).padStart(2)} pages, ${kb(bytes)}`)
-}
 console.log(
-  `prerender: ${written.length} files across ${byLang.size} languages, ${kb(
-    written.reduce((sum, page) => sum + page.bytes, 0),
-  )} of HTML`,
+  `prerender: ${written.length} files, ${kb(written.reduce((sum, page) => sum + page.bytes, 0))} of HTML`,
 )
 console.log(
   `prerender: ${indexable.length} urls -> sitemap.xml` +
-    (localizedPaths().length - indexable.length
-      ? ` (${localizedPaths().length - indexable.length} noindex, omitted)`
+    (staticPaths().length - indexable.length
+      ? ` (${staticPaths().length - indexable.length} noindex, omitted)`
       : '') +
     (fromGit ? `, lastmod from git` : ''),
 )

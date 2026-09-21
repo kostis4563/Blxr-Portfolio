@@ -34,10 +34,10 @@ export function isMacLike() {
 }
 
 export const SECTIONS = [
-  { id: 'projects', key: 'home.projects' },
-  { id: 'skills', key: 'home.skills' },
-  { id: 'education', key: 'home.education' },
-  { id: 'contact', key: 'home.contact' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'education', label: 'Education' },
+  { id: 'contact', label: 'Contact' },
 ]
 
 export function jumpToSection(id) {

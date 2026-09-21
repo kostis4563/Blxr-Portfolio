@@ -1,4 +1,4 @@
-import { routeOf, parseRoute } from './router.js'
+import { normalizePath, parseRoute } from './router.js'
 
 const KEY = 'blxr-recent'
 const MAX = 6
@@ -13,7 +13,7 @@ export function readRecent() {
 }
 
 export function rememberVisit(pathname) {
-  const route = routeOf(pathname)
+  const route = normalizePath(pathname)
   if (parseRoute(route).name === 'notFound') return
   try {
     const list = [route, ...readRecent().filter((r) => r !== route)].slice(0, MAX)

@@ -2,18 +2,7 @@ import { useState, useEffect } from 'react'
 import ProjectCover from './components/project-cover'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
-import { useI18n } from './lib/i18n'
-import {
-  projectsList,
-  findProject,
-  isVideoLink,
-  SHORT_KEY,
-  FULL_KEY,
-  FEATURE_KEY,
-  METRIC_KEY,
-  METRIC_VALUE_KEY,
-  URL_LABEL_KEY
-} from './lib/projects'
+import { projectsList, findProject, isVideoLink } from './lib/projects'
 import { libraryList } from './lib/library'
 import { link, useRouteHash, LIBRARY_PATH } from './lib/router'
 import { imageProps, SIZES } from './lib/images'
@@ -24,15 +13,7 @@ const LABEL = 'text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-
 const ROW = 'grid gap-y-3 sm:grid-cols-[152px_minmax(0,1fr)] sm:gap-x-8'
 
 export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
-  const { t } = useI18n()
-
-  const tShort = (p) => t(SHORT_KEY[p.id], null, p.shortDescription)
-  const tFull = (p) => t(FULL_KEY[p.id], null, p.fullDescription)
-  const tFeature = (p, i) => (FEATURE_KEY[p.id] ? t(`${FEATURE_KEY[p.id]}.${i + 1}`, null, p.features[i]) : p.features[i])
-  const tCategory = (c) => t(`cat.${c}`, null, c)
-  const tMetricLabel = (label) => t(METRIC_KEY[label], null, label)
-  const tMetricValue = (value) => t(METRIC_VALUE_KEY[value], null, value)
-  const tAction = (p) => (p.urlLabel ? t(URL_LABEL_KEY[p.urlLabel], null, p.urlLabel) : t('proj.liveDemo'))
+  const actionLabel = (p) => p.urlLabel || 'Live Demo'
 
   const hash = useRouteHash()
   const targetId = hash ? findProject(decodeURIComponent(hash.slice(1)))?.id ?? null : null
@@ -97,7 +78,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
             className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
           >
             <span>←</span>
-            <span>{t('proj.backHome')}</span>
+            <span>Back to Home</span>
           </a>
           <div className="flex items-center gap-4">
             <CommandButton className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-strong transition-colors duration-200" />
@@ -115,14 +96,14 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
         <div className="w-full flex items-baseline justify-between gap-6">
           <div className="max-w-[560px] text-left">
             <h1 className="text-[28px] sm:text-[32px] font-bold text-ink-strong tracking-[-0.03em] leading-tight">
-              {t('home.projects')}
+              Projects
             </h1>
             <p className="mt-2 text-[14.5px] text-ink-muted leading-relaxed">
-              {t('home.libraryTagline')}
+              Everything I have built, with case studies, stacks and source.
             </p>
           </div>
           <span className="hidden sm:block font-mono text-[11px] text-ink-subtle shrink-0">
-            {t('home.projectsCount', { n: projectsList.length })}
+            {projectsList.length} projects
           </span>
         </div>
 
@@ -173,14 +154,14 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                     <button
                       type="button"
                       onClick={(event) => { event.stopPropagation(); play(project.id) }}
-                      aria-label={`${tAction(project)} — ${project.title}`}
+                      aria-label={`${actionLabel(project)} — ${project.title}`}
                       className="project-play absolute inset-0 flex items-end justify-start p-3 sm:p-4 outline-none cursor-pointer"
                     >
                       <span className="project-play-pill inline-flex items-center gap-2.5 h-11 pl-4 pr-5 rounded-full bg-black/55 text-white text-[13px] font-semibold backdrop-blur-md ring-1 ring-white/15">
                         <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white text-black">
                           <svg className="w-2.5 h-2.5 translate-x-px" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2.5 1.5v9l8-4.5z" /></svg>
                         </span>
-                        {tAction(project)}
+                        {actionLabel(project)}
                       </span>
                     </button>
                   )}
@@ -191,7 +172,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                     <p className="font-mono text-[11px] text-ink-subtle">
                       <span className="text-ink-faint">{String(index + 1).padStart(2, '0')}</span>
                       <span className="mx-2 text-ink-faint">/</span>
-                      {tCategory(project.category)} · {project.date}
+                      {project.category} · {project.date}
                     </p>
                     <h2 className="mt-2 text-[22px] sm:text-[24px] font-semibold leading-tight tracking-tight text-ink-strong">
                       <button
@@ -205,7 +186,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                       </button>
                     </h2>
                     <p className="mt-2 max-w-[560px] text-[14.5px] leading-relaxed text-ink-muted">
-                      {tShort(project)}
+                      {project.shortDescription}
                     </p>
                   </div>
 
@@ -213,12 +194,12 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                     <div className="flex items-center gap-5 shrink-0 text-[13px] font-medium">
                       {project.github && (
                         <a href={project.github} target="_blank" rel="noreferrer" className="text-ink-muted hover:text-ink-strong transition-colors">
-                          {t('proj.viewSource')} ↗
+                          View source ↗
                         </a>
                       )}
                       {project.url && (
                         <a href={project.url} target="_blank" rel="noreferrer" className="text-ink-strong hover:text-ink-muted transition-colors">
-                          {tAction(project)} ↗
+                          {actionLabel(project)} ↗
                         </a>
                       )}
                     </div>
@@ -231,10 +212,10 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                       {project.metrics.map((metric) => (
                         <div key={metric.label} className="min-w-0">
                           <div className="text-[14px] font-semibold text-ink-strong leading-snug">
-                            {tMetricValue(metric.value)}
+                            {metric.value}
                           </div>
                           <div className="mt-0.5 text-[10.5px] text-ink-subtle">
-                            {tMetricLabel(metric.label)}
+                            {metric.label}
                           </div>
                         </div>
                       ))}
@@ -247,7 +228,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                     onClick={() => toggle(project.id)}
                     className="project-toggle inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors cursor-pointer outline-none rounded-md focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
                   >
-                    <span>{isOpen ? t('proj.hideDetails') : t('home.viewDetails')}</span>
+                    <span>{isOpen ? 'Hide details' : 'View details'}</span>
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="m6 9 6 6 6-6" />
                     </svg>
@@ -258,26 +239,26 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                   <div>
                     <div className="project-details-inner pt-8" inert={!isOpen}>
                       <section className={ROW}>
-                        <h3 className={LABEL}>{t('proj.overview')}</h3>
+                        <h3 className={LABEL}>Overview</h3>
                         <p className="text-[14px] leading-[1.75] text-ink-secondary">
-                          {tFull(project)}
+                          {project.fullDescription}
                         </p>
                       </section>
 
                       <section className={`${ROW} mt-8`}>
-                        <h3 className={LABEL}>{t('proj.keyFeatures')}</h3>
+                        <h3 className={LABEL}>Key Features</h3>
                         <ul className="flex flex-col gap-2.5">
                           {project.features.map((_, i) => (
                             <li key={i} className="flex gap-3 text-[13.5px] leading-relaxed text-ink-secondary">
                               <span className="text-ink-faint shrink-0" aria-hidden="true">—</span>
-                              <span>{tFeature(project, i)}</span>
+                              <span>{project.features[i]}</span>
                             </li>
                           ))}
                         </ul>
                       </section>
 
                       <section className={`${ROW} mt-8`}>
-                        <h3 className={LABEL}>{t('proj.technologies')}</h3>
+                        <h3 className={LABEL}>Technologies</h3>
                         <p className="font-mono text-[12px] leading-relaxed text-ink-muted">
                           {project.tags.join(' · ')}
                         </p>
@@ -285,7 +266,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
 
                       {project.gallery?.length > 0 && (
                         <section className={`${ROW} mt-8`}>
-                          <h3 className={LABEL}>{t('proj.gallery')}</h3>
+                          <h3 className={LABEL}>Gallery</h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {project.gallery.map((item, i) => {
                               const wide = i === 0 && project.gallery.length % 2 === 1
@@ -314,7 +295,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                         onClick={() => collapse(project.id)}
                         className="mt-8 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-subtle hover:text-ink-strong transition-colors cursor-pointer"
                       >
-                        <span>{t('proj.hideDetails')}</span>
+                        <span>Hide details</span>
                         <span aria-hidden="true">↑</span>
                       </button>
                     </div>
@@ -330,11 +311,11 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
           className="group w-full mt-12 pt-8 border-t border-line flex items-center justify-between gap-4 cursor-pointer"
         >
           <div className="min-w-0">
-            <p className="font-mono text-[11px] text-ink-subtle">FiveM · {t('lib.count', { n: libraryList.length })}</p>
-            <p className="mt-1 text-[15px] font-semibold text-ink-strong tracking-tight">{t('lib.title')}</p>
+            <p className="font-mono text-[11px] text-ink-subtle">FiveM · {libraryList.length} resources</p>
+            <p className="mt-1 text-[15px] font-semibold text-ink-strong tracking-tight">FiveM Library</p>
           </div>
           <span className="text-[13px] font-medium text-ink-muted group-hover:text-ink-strong group-hover:translate-x-0.5 transition-all shrink-0">
-            {t('lib.open')} →
+            Open library →
           </span>
         </a>
 

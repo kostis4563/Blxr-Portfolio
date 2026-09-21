@@ -85,7 +85,7 @@ function Confirm({ label, onConfirm, className = DANGER }) {
   )
 }
 
-function ReviewRow({ item, lang, busy, onOpen, onPatch, onCopy, copied }) {
+function ReviewRow({ item, busy, onOpen, onPatch, onCopy, copied }) {
   const open = () => onOpen(item.id)
   const stop = (fn) => (e) => {
     e.stopPropagation()
@@ -113,8 +113,8 @@ function ReviewRow({ item, lang, busy, onOpen, onPatch, onCopy, copied }) {
           {flagsOf(item).map(([flag, cls]) => (
             <span key={flag} className={`${CHIP} ${cls}`}>{flag}</span>
           ))}
-          <time dateTime={item.at} title={absoluteTime(item.at, lang)} className="ms-auto whitespace-nowrap font-mono text-[11px] text-ink-subtle">
-            {relativeTime(item.at, lang)}
+          <time dateTime={item.at} title={absoluteTime(item.at)} className="ms-auto whitespace-nowrap font-mono text-[11px] text-ink-subtle">
+            {relativeTime(item.at)}
           </time>
         </div>
         <p className="mt-2 line-clamp-2 whitespace-pre-line text-[13.5px] leading-relaxed text-ink-secondary">{item.text}</p>
@@ -154,7 +154,7 @@ function Field({ label, hint, children }) {
   )
 }
 
-function ReviewDialog({ item, list, lang, busy, onPatch, onDelete, onOpen, onClose }) {
+function ReviewDialog({ item, list, busy, onPatch, onDelete, onOpen, onClose }) {
   const [draft, setDraft] = useState(() => ({ name: item.name, role: item.role || '', rating: item.rating, text: item.text, reply: item.reply?.text || '' }))
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(false)
@@ -273,7 +273,7 @@ function ReviewDialog({ item, list, lang, busy, onPatch, onDelete, onOpen, onClo
             <h2 id="rv-dialog-title" className="text-[20px] font-bold tracking-tight text-ink-strong">{item.name}</h2>
             <Stars value={item.rating} size={13} />
             <span className="font-mono text-[11px] text-ink-subtle">#{item.id}</span>
-            <time dateTime={item.at} className="ms-auto font-mono text-[11px] text-ink-subtle">{absoluteTime(item.at, lang)}</time>
+            <time dateTime={item.at} className="ms-auto font-mono text-[11px] text-ink-subtle">{absoluteTime(item.at)}</time>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -304,7 +304,7 @@ function ReviewDialog({ item, list, lang, busy, onPatch, onDelete, onOpen, onClo
           </div>
 
           <div className="mt-4">
-            <Field label="Reply from you" hint={item.reply ? `posted ${relativeTime(item.reply.at, lang)}` : 'shown under the review'}>
+            <Field label="Reply from you" hint={item.reply ? `posted ${relativeTime(item.reply.at)}` : 'shown under the review'}>
               <textarea
                 rows={3}
                 className={`${INPUT} resize-y`}
@@ -319,7 +319,7 @@ function ReviewDialog({ item, list, lang, busy, onPatch, onDelete, onOpen, onClo
           {(item.auto || item.invited || item.editedAt) && (
             <p className="mt-4 text-[12px] text-ink-subtle">
               {item.auto ? 'Posted automatically after an invite expired. ' : item.invited ? 'Submitted through an invite link. ' : ''}
-              {item.editedAt ? `Edited ${relativeTime(item.editedAt, lang)}.` : ''}
+              {item.editedAt ? `Edited ${relativeTime(item.editedAt)}.` : ''}
             </p>
           )}
         </div>
@@ -365,7 +365,7 @@ function ReviewDialog({ item, list, lang, busy, onPatch, onDelete, onOpen, onClo
   )
 }
 
-function Invites({ invites, lang, busy, onCreate, onRevoke, onCopy, copied }) {
+function Invites({ invites, busy, onCreate, onRevoke, onCopy, copied }) {
   const [draft, setDraft] = useState({ name: '', role: '', text: '', rating: 5, days: INVITE_DAYS })
   const [created, setCreated] = useState(null)
   const [error, setError] = useState(null)
@@ -453,7 +453,7 @@ function Invites({ invites, lang, busy, onCreate, onRevoke, onCopy, copied }) {
                 </p>
                 <p className="mt-0.5 font-mono text-[10.5px] text-ink-faint">
                   {invite.status === 'pending'
-                    ? `expires ${relativeTime(invite.expiresAt, lang)}`
+                    ? `expires ${relativeTime(invite.expiresAt)}`
                     : invite.reviewId
                       ? `→ #${invite.reviewId}${invite.auto ? ' (automatic)' : ''}`
                       : 'expired'}
@@ -548,7 +548,7 @@ function Settings({ settings, reviews, busy, onSave }) {
   )
 }
 
-export default function ReviewPanel({ tab, auth = () => ({}), lang, onUnauthorized, onData }) {
+export default function ReviewPanel({ tab, auth = () => ({}), onUnauthorized, onData }) {
   const [data, setData] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -622,7 +622,6 @@ export default function ReviewPanel({ tab, auth = () => ({}), lang, onUnauthoriz
   const dialogList = tab === 'overview' ? pending : filtered
   const openItem = openId && data ? data.reviews.find((r) => r.id === openId) : null
   const rowProps = {
-    lang,
     busy,
     onCopy: copy,
     onOpen: setOpenId,
@@ -699,7 +698,7 @@ export default function ReviewPanel({ tab, auth = () => ({}), lang, onUnauthoriz
         </div>
       ) : tab === 'invites' ? (
         <div className="w-full">
-          <Invites invites={data.invites} lang={lang} busy={busy} copied={copied} onCopy={copy}
+          <Invites invites={data.invites} busy={busy} copied={copied} onCopy={copy}
             onCreate={(draft) => run((opts) => createInvite(draft, opts))}
             onRevoke={(token) => run((opts) => deleteInvite(token, opts))} />
         </div>
@@ -715,7 +714,6 @@ export default function ReviewPanel({ tab, auth = () => ({}), lang, onUnauthoriz
           key={openItem.id}
           item={openItem}
           list={dialogList.length ? dialogList : [openItem]}
-          lang={lang}
           busy={busy}
           onPatch={rowProps.onPatch}
           onDelete={(id) => run((opts) => panelDeleteReview(id, opts))}
