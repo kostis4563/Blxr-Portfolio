@@ -21,7 +21,7 @@ import { useTheme } from './lib/use-theme'
 import { useI18n } from './lib/i18n'
 import { projectsList, SHORT_KEY, METRIC_KEY, METRIC_VALUE_KEY } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
-import { SKILL_CATEGORIES, TOOL_CATEGORIES, CERTIFICATIONS, themedIconFor, skillUsage } from './lib/skills'
+import { SKILL_CATEGORIES, TOOL_CATEGORIES, FEATURED_CERTIFICATIONS, themedIconFor, skillUsage } from './lib/skills'
 import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
 import { CV_ROLE } from './lib/cv'
@@ -281,7 +281,7 @@ function App() {
     }
   ]
 
-  const certifications = CERTIFICATIONS.map((cert) => ({ ...cert, tier: t(cert.tierKey) }))
+  const certifications = FEATURED_CERTIFICATIONS.map((cert) => ({ ...cert, tier: t(cert.tierKey) }))
 
   const themedIcon = themedIconFor(theme)
 
@@ -963,9 +963,7 @@ function App() {
                     )
                   })}
                 </div>
-                <p className="mt-3 text-[10.5px] text-ink-faint">
-                  {t('cert.note')}
-                </p>
+                <p className="mt-3 text-[10.5px] text-ink-faint">{t('cert.note')}</p>
               </div>
             </div>
           </div>

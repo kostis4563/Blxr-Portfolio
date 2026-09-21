@@ -1,13 +1,5 @@
 import { projectsList } from './projects'
 import { libraryList } from './library'
-
-export const SKILL_LEVELS = {
-  advanced: { key: 'level.advanced', rank: 4, bar: 'bg-emerald-400' },
-  comfortable: { key: 'level.comfortable', rank: 3, bar: 'bg-sky-400' },
-  basic: { key: 'level.basic', rank: 2, bar: 'bg-zinc-300' },
-  learning: { key: 'level.learning', rank: 1, bar: 'bg-amber-400' },
-}
-
 export const SKILL_CATEGORIES = [
   {
     nameKey: 'skills.languages',
@@ -21,22 +13,18 @@ export const SKILL_CATEGORIES = [
   {
     nameKey: 'skills.frameworks',
     items: [
-      { name: 'React', icon: '/icons/react_dark.svg', level: 'comfortable', desc: 'React is a JavaScript library for building user interfaces.' },
       { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'comfortable', desc: 'Bootstrap is a framework for building responsive websites.' },
       { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'comfortable', desc: 'Utility-first CSS framework' },
-      { name: 'discord.js', icon: '/icons/discordjs.svg', level: 'advanced', desc: 'Node.js library for Discord bots' },
     ],
   },
   {
     nameKey: 'skills.infrastructure',
     items: [
-      { name: 'MySQL', icon: '/icons/mysql-icon-dark.svg', level: 'basic', desc: 'Relational database management' },
       { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable', desc: 'Process manager for Node.js' },
       { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', desc: 'CDN, DNS & edge security' },
     ],
   },
 ]
-
 export const TOOL_CATEGORIES = [
   {
     nameKey: 'tools.development',
@@ -65,7 +53,6 @@ export const TOOL_CATEGORIES = [
       { name: 'VS Code', icon: '/icons/vscode.svg', desc: 'Code editor' },
       { name: 'Visual Studio', icon: '/icons/visual-studio.svg', desc: 'IDE for app development' },
       { name: 'Xcode', icon: '/icons/xcode.svg', desc: "Apple's IDE for iOS & macOS" },
-      { name: 'Komodo', icon: '/icons/komodo_dark.svg', desc: 'Lightweight code editor' },
     ],
   },
   {
@@ -79,12 +66,14 @@ export const TOOL_CATEGORIES = [
 ]
 
 export const CERTIFICATIONS = [
-  { name: 'JavaScript', tierKey: 'tier.intermediate', issuer: 'HackerRank', date: null, url: null },
+  { name: 'JavaScript', tierKey: 'tier.intermediate', issuer: 'HackerRank', date: null, url: null, featured: true },
   { name: 'JavaScript', tierKey: 'tier.basic', issuer: 'HackerRank', date: null, url: null },
   { name: 'Python', tierKey: 'tier.basic', issuer: 'HackerRank', date: null, url: null },
   { name: 'Go', tierKey: 'tier.basic', issuer: 'HackerRank', date: null, url: null },
   { name: 'CSS', tierKey: 'tier.basic', issuer: 'HackerRank', date: null, url: null },
 ]
+
+export const FEATURED_CERTIFICATIONS = CERTIFICATIONS.filter((cert) => cert.featured)
 
 export const LIGHT_THEME_ICONS = {
   '/icons/apple_dark.svg': '/icons/apple.svg',
@@ -98,7 +87,6 @@ export const LIGHT_THEME_ICONS = {
 
 export const themedIconFor = (theme) => (url) => (theme   === 'light' ? LIGHT_THEME_ICONS[url] ?? url : url)
 
-// Which shipped work used a skill, matched against project tags ('JavaScript 4.4%' counts as 'JavaScript').
 const tagKey = (tag) => tag.replace(/\s+\d+(\.\d+)?%$/, '').toLowerCase()
 const usesTag = (entry, key) => entry.tags?.some((tag) => tagKey(tag) === key)
 

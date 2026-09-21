@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { Icon } from './components/icon'
@@ -20,7 +21,6 @@ import {
   CV_EDUCATION,
   CV_SKILLS,
   CV_TOOLS,
-  CV_CERTIFICATIONS,
   CV_LANGUAGES,
 } from './lib/cv'
 import { SKILL_LEVELS, themedIconFor } from './lib/skills'
@@ -62,7 +62,7 @@ function SectionHeading({ kicker, title, id }) {
     <div className="mb-2 flex w-full items-end justify-between gap-4">
       <div>
         <p className={`${KICKER} mb-2`}>{kicker}</p>
-        <h2 id={id} className="text-[22px] font-semibold tracking-tight text-ink-strong sm:text-[24px]">
+        <h2 id={id} className="scroll-mt-20 text-[22px] font-semibold tracking-tight text-ink-strong sm:text-[24px]">
           {title}
         </h2>
       </div>
@@ -225,6 +225,13 @@ export default function CvPage({ theme, onToggleTheme }) {
   const projects = CV_PROJECT_IDS.map((id) => projectsList.find((project) => project.id === id)).filter(Boolean)
 
   const print = () => window.print()
+
+  // Deep links such as /cv#cv-skills land on their section.
+  useEffect(() => {
+    const id = window.location.hash.slice(1)
+    if (!id) return
+    document.getElementById(id)?.scrollIntoView({ block: 'start' })
+  }, [])
 
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
@@ -399,38 +406,17 @@ export default function CvPage({ theme, onToggleTheme }) {
           </div>
         </section>
 
-        {/* Certifications + Languages */}
-        <section aria-labelledby="cv-certs" className="w-full mb-14">
-          <SectionHeading id="cv-certs" kicker="05" title={t('cv.certsAndLanguages')} />
-          <div className="grid w-full grid-cols-1 gap-x-12 md:grid-cols-2">
-            <div>
-              <p className={`${KICKER} mb-1 mt-4`}>{t('cv.certifications')}</p>
-              <ul>
-                {CV_CERTIFICATIONS.map((cert, index) => (
-                  <li key={index} className="flex items-baseline justify-between gap-4 border-b border-dashed border-line py-3 last:border-b-0 text-[13px]">
-                    <span className="text-ink-secondary">
-                      {cert.name}
-                      <span className="text-ink-subtle"> · </span>
-                      <span className="text-ink-muted">{t(cert.tierKey)}</span>
-                    </span>
-                    <span className="font-mono text-[10.5px] text-ink-subtle">{cert.issuer}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 text-[10.5px] text-ink-faint">{t('cert.note')}</p>
-            </div>
-            <div>
-              <p className={`${KICKER} mb-1 mt-4`}>{t('cv.languages')}</p>
-              <ul>
-                {CV_LANGUAGES.map((item) => (
-                  <li key={item.name} className="flex items-baseline justify-between gap-4 border-b border-dashed border-line py-3 last:border-b-0 text-[13px]">
-                    <span className="text-ink-secondary">{item.name}</span>
-                    <span className="font-mono text-[10.5px] text-ink-subtle">{item.level}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+        {/* Languages */}
+        <section aria-labelledby="cv-languages" className="w-full mb-14">
+          <SectionHeading id="cv-languages" kicker="05" title={t('cv.languages')} />
+          <ul className="w-full max-w-[640px]">
+            {CV_LANGUAGES.map((item) => (
+              <li key={item.name} className="flex items-baseline justify-between gap-4 border-b border-dashed border-line py-3 last:border-b-0 text-[13px]">
+                <span className="text-ink-secondary">{item.name}</span>
+                <span className="font-mono text-[10.5px] text-ink-subtle">{item.level}</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* Footer */}

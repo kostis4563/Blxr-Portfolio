@@ -1,13 +1,13 @@
 import { CONTACT_EMAIL, GITHUB_URL, GITHUB_USERNAME, DISCORD_URL } from './profile'
 
-export const CV_UPDATED = '2026-09-18'
+export const CV_UPDATED = '2026-09-21'
 
 export const CV_NAME = 'Kostis Nomikos'
 export const CV_HANDLE = GITHUB_USERNAME
 export const CV_LOCATION = 'Athens, Greece'
 export const CV_TIMEZONE = 'EET / EEST (UTC+2 / UTC+3)'
 
-export const CV_ROLE = { key: 'hero.bio2', fallback: 'Full stack developer specializing in backend systems, mobile apps and user interfaces.' }
+export const CV_ROLE = { key: 'hero.bio2', fallback: 'Full stack developer specializing in backend systems and user interfaces.' }
 export const CV_STATUS = { key: 'hero.bio1', fallback: 'IB Diploma student based in Athens.' }
 
 export const CV_SUMMARY =
@@ -20,7 +20,6 @@ export const CV_CONTACT = [
   { label: 'Email', value: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}`, sensitive: true },
   { label: 'Web', value: 'blxr.net', href: 'https://blxr.net' },
   { label: 'GitHub', value: `github.com/${GITHUB_USERNAME}`, href: GITHUB_URL },
-  { label: 'Discord', value: 'blxr__', href: DISCORD_URL },
 ]
 
 export const CV_EXPERIENCE = [
@@ -37,7 +36,7 @@ export const CV_EXPERIENCE = [
       'Ship React + Vite frontends with Tailwind, backed by Express APIs and nginx on self managed Linux.',
       'The person answering a client\'s messages is the person building the project.',
     ],
-    stack: ['React', 'Vite', 'Tailwind CSS', 'Express', 'nginx'],
+    stack: ['React', 'Tailwind CSS', 'Express'],
   },
   {
     role: { key: 'exp.async.role', fallback: 'Full Stack Developer' },
@@ -86,9 +85,10 @@ export const CV_EDUCATION = [
   },
 ]
 
-export { SKILL_CATEGORIES as CV_SKILLS, TOOL_CATEGORIES as CV_TOOLS, CERTIFICATIONS as CV_CERTIFICATIONS } from './skills'
+export { SKILL_CATEGORIES as CV_SKILLS, TOOL_CATEGORIES as CV_TOOLS } from './skills'
 
 export const CV_LANGUAGES = [
   { name: 'Greek', level: 'Native' },
   { name: 'English', level: 'Fluent' },
+  { name: 'French', level: 'B1' },
 ]
