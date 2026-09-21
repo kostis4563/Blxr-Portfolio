@@ -54,9 +54,9 @@ Everything in `guard.mjs`, applied before any route runs:
 - **Rate limits.** Token buckets per address, refilled continuously, all
   per minute: `all` 300 for anything; `auth` 30 for routes that verify a
   bearer token (`/api/logs`, the panel, invites, `/api/mail/*`,
-  `/api/account/*`, `/api/discord/start`, `/api/discord/result/*`,
+  `/api/account/*`, `/api/discord/user`,
   `/api/github/stats` with a token); `upstream` 90 for `/api/music/*`,
-  `/api/github/*` and `/api/discord/callback`; `write` 12 for review posts and edits;
+  `/api/github/*` and `/api/discord/user`; `write` 12 for review posts and edits;
   `beacon` 60 for hits, vitals and browser error reports; reads of
   `/api/hits` and `/api/vitals` count as `auth`. Over the limit
   answers `429 rate_limited` with `Retry-After`. nginx has a coarser
@@ -297,29 +297,20 @@ startup) posts a review under the invite's `name` and `role` with the chosen
 otherwise, flagged `auto: true` in the API. Invited submissions skip approval
 and the rate limit.
 
-### Discord: `POST /api/discord/start`, `GET /api/discord/callback`, `GET /api/discord/result/<state>`
-Dashboard → Profile → **Add from Discord**. There is no bot: the member
-authorises the Discord application Supabase already signs people in with
-(`DISCORD_CLIENT_ID` + `DISCORD_CLIENT_SECRET`, scope `identify` only) in a
-popup, and the server reads `/users/@me` once with the resulting token,
-then revokes it. Without both variables (or `SITE_URL`) every route answers
-`503 discord_disabled`. The application must list
-`SITE_URL/api/discord/callback` under **OAuth2 → Redirects**.
+### Discord: `GET /api/discord/user?id=<snowflake>`
+Dashboard → Profile → **Import from Discord**. No OAuth and no account
+linking: the member pastes their Discord user ID and the server reads the
+public user object. `Authorization: Bearer <supabase access token>` is
+required when Supabase is configured (`401 unauthorized` otherwise), so the
+route is never an anonymous lookup proxy. `id` must be a 17–20 digit
+snowflake (`400 bad_id`). Unknown ID: `404 not_found`; Discord throttling:
+`429 rate_limited`; anything else `502 discord_failed`. Cached 10 minutes
+per ID.
 
-- `POST /api/discord/start` — `Authorization: Bearer <supabase access
-  token>` (`401` otherwise). Answers `{ "url": "https://discord.com/oauth2/authorize?…", "state": "…" }`;
-  the dashboard opens `url` in a popup. A state is bound to the caller's
-  account and lives 10 minutes.
-- `GET /api/discord/callback?code&state` — where Discord sends the popup.
-  Swaps the code for a token, reads the profile, stores it under the state
-  and shows a plain "you can close this window" page (no script, so the
-  CSP needs no hash). A refused consent or an upstream failure is stored the
-  same way and shown as an error page.
-- `GET /api/discord/result/<state>` — bearer, same account that started it
-  (`404 expired` otherwise or after 10 minutes). `{ "pending": true }` until
-  the popup finishes, then `{ "user": … }` **once** — the entry is deleted
-  on read. `403 denied` when consent was refused, `502 discord_failed` when
-  Discord did not answer.
+**With `DISCORD_BOT_TOKEN` set**, reads Discord's own `GET /users/{id}` (any
+bot token works — the bot needs no intents, permissions or servers).
+Without it, or when that call fails, proxies the public `japi.rest` mirror,
+which relays the same user object.
 
 ```json
 { "user": { "id": "80351110224678912", "username": "nelly", "displayName": "Nelly",
@@ -333,9 +324,8 @@ then revokes it. Without both variables (or `SITE_URL`) every route answers
 
 `banner`, `decoration`, `nameplate` and `tag` are `null` when the account has
 none. Every URL points at `cdn.discordapp.com`, which the CSP and the
-`profiles` table constraints allow; nothing is downloaded or kept
-server-side beyond those 10 minutes. `start` and `result` count in the
-`auth` bucket, the callback in `upstream`. Consumed by `web/src/lib/discord.js`.
+`profiles` table constraints allow; nothing is downloaded server-side. Counts
+in the `auth` and `upstream` buckets. Consumed by `web/src/lib/discord.js`.
 
 ### `GET /api/github/contributions?user=<login>&y=last|YYYY`
 `user` must be a valid GitHub login (`400 bad_user` otherwise) **and one
@@ -470,6 +460,8 @@ identifier stored. Counts loads, not visitors.
 | Artwork | `i.ytimg.com` |
 | Contributions, developer stats | `api.github.com` (GraphQL + REST, only with `GITHUB_TOKEN`) |
 | Contributions fallback | `github-contributions-api.jogruber.de` |
+| Discord profile import | `discord.com/api` (only with `DISCORD_BOT_TOKEN`) |
+| Discord import fallback | `japi.rest` |
 
 All keyless and public. Playback itself doesn't go through here — browser
 loads YouTube's IFrame API directly (`web/src/lib/youtube-engine.js`).

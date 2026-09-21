@@ -26,11 +26,9 @@ jobs:
       - name: Stage server secrets
         env:
           GITHUB_TOKEN_VALUE: ${{ secrets.BLXR_GITHUB_TOKEN }}
-          DISCORD_CLIENT_ID_VALUE: ${{ secrets.BLXR_DISCORD_CLIENT_ID }}
-          DISCORD_CLIENT_SECRET_VALUE: ${{ secrets.BLXR_DISCORD_CLIENT_SECRET }}
+          DISCORD_BOT_TOKEN_VALUE: ${{ secrets.BLXR_DISCORD_BOT_TOKEN }}
         run: |
           printf 'GITHUB_TOKEN=%s\n' "$GITHUB_TOKEN_VALUE" > "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'DISCORD_CLIENT_ID=%s\n' "$DISCORD_CLIENT_ID_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'DISCORD_CLIENT_SECRET=%s\n' "$DISCORD_CLIENT_SECRET_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
+          printf 'DISCORD_BOT_TOKEN=%s\n' "$DISCORD_BOT_TOKEN_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
 
       - run: sudo bash "$GITHUB_WORKSPACE/deploy/deploy.sh"
