@@ -749,13 +749,14 @@ function App() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-5 w-full border-t border-dashed border-line pt-8 text-[14px]">
+          {/* Hovering one chip fades the rest of the block so the eye lands on it. */}
+          <div className="flex flex-col gap-5 w-full border-t border-dashed border-line pt-8 text-[14px] [&:has(.skill-chip:hover)_.skill-chip:not(:hover)]:opacity-45">
             {skillCategories.map((category, idx) => (
               <div
                 key={idx}
-                className="grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-2 sm:gap-6 w-full"
+                className="group/row grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-2 sm:gap-6 w-full"
               >
-                <span className="text-ink-subtle font-medium select-none">
+                <span className="text-ink-subtle font-medium select-none transition-colors duration-200 group-hover/row:text-ink-secondary">
                   {category.name}
                 </span>
 
@@ -766,14 +767,16 @@ function App() {
                     const chipProps = skill.url
                       ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer', title: `${skill.name} — official site`, 'aria-label': `${skill.name} — official site (opens in a new tab)` }
                       : {}
+                    // Negative margins cancel the padding, so the pill background appears on hover without shifting the row.
                     return (
                       <Chip
                         key={skill.name}
                         {...chipProps}
-                        className={`group/chip inline-flex items-center gap-2 text-ink-muted text-[12.5px] font-medium outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong ${
-                          skill.url ? 'cursor-pointer rounded-md focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-4 focus-visible:ring-offset-bg' : 'cursor-default'
+                        className={`skill-chip group/chip inline-flex items-center gap-2 -mx-1.5 -my-1 rounded-md px-1.5 py-1 text-ink-muted text-[12.5px] font-medium outline-none transition-[background-color,color,opacity,transform] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:-translate-y-px hover:bg-surface-hover hover:text-ink-strong focus-visible:-translate-y-px focus-visible:bg-surface-hover focus-visible:text-ink-strong motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0 ${
+                          skill.url ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg' : 'cursor-default'
                         }`}
                       >
+                        {/* Icon pops with a slight overshoot and tilt; the name slides a hair to the right behind it. */}
                         <img
                           {...imageProps(skill.icon)}
                           alt=""
@@ -782,9 +785,11 @@ function App() {
                           height="14"
                           loading="lazy"
                           decoding="async"
-                          className="w-3.5 h-3.5 object-contain opacity-70 transition-opacity duration-200 group-hover/chip:opacity-100 group-focus-visible/chip:opacity-100"
+                          className="w-3.5 h-3.5 object-contain opacity-70 grayscale transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover/chip:-rotate-6 group-hover/chip:scale-125 group-hover/chip:opacity-100 group-hover/chip:grayscale-0 group-focus-visible/chip:-rotate-6 group-focus-visible/chip:scale-125 group-focus-visible/chip:opacity-100 group-focus-visible/chip:grayscale-0 motion-reduce:transition-none motion-reduce:group-hover/chip:rotate-0 motion-reduce:group-hover/chip:scale-100 motion-reduce:group-focus-visible/chip:rotate-0 motion-reduce:group-focus-visible/chip:scale-100"
                         />
-                        <span>{skill.name}</span>
+                        <span className="transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover/chip:translate-x-0.5 group-focus-visible/chip:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/chip:translate-x-0 motion-reduce:group-focus-visible/chip:translate-x-0">
+                          {skill.name}
+                        </span>
                       </Chip>
                     )
                   })}
