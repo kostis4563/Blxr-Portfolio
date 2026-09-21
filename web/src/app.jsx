@@ -18,10 +18,9 @@ import NavMenu from './components/nav-menu'
 import { useTheme } from './lib/use-theme'
 import { projectsList } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
-import { SKILL_CATEGORIES, TOOL_CATEGORIES, themedIconFor, skillUsage } from './lib/skills'
+import { SKILL_CATEGORIES, TOOL_CATEGORIES, themedIconFor } from './lib/skills'
 import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
-import { CV_ROLE } from './lib/cv'
 import { Icon } from './components/icon'
 import { applyHead } from './lib/seo'
 import { recordHit } from './lib/api'
@@ -171,6 +170,9 @@ function App() {
         .filter((metric) => metric.value.length <= 18)
         .slice(0, 2)
     }))
+  const restCount = projectsList.length - featuredProjects.length
+  // Small counts read better as words in a sentence.
+  const countWord = (n) => ['zero', 'one', 'two', 'three', 'four', 'five', 'six'][n] ?? String(n)
 
   const goToSlide = (index, behavior) => {
     const track = carouselRef.current
@@ -256,6 +258,13 @@ function App() {
   const pauseCarousel = () => setCarouselPaused(true)
   const resumeCarousel = () => setCarouselPaused(false)
 
+  // "a, b and c" for the subjects line. Lowercased because it's mid-sentence.
+  const listSentence = (items) => {
+    const words = items.map((item) => item.toLowerCase())
+    if (words.length < 2) return words.join('')
+    return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
+  }
+
   const educationEntries = [
     {
       period: `2025 – Present`,
@@ -274,16 +283,9 @@ function App() {
 
   const themedIcon = themedIconFor(theme)
 
-  // A skill links to the work that used it — the library search when it shows up there, else the featured project(s).
-  const skillProof = (name) => {
-    const { featured, library } = skillUsage(name)
-    if (library) return { href: `${LIBRARY_PATH}?q=${encodeURIComponent(name)}`, count: library }
-    if (featured.length) return { href: featured.length === 1 ? projectPath(featured[0]) : PROJECTS_PATH, count: featured.length }
-    return null
-  }
   const skillCategories = SKILL_CATEGORIES.map((category) => ({
     name: category.name,
-    items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon), proof: skillProof(item.name) }))
+    items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon) }))
   }))
 
   const toolCategories = TOOL_CATEGORIES.map((category) => ({
@@ -489,15 +491,16 @@ function App() {
           </h1>
 
           {}
-          <p className="max-w-[56ch] text-[15px] text-ink-muted leading-[1.6] animate-fade-in-up delay-150">
-            {CV_ROLE}
+          <p className="max-w-[54ch] text-[15px] text-ink-muted leading-[1.6] animate-fade-in-up delay-150">
+            I'm Kostis. I build the whole thing: the backend, the interface on top of it, and the Linux box it ships to.
+            Most of it so far has been security tooling for FiveM communities, plus client work through a studio I run.
           </p>
 
           {}
           <dl className="mt-6 flex flex-col gap-2.5 text-[13.5px] leading-[1.55] animate-fade-in-up delay-300">
             {[
-              { key: 'now', label: 'Currently', value: 'IB Diploma student in Athens, Greece' },
-              { key: 'building', label: 'Building', value: 'Backend systems and the interfaces on top of them: websites, applications and game servers' },
+              { key: 'now', label: 'Currently', value: 'Final year of the IB Diploma in Athens, so most of this gets built after school' },
+              { key: 'stack', label: 'Mostly', value: 'TypeScript, React and Express, with C++ when it has to run on the machine itself' },
               { key: 'studio', label: 'Studio', value: 'Not a house, but a home <3' }
             ].map((fact) => (
               <div key={fact.key} className="grid grid-cols-[5.5rem_1fr] gap-x-4 items-baseline">
@@ -522,37 +525,41 @@ function App() {
           </dl>
 
           {}
-          <div className="mt-7 flex items-center gap-2.5 animate-fade-in-up delay-450">
+          <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3 animate-fade-in-up delay-450">
             <a
               {...link(PROJECTS_PATH, () => openProject(null))}
-              className="project-cta group inline-flex h-10 items-center gap-2 rounded-full bg-surface-inverted pl-5 pr-4 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+              className="project-cta group inline-flex h-10 items-center gap-2 rounded-[10px] bg-surface-inverted pl-4 pr-3.5 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
-              <span>Projects</span>
+              <span>See the work</span>
               <span className="project-arrow inline-block" aria-hidden="true">→</span>
             </a>
             <a
               {...link(CV_PATH)}
-              className="inline-flex h-10 items-center rounded-full border border-line px-5 text-[13px] font-medium text-ink outline-none transition-colors duration-200 hover:border-line-strong hover:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+              className="group inline-flex items-center gap-1.5 text-[13px] text-ink-muted outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong"
             >
-              CV
+              <span>or read the CV</span>
+              <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5">→</span>
             </a>
           </div>
         </section>
 
         <section id="projects" className="scroll-mt-8 w-full mt-14">
 
-          <div ref={projectsRef} className="flex flex-col items-center w-full">
-            <div data-reveal className="flex flex-col items-center text-center">
-              <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink-subtle">
-                <span className="tabular-nums" aria-live="polite">
+          <div ref={projectsRef} className="flex flex-col items-start w-full">
+            <div data-reveal className="flex w-full flex-col items-start text-left">
+              <div className="flex w-full items-baseline justify-between gap-4">
+                <h2 className="text-[22px] leading-none tracking-[-0.02em] text-ink-strong sm:text-[26px] font-bagus">
+                  Projects
+                </h2>
+                <span className="font-mono text-[11px] tabular-nums text-ink-subtle" aria-live="polite">
                   {String(activeSlide + 1).padStart(2, '0')}
                   <span className="mx-1.5 text-ink-faint">/</span>
                   {String(featuredProjects.length).padStart(2, '0')}
                 </span>
-              </span>
-              <h2 className="mt-3 text-[22px] leading-none tracking-[-0.02em] text-ink-strong sm:text-[26px] font-bagus">
-                Projects
-              </h2>
+              </div>
+              <p className="mt-3 max-w-[48ch] text-[13.5px] leading-relaxed text-ink-muted">
+                The {countWord(featuredProjects.length)} I'd show first. The rest, and the FiveM library, are on the projects page.
+              </p>
             </div>
 
             <div
@@ -673,7 +680,7 @@ function App() {
               </button>
             </div>
 
-            <div data-reveal style={{ '--reveal-delay': '160ms' }} className="mt-5 flex items-center gap-1.5" role="tablist" aria-label="Choose project">
+            <div data-reveal style={{ '--reveal-delay': '160ms' }} className="mt-5 flex items-center gap-1.5 self-center" role="tablist" aria-label="Choose project">
               {featuredProjects.map((project, idx) => (
                 <button
                   key={project.id}
@@ -697,20 +704,52 @@ function App() {
               {...link(PROJECTS_PATH, () => openProject(null))}
               data-reveal
               style={{ '--reveal-delay': '220ms' }}
-              className="project-cta group relative mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-surface-inverted pl-5 pr-4 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+              className="group relative mt-6 inline-flex items-center gap-1.5 self-center text-[13px] font-medium text-ink-muted outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong"
             >
-              <span>Browse all</span>
-              <span className="project-arrow inline-block" aria-hidden="true">→</span>
+              <span>The other {countWord(restCount)}, plus the library</span>
+              <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5">→</span>
             </a>
           </div>
         </section>
 
         <section id="skills" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
-            Skills
+            Background
           </h2>
 
-          <div className="flex flex-col gap-5 w-full text-[14px]">
+          {/* School first, then the tools. One section rather than two, since the second is really a footnote to the first. */}
+          <div id="education" className="scroll-mt-8 flex flex-col">
+            {educationEntries.map((entry, idx) => (
+              <div
+                key={idx}
+                className="grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-1 sm:gap-6 pb-8 text-left"
+              >
+                <div className="text-[12px] font-mono text-ink-subtle sm:pt-px">
+                  {entry.period}
+                </div>
+
+                <div>
+                  <h3 className="text-[14px] font-medium text-ink-strong">
+                    {entry.degree}
+                    <span className="text-ink-subtle font-normal"> · </span>
+                    <span className="font-normal text-ink-muted">{entry.org}</span>
+                  </h3>
+
+                  <p className="text-ink-muted text-[13px] leading-relaxed mt-1.5 max-w-xl">
+                    {entry.description}
+                  </p>
+
+                  {entry.subjects?.length > 0 && (
+                    <p className="mt-2.5 max-w-xl text-[12.5px] leading-relaxed text-ink-subtle">
+                      The CS side covers {listSentence(entry.subjects)}.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-5 w-full border-t border-dashed border-line pt-8 text-[14px]">
             {skillCategories.map((category, idx) => (
               <div
                 key={idx}
@@ -722,16 +761,17 @@ function App() {
 
                 <div className="flex flex-wrap gap-x-5 gap-y-3">
                   {category.items.map((skill) => {
-                    const Chip = skill.proof ? 'a' : 'span'
-                    const chipProps = skill.proof
-                      ? { ...link(skill.proof.href), title: `Used in ${skill.proof.count} projects`, 'aria-label': `${skill.name} — Used in ${skill.proof.count} projects` }
+                    // Each chip opens the official site for that language / framework / service.
+                    const Chip = skill.url ? 'a' : 'span'
+                    const chipProps = skill.url
+                      ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer', title: `${skill.name} — official site`, 'aria-label': `${skill.name} — official site (opens in a new tab)` }
                       : {}
                     return (
                       <Chip
                         key={skill.name}
                         {...chipProps}
                         className={`group/chip inline-flex items-center gap-2 text-ink-muted text-[12.5px] font-medium outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong ${
-                          skill.proof ? 'cursor-pointer rounded-md focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-4 focus-visible:ring-offset-bg' : 'cursor-default'
+                          skill.url ? 'cursor-pointer rounded-md focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-4 focus-visible:ring-offset-bg' : 'cursor-default'
                         }`}
                       >
                         <img
@@ -878,51 +918,6 @@ function App() {
               </aside>
             </div>
           </details>
-        </section>
-
-        <section id="education" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
-          <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
-            Education
-          </h2>
-
-          {}
-          <div className="flex flex-col">
-            {educationEntries.map((entry, idx) => (
-              <div
-                key={idx}
-                className="grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-1 sm:gap-6 py-4 border-b border-line last:border-b-0 text-left"
-              >
-                <div className="text-[12px] font-mono text-ink-subtle sm:pt-px">
-                  {entry.period}
-                </div>
-
-                <div>
-                  <h3 className="text-[14px] font-medium text-ink-strong">
-                    {entry.degree}
-                    <span className="text-ink-subtle font-normal"> · </span>
-                    <span className="font-normal text-ink-muted">{entry.org}</span>
-                  </h3>
-
-                  <p className="text-ink-muted text-[12.5px] leading-relaxed font-light mt-1 max-w-xl">
-                    {entry.description}
-                  </p>
-
-                  {entry.subjects?.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3.5">
-                      {entry.subjects.map((subject) => (
-                        <span
-                          key={subject}
-                          className="px-2.5 py-1 rounded-md border border-line bg-surface-raised/60 text-[11.5px] text-ink-muted"
-                        >
-                          {subject}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
         </section>
 
         <ContactSection />

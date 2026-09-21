@@ -330,7 +330,7 @@ export default function CvPage({ theme, onToggleTheme }) {
             ))}
           </ol>
           <a {...link(PROJECTS_PATH)} className="group mt-5 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-muted transition-colors duration-200 hover:text-ink-strong print:hidden">
-            <span>Browse all</span>
+            <span>All {projectsList.length} projects</span>
             <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">→</span>
           </a>
         </section>

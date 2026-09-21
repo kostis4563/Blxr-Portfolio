@@ -7,14 +7,14 @@ export const CV_HANDLE = GITHUB_USERNAME
 export const CV_LOCATION = 'Athens, Greece'
 export const CV_TIMEZONE = 'EET / EEST (UTC+2 / UTC+3)'
 
-export const CV_ROLE = 'Full stack developer specializing in backend systems and user interfaces.'
-export const CV_STATUS = 'IB Diploma student based in Athens.'
+export const CV_ROLE = 'Developer working across backends, the interfaces on top of them, and the servers underneath.'
+export const CV_STATUS = 'Final year of the IB Diploma, Athens.'
 
 export const CV_SUMMARY =
-  'Full stack developer in the final year of the IB Diploma Programme. I build the whole thing: React frontends, ' +
-  'Node and Express backends, and the Linux box it ships to. Most of my work has been security tooling and UIs for ' +
-  'FiveM communities, plus client sites through my own studio. I like working close to the product and shipping ' +
-  'things that still work once real people use them.'
+  'Final year of the IB Diploma Programme, building software on the side since 2023. I do the whole thing: React ' +
+  'frontends, Node and Express backends, and the Linux box it ships to. Most of my work so far has been security ' +
+  'tooling and UIs for FiveM communities, plus client sites through my own studio. I like being close to the ' +
+  'product, and I care most about whether it still works once real people are using it.'
 
 export const CV_CONTACT = [
   { label: 'Email', value: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}`, sensitive: true },

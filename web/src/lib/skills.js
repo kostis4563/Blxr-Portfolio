@@ -12,24 +12,24 @@ export const SKILL_CATEGORIES = [
   {
     name: 'Languages',
     items: [
-      { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable', desc: 'Scripting language for the web' },
-      { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', desc: 'General purpose scripting & automation' },
-      { name: 'CSS', icon: '/icons/css.svg', level: 'advanced', desc: 'Styling & layout for the web' },
-      { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced', desc: 'Markup that structures web pages' },
+      { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable', url: 'https://developer.mozilla.org/docs/Web/JavaScript', desc: 'Scripting language for the web' },
+      { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', url: 'https://www.python.org', desc: 'General purpose scripting & automation' },
+      { name: 'CSS', icon: '/icons/css.svg', level: 'advanced', url: 'https://developer.mozilla.org/docs/Web/CSS', desc: 'Styling & layout for the web' },
+      { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced', url: 'https://developer.mozilla.org/docs/Web/HTML', desc: 'Markup that structures web pages' },
     ],
   },
   {
     name: 'Frameworks',
     items: [
-      { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'comfortable', desc: 'Bootstrap is a framework for building responsive websites.' },
-      { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'comfortable', desc: 'Utility-first CSS framework' },
+      { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'comfortable', url: 'https://getbootstrap.com', desc: 'Bootstrap is a framework for building responsive websites.' },
+      { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'comfortable', url: 'https://tailwindcss.com', desc: 'Utility-first CSS framework' },
     ],
   },
   {
     name: 'Infrastructure',
     items: [
-      { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable', desc: 'Process manager for Node.js' },
-      { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', desc: 'CDN, DNS & edge security' },
+      { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable', url: 'https://pm2.keymetrics.io', desc: 'Process manager for Node.js' },
+      { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', url: 'https://www.cloudflare.com', desc: 'CDN, DNS & edge security' },
     ],
   },
 ]

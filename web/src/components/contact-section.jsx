@@ -69,7 +69,7 @@ function EmailCard() {
 function SocialsRow() {
   return (
     <Row label="Elsewhere">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {SOCIALS.map((social) => {
           const Wrapper = social.url ? 'a' : 'span'
           const props = social.url ? { href: social.url, target: '_blank', rel: 'noreferrer' } : {}
@@ -77,15 +77,15 @@ function SocialsRow() {
             <Wrapper
               key={social.name}
               {...props}
-              className={`inline-flex items-center gap-2 rounded-lg border border-line bg-surface-raised/60 px-2.5 py-1 text-[12px] text-ink-secondary transition-colors duration-200 ${
-                social.url ? 'group cursor-pointer hover:border-line-strong hover:text-ink-strong' : ''
+              className={`inline-flex items-center gap-2 text-[12.5px] text-ink-secondary transition-colors duration-200 ${
+                social.url ? 'group cursor-pointer hover:text-ink-strong' : ''
               }`}
             >
               <svg aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-ink-subtle transition-colors duration-200 group-hover:text-ink-strong" fill="currentColor" viewBox="0 0 24 24">
                 <path d={SOCIAL_ICON_PATHS[social.name]} />
               </svg>
               <span className="font-medium">{social.name}</span>
-              {social.handle && <span className="text-ink-subtle">{social.handle}</span>}
+              {social.handle && <span className="font-mono text-[12px] text-ink-subtle">{social.handle}</span>}
             </Wrapper>
           )
         })}
@@ -101,7 +101,10 @@ export default function ContactSection() {
     <section id="contact" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
       <h2 className="mb-8 text-[20px] tracking-tight text-ink-strong font-vergilia">Contact</h2>
 
-      <p className="mb-6 max-w-xl text-[13.5px] font-light leading-relaxed text-ink-muted">Pick whichever is easier. I read everything that comes in, and a short message is completely fine. Happy to talk about anything on this page, or about whatever you're building.</p>
+      <p className="mb-6 max-w-xl text-[13.5px] leading-relaxed text-ink-muted">
+        Email is the reliable one. It doesn't need to be long, and I reply to all of it, one-liners included.
+        If it's about a project, a link to whatever you have so far saves us both a round trip.
+      </p>
 
       <EmailCard />
 
@@ -111,7 +114,7 @@ export default function ContactSection() {
         className="group mt-3 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-line px-5 py-3.5 text-[13px] text-ink-muted transition-colors duration-200 hover:border-line-strong hover:text-ink-strong sm:px-6"
       >
         <Icon name="message" className="h-4 w-4 shrink-0 text-ink-subtle transition-colors duration-200 group-hover:text-ink-strong" strokeWidth={1.8} />
-        <span className="flex-1">{session ? 'Open your thread' : 'Or contact me through the dashboard'}</span>
+        <span className="flex-1">{session ? 'Open your thread' : 'Or start a private thread here. You\'ll need to sign in first.'}</span>
         <Arrow />
       </a>
 
@@ -120,8 +123,8 @@ export default function ContactSection() {
         <Row label="More">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <a {...link(REVIEWS_PATH)} className={ARROW_LINK}><span>Worked with me? Leave a review</span><Arrow /></a>
-            <a {...link(USES_PATH)} className={ARROW_LINK}><span>See what I use</span><Arrow /></a>
-            <a {...link(CV_PATH)} className={ARROW_LINK}><span>Read my CV</span><Arrow /></a>
+            <a {...link(USES_PATH)} className={ARROW_LINK}><span>The desk, the editor, the rest of it</span><Arrow /></a>
+            <a {...link(CV_PATH)} className={ARROW_LINK}><span>CV</span><Arrow /></a>
           </div>
         </Row>
       </div>
