@@ -49,7 +49,9 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
       : tMetricValue(metric.value)
 
   const selectedItem = findLibraryItem(openItemId)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(() =>
+    typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('q') || ''
+  )
   const [selectedCategory, setSelectedCategory] = useState('All')
 
   const closeItem = useCallback(() => backOr(LIBRARY_PATH), [])

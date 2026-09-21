@@ -74,25 +74,18 @@ export const translations = {
     'contact.copy': 'Copy',
     'contact.copied': 'Copied',
     'contact.based': 'Based in Athens, Greece · EET / EEST',
-    'contact.dm.kicker': 'Direct message',
-    'contact.dm.title': 'Write to me here',
-    'contact.dm.body': 'A private thread between the two of us, right here on the site. Your message lands in my dashboard, I get pinged, and you can pick it up again any time.',
-    'contact.dm.private': 'Private',
-    'contact.dm.files': 'Files welcome',
-    'contact.dm.notify': 'Reply alerts by email',
-    'contact.dm.start': 'Start a conversation',
     'contact.dm.open': 'Open your thread',
-    'contact.dm.note': 'Sign in with Google, Discord or GitHub',
-    'contact.dm.online': 'Online now',
+    'contact.dm.dashboard': 'Or contact me through the dashboard',
     'contact.email.kicker': 'Email',
-    'contact.email.hint': 'Hover or tap to reveal',
     'contact.more': 'More',
-    'contact.email.reveal': 'Email address, hover or tap to reveal',
     'contact.email.open': 'Open in your mail app',
     'contact.elsewhere': 'Elsewhere',
     'cmd.sendMessage': 'Send me a message',
     'nav.signIn': 'Sign in',
     'nav.account': 'Account',
+    'nav.more': 'More',
+    'nav.about': 'About',
+    'skills.usedIn': 'Used in {n} projects',
     'cmd.signIn': 'Sign in',
     'cmd.signOut': 'Sign out',
     'cmd.dashboard': 'Dashboard',
@@ -655,25 +648,18 @@ export const translations = {
     'contact.copy': 'Αντιγραφή',
     'contact.copied': 'Αντιγράφηκε',
     'contact.based': 'Με έδρα την Αθήνα, Ελλάδα · EET / EEST',
-    'contact.dm.kicker': 'Άμεσο μήνυμα',
-    'contact.dm.title': 'Γράψτε μου από εδώ',
-    'contact.dm.body': 'Μια ιδιωτική συζήτηση ανάμεσα στους δυο μας, εδώ στο site. Τίποτα να εγκαταστήσετε, κανένα inbox να ψάξετε: το μήνυμά σας φτάνει στο dashboard μου και ειδοποιούμαι.',
-    'contact.dm.private': 'Ιδιωτικό',
-    'contact.dm.files': 'Αρχεία ευπρόσδεκτα',
-    'contact.dm.notify': 'Ειδοποιήσεις απάντησης με email',
-    'contact.dm.start': 'Ξεκινήστε μια συζήτηση',
     'contact.dm.open': 'Ανοίξτε τη συζήτησή σας',
-    'contact.dm.note': 'Σύνδεση με Google, Discord ή GitHub',
-    'contact.dm.online': 'Online τώρα',
+    'contact.dm.dashboard': 'Ή επικοινωνήστε μαζί μου μέσω του dashboard',
     'contact.email.kicker': 'Email',
-    'contact.email.hint': 'Hover ή πάτημα για εμφάνιση',
     'contact.more': 'Περισσότερα',
-    'contact.email.reveal': 'Διεύθυνση email, hover ή πάτημα για εμφάνιση',
     'contact.email.open': 'Άνοιγμα στην εφαρμογή email',
     'contact.elsewhere': 'Αλλού',
     'cmd.sendMessage': 'Στείλτε μου μήνυμα',
     'nav.signIn': 'Σύνδεση',
     'nav.account': 'Λογαριασμός',
+    'nav.more': 'Περισσότερα',
+    'nav.about': 'Σχετικά',
+    'skills.usedIn': 'Σε {n} projects',
     'cmd.signIn': 'Σύνδεση',
     'cmd.signOut': 'Αποσύνδεση',
     'cmd.dashboard': 'Πίνακας ελέγχου',
@@ -6106,6 +6092,17 @@ const REVIEW_PANEL_LABELS = {
   }
 }
 mergeLabels(REVIEW_PANEL_LABELS)
+
+const HERO_LABELS = {
+  'hero.location': {
+    en: 'Athens, Greece', es: 'Atenas, Grecia', fr: 'Athènes, Grèce', de: 'Athen, Griechenland', it: 'Atene, Grecia', pt: 'Atenas, Grécia',
+    el: 'Αθήνα, Ελλάδα', nl: 'Athene, Griekenland', ru: 'Афины, Греция', ja: 'ギリシャ、アテネ', zh: '希腊雅典', ar: 'أثينا، اليونان',
+    no: 'Athen, Hellas', hi: 'एथेंस, ग्रीस', id: 'Athena, Yunani', tr: 'Atina, Yunanistan', ko: '그리스 아테네', pl: 'Ateny, Grecja',
+    vi: 'Athens, Hy Lạp', uk: 'Афіни, Греція', sv: 'Aten, Grekland', da: 'Athen, Grækenland', fi: 'Ateena, Kreikka', bg: 'Атина, Гърция',
+    ro: 'Atena, Grecia', sr: 'Атина, Грчка', cs: 'Atény, Řecko', th: 'เอเธนส์ ประเทศกรีซ', bn: 'এথেন্স, গ্রিস', fa: 'آتن، یونان', he: 'אתונה, יוון', hu: 'Athén, Görögország'
+  }
+}
+mergeLabels(HERO_LABELS)
 
 const CV_LABELS = {
   'cv.title': {

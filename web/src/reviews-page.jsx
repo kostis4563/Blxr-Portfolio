@@ -953,7 +953,7 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
           id="write"
           ref={formRef}
           aria-labelledby="write-heading"
-          className="mt-16 w-full scroll-mt-24 border-t border-dashed border-line pt-10"
+          className="mt-16 w-full scroll-mt-8 border-t border-dashed border-line pt-10"
         >
           <div className="mb-7 max-w-[560px]">
             <h2 id="write-heading" className="text-[22px] font-bold tracking-tight text-ink-strong">

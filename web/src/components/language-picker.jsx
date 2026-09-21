@@ -21,7 +21,7 @@ function Key({ children, wide = false }) {
   )
 }
 
-export default function LanguagePicker({ className = '' }) {
+export default function LanguagePicker({ className = '', label = null }) {
   const { lang, setLang, t } = useI18n()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -190,7 +190,7 @@ export default function LanguagePicker({ className = '' }) {
   return (
     <div
       ref={wrapRef}
-      className="relative h-full flex items-center"
+      className={label ? 'relative' : 'relative h-full flex items-center'}
       onKeyDown={open ? onPanelKey : undefined}
 
       onBlur={(e) => {
@@ -208,6 +208,7 @@ export default function LanguagePicker({ className = '' }) {
         aria-expanded={open}
         aria-label={`${t('nav.language')} — ${activeLang.name}`}
         title={t('nav.language')}
+        role={label ? 'menuitem' : undefined}
         className={`${className} group`}
       >
         {}
@@ -219,8 +220,9 @@ export default function LanguagePicker({ className = '' }) {
           <path strokeLinecap="round" d="M3 12h18" />
           <path strokeLinecap="round" d="M12 3c2.5 2.5 3.75 5.5 3.75 9S14.5 18.5 12 21c-2.5-2.5-3.75-5.5-3.75-9S9.5 5.5 12 3z" />
         </svg>
+        {label && <span className="flex-1 text-left">{label}</span>}
         {}
-        <span dir="ltr" className="font-mono text-[10.5px] uppercase tracking-[0.1em] leading-none pt-px">
+        <span dir="ltr" className={`font-mono uppercase tracking-[0.1em] leading-none pt-px ${label ? 'text-[10px] text-ink-subtle' : 'text-[10.5px]'}`}>
           {lang}
         </span>
         <svg
@@ -237,6 +239,7 @@ export default function LanguagePicker({ className = '' }) {
           ref={panelRef}
           role="dialog"
           aria-label={t('nav.language')}
+          data-menu-portal=""
 
           onPointerDown={(e) => {
             if (!keyboard || e.target.closest('button, input')) return

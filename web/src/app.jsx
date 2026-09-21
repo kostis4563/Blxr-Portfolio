@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 're
 
 const AUTOPLAY_MS = 6000
 import GitHubContributions from './components/github-contribution'
-import AnimatedFooter from './components/animated-footer'
 import Testimonials from './components/testimonials'
 import ContactSection from './components/contact-section'
 import ProjectsPageImpl from '#ssr-page/projects'
@@ -16,18 +15,18 @@ import DashboardPageImpl from '#ssr-page/dashboard'
 import PublicProfilePageImpl from '#ssr-page/public-profile'
 import NotFoundPageImpl from '#ssr-page/not-found'
 import ThemeToggle from './components/theme-toggle'
-import LanguagePicker from './components/language-picker'
 import CommandPaletteHost from './components/command-palette-host'
-import { CommandButton } from './components/command-button'
-import NavAccount from './components/nav-account'
+import NavMenu from './components/nav-menu'
 import { useTheme } from './lib/use-theme'
 import { useI18n } from './lib/i18n'
 import { projectsList, SHORT_KEY, METRIC_KEY, METRIC_VALUE_KEY } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
-import { SKILL_CATEGORIES, SKILL_LEVELS, TOOL_CATEGORIES, CERTIFICATIONS, themedIconFor } from './lib/skills'
-import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH } from './lib/router'
-import { applyHead } from './lib/seo'
+import { SKILL_CATEGORIES, TOOL_CATEGORIES, CERTIFICATIONS, themedIconFor, skillUsage } from './lib/skills'
+import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
+import { CV_ROLE } from './lib/cv'
+import { Icon } from './components/icon'
+import { applyHead } from './lib/seo'
 import { recordHit } from './lib/api'
 import { rememberVisit } from './lib/recent'
 
@@ -58,9 +57,7 @@ import {
   GITHUB_JOINED,
   GITHUB_ACTIVE_SINCE,
   GITHUB_URL,
-  DISCORD_URL,
-  SOCIALS,
-  SOCIAL_ICON_PATHS
+  CONTACT_EMAIL,
 } from './lib/profile'
 
 function App() {
@@ -69,10 +66,6 @@ function App() {
   const route = parseRoute(path)
   const currentView = route.name
 
-  const [skillBadgesArmed, setSkillBadgesArmed] = useState(false)
-  const armSkillBadges = () => {
-    if (!skillBadgesArmed) setSkillBadgesArmed(true)
-  }
 
   const { theme, preference: themePreference, toggleTheme, setPreference: setThemePreference } = useTheme()
   const { t } = useI18n()
@@ -290,17 +283,18 @@ function App() {
 
   const certifications = CERTIFICATIONS.map((cert) => ({ ...cert, tier: t(cert.tierKey) }))
 
-  const skillLevels = Object.fromEntries(
-    Object.entries(SKILL_LEVELS).map(([id, level]) => [id, { ...level, label: t(level.key) }])
-  )
-
-  const meterSegments = [0, 1, 2, 3]
-
   const themedIcon = themedIconFor(theme)
 
+  // A skill links to the work that used it — the library search when it shows up there, else the featured project(s).
+  const skillProof = (name) => {
+    const { featured, library } = skillUsage(name)
+    if (library) return { href: `${LIBRARY_PATH}?q=${encodeURIComponent(name)}`, count: library }
+    if (featured.length) return { href: featured.length === 1 ? projectPath(featured[0]) : PROJECTS_PATH, count: featured.length }
+    return null
+  }
   const skillCategories = SKILL_CATEGORIES.map((category) => ({
     name: t(category.nameKey),
-    items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon) }))
+    items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon), proof: skillProof(item.name) }))
   }))
 
   const toolCategories = TOOL_CATEGORIES.map((category) => ({
@@ -315,10 +309,17 @@ function App() {
   const toolboxCount = toolCategories.reduce((total, category) => total + category.items.length, 0)
 
   const navItemClass = 'h-9 w-9 flex items-center justify-center hover:text-ink-strong focus-visible:text-ink-strong aria-expanded:text-ink-strong transition-colors duration-200'
-
-  const navPillClass = 'h-9 px-2 sm:ps-2 sm:pe-1.5 flex items-center gap-1.5 rounded-lg hover:text-ink-strong hover:bg-surface-hover focus-visible:text-ink-strong aria-expanded:text-ink-strong aria-expanded:bg-surface-hover transition-colors duration-200'
+  const navLinkClass = 'inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-md px-2.5 text-[13px] font-medium outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30'
 
   const navDivider = 'mx-1 h-full border-l border-dashed border-line'
+
+  // The primary nav. Text links from md up; below that the same list lives at the top of the ⋯ menu.
+  const sectionLink = (id) => ({ href: `#${id}`, onClick: (event) => { event.preventDefault(); jumpToSection(id) } })
+  const navLinks = [
+    { id: 'projects', label: t('home.projects'), ...sectionLink('projects') },
+    { id: 'about', label: t('nav.about'), ...sectionLink('skills') },
+    { id: 'contact', label: t('home.contact'), ...sectionLink('contact') },
+  ]
 
   if (currentView === 'notFound') {
     return (
@@ -466,36 +467,22 @@ function App() {
             aria-label="Site links"
             className="flex items-center h-full text-ink-muted sm:-mr-4"
           >
-            {}
-            <CommandButton className={navPillClass} />
+            <div className="hidden md:flex items-center gap-0.5 mr-1">
+              {navLinks.map(({ id, label, external, ...props }) => (
+                <a key={id} {...props} {...(external ? { target: '_blank', rel: 'noreferrer' } : {})} className={navLinkClass}>
+                  {label}
+                  {external && <Icon name="arrowUpRight" className="h-3 w-3 text-ink-faint" />}
+                </a>
+              ))}
+            </div>
 
-            <span aria-hidden="true" className={`${navDivider} hidden sm:block`} />
-
-            <a href={DISCORD_URL} target="_blank" rel="noreferrer" className={`${navItemClass} hidden sm:flex`} aria-label="Discord">
-              <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.094 13.094 0 0 1-1.873-.894.077.077 0 0 1-.008-.128c.126-.093.252-.19.372-.287a.075.075 0 0 1 .077-.011c3.92 1.793 8.18 1.793 12.061 0a.073.073 0 0 1 .078.009c.12.099.246.195.373.289a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.156-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.156 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.156-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.156 2.418z"/>
-              </svg>
-            </a>
-
-            <span aria-hidden="true" className={`${navDivider} hidden sm:block`} />
-
-            <a href={GITHUB_URL} target="_blank" rel="noreferrer" className={`${navItemClass} hidden sm:flex`} aria-label="GitHub">
-              <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-              </svg>
-            </a>
-
-            <span aria-hidden="true" className={`${navDivider} hidden sm:block`} />
+            <span aria-hidden="true" className={`${navDivider} hidden md:block`} />
 
             <ThemeToggle theme={theme} onToggle={toggleTheme} className={navItemClass} />
 
-            <span aria-hidden="true" className={`${navDivider} hidden sm:block`} />
+            <span aria-hidden="true" className={navDivider} />
 
-            <LanguagePicker className={navPillClass} />
-
-            <span aria-hidden="true" className={`${navDivider} hidden sm:block`} />
-
-            <NavAccount theme={theme} onToggleTheme={toggleTheme} pillClass={navPillClass} itemClass={navItemClass} />
+            <NavMenu itemClass={navItemClass} pages={navLinks} />
           </nav>
         </div>
       </header>
@@ -519,54 +506,35 @@ function App() {
           />
 
           {}
-          <h1 className="hero-title text-[28px] sm:text-[34px] font-extrabold tracking-[-0.03em] leading-[1.15] mb-3 animate-fade-in-up">
-            {(() => {
-              const greeting = t('hero.greeting')
-              const at = greeting.indexOf('Blxr')
-              if (at === -1) return greeting
-              return (
-                <>
-                  <span className="font-vergilia font-normal">{greeting.slice(0, at)}</span>
-                  <span className="hl-word font-bagus font-normal">{greeting.slice(at, at + 4)}</span>
-                  <span className="font-vergilia font-normal">{greeting.slice(at + 4)}</span>
-                </>
-              )
-            })()}
+          <h1 className="hero-title font-bagus text-[36px] sm:text-[44px] font-normal tracking-[-0.02em] leading-none mb-3 animate-fade-in-up">
+            Blxr
           </h1>
 
           {}
-          <div className="max-w-[68ch] text-[15px] text-ink-muted font-normal leading-[1.7] mb-6">
-            <p className="animate-fade-in-up delay-150">{t('hero.bio1')}</p>
-            <p className="animate-fade-in-up delay-300">{t('hero.bio2')}</p>
-          </div>
+          <p className="max-w-[56ch] text-[15px] text-ink-muted leading-[1.6] animate-fade-in-up delay-150">
+            {t(CV_ROLE.key, null, CV_ROLE.fallback)}
+          </p>
 
-          <div className="flex items-center gap-[18px] text-ink-muted">
-            {SOCIALS.map((social) => (
-              <a
-                key={social.name}
-                href={social.url}
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-ink-strong transition-colors duration-200"
-                aria-label={social.name}
-              >
-                <svg className="w-[15px] h-[15px]" fill="currentColor" viewBox="0 0 24 24">
-                  <path d={SOCIAL_ICON_PATHS[social.name]} />
-                </svg>
-              </a>
-            ))}
+          {}
+          <p className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-ink-subtle animate-fade-in-up delay-300">
+            <Icon name="pin" className="h-3.5 w-3.5" />
+            {t('hero.location')}
+          </p>
+
+          {}
+          <div className="mt-7 flex items-center gap-2.5 animate-fade-in-up delay-450">
             <a
-              href="#contact"
-              onClick={(event) => {
-                event.preventDefault()
-                jumpToSection('contact')
-              }}
-              className="hover:text-ink-strong transition-colors duration-200"
-              aria-label={t('home.contact')}
+              {...link(PROJECTS_PATH, () => openProject(null))}
+              className="project-cta group inline-flex h-10 items-center gap-2 rounded-full bg-surface-inverted pl-5 pr-4 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
-              <svg className="w-[15px] h-[15px]" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-              </svg>
+              <span>{t('home.projects')}</span>
+              <span className="project-arrow inline-block" aria-hidden="true">→</span>
+            </a>
+            <a
+              {...link(CV_PATH)}
+              className="inline-flex h-10 items-center rounded-full border border-line px-5 text-[13px] font-medium text-ink outline-none transition-colors duration-200 hover:border-line-strong hover:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+            >
+              {t('cv.title')}
             </a>
           </div>
 
@@ -578,7 +546,7 @@ function App() {
           </div>
         </section>
 
-        <section id="projects" className="scroll-mt-28 w-full mt-14">
+        <section id="projects" className="scroll-mt-8 w-full mt-14">
 
           <div ref={projectsRef} className="flex flex-col items-center w-full">
             <div data-reveal className="flex flex-col items-center text-center">
@@ -744,17 +712,12 @@ function App() {
           </div>
         </section>
 
-        <section id="skills" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
+        <section id="skills" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             {t('home.skills')}
           </h2>
 
-          <div
-            className="flex flex-col gap-5 w-full text-[14px]"
-            onPointerEnter={armSkillBadges}
-            onFocusCapture={armSkillBadges}
-            onTouchStart={armSkillBadges}
-          >
+          <div className="flex flex-col gap-5 w-full text-[14px]">
             {skillCategories.map((category, idx) => (
               <div
                 key={idx}
@@ -765,55 +728,19 @@ function App() {
                 </span>
 
                 <div className="flex flex-wrap gap-x-5 gap-y-3">
-                  {category.items.map((skill, skillIdx) => {
-                    const level = skill.level ? skillLevels[skill.level] : null
+                  {category.items.map((skill) => {
+                    const Chip = skill.proof ? 'a' : 'span'
+                    const chipProps = skill.proof
+                      ? { ...link(skill.proof.href), title: t('skills.usedIn', { n: skill.proof.count }), 'aria-label': `${skill.name} — ${t('skills.usedIn', { n: skill.proof.count })}` }
+                      : {}
                     return (
-                      <span
-                        key={skillIdx}
-                        tabIndex={level ? 0 : undefined}
-                        className="group/chip relative inline-flex items-center gap-2 text-ink-muted text-[12.5px] font-medium cursor-default outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong"
+                      <Chip
+                        key={skill.name}
+                        {...chipProps}
+                        className={`group/chip inline-flex items-center gap-2 text-ink-muted text-[12.5px] font-medium outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong ${
+                          skill.proof ? 'cursor-pointer rounded-md focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-4 focus-visible:ring-offset-bg' : 'cursor-default'
+                        }`}
                       >
-                        {}
-                        {level && skillBadgesArmed && (
-                          <span
-                            role="tooltip"
-                            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2.5 -translate-x-1/2 translate-y-1 origin-bottom scale-[0.94] opacity-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/chip:translate-y-0 group-hover/chip:scale-100 group-hover/chip:opacity-100 group-focus-visible/chip:translate-y-0 group-focus-visible/chip:scale-100 group-focus-visible/chip:opacity-100 motion-reduce:transition-none motion-reduce:scale-100"
-                          >
-                            <span className="relative flex w-max max-w-[220px] flex-col rounded-lg border border-ink-on-inverted/10 bg-surface-inverted text-left shadow-[0_14px_32px_-16px_var(--shadow-cast)]">
-                              {skill.desc && (
-                                <span className="whitespace-normal px-3 pb-2 pt-2.5 text-[11.5px] font-medium leading-snug tracking-tight text-ink-on-inverted">
-                                  {skill.desc}
-                                </span>
-                              )}
-
-                              <span className="flex items-center justify-between gap-4 border-t border-dashed border-ink-on-inverted/10 px-3 py-2">
-                                <span aria-hidden="true" className="flex items-center gap-[3px]">
-                                  {meterSegments.map((segIdx) => (
-                                    <span
-                                      key={segIdx}
-                                      className={`h-[3px] w-3.5 origin-left rounded-full ${
-                                        segIdx < level.rank
-                                          ? `${level.bar} scale-x-0 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/chip:scale-x-100 group-focus-visible/chip:scale-x-100 motion-reduce:scale-x-100 motion-reduce:transition-none`
-                                          : 'bg-ink-on-inverted/12'
-                                      }`}
-                                      style={segIdx < level.rank ? { transitionDelay: `${140 + segIdx * 60}ms` } : undefined}
-                                    />
-                                  ))}
-                                </span>
-
-                                <span className="text-[9.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-on-inverted/55">
-                                  {level.label}
-                                </span>
-                              </span>
-
-                              <span
-                                aria-hidden="true"
-                                className="absolute left-1/2 top-full -mt-[4px] h-[7px] w-[7px] -translate-x-1/2 rotate-45 rounded-[1px] border-b border-r border-ink-on-inverted/10 bg-surface-inverted"
-                              />
-                            </span>
-                          </span>
-                        )}
-
                         <img
                           {...imageProps(skill.icon)}
                           alt=""
@@ -825,8 +752,7 @@ function App() {
                           className="w-3.5 h-3.5 object-contain opacity-70 transition-opacity duration-200 group-hover/chip:opacity-100 group-focus-visible/chip:opacity-100"
                         />
                         <span>{skill.name}</span>
-                        {level && <span className="sr-only">{level.label}</span>}
-                      </span>
+                      </Chip>
                     )
                   })}
                 </div>
@@ -961,7 +887,7 @@ function App() {
           </details>
         </section>
 
-        <section id="education" className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
+        <section id="education" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             {t('home.education')}
           </h2>
@@ -1049,26 +975,18 @@ function App() {
 
         <ContactSection />
 
-       <div className="relative h-[360px] sm:h-[400px] w-full overflow-hidden mt-8">
-      <AnimatedFooter
-        headingLines={[]}
-
-        theme={theme}
-
-        leftText="BL"
-        rightText="XR"
-        textFont='"Yang Bagus"'
-
-      >
-        <div className="w-full  font-normal not-italic pt-4 border-t border-dashed border-[var(--hairline-strong)] flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-4 text-[12px] text-ink-muted">
-          <span className="flex items-center gap-4">
-            <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="hover:text-ink-strong transition-colors duration-200">GitHub</a>
-            <span aria-hidden="true" className="text-ink-faint">·</span>
-            <a href={DISCORD_URL} target="_blank" rel="noreferrer" className="hover:text-ink-strong transition-colors duration-200">Discord</a>
-          </span>
-        </div>
-      </AnimatedFooter>
-    </div>
+        <footer className="w-[calc(100%+3rem)] -mx-6 mt-16 flex flex-col gap-3 border-t border-dashed border-line px-6 py-6 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            <span className="font-medium text-ink-strong">Blxr</span>
+            <span aria-hidden="true" className="mx-2 text-ink-faint">·</span>
+            {t('hero.location')}
+          </p>
+          <nav aria-label="Footer" className="flex items-center gap-4">
+            <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="transition-colors duration-200 hover:text-ink-strong">GitHub</a>
+            <a {...link(CV_PATH)} className="transition-colors duration-200 hover:text-ink-strong">{t('cv.title')}</a>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors duration-200 hover:text-ink-strong">{t('contact.email.kicker')}</a>
+          </nav>
+        </footer>
 
       </main>
 

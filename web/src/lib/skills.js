@@ -1,3 +1,6 @@
+import { projectsList } from './projects'
+import { libraryList } from './library'
+
 export const SKILL_LEVELS = {
   advanced: { key: 'level.advanced', rank: 4, bar: 'bg-emerald-400' },
   comfortable: { key: 'level.comfortable', rank: 3, bar: 'bg-sky-400' },
@@ -94,3 +97,14 @@ export const LIGHT_THEME_ICONS = {
 }
 
 export const themedIconFor = (theme) => (url) => (theme   === 'light' ? LIGHT_THEME_ICONS[url] ?? url : url)
+
+// Which shipped work used a skill, matched against project tags ('JavaScript 4.4%' counts as 'JavaScript').
+const tagKey = (tag) => tag.replace(/\s+\d+(\.\d+)?%$/, '').toLowerCase()
+const usesTag = (entry, key) => entry.tags?.some((tag) => tagKey(tag) === key)
+
+export function skillUsage(name) {
+  const key = name.toLowerCase()
+  const featured = projectsList.filter((p) => usesTag(p, key)).map((p) => p.id)
+  const library = libraryList.filter((e) => !e.placeholder && usesTag(e, key)).length
+  return { featured, library, count: featured.length + library }
+}

@@ -31,7 +31,7 @@ export function localizePath(path, lang) {
 }
 
 export function parseRoute(path) {
-  const p = routeOf(path).split('#')[0]
+  const p = routeOf(path).split('#')[0].split('?')[0]
   if (p === '/') return { name: 'home' }
   if (p === '/projects') return { name: 'projects', projectId: null }
   if (p === '/library') return { name: 'library', itemId: null }

@@ -137,7 +137,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
               <article
                 key={project.id}
                 id={project.id}
-                className={`project-entry w-full scroll-mt-16 ${index > 0 ? 'mt-12 pt-12 border-t border-line' : ''}`}
+                className={`project-entry w-full scroll-mt-4 ${index > 0 ? 'mt-12 pt-12 border-t border-line' : ''}`}
               >
                 <div
                   onClick={() => (videoId ? play(project.id) : toggle(project.id))}

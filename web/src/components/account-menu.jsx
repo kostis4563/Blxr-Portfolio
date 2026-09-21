@@ -6,8 +6,8 @@ import { CLAIM_PATH } from '../lib/guest'
 import { Sensitive } from './sensitive'
 const PROVIDER_LABEL = { email: 'Email', google: 'Google', discord: 'Discord', apple: 'Apple', github: 'GitHub', guest: 'Guest' }
 
-const MENU = 'absolute z-50 w-[240px] rounded-xl border border-line bg-surface shadow-xl animate-menu-in'
-const MENU_ITEM =
+export const MENU = 'absolute z-50 w-[240px] rounded-xl border border-line bg-surface shadow-xl animate-menu-in'
+export const MENU_ITEM =
   'flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] text-ink outline-none transition-colors hover:bg-surface-hover hover:text-ink-strong focus-visible:bg-surface-hover'
 
 const PLACE = {
@@ -22,8 +22,10 @@ export function useDismiss(open, onClose) {
   const ref = useRef(null)
   useEffect(() => {
     if (!open) return
-    const onDown = (e) => { if (!ref.current?.contains(e.target)) onClose() }
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    // A nested popover (e.g. the language panel) portals out of the menu; leave it alone.
+    const inPortal = (el) => Boolean(el?.closest?.('[data-menu-portal]'))
+    const onDown = (e) => { if (!ref.current?.contains(e.target) && !inPortal(e.target)) onClose() }
+    const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('[data-menu-portal]')) onClose() }
     document.addEventListener('pointerdown', onDown)
     document.addEventListener('keydown', onKey)
     return () => {

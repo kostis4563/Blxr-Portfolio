@@ -290,6 +290,12 @@
   }
 }
 
+/* Every page has a fixed bar of this height; anchor scrolls stop below it instead of under it. */
+html {
+  --header-h: 60px;
+  scroll-padding-top: var(--header-h);
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-ink);

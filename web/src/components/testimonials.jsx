@@ -226,7 +226,7 @@ export default function Testimonials() {
       ref={sectionRef}
       id="reviews"
       data-in={lit || undefined}
-      className="scroll-mt-28 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 pt-12 text-left"
+      className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 pt-12 text-left"
     >
       <div className="flex items-end justify-between gap-6 px-6">
         <div>
