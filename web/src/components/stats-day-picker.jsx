@@ -20,9 +20,28 @@ function tintOf(commits, busiest) {
   return `color-mix(in srgb, var(--color-ink-strong) ${10 + 8 * (level < 0 ? 4 : level)}%, var(--color-surface))`
 }
 
+const MARKS = {
+  cleanup: { tint: 'bg-rose-400', label: 'Cleanup', says: 'removed more than it added' },
+  churn: { tint: 'bg-emerald-400', label: 'Heavy', says: 'a lot of lines moved' },
+  spread: { tint: 'bg-blue-400', label: 'Spread', says: 'touched three or more repositories' },
+}
+const MARK_ORDER = ['cleanup', 'churn', 'spread']
+const SPREAD_REPOS = 3
+const CHURN_QUANTILE = 0.85
+
+function markOf(bucket, heavy) {
+  if (!bucket?.c) return null
+  const added = bucket.a || 0
+  const removed = bucket.d || 0
+  if (removed > added) return 'cleanup'
+  if (added + removed >= heavy) return 'churn'
+  if ((bucket.r || 0) >= SPREAD_REPOS) return 'spread'
+  return null
+}
+
 const plural = (n) => `${formatExact(n)} commit${n === 1 ? '' : 's'}`
 
-function Grid({ face, value, days, busiest, min, max, cursor, onMonth, onPick, onCursor }) {
+function Grid({ face, value, days, busiest, heavy, min, max, cursor, onMonth, onPick, onCursor }) {
   const gridRef = useRef(null)
   const wanted = useRef(null)
   const today = todayKey()
@@ -91,10 +110,13 @@ function Grid({ face, value, days, busiest, min, max, cursor, onMonth, onPick, o
           </span>
         ))}
         {cells.map((cell) => {
-          const commits = days.get(cell.iso)?.c || 0
+          const bucket = days.get(cell.iso)
+          const commits = bucket?.c || 0
           const out = !inRange(cell.iso)
           const on = cell.iso === value
           const tint = on || out ? null : tintOf(commits, busiest)
+          const mark = out ? null : markOf(bucket, heavy)
+          const reads = commits ? `${plural(commits)}${mark ? ` · ${MARKS[mark].says}` : ''}` : 'No commits'
           return (
             <button
               key={cell.iso}
@@ -104,12 +126,12 @@ function Grid({ face, value, days, busiest, min, max, cursor, onMonth, onPick, o
               disabled={out}
               aria-pressed={on}
               tabIndex={cell.iso === roving ? 0 : -1}
-              aria-label={`${formatDayShort(cell.iso)} — ${commits ? plural(commits) : 'no commits'}`}
-              title={commits ? plural(commits) : 'No commits'}
+              aria-label={`${formatDayShort(cell.iso)} — ${commits ? reads.toLowerCase() : 'no commits'}`}
+              title={reads}
               onClick={() => onPick(cell.iso)}
               onFocus={() => onCursor(cell.iso, true)}
               style={tint ? { background: tint } : undefined}
-              className={`h-8 cursor-pointer rounded-md font-mono text-[11.5px] tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink-strong/40 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-ink-faint/30 ${
+              className={`relative h-8 cursor-pointer rounded-md font-mono text-[11.5px] tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink-strong/40 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-ink-faint/30 ${
                 on
                   ? 'bg-ink-strong font-semibold text-ink-inverse'
                   : `hover:bg-surface-hover hover:ring-1 hover:ring-inset hover:ring-line-strong ${cell.inside ? (commits ? 'font-medium text-ink-strong' : 'text-ink-muted') : 'text-ink-faint/50'} ${
@@ -118,6 +140,7 @@ function Grid({ face, value, days, busiest, min, max, cursor, onMonth, onPick, o
               }`}
             >
               {cell.day}
+              {mark && <span className={`absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full ${MARKS[mark].tint}`} />}
             </button>
           )
         })}
@@ -132,10 +155,23 @@ function Popover({ anchor, value, days, min, max, latest, note, onClose, onChang
   const [face, setFace] = useState(() => dayParts(value || max))
   const [cursor, setCursor] = useState(value || null)
 
-  const busiest = useMemo(() => {
+  const { busiest, heavy, legend } = useMemo(() => {
     let top = 1
-    for (const b of days.values()) if (b.c > top) top = b.c
-    return top
+    const churns = []
+    for (const b of days.values()) {
+      if (b.c > top) top = b.c
+      const moved = (b.a || 0) + (b.d || 0)
+      if (b.c && moved > 0) churns.push(moved)
+    }
+    churns.sort((x, y) => x - y)
+    const cut = churns.length >= 4 ? churns[Math.min(churns.length - 1, Math.floor(churns.length * CHURN_QUANTILE))] : Infinity
+    const seen = new Set()
+    for (const b of days.values()) {
+      const mark = markOf(b, cut)
+      if (mark) seen.add(mark)
+      if (seen.size === MARK_ORDER.length) break
+    }
+    return { busiest: top, heavy: cut, legend: MARK_ORDER.filter((m) => seen.has(m)) }
   }, [days])
 
   const place = useCallback(() => {
@@ -205,6 +241,7 @@ function Popover({ anchor, value, days, min, max, latest, note, onClose, onChang
         value={value}
         days={days}
         busiest={busiest}
+        heavy={heavy}
         min={min}
         max={max}
         cursor={cursor}
@@ -212,6 +249,16 @@ function Popover({ anchor, value, days, min, max, latest, note, onClose, onChang
         onPick={settle}
         onCursor={walk}
       />
+      {legend.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-line px-3 py-2">
+          {legend.map((mark) => (
+            <span key={mark} title={MARKS[mark].says} className="flex items-center gap-1.5 text-[10.5px] text-ink-subtle">
+              <span className={`size-1.5 shrink-0 rounded-full ${MARKS[mark].tint}`} />
+              {MARKS[mark].label}
+            </span>
+          ))}
+        </div>
+      )}
       {note && <p className="border-t border-line px-3 py-2 text-[11.5px] leading-snug text-ink-subtle">{note}</p>}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-line p-2.5">
         {shortcuts.map((s) => (
