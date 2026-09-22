@@ -21,8 +21,15 @@ export function parseRoute(path) {
   if (p === '/dashboard') return { name: 'dashboard' }
   if (p === PROFILE_BASE_PATH) return { name: 'profile', handle: null }
 
-  const profileMatch = /^\/u\/([^/]+)$/.exec(p)
+  const profileMatch = /^\/@([^/]+)$/.exec(p)
   if (profileMatch) return { name: 'profile', handle: decodeURIComponent(profileMatch[1]).toLowerCase() }
+
+  // Profiles used to live under /u/<handle>; old links fold onto /@<handle>.
+  const legacyProfile = /^\/u\/([^/]+)$/.exec(p)
+  if (legacyProfile) {
+    const handle = decodeURIComponent(legacyProfile[1]).toLowerCase()
+    return { name: 'profile', handle, redirect: profilePath(handle) }
+  }
 
   const match = /^\/projects\/([^/]+)$/.exec(p)
   if (match) {
@@ -90,8 +97,11 @@ export const UPDATE_PASSWORD_PATH = `${LOGIN_PATH}#update`
 export const VERIFY_PATH = `${LOGIN_PATH}#verify`
 export const DASHBOARD_PATH = '/dashboard'
 export const dashboardPath = (id) => (id ? `${DASHBOARD_PATH}#${id}` : DASHBOARD_PATH)
-export const PROFILE_BASE_PATH = '/u'
-export const profilePath = (handle) => `${PROFILE_BASE_PATH}/${encodeURIComponent(handle)}`
+export const PROFILE_BASE_PATH = '/@'
+export const profilePath = (handle) => `${PROFILE_BASE_PATH}${encodeURIComponent(handle)}`
+// '@' is an awkward filename (and nginx reads a leading '@' as a named
+// location), so the prerendered shell for every profile is profile.html.
+export const PROFILE_SHELL_FILE = 'profile.html'
 
 export const staticPaths = () => [
   HOME_PATH,

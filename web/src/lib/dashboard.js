@@ -160,7 +160,7 @@ export const NAV_FOOTER = [
 ]
 
 export const BLURBS = {
-  profile: 'Build the page people see at blxr.net/u/you.',
+  profile: 'Build the page people see at blxr.net/@you.',
   boards: 'Columns, cards and due dates for whatever you are building.',
   messages: 'A private line between your account and the owner.',
   stats: 'Your commits, files and lines across every repo you touch.',

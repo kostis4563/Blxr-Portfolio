@@ -29,6 +29,7 @@ const {
   LOGIN_PATH,
   DASHBOARD_PATH,
   PROFILE_BASE_PATH,
+  PROFILE_SHELL_FILE,
 } = await import(pathToFileURL(ssrEntry).href)
 
 const template = await readFile(indexPath, 'utf8')
@@ -44,6 +45,7 @@ if (!TITLE_RE.test(template)) {
 
 function outputFileFor(path) {
   if (path === '/') return indexPath
+  if (path === PROFILE_BASE_PATH) return resolve(dist, PROFILE_SHELL_FILE)
 
   return resolve(dist, `${path.replace(/^\//, '')}.html`)
 }

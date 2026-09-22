@@ -22,7 +22,7 @@ const LOCKED_COPY = {
     points: ['One thread, just you and the owner', 'Replies, reactions and attachments', 'Delivered live, with read receipts'],
   },
   profile: {
-    title: 'Your page at blxr.net/u/you',
+    title: 'Your page at blxr.net/@you',
     why: 'Handles are one per member, first come first served. Claim yours before someone else picks it.',
     points: ['A public page with your links, skills and status', 'Cover photo, accent colour and layout', 'A URL that is yours to share'],
   },

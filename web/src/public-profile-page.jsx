@@ -7,7 +7,7 @@ import { useAuth } from './lib/supabase'
 import { fetchProfileByHandle, HANDLE_RE } from './lib/profiles'
 import { SITE_NAME } from './lib/seo'
 
-// /u/<handle> — one member's public page. The prerendered shell is generic;
+// /@<handle> — one member's public page. The prerendered shell is generic;
 // everything here loads in the browser and titles the tab once it has a name.
 
 const BTN =

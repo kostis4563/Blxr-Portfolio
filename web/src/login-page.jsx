@@ -123,7 +123,7 @@ function validate(mode, form, accountEmail = '') {
 const PERKS = [
   { icon: 'kanban', title: 'Boards', body: 'Columns, cards and due dates. Private to you.' },
   { icon: 'message', title: 'A line to me', body: 'One private thread, straight to the owner.' },
-  { icon: 'user', title: 'Your page', body: 'blxr.net/u/you — links, skills, what you are up to.' },
+  { icon: 'user', title: 'Your page', body: 'blxr.net/@you — links, skills, what you are up to.' },
 ]
 
 function Perks() {

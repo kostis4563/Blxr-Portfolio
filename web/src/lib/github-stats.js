@@ -101,7 +101,11 @@ export function relativeTime(iso, now = Date.now()) {
 }
 
 const monthDay = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
+const monthDayYear = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' })
 const monthYear = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric' })
+const fullDay = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' })
+const fullDayYear = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+const weekday = new Intl.DateTimeFormat('en', { weekday: 'long' })
 
 const parseDay = (iso) => {
   const [y, m, d] = String(iso).split('-').map(Number)
@@ -109,3 +113,25 @@ const parseDay = (iso) => {
 }
 export const formatDay = (iso) => (iso ? monthDay.format(parseDay(iso)) : '')
 export const formatMonthYear = (iso) => (iso ? monthYear.format(new Date(iso)) : '')
+export const formatWeekday = (iso) => (iso ? weekday.format(parseDay(iso)) : '')
+
+export const isoDay = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+export const today = () => isoDay(new Date())
+
+export function shiftDay(iso, by) {
+  const d = parseDay(iso)
+  d.setDate(d.getDate() + by)
+  return isoDay(d)
+}
+
+export const dayParts = (iso) => {
+  const d = parseDay(iso)
+  return { year: d.getFullYear(), month: d.getMonth() }
+}
+
+export const formatDayFull = (iso, now = today()) =>
+  iso ? (iso.slice(0, 4) === now.slice(0, 4) ? fullDay : fullDayYear).format(parseDay(iso)) : ''
+export const formatDayShort = (iso, now = today()) =>
+  iso ? (iso.slice(0, 4) === now.slice(0, 4) ? monthDay : monthDayYear).format(parseDay(iso)) : ''

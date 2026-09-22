@@ -874,6 +874,7 @@ const GH_STATS_PAGE = 100
 const GH_STATS_PAGES_PER_REPO = 20
 const GH_STATS_MAX_PAGES = 90
 const GH_STATS_MONTHS = 120
+const GH_STATS_DAY_REPOS = 8
 const ghStatsCache = new Map()
 const ghStatsInflight = new Map()
 let ghOwner = null
@@ -1112,6 +1113,7 @@ async function buildGithubStats(login) {
   const scanned = repos.slice(0, GH_STATS_REPOS)
 
   const byDay = new Map()
+  const dayRepos = new Map()
   const perRepo = new Map()
   const grid = Array.from({ length: 7 }, () => new Array(24).fill(0))
   const bounds = {
@@ -1129,6 +1131,9 @@ async function buildGithubStats(login) {
     let bucket = byDay.get(day)
     if (!bucket) byDay.set(day, (bucket = emptyBucket()))
     add(bucket, c)
+    let seen = dayRepos.get(day)
+    if (!seen) dayRepos.set(day, (seen = new Map()))
+    seen.set(repo.fullName, (seen.get(repo.fullName) || 0) + 1)
     let mine = perRepo.get(repo.fullName)
     if (!mine) perRepo.set(repo.fullName, (mine = { ...emptyBucket(), first: day, last: day }))
     add(mine, c)
@@ -1213,6 +1218,17 @@ async function buildGithubStats(login) {
   repoRows.sort((a, b) => b.commits - a.commits)
   const langTotal = [...languages.values()].reduce((s, l) => s + l.commits, 0)
 
+  const repoIndex = new Map(repoRows.map((r, i) => [r.fullName, i]))
+  const days = [...byDay.keys()].sort().map((date) => {
+    const touched = dayRepos.get(date) || new Map()
+    const top = [...touched.entries()]
+      .sort((x, y) => y[1] - x[1])
+      .slice(0, GH_STATS_DAY_REPOS)
+      .map(([fullName, c]) => [repoIndex.get(fullName) ?? -1, c])
+      .filter(([i]) => i >= 0)
+    return { date, ...byDay.get(date), r: touched.size, t: top }
+  })
+
   return {
     user: {
       login: canonical,
@@ -1228,6 +1244,7 @@ async function buildGithubStats(login) {
     },
     periods,
     daily,
+    days,
     weekly: weeks,
     monthly: months.slice(-GH_STATS_MONTHS),
     grid,

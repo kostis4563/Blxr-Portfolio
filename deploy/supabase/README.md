@@ -193,7 +193,7 @@ regional and notification preferences are stored in `user_metadata`
 ## 9. Member profiles
 
 `/dashboard#profile` lets every account build a public page at
-`blxr.net/u/<handle>`. Unlike settings it needs a table, because other people
+`blxr.net/@<handle>`. Unlike settings it needs a table, because other people
 have to be able to read it:
 
 1. Supabase → **SQL editor** → paste [`profiles.sql`](profiles.sql) → **Run**.

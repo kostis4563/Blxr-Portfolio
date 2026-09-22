@@ -1,10 +1,24 @@
 import { Fragment, useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect, useId } from 'react'
 import { Icon } from './components/dashboard-sidebar'
 import GitHubContributions from './components/github-contribution'
+import StatsDayPicker from './components/stats-day-picker'
 import { Segmented, ToastProvider, DensityProvider, useToast, LABEL, BTN_SECONDARY, BTN_GHOST } from './components/settings-ui'
 import { Bone, Dot, Figure, Loading } from './components/skeleton'
 import { useDevicePrefs } from './lib/prefs'
-import { fetchGithubStats, readStatsCache, formatCount, formatExact, formatDay, formatMonthYear, relativeTime } from './lib/github-stats'
+import {
+  fetchGithubStats,
+  readStatsCache,
+  formatCount,
+  formatExact,
+  formatDay,
+  formatDayFull,
+  formatDayShort,
+  formatMonthYear,
+  formatWeekday,
+  relativeTime,
+  shiftDay,
+  today as todayKey,
+} from './lib/github-stats'
 
 const MESSAGES = {
   stats_disabled: 'Developer stats are not enabled on this server yet — GITHUB_TOKEN needs to be set in its environment.',
@@ -281,7 +295,7 @@ const METRICS = [
 const monthLabel = new Intl.DateTimeFormat('en', { month: 'short' })
 const monthYearLabel = new Intl.DateTimeFormat('en', { month: 'short', year: '2-digit' })
 
-function Bars({ points, ticks, ariaLabel, height = 184, diverging = false, empty = 'Nothing in this range.' }) {
+function Bars({ points, ticks, ariaLabel, height = 184, diverging = false, empty = 'Nothing in this range.', active = null, onPick }) {
   const ref = useRef(null)
   const width = useWidth(ref)
   const [hover, setHover] = useState(null)
@@ -337,12 +351,21 @@ function Bars({ points, ticks, ariaLabel, height = 184, diverging = false, empty
           {points.map((p, i) => {
             const x = xOf(i)
             const on = hover === i
-            const opacity = hover != null && !on ? 0.35 : on ? 1 : 0.85
+            const picked = active != null && p.key === active
+            const opacity = hover != null && !on ? 0.35 : on || picked ? 1 : 0.85
             const upH = diverging ? p.up * scale : p.value * scale
             const downH = diverging ? p.down * scale : 0
             return (
-              <g key={p.key} onMouseEnter={() => setHover(i)}>
-                <rect x={x - gap / 2} y={pad.top} width={bw + gap} height={plotH} fill="var(--color-ink-strong)" opacity={on ? 0.05 : 0} />
+              <g
+                key={p.key}
+                onMouseEnter={() => setHover(i)}
+                onClick={onPick ? () => onPick(p.key) : undefined}
+                className={onPick ? 'cursor-pointer' : undefined}
+              >
+                <rect x={x - gap / 2} y={pad.top} width={bw + gap} height={plotH} fill="var(--color-ink-strong)" opacity={on ? 0.05 : picked ? 0.08 : 0} />
+                {picked && (
+                  <rect x={x - gap / 2} y={pad.top} width={bw + gap} height={plotH} fill="none" stroke="var(--color-line-strong)" strokeDasharray="2 3" />
+                )}
                 {upH > 0 && (
                   <path
                     d={barPath(x, base - Math.max(2, upH), bw, Math.max(2, upH), true)}
@@ -381,11 +404,16 @@ const TipRow = ({ b }) => (
   </span>
 )
 
-function Activity({ data, period }) {
+function Activity({ data, period, day, frame, onDay }) {
   const [metric, setMetric] = useState('c')
   const m = METRICS.find((x) => x.id === metric)
   const { points, ticks, unit } = useMemo(() => {
     const toPoint = (key, label, b) => ({ key, label, value: m.of(b), up: b.a, down: b.d, tip: <TipRow b={b} /> })
+    if (day) {
+      const pts = frame.map((d) => toPoint(d.date, formatDay(d.date), d))
+      const tk = pts.map((p, i) => ({ i, label: i % 2 === 0 ? p.label : '' })).filter((t) => t.label)
+      return { points: pts, ticks: tk, unit: `per day, the two weeks up to ${formatDay(day)}` }
+    }
     if (period === 'year') {
       const pts = data.weekly.map((w) => toPoint(w.week, `Week of ${formatDay(w.week)}`, w))
       const tk = []
@@ -403,19 +431,29 @@ function Activity({ data, period }) {
     const pts = days.map((d) => toPoint(d.date, formatDay(d.date), d))
     const tk = pts.map((p, i) => ({ i, label: i % (days.length > 20 ? 5 : 2) === 0 ? p.label : '' })).filter((t) => t.label)
     return { points: pts, ticks: tk, unit: `per day, last ${days.length} days` }
-  }, [data, period, m])
+  }, [data, period, day, frame, m])
 
   const peak = points.reduce((best, p) => (p.value > (best?.value || 0) ? p : best), null)
+  const pickable = Boolean(onDay) && (day || ['today', 'week', 'month'].includes(period))
 
   return (
     <Panel
       title="Activity"
       aside={<Segmented size="sm" label="Metric" value={metric} onChange={setMetric} options={METRICS.map((x) => ({ value: x.id, label: x.label }))} />}
     >
-      <Bars key={`${period}-${metric}`} points={points} ticks={ticks} diverging={m.diverging} ariaLabel={`${m.label} ${unit}`} />
+      <Bars
+        key={`${day || period}-${metric}`}
+        points={points}
+        ticks={ticks}
+        diverging={m.diverging}
+        ariaLabel={`${m.label} ${unit}`}
+        active={day}
+        onPick={pickable ? onDay : undefined}
+      />
       <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-ink-subtle">
         <span>{m.label} {unit}.</span>
         {peak && <span>Peak <span className="text-ink-muted tabular-nums">{formatCount(peak.value)}</span> · {peak.label}</span>}
+        {pickable && !m.diverging && <span className="text-ink-faint">Click a bar to open that day.</span>}
         {m.diverging && (
           <span className="ml-auto flex items-center gap-2.5">
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-[2px] bg-emerald-500" />added</span>
@@ -670,14 +708,146 @@ function useDelta(data, period) {
   }, [data, period])
 }
 
+const EMPTY_DAY = { c: 0, a: 0, d: 0, f: 0, r: 0, t: [] }
+
+function useDays(data) {
+  return useMemo(() => {
+    const rows = data.days?.length ? data.days : data.daily
+    const active = rows.filter((r) => r.c > 0).map((r) => r.date)
+    const here = todayKey()
+    const last = data.calendar?.to
+    return {
+      byDate: new Map(rows.map((r) => [r.date, r])),
+      active,
+      first: rows[0]?.date || here,
+      latest: active[active.length - 1] || null,
+      max: last && last > here ? last : here,
+      detailed: Boolean(data.days?.length),
+    }
+  }, [data])
+}
+
+function DayRepos({ day, bucket, repos, onDay, nearest }) {
+  if (!bucket.c) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-10 text-center">
+        <span className="grid h-10 w-10 place-items-center rounded-full bg-surface-raised text-ink-subtle"><Icon name="calendar" className="h-4 w-4" /></span>
+        <p className="max-w-[28ch] text-[12.5px] leading-relaxed text-ink-muted">Nothing landed on {formatDayShort(day)}. A day off, or the work is still on a branch.</p>
+        {nearest && (
+          <button type="button" onClick={() => onDay(nearest)} className={BTN_SECONDARY}>
+            <Icon name="calendar" className="h-3.5 w-3.5" />
+            Closest day with commits
+          </button>
+        )}
+      </div>
+    )
+  }
+  const rows = (bucket.t || []).map(([i, c]) => ({ repo: repos[i], c })).filter((r) => r.repo)
+  if (!rows.length) return <p className="text-[12.5px] text-ink-subtle">Refresh to see which repositories this day touched.</p>
+  const rest = bucket.r - rows.length
+  return (
+    <div className="flex flex-col gap-3">
+      <ul className="-my-2 divide-y divide-line">
+        {rows.map(({ repo, c }, i) => (
+          <li key={repo.fullName || `private-${i}`} className="flex items-center justify-between gap-3 py-2 text-[12.5px]">
+            <span className="flex min-w-0 items-center gap-2">
+              <LanguageDot color={repo.languageColor} />
+              {repo.name ? (
+                <a href={repo.url} target="_blank" rel="noreferrer" className="truncate font-medium text-ink-strong hover:underline">
+                  <span className="text-ink-muted">{repo.owner}/</span>{repo.name}
+                </a>
+              ) : (
+                <span className="flex min-w-0 items-center gap-1.5 font-medium text-ink-muted">
+                  <Icon name="lock" className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{repo.owner ? `${repo.owner}/private repository` : 'Private repository'}</span>
+                </span>
+              )}
+            </span>
+            <span className="shrink-0 tabular-nums text-ink-strong">
+              {formatExact(c)} <span className="text-ink-subtle">{c === 1 ? 'commit' : 'commits'}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[11.5px] text-ink-subtle">
+        {plural(bucket.c, 'commit')} · {plural(bucket.f, 'file')} · <span className="text-emerald-500">+{formatCount(bucket.a)}</span> <span className="text-rose-500">−{formatCount(bucket.d)}</span>
+        {rest > 0 && ` · ${rest} more ${rest === 1 ? 'repository' : 'repositories'}`}
+      </p>
+    </div>
+  )
+}
+
+function Breakdown({ periods, period, onPeriod }) {
+  return (
+    <table className="-mx-2 w-[calc(100%+16px)] text-[12.5px]">
+      <thead>
+        <tr className="text-[10.5px] font-mono uppercase tracking-wider text-ink-subtle">
+          <th className="px-2 pb-1.5 text-left font-semibold">Period</th>
+          <th className="px-2 pb-1.5 text-right font-semibold">Commits</th>
+          <th className="px-2 pb-1.5 text-right font-semibold">Files</th>
+          <th className="px-2 pb-1.5 text-right font-semibold">Lines</th>
+        </tr>
+      </thead>
+      <tbody>
+        {PERIODS.map((x) => {
+          const b = periods[x.id]
+          const on = x.id === period
+          const share = periods.all.c ? b.c / periods.all.c : 0
+          return (
+            <tr key={x.id} onClick={() => onPeriod(x.id)} className={`cursor-pointer transition-colors ${on ? 'bg-surface-hover text-ink-strong' : 'hover:bg-surface-hover/60'}`}>
+              <td className={`rounded-l-md px-2 py-2 ${on ? 'font-medium' : ''}`}>
+                <span className="flex items-center gap-2">
+                  <span className={`h-1.5 w-1.5 rounded-full transition-colors ${on ? 'bg-ink-strong' : 'bg-line-strong'}`} aria-hidden="true" />
+                  {x.short}
+                </span>
+              </td>
+              <td className="relative px-2 py-2 text-right tabular-nums">
+                <span aria-hidden="true" className={`absolute bottom-1 right-2 h-[3px] rounded-full ${on ? 'bg-ink-strong/40' : 'bg-ink-strong/20'}`} style={{ width: `calc((100% - 16px) * ${share})` }} />
+                <span className="relative">{formatCount(b.c)}</span>
+              </td>
+              <td className="px-2 py-2 text-right tabular-nums">{formatCount(b.f)}</td>
+              <td className="whitespace-nowrap rounded-r-md px-2 py-2 text-right tabular-nums"><span className="text-emerald-500">+{formatCount(b.a)}</span> <span className="text-rose-500">−{formatCount(b.d)}</span></td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+}
+
 function StatsView({ data, onRefresh, refreshing, stale }) {
   const { user, periods, calendar, general, coverage } = data
   const [period, setPeriod] = useState('month')
-  const p = periods[period]
+  const [day, setDay] = useState(null)
+  const { byDate, active, first, latest, max, detailed } = useDays(data)
+  const dayOf = useCallback((iso) => ({ ...EMPTY_DAY, ...(byDate.get(iso) || null) }), [byDate])
+  const bucket = day ? dayOf(day) : null
+  const frame = useMemo(() => {
+    if (!day) return null
+    return Array.from({ length: 14 }, (_, i) => {
+      const date = shiftDay(day, i - 13)
+      return { date, ...dayOf(date) }
+    })
+  }, [day, dayOf])
+  const openDay = useCallback((iso) => setDay(iso == null ? null : iso < first ? first : iso > max ? max : iso), [first, max])
+  const nearest = useMemo(() => {
+    if (!day || byDate.get(day)?.c) return null
+    let before = null
+    let after = null
+    for (const d of active) {
+      if (d < day) before = d
+      else if (!after) after = d
+    }
+    return before || after
+  }, [day, active, byDate])
+
+  const p = day ? { ...bucket, repos: bucket.r } : periods[period]
   const meta = PERIODS.find((x) => x.id === period)
   const net = p.a - p.d
-  const delta = useDelta(data, period)
-  const series = period === 'year' ? data.weekly : period === 'all' ? data.monthly : period === 'month' ? data.daily : data.daily.slice(-14)
+  const periodDelta = useDelta(data, period)
+  const dayDelta = useMemo(() => (day ? { than: 'the day before', before: dayOf(shiftDay(day, -1)) } : null), [day, dayOf])
+  const delta = day ? dayDelta : periodDelta
+  const series = day ? frame : period === 'year' ? data.weekly : period === 'all' ? data.monthly : period === 'month' ? data.daily : data.daily.slice(-14)
   const spark = (of) => series.map(of)
   const vs = (now, before) => (delta ? { now, before, than: delta.than } : null)
   const month30 = data.daily.map((d) => d.c)
@@ -736,57 +906,54 @@ function StatsView({ data, onRefresh, refreshing, stale }) {
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3 px-0.5">
           <h2 className="text-[13px] font-semibold tracking-tight text-ink-strong">
-            {meta.short}
-            {delta && <span className="ml-2 font-normal text-ink-subtle">vs {delta.than}</span>}
+            {day ? formatDayFull(day) : meta.short}
+            {delta && <span className="ml-2 font-normal text-ink-subtle">vs {day ? formatWeekday(shiftDay(day, -1)) : delta.than}</span>}
           </h2>
-          <Segmented label="Period" value={period} onChange={setPeriod} options={PERIODS.map((x) => ({ value: x.id, label: x.label }))} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Segmented
+              label="Period"
+              value={day ? '' : period}
+              onChange={(id) => { setDay(null); setPeriod(id) }}
+              options={PERIODS.map((x) => ({ value: x.id, label: x.label }))}
+            />
+            <StatsDayPicker
+              value={day}
+              days={byDate}
+              min={first}
+              max={max}
+              latest={latest}
+              note={detailed ? null : 'Only the last 30 days are in this payload — refresh to reach the rest of your history.'}
+              onChange={openDay}
+            />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <Tile label="Commits" icon="terminal" value={p.c} spark={spark((b) => b.c)} delta={vs(p.c, delta?.before.c)} sub={p.repos ? `in ${p.repos} ${p.repos === 1 ? 'repository' : 'repositories'}` : 'nothing yet'} />
+          <Tile label="Commits" icon="terminal" value={p.c} spark={spark((b) => b.c)} delta={vs(p.c, delta?.before.c)} sub={p.repos ? `in ${p.repos} ${p.repos === 1 ? 'repository' : 'repositories'}` : day ? 'a quiet day' : 'nothing yet'} />
           <Tile label="Files edited" icon="folder" value={p.f} spark={spark((b) => b.f)} delta={vs(p.f, delta?.before.f)} sub={p.c ? `${(p.f / p.c).toFixed(1)} per commit` : '—'} />
           <Tile label="Lines added" icon="plus" value={p.a} prefix="+" spark={spark((b) => b.a)} delta={vs(p.a, delta?.before.a)} sub={p.c ? `${formatCount(Math.round(p.a / p.c))} per commit` : '—'} />
           <Tile label="Lines removed" icon="x" value={p.d} prefix="−" spark={spark((b) => b.d)} delta={vs(p.d, delta?.before.d)} sub={`net ${net >= 0 ? '+' : '−'}${formatCount(Math.abs(net))}`} />
-          <Tile className="col-span-2 sm:col-span-1" label="Repos touched" icon="activity" value={p.repos} bar={periods.all.repos ? p.repos / periods.all.repos : 0} sub={period === 'all' ? `of ${coverage.reposFound} you've committed to` : `of ${periods.all.repos} all time`} />
+          <Tile className="col-span-2 sm:col-span-1" label="Repos touched" icon="activity" value={p.repos} bar={periods.all.repos ? p.repos / periods.all.repos : 0} sub={!day && period === 'all' ? `of ${coverage.reposFound} you've committed to` : `of ${periods.all.repos} all time`} />
         </div>
       </section>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Activity data={data} period={period} />
-        <Panel title="Breakdown" aside="click a row">
-          <table className="-mx-2 w-[calc(100%+16px)] text-[12.5px]">
-            <thead>
-              <tr className="text-[10.5px] font-mono uppercase tracking-wider text-ink-subtle">
-                <th className="px-2 pb-1.5 text-left font-semibold">Period</th>
-                <th className="px-2 pb-1.5 text-right font-semibold">Commits</th>
-                <th className="px-2 pb-1.5 text-right font-semibold">Files</th>
-                <th className="px-2 pb-1.5 text-right font-semibold">Lines</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PERIODS.map((x) => {
-                const b = periods[x.id]
-                const on = x.id === period
-                const share = periods.all.c ? b.c / periods.all.c : 0
-                return (
-                  <tr key={x.id} onClick={() => setPeriod(x.id)} className={`cursor-pointer transition-colors ${on ? 'bg-surface-hover text-ink-strong' : 'hover:bg-surface-hover/60'}`}>
-                    <td className={`rounded-l-md px-2 py-2 ${on ? 'font-medium' : ''}`}>
-                      <span className="flex items-center gap-2">
-                        <span className={`h-1.5 w-1.5 rounded-full transition-colors ${on ? 'bg-ink-strong' : 'bg-line-strong'}`} aria-hidden="true" />
-                        {x.short}
-                      </span>
-                    </td>
-                    <td className="relative px-2 py-2 text-right tabular-nums">
-                      <span aria-hidden="true" className={`absolute bottom-1 right-2 h-[3px] rounded-full ${on ? 'bg-ink-strong/40' : 'bg-ink-strong/20'}`} style={{ width: `calc((100% - 16px) * ${share})` }} />
-                      <span className="relative">{formatCount(b.c)}</span>
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums">{formatCount(b.f)}</td>
-                    <td className="whitespace-nowrap rounded-r-md px-2 py-2 text-right tabular-nums"><span className="text-emerald-500">+{formatCount(b.a)}</span> <span className="text-rose-500">−{formatCount(b.d)}</span></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </Panel>
+        <Activity data={data} period={period} day={day} frame={frame} onDay={openDay} />
+        {day ? (
+          <Panel
+            title="That day"
+            aside={
+              <button type="button" onClick={() => setDay(null)} className="cursor-pointer text-[11.5px] text-ink-subtle transition-colors hover:text-ink-strong">
+                back to periods
+              </button>
+            }
+          >
+            <DayRepos day={day} bucket={bucket} repos={data.repos} onDay={openDay} nearest={nearest} />
+          </Panel>
+        ) : (
+          <Panel title="Breakdown" aside="click a row">
+            <Breakdown periods={periods} period={period} onPeriod={setPeriod} />
+          </Panel>
+        )}
       </div>
 
       <GitHubContributions username={user.login} since={user.createdAt ? user.createdAt.slice(0, 10) : undefined} />
