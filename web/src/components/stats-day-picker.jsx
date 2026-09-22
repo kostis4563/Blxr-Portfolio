@@ -7,7 +7,12 @@ import { dayParts, formatDayShort, formatExact, isoDay, shiftDay, today as today
 
 const DAY_NAMES = weekdayNames()
 const LEVELS = [0.14, 0.32, 0.55, 0.8, 1]
-const CAPS = 'font-mono text-[9.5px] font-semibold uppercase tracking-wider text-ink-faint'
+
+const HEAD = 'w-full text-center text-[0.8rem] font-normal text-ink-subtle'
+const NAV =
+  'absolute inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-line bg-transparent p-0 text-ink-muted opacity-50 transition hover:bg-surface-hover hover:text-ink-strong hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-ink-muted'
+const DAY =
+  'relative inline-flex h-9 w-full max-w-9 cursor-pointer items-center justify-center rounded-md p-0 text-sm font-normal tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink-strong/40 disabled:pointer-events-none disabled:bg-transparent disabled:text-ink-subtle disabled:opacity-40'
 
 const clamp = (day, min, max) => (day < min ? min : day > max ? max : day)
 const faceYm = (face) => `${face.year}-${String(face.month + 1).padStart(2, '0')}`
@@ -65,7 +70,6 @@ function Grid({ face, value, days, busiest, heavy, min, max, cursor, onMonth, on
 
   useEffect(() => {
     focusDay(value || max)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const walk = (event) => {
@@ -81,31 +85,31 @@ function Grid({ face, value, days, busiest, heavy, min, max, cursor, onMonth, on
 
   return (
     <div className="p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="relative flex items-center justify-center pt-1 pb-2">
         <button
           type="button"
           aria-label="Previous month"
           disabled={ym <= min.slice(0, 7)}
           onClick={() => onMonth(-1)}
-          className="cursor-pointer rounded-md p-1 text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-30"
+          className={`${NAV} left-1`}
         >
           <Icon name="chevronLeft" className="h-4 w-4" />
         </button>
-        <span className="text-[12.5px] font-medium tracking-tight text-ink-strong">{monthWords(face.year, face.month)}</span>
+        <span className="text-sm font-medium text-ink-strong">{monthWords(face.year, face.month)}</span>
         <button
           type="button"
           aria-label="Next month"
           disabled={ym >= max.slice(0, 7)}
           onClick={() => onMonth(1)}
-          className="cursor-pointer rounded-md p-1 text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-30"
+          className={`${NAV} right-1`}
         >
           <Icon name="chevronRight" className="h-4 w-4" />
         </button>
       </div>
 
-      <div ref={gridRef} onKeyDown={walk} className="grid grid-cols-7 gap-0.5" role="grid" aria-label="Pick a day">
+      <div ref={gridRef} onKeyDown={walk} className="grid grid-cols-7 justify-items-center gap-y-1" role="grid" aria-label="Pick a day">
         {DAY_NAMES.map((name) => (
-          <span key={name} className={`${CAPS} pb-1 text-center`}>
+          <span key={name} className={HEAD}>
             {name.slice(0, 2)}
           </span>
         ))}
@@ -114,7 +118,9 @@ function Grid({ face, value, days, busiest, heavy, min, max, cursor, onMonth, on
           const commits = bucket?.c || 0
           const out = !inRange(cell.iso)
           const on = cell.iso === value
-          const tint = on || out ? null : tintOf(commits, busiest)
+          const isToday = cell.iso === today
+          // Today now reads as a filled cell rather than a ring, so it can't also carry a tint.
+          const tint = on || out || isToday ? null : tintOf(commits, busiest)
           const mark = out ? null : markOf(bucket, heavy)
           const reads = commits ? `${plural(commits)}${mark ? ` · ${MARKS[mark].says}` : ''}` : 'No commits'
           return (
@@ -131,11 +137,12 @@ function Grid({ face, value, days, busiest, heavy, min, max, cursor, onMonth, on
               onClick={() => onPick(cell.iso)}
               onFocus={() => onCursor(cell.iso, true)}
               style={tint ? { background: tint } : undefined}
-              className={`relative h-8 cursor-pointer rounded-md font-mono text-[11.5px] tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink-strong/40 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-ink-faint/30 ${
+              className={`${DAY} ${
                 on
-                  ? 'bg-ink-strong font-semibold text-ink-inverse'
-                  : `hover:bg-surface-hover hover:ring-1 hover:ring-inset hover:ring-line-strong ${cell.inside ? (commits ? 'font-medium text-ink-strong' : 'text-ink-muted') : 'text-ink-faint/50'} ${
-                      cell.iso === today ? 'ring-1 ring-inset ring-line-strong' : ''
+                  ? 'bg-ink-strong font-medium text-ink-inverse hover:bg-ink-strong hover:text-ink-inverse'
+                  : 
+                    `hover:bg-surface-hover hover:text-ink-strong hover:ring-1 hover:ring-inset hover:ring-line-strong ${
+                      isToday ? 'bg-surface-hover text-ink-strong' : cell.inside ? 'text-ink' : 'text-ink-subtle opacity-50'
                     }`
               }`}
             >
@@ -250,23 +257,23 @@ function Popover({ anchor, value, days, min, max, latest, note, onClose, onChang
         onCursor={walk}
       />
       {legend.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-line px-3 py-2">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 border-t border-line px-3 py-2.5 text-ink-subtle text-xs">
           {legend.map((mark) => (
-            <span key={mark} title={MARKS[mark].says} className="flex items-center gap-1.5 text-[10.5px] text-ink-subtle">
-              <span className={`size-1.5 shrink-0 rounded-full ${MARKS[mark].tint}`} />
+            <span key={mark} title={MARKS[mark].says} className="flex items-center gap-1.5">
+              <span className={`size-2 shrink-0 rounded-full ${MARKS[mark].tint}`} />
               {MARKS[mark].label}
             </span>
           ))}
         </div>
       )}
-      {note && <p className="border-t border-line px-3 py-2 text-[11.5px] leading-snug text-ink-subtle">{note}</p>}
+      {note && <p className="border-t border-line px-3 py-2 text-xs leading-snug text-ink-subtle">{note}</p>}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-line p-2.5">
         {shortcuts.map((s) => (
           <button
             key={s.label}
             type="button"
             onClick={() => settle(s.day)}
-            className="h-7 cursor-pointer rounded-lg border border-line px-2 text-[11.5px] text-ink-subtle transition-colors hover:border-line-strong hover:text-ink-strong"
+            className="h-7 cursor-pointer rounded-md border border-line px-2.5 text-xs text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink-strong"
           >
             {s.label}
           </button>
