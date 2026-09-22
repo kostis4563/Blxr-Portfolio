@@ -81,6 +81,9 @@
   --animate-overlay-in: overlay-in 0.2s ease-out both;
   --animate-panel-in: panel-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-menu-in: menu-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-menu-up-in: menu-up-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-menu-right-in: menu-right-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-menu-out: menu-out 0.12s ease-in both;
   --animate-eq: eq 1.1s ease-in-out infinite;
   --animate-flow: flow 1.4s linear infinite;
   --animate-caret: caret 1s steps(2, start) infinite;
@@ -184,6 +187,39 @@
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes menu-up-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes menu-right-in {
+    from {
+      opacity: 0;
+      transform: translateX(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  @keyframes menu-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.97);
     }
   }
 }

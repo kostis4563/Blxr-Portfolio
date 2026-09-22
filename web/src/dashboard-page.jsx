@@ -149,6 +149,8 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
         user={user}
         theme={theme}
         onToggleTheme={onToggleTheme}
+        themePreference={themePreference}
+        onSetTheme={onSetTheme}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">

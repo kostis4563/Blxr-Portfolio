@@ -170,6 +170,8 @@ export default function DashboardSidebar({
   user,
   theme,
   onToggleTheme,
+  themePreference,
+  onSetTheme,
 }) {
   const [mobile, setMobile] = useState(false)
   const [mac, setMac] = useState(true)
@@ -234,18 +236,26 @@ export default function DashboardSidebar({
 
   const toggleLabel = collapsed ? 'Expand sidebar' : 'Collapse sidebar'
 
-  const accountTrigger = ({ open, toggle }) =>
+  const accountTrigger = ({ open, toggle, onKeyDown, controls }) =>
     rail ? (
       <div className="group relative flex justify-center">
         <button
           type="button"
           onClick={toggle}
+          onKeyDown={onKeyDown}
           aria-label="Account menu"
           aria-expanded={open}
+          aria-controls={controls}
           aria-haspopup="menu"
-          className="grid h-9 w-9 cursor-pointer place-items-center rounded-lg outline-none transition-colors hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/30 aria-expanded:bg-surface-hover"
+          className="grid h-9 w-9 cursor-pointer place-items-center rounded-lg outline-none transition-colors duration-150 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/30 aria-expanded:bg-surface-hover"
         >
-          <Avatar user={user} size={24} />
+          <span
+            className={`grid place-items-center rounded-full transition-shadow duration-200 ${
+              open ? 'shadow-[0_0_0_2px_var(--color-surface),0_0_0_3px_var(--color-line-strong)]' : ''
+            }`}
+          >
+            <Avatar user={user} size={24} />
+          </span>
         </button>
         {!open && <span role="tooltip" className={TIP}>{user.name}</span>}
       </div>
@@ -253,12 +263,14 @@ export default function DashboardSidebar({
       <button
         type="button"
         onClick={toggle}
+        onKeyDown={onKeyDown}
         aria-label="Account menu"
         aria-expanded={open}
+        aria-controls={controls}
         aria-haspopup="menu"
-        className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg px-1.5 text-left outline-none transition-colors hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/30 aria-expanded:bg-surface-hover"
+        className="group flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg px-1.5 text-left outline-none transition-colors duration-150 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/30 aria-expanded:bg-surface-hover"
       >
-        <Avatar user={user} size={26} />
+        <Avatar user={user} size={28} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium leading-tight text-ink-strong">{user.name}</span>
           {user.guest ? (
@@ -267,7 +279,10 @@ export default function DashboardSidebar({
             <Sensitive interactive={false} className="block truncate text-[11.5px] leading-tight text-ink-subtle">{user.email}</Sensitive>
           )}
         </span>
-        <Icon name="chevronsUpDown" className="h-3.5 w-3.5 text-ink-faint" />
+        <Icon
+          name="chevronsUpDown"
+          className={`h-3.5 w-3.5 transition-colors duration-150 group-hover:text-ink-muted ${open ? 'text-ink-muted' : 'text-ink-faint'}`}
+        />
       </button>
     )
 
@@ -387,6 +402,8 @@ export default function DashboardSidebar({
             user={user}
             theme={theme}
             onToggleTheme={onToggleTheme}
+            themePreference={themePreference}
+            onSetTheme={onSetTheme}
             placement={rail ? 'right' : 'up'}
             trigger={accountTrigger}
           />
