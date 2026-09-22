@@ -44,6 +44,7 @@ create table if not exists public.boards (
   remind      jsonb not null default '{}'::jsonb,
   art         jsonb not null default '{}'::jsonb,
   archived    boolean not null default false,
+  pinned      boolean not null default false,
   seq         integer not null default 0,
   rev         integer not null default 0,
   created_at  timestamptz not null default now(),
@@ -60,7 +61,10 @@ create table if not exists public.boards (
   constraint boards_remind_shape check (jsonb_typeof(remind) = 'object')
 );
 
+alter table public.boards add column if not exists pinned boolean not null default false;
+
 create index if not exists boards_owner_idx on public.boards (owner, archived);
+create index if not exists boards_pinned_idx on public.boards (owner) where pinned;
 
 create table if not exists public.board_cards (
   id          uuid primary key default gen_random_uuid(),
@@ -237,8 +241,14 @@ create index if not exists board_cards_agenda_idx on public.board_cards (due)
 create or replace function public.boards_touch()
 returns trigger language plpgsql as $$
 begin
-  new.updated_at = now();
   new.rev = coalesce(old.rev, 0) + 1;
+  if new.pinned is distinct from old.pinned
+     and to_jsonb(new) - 'pinned' - 'rev' - 'updated_at'
+       = to_jsonb(old) - 'pinned' - 'rev' - 'updated_at' then
+    new.updated_at = old.updated_at;
+  else
+    new.updated_at = now();
+  end if;
   return new;
 end $$;
 
@@ -335,7 +345,10 @@ drop policy if exists "cards: delete own" on public.board_cards;
 create policy "cards: delete own" on public.board_cards
   for delete using ((select auth.uid()) = owner or (select public.is_board_admin()));
 
-create or replace view public.board_index
+-- dropped first: `b.*` pins the column list at creation time, so a new column
+-- on public.boards cannot be folded in by `create or replace` alone
+drop view if exists public.board_index;
+create view public.board_index
 with (security_invoker = on) as
 select
   b.*,

@@ -190,71 +190,90 @@ function ComingUp({ boards, onOpen }) {
   )
 }
 
-function BoardTile({ board, onOpen }) {
+function BoardTile({ board, onOpen, onPin, busy }) {
   const { cards, done, overdue, soon, archived } = board.counts
   const purpose = purposeOf(board.purpose)
   const lead = factLead(purpose, board.facts)
+  const banner = board.art?.banner?.path
 
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(board.id)}
-      className="group relative flex cursor-pointer flex-col items-stretch overflow-hidden rounded-xl border border-line bg-surface text-left transition-colors hover:border-line-strong"
-    >
-      {board.art?.banner?.path ? (
-        <span className="block h-16 w-full overflow-hidden border-b border-line">
-          <StoredImage path={board.art.banner.path} alt="" focus={board.art.banner.focus} className="h-full w-full object-cover" />
-        </span>
-      ) : (
-        <span className={`absolute inset-x-0 top-0 h-px ${shade(board.colour).stripe}`} aria-hidden="true" />
-      )}
-
-      <span className="flex flex-1 flex-col p-4">
-        <span className="flex items-center gap-2">
-          <BoardMark board={board} size="sm" />
-          <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium tracking-tight text-ink-strong">{board.name}</span>
-          {board.archived && <Tag>Archived</Tag>}
-        </span>
-
-        <span className="mt-1.5 line-clamp-2 block min-h-[32px] text-[12px] leading-relaxed text-ink-muted">
-          {board.note || <span className="text-ink-faint">No description.</span>}
-        </span>
-
-        <span className="mt-2 flex min-h-[15px] items-center gap-1.5 overflow-hidden text-[11px] text-ink-faint">
-          {purpose.id !== 'personal' && (
-            <>
-              <Icon name={purpose.icon} className="h-3 w-3 shrink-0" />
-              <span className="shrink-0">{purpose.label}</span>
-            </>
-          )}
-          {lead && (
-            <span className="min-w-0 truncate">
-              {purpose.id !== 'personal' && '· '}
-              {lead.text}
-            </span>
-          )}
-        </span>
-
-        <span className="mt-4 block">
-          <span className="mb-2 flex items-baseline gap-1.5">
-            <span className="font-mono text-[15px] font-semibold leading-none tabular-nums text-ink-strong">{done}</span>
-            <span className="text-[11.5px] text-ink-subtle">
-              of {cards} done
-              {archived > 0 && <span className="text-ink-faint"> · {archived} archived</span>}
-            </span>
-            <span className="flex-1" />
-            {overdue > 0 ? (
-              <span className="text-[11.5px] font-medium tabular-nums text-red-500">{overdue} overdue</span>
-            ) : soon > 0 ? (
-              <span className="text-[11.5px] tabular-nums text-amber-500">{soon} due soon</span>
-            ) : null}
+    <div className="relative flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-line-strong">
+      <button
+        type="button"
+        onClick={() => onOpen(board.id)}
+        className="relative flex flex-1 cursor-pointer flex-col items-stretch text-left"
+      >
+        {banner ? (
+          <span className="block h-16 w-full overflow-hidden border-b border-line">
+            <StoredImage path={board.art.banner.path} alt="" focus={board.art.banner.focus} className="h-full w-full object-cover" />
           </span>
-          <Progress done={done} total={cards} />
-        </span>
+        ) : (
+          <span className={`absolute inset-x-0 top-0 h-px ${shade(board.colour).stripe}`} aria-hidden="true" />
+        )}
 
-        <span className="mt-3 block text-[11px] text-ink-faint">{board.updated_at ? `Touched ${ago(board.updated_at)}` : ''}</span>
-      </span>
-    </button>
+        <span className="flex flex-1 flex-col p-4">
+          <span className={`flex items-center gap-2 ${banner ? '' : 'pr-7'}`}>
+            <BoardMark board={board} size="sm" />
+            <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium tracking-tight text-ink-strong">{board.name}</span>
+            {board.archived && <Tag>Archived</Tag>}
+          </span>
+
+          <span className="mt-1.5 line-clamp-2 block min-h-[32px] text-[12px] leading-relaxed text-ink-muted">
+            {board.note || <span className="text-ink-faint">No description.</span>}
+          </span>
+
+          <span className="mt-2 flex min-h-[15px] items-center gap-1.5 overflow-hidden text-[11px] text-ink-faint">
+            {purpose.id !== 'personal' && (
+              <>
+                <Icon name={purpose.icon} className="h-3 w-3 shrink-0" />
+                <span className="shrink-0">{purpose.label}</span>
+              </>
+            )}
+            {lead && (
+              <span className="min-w-0 truncate">
+                {purpose.id !== 'personal' && '· '}
+                {lead.text}
+              </span>
+            )}
+          </span>
+
+          <span className="mt-4 block">
+            <span className="mb-2 flex items-baseline gap-1.5">
+              <span className="font-mono text-[15px] font-semibold leading-none tabular-nums text-ink-strong">{done}</span>
+              <span className="text-[11.5px] text-ink-subtle">
+                of {cards} done
+                {archived > 0 && <span className="text-ink-faint"> · {archived} archived</span>}
+              </span>
+              <span className="flex-1" />
+              {overdue > 0 ? (
+                <span className="text-[11.5px] font-medium tabular-nums text-red-500">{overdue} overdue</span>
+              ) : soon > 0 ? (
+                <span className="text-[11.5px] tabular-nums text-amber-500">{soon} due soon</span>
+              ) : null}
+            </span>
+            <Progress done={done} total={cards} />
+          </span>
+
+          <span className="mt-3 block text-[11px] text-ink-faint">{board.updated_at ? `Touched ${ago(board.updated_at)}` : ''}</span>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        disabled={busy}
+        aria-pressed={Boolean(board.pinned)}
+        title={board.pinned ? `Unpin ${board.name}` : `Pin ${board.name} to the top`}
+        onClick={() => onPin(board)}
+        className={`absolute right-2 top-2 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+          board.pinned
+            ? 'border-line-strong bg-surface text-ink-strong'
+            : 'border-transparent bg-surface/70 text-ink-faint backdrop-blur-sm hover:border-line hover:text-ink-strong'
+        }`}
+      >
+        <Icon name="pushpin" className="h-3.5 w-3.5" />
+        <span className="sr-only">{board.pinned ? 'Unpin this board' : 'Pin this board'}</span>
+      </button>
+    </div>
   )
 }
 
@@ -723,6 +742,8 @@ export default function DashboardBoards({ hash, guest = false, onClaim }) {
     if (sort === 'made') sorted.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
     if (sort === 'open')
       sorted.sort((a, b) => b.counts.cards - b.counts.done - (a.counts.cards - a.counts.done) || a.name.localeCompare(b.name))
+    // pinned boards float to the top, keeping the chosen order inside each half
+    sorted.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)))
     return sorted
   }, [index, search, sort, kind])
 
@@ -743,6 +764,16 @@ export default function DashboardBoards({ hash, guest = false, onClaim }) {
     }
   }
 
+  const pinBoard = (entry) => {
+    const pinned = !entry.pinned
+    setIndex((held) => (held || []).map((row) => (row.id === entry.id ? { ...row, pinned } : row)))
+    if (board?.id === entry.id) setBoard((held) => (held ? { ...held, pinned } : held))
+    return run(async () => {
+      const next = await api.updateBoard(entry.id, { pinned })
+      if (live.current && board?.id === entry.id) setBoard((held) => (held ? { ...held, ...next } : held))
+    })
+  }
+
   if (openId && board) {
     return (
       <div className="flex flex-col gap-5">
@@ -761,6 +792,7 @@ export default function DashboardBoards({ hash, guest = false, onClaim }) {
             <h2 data-tour="board-head" className="flex items-center gap-2.5 text-[18px] font-semibold tracking-tight text-ink-strong">
               <BoardMark board={board} size="lg" />
               <span className="min-w-0 truncate">{board.name}</span>
+              {board.pinned && <Tag tone="strong" title="Pinned to the top of your boards">Pinned</Tag>}
               {board.archived && <Tag tone="amber">Archived</Tag>}
             </h2>
 
@@ -791,6 +823,17 @@ export default function DashboardBoards({ hash, guest = false, onClaim }) {
 
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
             <SaveMark state={busy ? 'saving' : savedAt ? 'saved' : 'rest'} at={savedAt} now={now} />
+            <button
+              type="button"
+              disabled={busy}
+              aria-pressed={Boolean(board.pinned)}
+              title={board.pinned ? 'Stop pinning this board' : 'Keep this board at the top of your boards'}
+              onClick={() => pinBoard(board)}
+              className={BTN_QUIET}
+            >
+              <Icon name="pushpin" className="h-3.5 w-3.5" />
+              {board.pinned ? 'Pinned' : 'Pin'}
+            </button>
             <button type="button" data-tour="board-settings" onClick={() => setSettings(true)} className={BTN_QUIET}>
               <Icon name="settings" className="h-3.5 w-3.5" />
               Settings
@@ -1089,7 +1132,7 @@ export default function DashboardBoards({ hash, guest = false, onClaim }) {
       {index && listed.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {listed.map((entry) => (
-            <BoardTile key={entry.id} board={entry} onOpen={(id) => go({ board: id })} />
+            <BoardTile key={entry.id} board={entry} busy={busy} onOpen={(id) => go({ board: id })} onPin={pinBoard} />
           ))}
         </div>
       )}

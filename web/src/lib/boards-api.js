@@ -66,14 +66,19 @@ function unwrap({ data, error }, what) {
   return data
 }
 
-const BOARD_COLUMNS = 'id, owner, name, note, colour, purpose, facts, lists, labels, remind, art, archived, seq, rev, created_at, updated_at'
+const BOARD_COLUMNS = 'id, owner, name, note, colour, purpose, facts, lists, labels, remind, art, archived, pinned, seq, rev, created_at, updated_at'
 const INDEX_COLUMNS = `${BOARD_COLUMNS}, count_cards, count_done, count_overdue, count_soon, count_archived`
 const CARD_COLUMNS =
   'id, board_id, seq, list_id, position, title, notes, done, archived, due, labels, checklist, comments, links, files, activity, deleted_at, completed_at, created_at, updated_at'
 
 export async function fetchBoards(archived = false) {
   const rows = unwrap(
-    await client().from('board_index').select(INDEX_COLUMNS).eq('archived', archived).order('updated_at', { ascending: false }),
+    await client()
+      .from('board_index')
+      .select(INDEX_COLUMNS)
+      .eq('archived', archived)
+      .order('pinned', { ascending: false })
+      .order('updated_at', { ascending: false }),
     'Boards could not be loaded',
   )
   return (rows || []).map(shapeBoard)
@@ -127,6 +132,7 @@ function shapeBoard(row) {
   return {
     ...row,
     note: row.note || '',
+    pinned: Boolean(row.pinned),
     facts: row.facts || {},
     lists: Array.isArray(row.lists) ? row.lists : [],
     labels: Array.isArray(row.labels) ? row.labels : [],
