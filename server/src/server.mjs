@@ -862,6 +862,23 @@ async function fetchContributions(user, year) {
   return ghFromMirror(user, year)
 }
 
+const WEATHER_TTL_MS = 10 * 60 * 1000
+const WEATHER_URL =
+  'https://api.open-meteo.com/v1/forecast?latitude=37.9838&longitude=23.7275&current=temperature_2m,weather_code&timezone=Europe%2FAthens'
+let weatherCache = null
+
+async function fetchWeather() {
+  const data = await withTimeout(async (signal) => {
+    const res = await fetch(WEATHER_URL, { headers: { accept: 'application/json', 'user-agent': 'blxr.net' }, signal })
+    if (!res.ok) throw new Error(`open-meteo ${res.status}`)
+    return res.json()
+  })
+  const temp = Number(data?.current?.temperature_2m)
+  if (!Number.isFinite(temp)) throw new Error('open-meteo: no temperature')
+  const code = Number(data?.current?.weather_code)
+  return { tempC: Math.round(temp * 10) / 10, code: Number.isFinite(code) ? code : null, at: Date.now() }
+}
+
 const GH_API = (process.env.GITHUB_API || 'https://api.github.com').replace(/\/$/, '')
 const GH_STATS_TTL_MS = 60 * 60 * 1000
 const GH_STATS_REFRESH_MIN_MS = 2 * 60 * 1000
@@ -1655,7 +1672,7 @@ function bucketsFor(req, pathname) {
   ) {
     out.push('auth')
   }
-  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname === '/api/discord/user') out.push('upstream')
+  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname === '/api/discord/user' || pathname === '/api/weather') out.push('upstream')
   if ((pathname === '/api/reviews' && req.method === 'POST') || (/^\/api\/reviews\/[a-z0-9]{8}$/.test(pathname) && req.method === 'PATCH')) out.push('write')
   if (pathname === '/api/hit' || pathname === '/api/logs/client' || (pathname === '/api/vitals' && req.method === 'POST')) out.push('beacon')
   out.push('all')
@@ -2105,6 +2122,22 @@ const server = http.createServer(async (req, res) => {
         log.warn('upstream', `discord lookup failed for ${id}`, { detail: err?.message })
         return json(res, 502, { error: 'discord_failed' }, NO_STORE)
       }
+    }
+
+    if (url.pathname === '/api/weather') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      const fresh = weatherCache && Date.now() - weatherCache.at < WEATHER_TTL_MS
+      if (!fresh) {
+        try {
+          weatherCache = { at: Date.now(), data: await fetchWeather() }
+        } catch (err) {
+          if (!weatherCache) {
+            log.warn('upstream', 'athens weather lookup failed', { detail: err?.message })
+            return json(res, 502, { error: 'weather_failed' }, NO_STORE)
+          }
+        }
+      }
+      return json(res, 200, weatherCache.data, { 'cache-control': 'public, max-age=300' })
     }
 
     if (url.pathname === '/api/github/contributions') {

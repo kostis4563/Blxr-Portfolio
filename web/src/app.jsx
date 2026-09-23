@@ -15,6 +15,7 @@ import NotFoundPageImpl from '#ssr-page/not-found'
 import ThemeToggle from './components/theme-toggle'
 import CommandPaletteHost from './components/command-palette-host'
 import NavMenu from './components/nav-menu'
+import StudioFact from './components/studio-fact'
 import { useTheme } from './lib/use-theme'
 import { projectsList } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
@@ -501,7 +502,7 @@ function App() {
             {[
               { key: 'now', label: 'Currently', value: 'Final year of the IB Diploma in Athens, so most of this gets built after school' },
               { key: 'stack', label: 'Mostly', value: 'TypeScript, React and Express, with C++ when it has to run on the machine itself' },
-              { key: 'studio', label: 'Studio', value: 'Not a house, but a home <3' }
+              { key: 'studio', label: 'Studio', value: 'Not a house, but a home <3', live: true }
             ].map((fact) => (
               <div key={fact.key} className="grid grid-cols-[5.5rem_1fr] gap-x-4 items-baseline">
                 <dt className="text-[12px] font-watom text-ink-subtle">{fact.label}</dt>
@@ -516,6 +517,8 @@ function App() {
                       </span>
                       <Icon name="arrowUpRight" className="h-3 w-3 self-center text-ink-faint" />
                     </a>
+                  ) : fact.live ? (
+                    <StudioFact text={fact.value} />
                   ) : (
                     fact.value
                   )}

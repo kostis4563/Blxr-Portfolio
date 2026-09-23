@@ -954,6 +954,119 @@ body {
   .sensitive { transition: none; }
 }
 
+.scramble {
+  display: inline-grid;
+  justify-items: start;
+  align-items: baseline;
+  cursor: default;
+  outline: none;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scramble > * {
+  grid-area: 1 / 1;
+}
+
+.scramble-size {
+  visibility: hidden;
+  pointer-events: none;
+  white-space: pre-wrap;
+}
+.scramble:hover,
+.scramble:focus-visible,
+.scramble[data-run] {
+  border-bottom-color: var(--color-line);
+}
+
+.scramble-rest {
+  white-space: pre-wrap;
+}
+.scramble[data-run] .scramble-rest {
+  display: none;
+}
+
+.scramble-stage {
+  position: relative;
+  display: none;
+  white-space: pre;
+}
+.scramble[data-run] .scramble-stage {
+  display: inline-block;
+}
+
+.scramble-cell {
+  display: inline-block;
+  text-align: center;
+  transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), color 150ms ease;
+}
+.scramble-cell[data-phase='noise'] {
+  color: var(--color-ink-faint);
+  animation: scramble-flicker 260ms ease-in-out var(--fd, 0ms) infinite alternate;
+}
+.scramble-cell[data-phase='set'] {
+  animation: scramble-land 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes scramble-flicker {
+  from { opacity: 0.5; }
+  to { opacity: 0.92; }
+}
+
+@keyframes scramble-land {
+  0% {
+    opacity: 0.4;
+    color: var(--color-ink-strong);
+    transform: translate3d(0, -2px, 0) scale(0.92);
+    filter: blur(0.5px);
+  }
+  45% {
+    opacity: 1;
+    color: var(--color-ink-strong);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    color: inherit;
+    transform: none;
+    filter: none;
+  }
+}
+
+.scramble-caret {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 1.5px;
+  height: 1.05em;
+  margin-top: -0.52em;
+  border-radius: 2px;
+  background: var(--color-ink-strong);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.scramble-caret::before {
+  content: '';
+  position: absolute;
+  right: 1.5px;
+  top: 0;
+  bottom: 0;
+  width: 2.4em;
+  border-radius: 2px;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--color-ink-strong) 16%, transparent),
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scramble,
+  .scramble-cell { transition: none; }
+  .scramble-cell[data-phase='noise'],
+  .scramble-cell[data-phase='set'] { animation: none; }
+}
+
 @media print {
   :root,
   :root[data-theme='dark'] {

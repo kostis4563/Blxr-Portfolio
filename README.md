@@ -116,6 +116,7 @@ web/src/
     ├── github-stats.js  Dashboard → Stats (/api/github/stats)
     ├── youtube-engine.js
     ├── lyrics.js        LRCLIB
+    ├── weather.js       Athens' temperature for the hero's Studio line (/api/weather)
     └── use-theme.js
 ```
 

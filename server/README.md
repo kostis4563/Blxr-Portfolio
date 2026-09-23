@@ -56,7 +56,8 @@ Everything in `guard.mjs`, applied before any route runs:
   bearer token (`/api/logs`, the panel, invites, `/api/mail/*`,
   `/api/account/*`, `/api/discord/user`,
   `/api/github/stats` with a token); `upstream` 90 for `/api/music/*`,
-  `/api/github/*` and `/api/discord/user`; `write` 12 for review posts and edits;
+  `/api/github/*`, `/api/discord/user` and `/api/weather`; `write` 12 for review
+  posts and edits;
   `beacon` 60 for hits, vitals and browser error reports; reads of
   `/api/hits` and `/api/vitals` count as `auth`. Over the limit
   answers `429 rate_limited` with `Retry-After`. nginx has a coarser
@@ -326,6 +327,22 @@ which relays the same user object.
 none. Every URL points at `cdn.discordapp.com`, which the CSP and the
 `profiles` table constraints allow; nothing is downloaded server-side. Counts
 in the `auth` and `upstream` buckets. Consumed by `web/src/lib/discord.js`.
+
+### `GET /api/weather`
+Athens' current temperature, for the "Studio" line in the hero. No parameters,
+no key: reads Open-Meteo server-side so the browser's CSP stays on
+`connect-src 'self'` and one reading serves every visitor.
+
+```json
+{ "tempC": 24.3, "code": 0, "at": 1758585600000 }
+```
+
+`code` is the WMO weather code (`null` if the upstream omits it). Cached ten
+minutes in the process; if the lookup fails the last reading is served instead,
+and only a cold cache answers `502 weather_failed`. Counts in the `upstream`
+bucket. Consumed by `web/src/lib/weather.js`, which falls back to Open-Meteo
+directly when this route isn't there (`npm run dev` forwards `/api` to
+production) — hence `api.open-meteo.com` in the CSP's `connect-src`.
 
 ### `GET /api/github/contributions?user=<login>&y=last|YYYY`
 `user` must be a valid GitHub login (`400 bad_user` otherwise) **and one
