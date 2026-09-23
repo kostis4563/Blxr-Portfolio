@@ -9,7 +9,7 @@ const pub = resolve(here, 'public')
 const W = 1200
 const H = 630
 
-const BG = '#0a0a0a'
+const BG = '#090909'
 const LINE = '#262626'
 const PURPLE = '#8b5cf6'
 

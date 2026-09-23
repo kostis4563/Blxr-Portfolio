@@ -856,7 +856,7 @@ function SecurityTab({ user, prefs, setPref }) {
 
 const SWATCH = {
   light: { bg: '#f4f3f0', surface: '#ffffff', line: '#dbd8d2', ink: '#97918a', strong: '#17150f' },
-  dark: { bg: '#0a0a0a', surface: '#161616', line: '#2a2a2a', ink: '#525252', strong: '#e5e5e5' },
+  dark: { bg: '#090909', surface: '#131313', line: '#282828', ink: '#4f4f4f', strong: '#f5f5f5' },
 }
 
 function Preview({ scheme }) {

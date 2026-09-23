@@ -13,29 +13,29 @@
   --color-brand-purple: #8b5cf6;
   --color-brand-indigo: #6366f1;
 
-  --color-bg: #0a0a0a;
-  --color-surface: #111111;
-  --color-surface-raised: #161616;
-  --color-surface-hover: #1e1e1e;
-  --color-surface-hover-strong: #2a2a2a;
+  --color-bg: #090909;
+  --color-surface: #0d0d0d;
+  --color-surface-raised: #131313;
+  --color-surface-hover: #1a1a1a;
+  --color-surface-hover-strong: #242424;
 
   --color-surface-inverted: #0d0d0d;
 
-  --color-ink-on-inverted: #e5e5e5;
+  --color-ink-on-inverted: #f5f5f5;
 
-  --color-line: #222222;
-  --color-line-strong: #2d2d2d;
+  --color-line: #1c1c1c;
+  --color-line-strong: #282828;
 
   --color-ink-strong: #ffffff;
-  --color-ink: #e5e5e5;
-  --color-ink-secondary: #d4d4d4;
-  --color-ink-muted: #a3a3a3;
-  --color-ink-subtle: #737373;
-  --color-ink-faint: #525252;
+  --color-ink: #f5f5f5;
+  --color-ink-secondary: #cfcfcf;
+  --color-ink-muted: #888888;
+  --color-ink-subtle: #6e6e6e;
+  --color-ink-faint: #4f4f4f;
 
-  --color-ink-inverse: #0a0a0a;
+  --color-ink-inverse: #090909;
 
-  --color-selection: #262626;
+  --color-selection: #242424;
 
   --hairline: rgba(255, 255, 255, 0.05);
   --hairline-strong: rgba(255, 255, 255, 0.1);
