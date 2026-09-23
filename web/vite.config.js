@@ -130,6 +130,23 @@ const apiProxy = (mode) => {
   return set === undefined ? PROD_API : set
 }
 
+const CLIENT_ENTRY = fileURLToPath(new URL('./src/main.jsx', import.meta.url))
+
+let entryPath = null
+function onEntryPath(id, ctx) {
+  if (!entryPath) {
+    entryPath = new Set()
+    const stack = [CLIENT_ENTRY]
+    while (stack.length) {
+      const next = stack.pop()
+      if (entryPath.has(next)) continue
+      entryPath.add(next)
+      stack.push(...(ctx.getModuleInfo(next)?.importedIds ?? []))
+    }
+  }
+  return entryPath.has(id)
+}
+
 export default defineConfig(({ command, mode, isSsrBuild }) => ({
   server: apiProxy(mode) ? { proxy: { '/api': { target: apiProxy(mode), changeOrigin: true } } } : undefined,
   resolve: {
@@ -154,12 +171,13 @@ export default defineConfig(({ command, mode, isSsrBuild }) => ({
           groups: [
 
             { name: 'gsap', test: /[\\/]node_modules[\\/]gsap[\\/]/ },
-            { name: 'vendor', test: /node_modules/ },
 
-            {
-              name: 'app',
-              test: /[\\/]src[\\/](?!components[\\/](command-palette\.jsx|dashboard-[^/]+\.jsx)|dashboard-[^/]+\.jsx$|(projects|library|reviews|now|uses|cv|login|dashboard|public-profile|not-found)-page\.jsx$)/,
-            },
+            // vendor and app are modulepreloaded on every page, so they only
+            // take what main.jsx reaches through static imports. Anything a
+            // lazy route alone needs (boards, messages, review panel...) is
+            // left to that route's own chunk instead of riding along.
+            { name: (id, ctx) => (onEntryPath(id, ctx) ? 'vendor' : null), test: /node_modules/ },
+            { name: (id, ctx) => (onEntryPath(id, ctx) ? 'app' : null), test: /[\\/]src[\\/]/ },
           ],
         },
         chunkFileNames: 'assets/[name]-[hash].js',

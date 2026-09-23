@@ -1,14 +1,13 @@
 @import "tailwindcss";
 
 @import "./fonts.css";
+@import "./display-fonts.css";
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-serif: 'Playfair Display', 'Georgia', serif;
-  --font-shake: 'Super Shake', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-bagus: 'Yang Bagus', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-vergilia: 'Vergilia', 'Playfair Display', serif;
-  --font-aquire: 'Aquire', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-watom: 'Watom', 'Plus Jakarta Sans', system-ui, sans-serif;
 
   --color-brand-purple: #8b5cf6;

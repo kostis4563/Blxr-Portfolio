@@ -282,7 +282,8 @@ begin
     elsif old.done and not new.done then
       new.completed_at = null;
     end if;
-    update public.boards set updated_at = now() where id = new.board_id;
+    update public.boards set updated_at = now()
+     where id = new.board_id and updated_at is distinct from now();
   end if;
   return new;
 end $$;

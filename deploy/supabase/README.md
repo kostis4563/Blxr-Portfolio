@@ -334,7 +334,12 @@ bare call, so Postgres evaluates them once per query instead of once per row
 for every card counted. `board_cards_live_idx` carries the columns the board
 list's counters and the open board need, so neither touches the table, and
 `board_cards_agenda_idx` is keyed on `due` because row security's
-`owner = … or admin` cannot use an owner key. All of this is created by
+`owner = … or admin` cannot use an owner key. A card update touches its
+board's `updated_at`/`rev` once per transaction, not once per card, so bulk
+edits don't rewrite the board row dozens of times. `messages_reply_to_idx`
+and `messages_author_idx` back the two foreign keys that cascade, so clearing
+a conversation or deleting an account no longer scans `messages` per row, and
+`messages_unread()` checks the owner role once instead of per message. All of this is created by
 re-running [`profiles.sql`](profiles.sql), [`boards.sql`](boards.sql) and
 [`messages.sql`](messages.sql); the old `board_cards_due_idx` is dropped by
 the boards file.

@@ -1,0 +1,32 @@
+/*
+  Local display faces. Kept apart from fonts.css, which fetch-fonts.js
+  regenerates. Each file is subset to Latin + common punctuation and shipped
+  as WOFF2; the hash in the name keeps the year-long immutable cache honest.
+  Re-subset with:
+    pyftsubset <src>.ttf --flavor=woff2 --layout-features='kern,liga' \
+      --unicodes="U+0020-007E,U+00A0-00FF,U+2013-2014,U+2018-201D,U+2022,U+2026,U+20AC,U+2122"
+*/
+
+@font-face {
+  font-family: 'Yang Bagus';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/yang-bagus-latin-e4902677.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Vergilia';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/vergilia-latin-9d071c69.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Watom';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/watom-latin-8a598f2d.woff2') format('woff2');
+}

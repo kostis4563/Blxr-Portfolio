@@ -87,6 +87,8 @@ end $$;
 
 create index if not exists messages_thread_idx on public.messages (thread_id, created_at);
 create index if not exists messages_thread_updated_idx on public.messages (thread_id, updated_at);
+create index if not exists messages_reply_to_idx on public.messages (reply_to) where reply_to is not null;
+create index if not exists messages_author_idx on public.messages (author);
 
 create or replace function public.threads_stamp()
 returns trigger
@@ -303,13 +305,13 @@ $$;
 create or replace function public.messages_unread()
 returns integer
 language sql stable as $$
-  select coalesce(sum(
-    (select count(*) from public.messages m
-     where m.thread_id = t.id and m.deleted_at is null
-       and m.from_owner <> public.is_site_owner()
-       and m.created_at > case when public.is_site_owner() then t.owner_seen_at else t.member_seen_at end)
-  ), 0)::integer
-  from public.threads t;
+  with me as (select public.is_site_owner() as owner)
+  select count(*)::integer
+  from me, public.threads t
+  join public.messages m on m.thread_id = t.id
+  where m.deleted_at is null
+    and m.from_owner <> me.owner
+    and m.created_at > case when me.owner then t.owner_seen_at else t.member_seen_at end;
 $$;
 
 create or replace function public.messages_seen(thread uuid)
