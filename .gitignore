@@ -8,6 +8,7 @@ lerna-debug.log*
 
 node_modules
 dist
+!web/tests/dist/
 dist-ssr
 *.local
 
