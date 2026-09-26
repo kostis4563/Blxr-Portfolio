@@ -1240,14 +1240,16 @@ html[data-entry] .project-slide[data-active] .project-copy > * {
 }
 
 .flashbang,
-.flashbang-throw {
+.flashbang-throw,
+.smoke {
   position: fixed;
   inset: 0;
   z-index: 90;
   overflow: hidden;
   pointer-events: none;
 }
-.flashbang-throw {
+.flashbang-throw,
+.smoke {
   --nade: clamp(40px, 6.5vmin, 64px);
 }
 .nade {
@@ -1418,6 +1420,105 @@ html[data-entry] .project-slide[data-active] .project-copy > * {
   100% {
     opacity: 0;
     transform: translate(-46%, -47%) scale(0.85);
+  }
+}
+
+.smoke .nade {
+  animation:
+    nade-roll 1.1s linear both,
+    smoke-swallow 0.3s 1.7s both;
+}
+/* Haze and fog fill in behind the puffs as a soft-edged wall: the mask grows from nothing to past every corner. */
+.smoke-haze,
+.smoke-fog {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: radial-gradient(circle at 50% 54%, #000 30%, transparent 58%) 50% 54% / 0 0 no-repeat;
+  mask: radial-gradient(circle at 50% 54%, #000 30%, transparent 58%) 50% 54% / 0 0 no-repeat;
+}
+.smoke-haze {
+  -webkit-backdrop-filter: blur(10px) saturate(0.5) brightness(0.6);
+  backdrop-filter: blur(10px) saturate(0.5) brightness(0.6);
+  animation:
+    smoke-spread 0.7s cubic-bezier(0.45, 0, 0.35, 1) 1.2s both,
+    smoke-haze 5.6s ease-in-out both;
+}
+.smoke-fog {
+  background: radial-gradient(circle at 50% 54%, #2f3235, #1e2022 55%, #111213);
+  animation:
+    smoke-spread 0.7s cubic-bezier(0.45, 0, 0.35, 1) 1.2s both,
+    smoke-fog 5.6s both;
+}
+.smoke-puff {
+  position: absolute;
+  top: 54%;
+  left: calc(50% - var(--nade) * 0.6);
+  width: var(--size);
+  aspect-ratio: 1;
+  background:
+    radial-gradient(closest-side at 44% 38%, rgb(255 255 255 / 0.09), transparent),
+    radial-gradient(closest-side at 56% 64%, rgb(0 0 0 / 0.25), transparent),
+    radial-gradient(closest-side, rgb(var(--tone) / 0.94), rgb(var(--tone) / 0.72) 45%, rgb(var(--tone) / 0));
+  animation:
+    smoke-grow var(--grow) cubic-bezier(0.1, 0.75, 0.3, 1) var(--at) both,
+    smoke-thin var(--fade) ease-in var(--thin) both;
+}
+@keyframes smoke-swallow {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes smoke-spread {
+  to {
+    -webkit-mask-size: 360vmax 360vmax;
+    mask-size: 360vmax 360vmax;
+  }
+}
+/* Chrome skips an empty mask on a backdrop filter, so the haze also stays hidden until the can starts smoking. */
+@keyframes smoke-haze {
+  0%,
+  21% {
+    opacity: 0;
+  }
+  30%,
+  50% {
+    opacity: 1;
+  }
+  88%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes smoke-fog {
+  0%,
+  18% {
+    opacity: 0.3;
+  }
+  26% {
+    opacity: 0.6;
+  }
+  34%,
+  43% {
+    opacity: 1;
+    animation-timing-function: ease-in-out;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes smoke-grow {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+  }
+  to {
+    transform: translate(calc(var(--x) - 50%), calc(var(--y) - 50%)) scale(1);
+  }
+}
+@keyframes smoke-thin {
+  to {
+    opacity: 0;
+    translate: var(--dx) var(--dy);
   }
 }
 

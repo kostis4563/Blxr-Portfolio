@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { flashbang } from './memes'
+import { flashbang, smokeGrenade } from './memes'
 
 const STORAGE_KEY = 'blxr-theme'
 const DEFAULT_THEME = 'dark'
@@ -38,7 +38,9 @@ function changeTheme(next, apply) {
   const applyIfLatest = () => {
     if (change === themeChanges) apply()
   }
-  if (next === 'light' && document.documentElement.dataset.theme === 'dark') flashbang(applyIfLatest)
+  const current = document.documentElement.dataset.theme
+  if (next === 'light' && current === 'dark') flashbang(applyIfLatest)
+  else if (next === 'dark' && current === 'light') smokeGrenade(applyIfLatest)
   else applyIfLatest()
 }
 
