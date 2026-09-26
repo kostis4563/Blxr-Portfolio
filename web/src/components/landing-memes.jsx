@@ -29,7 +29,13 @@ const readEverything = () =>
 
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']
 
+const SPLIT_MIN = 0.25
+const SPLIT_MAX = 0.7
+const SPLIT_KEYS = { ArrowUp: -0.05, ArrowDown: 0.05, Home: -1, End: 1 }
+const clampSplit = (share) => Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, share))
+
 let visitorActive = false
+let splitShare = 0.5
 
 const saveData = () => navigator.connection?.saveData || /2g/.test(navigator.connection?.effectiveType ?? '')
 
@@ -38,6 +44,7 @@ export default function LandingMemes() {
   const [called, setCalled] = useState(false)
   const [split, setSplit] = useState(false)
   const [leaving, setLeaving] = useState(null)
+  const [share, setShare] = useState(splitShare)
   const placement = useRef('in')
   const video = useRef(null)
   const ambient = useRef(null)
@@ -262,12 +269,21 @@ export default function LandingMemes() {
   }, [])
 
   const splitShown = split && clip !== null
+  const splitMode = splitShown && (leaving ? 'leaving' : 'split')
+  useEffect(() => {
+    if (!splitMode) return
+    const root = document.documentElement
+    root.dataset.parkour = splitMode
+    return () => delete root.dataset.parkour
+  }, [splitMode])
+
   useEffect(() => {
     if (!splitShown) return
+    splitShare = share
     const root = document.documentElement
-    root.dataset.parkour = 'split'
-    return () => delete root.dataset.parkour
-  }, [splitShown])
+    root.style.setProperty('--parkour-h', `${share * 100}dvh`)
+    return () => root.style.removeProperty('--parkour-h')
+  }, [splitShown, share])
 
   if (!clip) return null
 
@@ -297,6 +313,31 @@ export default function LandingMemes() {
     const needed = el.duration - 1
     watched.current += step
     if (watched.current >= needed && watched.current - step < needed) achievement(ACHIEVEMENTS.stayedForParkour)
+  }
+
+  const startResize = (event) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    const handle = event.currentTarget
+    const root = document.documentElement
+    const grab = event.clientY - share * window.innerHeight
+    const move = (e) => setShare(clampSplit((e.clientY - grab) / window.innerHeight))
+    const end = () => {
+      delete root.dataset.parkourDrag
+      handle.removeEventListener('pointermove', move)
+      handle.removeEventListener('lostpointercapture', end)
+    }
+    handle.setPointerCapture(event.pointerId)
+    root.dataset.parkourDrag = ''
+    handle.addEventListener('pointermove', move)
+    handle.addEventListener('lostpointercapture', end)
+  }
+
+  const nudgeResize = (event) => {
+    const step = SPLIT_KEYS[event.key]
+    if (!step) return
+    event.preventDefault()
+    setShare((current) => clampSplit(current + step))
   }
 
   const state = split ? 'in' : clip
@@ -341,10 +382,25 @@ export default function LandingMemes() {
           <div ref={progress} />
         </div>
       </div>
+      {split && (
+        <div
+          className="parkour-resize"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize Minecraft parkour"
+          aria-valuemin={SPLIT_MIN * 100}
+          aria-valuemax={SPLIT_MAX * 100}
+          aria-valuenow={Math.round(share * 100)}
+          tabIndex={0}
+          onPointerDown={startResize}
+          onKeyDown={nudgeResize}
+          onDoubleClick={() => setShare(0.5)}
+        />
+      )}
       <button type="button" className="parkour-split" onClick={() => (split ? setLeaving('exit') : setSplit(true))}>
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="1.75" width="8" height="12.5" rx="2" />
-          <path d="M4 8h8v4.25a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="currentColor" />
+          <path d="M4 8h8V3.75a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2z" fill="currentColor" />
         </svg>
         {split ? 'Exit focus mode' : 'Focus mode'}
       </button>

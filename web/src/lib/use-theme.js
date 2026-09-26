@@ -31,8 +31,15 @@ export function resolveInitialTheme() {
 
 const readPreference = () => (typeof window === 'undefined' ? DEFAULT_THEME : readStoredTheme() ?? DEFAULT_THEME)
 
-function blindIfLeavingDark(next) {
-  if (next === 'light' && document.documentElement.dataset.theme === 'dark') flashbang()
+let themeChanges = 0
+
+function changeTheme(next, apply) {
+  const change = ++themeChanges
+  const applyIfLatest = () => {
+    if (change === themeChanges) apply()
+  }
+  if (next === 'light' && document.documentElement.dataset.theme === 'dark') flashbang(applyIfLatest)
+  else applyIfLatest()
 }
 
 export function useTheme() {
@@ -72,29 +79,18 @@ export function useTheme() {
   }, [])
 
   const toggleTheme = useCallback(() => {
-    blindIfLeavingDark(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
-    setTheme((current) => {
-      const next = current === 'dark' ? 'light' : 'dark'
-      storeTheme(next)
-      setPreferenceState(next)
-      return next
-    })
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
+    storeTheme(next)
+    setPreferenceState(next)
+    changeTheme(next, () => setTheme(next))
   }, [])
 
   const setPreference = useCallback((pref) => {
-    if (pref === 'system') {
-      const resolved = systemTheme()
-      blindIfLeavingDark(resolved)
-      storeTheme('system')
-      setPreferenceState('system')
-      setTheme(resolved)
-      return
-    }
-    if (pref !== 'light' && pref !== 'dark') return
-    blindIfLeavingDark(pref)
+    if (pref !== 'system' && pref !== 'light' && pref !== 'dark') return
+    const next = pref === 'system' ? systemTheme() : pref
     storeTheme(pref)
     setPreferenceState(pref)
-    setTheme(pref)
+    changeTheme(next, () => setTheme(next))
   }, [])
 
   return { theme, preference, toggleTheme, setPreference }
