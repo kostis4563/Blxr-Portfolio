@@ -13,7 +13,7 @@ default until custom SMTP is set up.
 | Template in dashboard | File | Subject |
 | :-- | :-- | :-- |
 | Confirm sign up | `confirm-signup.html` | `Confirm your blxr account` |
-| Reset password | `reset-password.html` | `Reset your blxr password` |
+| Reset password | `reset-password.html` | `Your blxr reset code` |
 | Magic link | `magic-link.html` | `Sign in to blxr` |
 | Change email address | `change-email.html` | `Confirm your new blxr email` |
 | Invite user | `invite.html` | `You're invited to blxr` |
@@ -25,6 +25,10 @@ it from `server/src/mail.mjs` in the same style.
 `{{ .ConfirmationURL }}` already carries the `redirect_to` the app passed
 (`/login?next=…`), so the links land on the login page and forward from there.
 The reauthentication one shows `{{ .Token }}` as a code instead of a button.
+So does reset password: `/login#reset` asks for that 6-digit code, and the
+link underneath still works for anyone who closed the tab. Leave
+**Providers → Email → Email OTP Length** at `6` — `CODE_LENGTH` in
+`web/src/components/reset-password.jsx` expects it.
 
 To preview a template locally, replace the `{{ … }}` placeholders and open the
 file in a browser; all six share the same shell, so a change to one should be

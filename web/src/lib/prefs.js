@@ -1,15 +1,9 @@
 import { useSyncExternalStore } from 'react'
 
-// Two kinds of settings. Device prefs live in localStorage and follow the
-// browser (density, motion, analytics). Account prefs ride in Supabase
-// `user_metadata.prefs` so they follow the user across devices.
-
-// --- device -----------------------------------------------------------------
-
 const DEVICE_KEY = 'blxr:prefs'
 
 export const DEVICE_DEFAULTS = {
-  density: 'comfortable', // comfortable | compact
+  density: 'comfortable',
   reduceMotion: false,
   analytics: true,
 }
@@ -31,13 +25,11 @@ export function setDevicePref(key, value) {
   try {
     localStorage.setItem(DEVICE_KEY, JSON.stringify(device))
   } catch {
-    // private mode
   }
   applyDevicePrefs()
   listeners.forEach((fn) => fn())
 }
 
-// Root attributes the stylesheet keys off (`[data-motion="reduced"]`).
 export function applyDevicePrefs() {
   if (typeof document === 'undefined') return
   const root = document.documentElement
@@ -55,23 +47,20 @@ export function useDevicePrefs() {
   return useSyncExternalStore(subscribe, () => device, () => DEVICE_DEFAULTS)
 }
 
-// Synchronous check for the beacon senders.
 export const analyticsAllowed = () => (typeof window === 'undefined' ? true : readDevice().analytics !== false)
-
-// --- account ----------------------------------------------------------------
 
 export const ACCOUNT_DEFAULTS = {
   locale: {
     timezone: 'auto',
-    dateFormat: 'mdy', // mdy | dmy | ymd
-    timeFormat: 'auto', // auto | 12 | 24
-    weekStart: 'monday', // monday | sunday
+    dateFormat: 'mdy',
+    timeFormat: 'auto',
+    weekStart: 'monday',
   },
   notifications: {
     productUpdates: true,
     reviewActivity: true,
     mentions: true,
-    digest: 'weekly', // daily | weekly | monthly | never
+    digest: 'weekly',
     desktop: false,
     sound: true,
     badge: true,
@@ -84,7 +73,6 @@ export const ACCOUNT_DEFAULTS = {
   },
 }
 
-// Deep-merge one level so a new default key shows up for existing users.
 export function mergeAccountPrefs(stored) {
   const out = {}
   for (const group of Object.keys(ACCOUNT_DEFAULTS)) {
@@ -115,7 +103,6 @@ export function localTimeZone() {
   }
 }
 
-// Formats a date the way the account prefs ask for.
 export function formatDate(value, locale) {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) return ''

@@ -5,9 +5,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET="${1:-all}"
 DRY_RUN="${DRY_RUN:-0}"
 
-# When invoked via sudo, hand the checkout back to the calling user on exit
-# (success or failure) so a build step run as root here doesn't leave
-# root-owned files that block the runner's next checkout.
 restore_ownership() {
   [[ -n "${SUDO_UID:-}" && -n "${SUDO_GID:-}" ]] || return 0
   chown -R "$SUDO_UID:$SUDO_GID" "$ROOT"
@@ -22,11 +19,7 @@ NGINX_SNIPPET=/etc/nginx/snippets/blxr-security-headers.conf
 NGINX_HINTS_SNIPPET=/etc/nginx/snippets/blxr-early-hints.conf
 NGINX_CF_SNIPPET=/etc/nginx/snippets/blxr-cloudflare-realip.conf
 SERVER_ENV=/etc/blxr-search.env
-# KEY=value lines the deploy job writes from repository secrets (never
-# committed); merged into $SERVER_ENV by deploy_server and deleted.
 ENV_OVERRIDES="$ROOT/deploy/.env-overrides"
-# Non-secret server settings (public URLs and keys), committed; merged the
-# same way, before the secrets.
 ENV_PUBLIC="$ROOT/deploy/server.env"
 
 run() {
@@ -80,10 +73,6 @@ check_early_hints() {
   printf '       bash deploy/deploy.sh nginx\n\n'
 }
 
-# Replace-or-append each KEY=value from $ENV_OVERRIDES into $SERVER_ENV, so
-# secrets live in the repository's Actions secrets and reach the box on
-# every deploy. Keys with an empty value are left untouched.
-# merge_env FILE — KEY=value lines from FILE replace the same keys in $SERVER_ENV.
 merge_env() {
   local file="$1" line key value
   [[ -s "$file" ]] || return 0
@@ -111,8 +100,6 @@ deploy_server() {
   need_root
   sync_server_env
   step "Installing server -> $SERVER_ROOT"
-  # Every module next to server.mjs; a hand-kept list silently drops a new
-  # file (log.mjs, 2026-09-18) and the service crash-loops on ERR_MODULE_NOT_FOUND.
   local f
   for f in "$ROOT"/server/src/*.mjs; do
     run install -D -m 0644 "$f" "$SERVER_ROOT/$(basename "$f")"

@@ -77,8 +77,6 @@ function Cropper({ kind, source, image, type, animated, busy, onApply, onKeep, o
     })
   }, [])
 
-  // React registers wheel listeners as passive, so preventDefault() there is
-  // ignored and the sheet scrolls under the cursor. Attach a real one instead.
   useEffect(() => {
     const node = floor.current
     if (!node) return undefined

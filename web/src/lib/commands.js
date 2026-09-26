@@ -1,10 +1,11 @@
-import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, CONTACT_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
 import { SECTIONS, jumpToSection } from './palette'
 import { fold } from './text-match'
 import { CONTACT_EMAIL, SOCIALS } from './profile'
+import { SITE_NAME } from './seo'
 
 export function buildCommands({ theme, toggleTheme, signedIn = false }) {
   const jump = 'Jump to'
@@ -69,6 +70,16 @@ export function buildCommands({ theme, toggleTheme, signedIn = false }) {
       href: CV_PATH,
       run: () => navigate(CV_PATH),
       keywords: 'cv resume résumé curriculum vitae experience education skills certifications print pdf',
+    },
+    {
+      id: 'page-contact',
+      group: jump,
+      label: 'Contact',
+      hint: 'Get in touch',
+      icon: 'mail',
+      href: CONTACT_PATH,
+      run: () => navigate(CONTACT_PATH),
+      keywords: 'contact email reach hire freelance discord github socials',
     },
 
     ...SECTIONS.map((section) => ({
@@ -196,6 +207,19 @@ export function buildCommands({ theme, toggleTheme, signedIn = false }) {
     fLabel: fold(command.label),
     haystack: fold([command.label, command.hint || '', command.group, command.keywords || ''].join(' ')),
   }))
+}
+
+export function sudoCommand(query) {
+  const typed = query.trim().replace(/\s+/g, ' ')
+  if (!/^sudo\b/i.test(typed)) return null
+  return {
+    id: 'action-sudo',
+    group: 'Terminal',
+    label: /^sudo$/i.test(typed) ? `sudo hire ${SITE_NAME}` : typed,
+    hint: 'Run as root',
+    icon: 'terminal',
+    shell: true,
+  }
 }
 
 export function rankCommands(commands, query) {

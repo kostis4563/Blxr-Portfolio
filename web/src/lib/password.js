@@ -52,6 +52,18 @@ export function passwordProblem(password, { email = '', name = '' } = {}) {
   return null
 }
 
+const SYMBOL = /[!@#$%^&*()_+\-=[\]{};'\\:"|<>?,./`~]/
+
+export function passwordChecks(password) {
+  const p = String(password || '')
+  return [
+    { label: `${PASSWORD_MIN}+ characters`, met: p.length >= PASSWORD_MIN },
+    { label: 'Upper & lowercase', met: /[a-z]/.test(p) && /[A-Z]/.test(p) },
+    { label: 'A number', met: /\d/.test(p) },
+    { label: 'A symbol', met: SYMBOL.test(p) },
+  ]
+}
+
 export function strengthOf(password) {
   if (!password) return 0
   let score = password.length >= PASSWORD_MIN ? 1 : 0

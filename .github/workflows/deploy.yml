@@ -23,6 +23,13 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run lint
+
+      - run: npm test
+
+      - name: Build and check the output
+        run: npm run test:dist
+
       - name: Stage server secrets
         env:
           GITHUB_TOKEN_VALUE: ${{ secrets.BLXR_GITHUB_TOKEN }}
@@ -32,3 +39,7 @@ jobs:
           printf 'DISCORD_BOT_TOKEN=%s\n' "$DISCORD_BOT_TOKEN_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
 
       - run: sudo bash "$GITHUB_WORKSPACE/deploy/deploy.sh"
+
+      - name: Smoke-test the live site
+        run: npm run test:live
+        continue-on-error: true

@@ -1,12 +1,13 @@
 import { useState, useEffect, useId, useRef } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { link, navigate, useRouteHash, HOME_PATH, LOGIN_PATH, REGISTER_PATH, RESET_PATH, UPDATE_PASSWORD_PATH, VERIFY_PATH, DASHBOARD_PATH } from './lib/router'
-import { authLogin, authRegister, authRequestReset, authUpdatePassword, authSignOut, authContinueAsGuest, isGuest, mfaRequired, mfaChallenge } from './lib/auth'
+import { authLogin, authRegister, authUpdatePassword, authSignOut, authContinueAsGuest, isGuest, mfaRequired, mfaChallenge } from './lib/auth'
 import { useAuth, clearRecovery } from './lib/supabase'
 import { PASSWORD_MIN, passwordProblem } from './lib/password'
 import { Captcha } from './components/captcha'
 import { Icon } from './components/icon'
 import { LABEL, INPUT, CTA, SWITCH, QUIET, Field, PasswordInput, Strength, Providers, Divider } from './components/auth-ui'
+import ResetPassword from './components/reset-password'
 
 export { PASSWORD_MIN }
 const NAME_MAX = 32
@@ -30,9 +31,6 @@ const MODES = {
   reset: {
     eyebrow: 'Forgot password',
     title: 'Reset your password',
-    tagline: 'Enter your email and we will send you a link to choose a new one.',
-    cta: 'Send reset link',
-    busy: 'Sending…',
   },
   update: {
     eyebrow: 'Almost there',
@@ -71,7 +69,7 @@ function messageFor(err, mode) {
   if (code === 'same_password') return 'That is already your password. Pick a different one.'
   if (code === 'signup_disabled') return 'Sign-ups are closed right now.'
   if (code === 'provider_disabled') return 'That sign-in method is turned off.'
-  if (code === 'link_expired') return 'That link has expired. Request a new one.'
+  if (code === 'link_expired') return mode === 'reset-code' ? 'That code is wrong or has expired.' : 'That link has expired. Request a new one.'
   if (code === 'not_configured') return 'Accounts are not set up on this build yet.'
   if (code === 'bad_code') return 'That code is not right. Codes change every 30 seconds.'
   if (code === 'code_expired') return 'That code expired — enter the current one.'
@@ -83,7 +81,8 @@ function messageFor(err, mode) {
   if (mode === 'login') return 'Could not sign in.'
   if (mode === 'register') return 'Could not create the account.'
   if (mode === 'update') return 'Could not update the password.'
-  return 'Could not send the reset link.'
+  if (mode === 'reset-code') return 'Could not check the code.'
+  return 'Could not send the code.'
 }
 
 function messageForCallback(params) {
@@ -109,14 +108,12 @@ function validate(mode, form, accountEmail = '') {
     else if (name.length > NAME_MAX) errors.name = `Keep it under ${NAME_MAX} characters.`
   }
   if (mode !== 'update' && !EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email.'
-  if (mode !== 'reset') {
-    if (!form.password) errors.password = mode === 'update' ? 'Enter a new password.' : 'Enter your password.'
-    else if (mode !== 'login') {
-      const problem = passwordProblem(form.password, { email: form.email || accountEmail, name: form.name })
-      if (problem) errors.password = problem
-    }
+  if (!form.password) errors.password = mode === 'update' ? 'Enter a new password.' : 'Enter your password.'
+  else if (mode !== 'login') {
+    const problem = passwordProblem(form.password, { email: form.email || accountEmail, name: form.name })
+    if (problem) errors.password = problem
   }
-  if (mode !== 'login' && mode !== 'reset' && form.confirm !== form.password) errors.confirm = 'Passwords do not match.'
+  if (mode !== 'login' && form.confirm !== form.password) errors.confirm = 'Passwords do not match.'
   return errors
 }
 
@@ -220,7 +217,7 @@ export default function LoginPage({ theme, onToggleTheme }) {
   }, [])
 
   useEffect(() => {
-    if (recovery && mode !== 'update') navigate(UPDATE_PASSWORD_PATH, { replace: true })
+    if (recovery && mode !== 'update' && mode !== 'reset') navigate(UPDATE_PASSWORD_PATH, { replace: true })
   }, [recovery, mode])
 
   useEffect(() => {
@@ -289,9 +286,6 @@ export default function LoginPage({ theme, onToggleTheme }) {
         await mfaChallenge(form.code)
         setLeaving(true)
         navigate(next, { replace: true })
-      } else {
-        await authRequestReset(email, { captchaToken })
-        setNotice({ kind: 'reset', email })
       }
     } catch (err) {
       fail(err)
@@ -318,6 +312,11 @@ export default function LoginPage({ theme, onToggleTheme }) {
   }
 
   const wide = mode === 'login' || mode === 'register'
+  const card = `w-full max-w-[400px] rounded-2xl border border-line bg-surface-raised/40 p-7 transition-opacity ${leaving ? 'pointer-events-none opacity-60' : ''}`
+  const leave = () => {
+    setLeaving(true)
+    navigate(next, { replace: true })
+  }
 
   const updateLocked = mode === 'update' && session === null
   const tagline =
@@ -356,232 +355,233 @@ export default function LoginPage({ theme, onToggleTheme }) {
           </section>
         )}
 
-        <form
-          key={mode}
-          onSubmit={submit}
-          noValidate
-          aria-busy={leaving || undefined}
-          className={`w-full max-w-[400px] rounded-2xl border border-line bg-surface-raised/40 p-7 transition-opacity ${wide ? 'mx-auto md:mx-0' : ''} ${leaving ? 'pointer-events-none opacity-60' : ''}`}
-        >
-          {!wide && (
-            <>
-              <p className={`${LABEL} mb-2`}>{copy.eyebrow}</p>
-              <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">{copy.title}</h1>
-              <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{tagline}</p>
-            </>
-          )}
+        {mode === 'reset' ? (
+          <ResetPassword
+            email={form.email}
+            onEmailChange={(email) => setForm((f) => ({ ...f, email }))}
+            copy={copy}
+            describe={messageFor}
+            next={next}
+            onDone={leave}
+            className={card}
+          />
+        ) : (
+          <form
+            key={mode}
+            onSubmit={submit}
+            noValidate
+            aria-busy={leaving || undefined}
+            className={`${card} ${wide ? 'mx-auto md:mx-0' : ''}`}
+          >
+            {!wide && (
+              <>
+                <p className={`${LABEL} mb-2`}>{copy.eyebrow}</p>
+                <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">{copy.title}</h1>
+                <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{tagline}</p>
+              </>
+            )}
 
-          {notice?.kind === 'reset' ? (
-            <Notice title="Check your inbox">
-              If an account exists for <span className="text-ink-strong">{notice.email}</span>, a reset link is on its way. Open it in this browser — it expires in an hour.
-            </Notice>
-          ) : notice?.kind === 'confirm' ? (
-            <Notice title="Confirm your email">
-              We sent a link to <span className="text-ink-strong">{notice.email}</span>. Open it to activate the account, then sign in.
-            </Notice>
-          ) : updateLocked ? (
-            <Notice title="That link has expired" tone="plain">
-              Open the reset link from your email in this browser, or request a new one.
-            </Notice>
-          ) : (
-            <>
-              {guest && (mode === 'login' || mode === 'register') && (
-                <div className="mb-6 rounded-xl border border-line bg-surface px-4 py-3.5 text-[12.5px] leading-relaxed">
-                  <p className="font-medium text-ink-strong">You are browsing as a guest.</p>
-                  <p className="mt-1 text-ink-muted">
-                    Signing in here switches to that account and leaves your guest board behind. To keep it,{' '}
-                    <a {...link(`${DASHBOARD_PATH}#claim`)} className={SWITCH}>claim the guest account</a> instead.
+            {notice?.kind === 'confirm' ? (
+              <Notice title="Confirm your email">
+                We sent a link to <span className="text-ink-strong">{notice.email}</span>. Open it to activate the account, then sign in.
+              </Notice>
+            ) : updateLocked ? (
+              <Notice title="That link has expired" tone="plain">
+                Open the reset link from your email in this browser, or request a new code.
+              </Notice>
+            ) : (
+              <>
+                {guest && (mode === 'login' || mode === 'register') && (
+                  <div className="mb-6 rounded-xl border border-line bg-surface px-4 py-3.5 text-[12.5px] leading-relaxed">
+                    <p className="font-medium text-ink-strong">You are browsing as a guest.</p>
+                    <p className="mt-1 text-ink-muted">
+                      Signing in here switches to that account and leaves your guest board behind. To keep it,{' '}
+                      <a {...link(`${DASHBOARD_PATH}#claim`)} className={SWITCH}>claim the guest account</a> instead.
+                    </p>
+                  </div>
+                )}
+
+                {(mode === 'login' || mode === 'register') && (
+                  <div className="flex flex-col gap-5">
+                    <Providers next={next} disabled={busy} onStart={() => setError(null)} onError={fail} />
+                    <Divider>or with email</Divider>
+                  </div>
+                )}
+
+                <div className={`${mode === 'login' || mode === 'register' ? 'mt-5' : 'mt-6'} flex flex-col gap-4`}>
+                  {mode === 'verify' && (
+                    <Field label="Verification code" error={errors.code}>
+                      <input
+                        id={`${id}-code`}
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        pattern="[0-9]*"
+                        maxLength={7}
+                        autoFocus
+                        placeholder="123 456"
+                        value={form.code}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^\d\s]/g, '')
+                          setForm((f) => ({ ...f, code: value }))
+                          if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
+                        }}
+                        aria-invalid={Boolean(errors.code) || undefined}
+                        className={`${INPUT} font-mono tracking-[0.25em]`}
+                      />
+                    </Field>
+                  )}
+
+                  {mode === 'register' && (
+                    <Field label="Name" error={errors.name}>
+                      <input
+                        id={`${id}-name`}
+                        type="text"
+                        autoComplete="nickname"
+                        autoFocus
+                        maxLength={NAME_MAX}
+                        value={form.name}
+                        onChange={set('name')}
+                        aria-invalid={Boolean(errors.name) || undefined}
+                        className={INPUT}
+                      />
+                    </Field>
+                  )}
+
+                  {mode !== 'update' && mode !== 'verify' && (
+                    <Field label="Email" error={errors.email}>
+                      <input
+                        id={`${id}-email`}
+                        type="email"
+                        autoComplete="email"
+                        autoFocus={mode !== 'register'}
+                        inputMode="email"
+                        spellCheck={false}
+                        value={form.email}
+                        onChange={set('email')}
+                        aria-invalid={Boolean(errors.email) || undefined}
+                        className={INPUT}
+                      />
+                    </Field>
+                  )}
+
+                  {mode !== 'verify' && (
+                    <Field
+                      label={mode === 'update' ? 'New password' : 'Password'}
+                      error={errors.password}
+                      hint={
+                        mode === 'login' ? (
+                          <a {...link(RESET_PATH)} className={QUIET}>Forgot password?</a>
+                        ) : (
+                          <span className="text-[11px] text-ink-faint">{PASSWORD_MIN}+ characters</span>
+                        )
+                      }
+                    >
+                      <PasswordInput
+                        id={`${id}-password`}
+                        value={form.password}
+                        onChange={set('password')}
+                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                        autoFocus={mode === 'update'}
+                        invalid={Boolean(errors.password)}
+                      />
+                      {mode !== 'login' && form.password && <Strength password={form.password} />}
+                    </Field>
+                  )}
+
+                  {(mode === 'register' || mode === 'update') && (
+                    <Field label="Confirm password" error={errors.confirm}>
+                      <PasswordInput
+                        id={`${id}-confirm`}
+                        value={form.confirm}
+                        onChange={set('confirm')}
+                        autoComplete="new-password"
+                        invalid={Boolean(errors.confirm)}
+                      />
+                    </Field>
+                  )}
+
+                  {mode === 'login' && (
+                    <label className="flex cursor-pointer items-center gap-2.5 text-[12.5px] text-ink-muted">
+                      <input
+                        type="checkbox"
+                        checked={form.remember}
+                        onChange={set('remember')}
+                        className="h-3.5 w-3.5 cursor-pointer rounded border-line accent-ink-strong"
+                      />
+                      Keep me signed in
+                    </label>
+                  )}
+                </div>
+
+                {error && (
+                  <p role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-3.5 py-2.5 text-[12.5px] text-red-500">
+                    {error}
                   </p>
-                </div>
-              )}
-
-              {(mode === 'login' || mode === 'register') && (
-                <div className="flex flex-col gap-5">
-                  <Providers next={next} disabled={busy} onStart={() => setError(null)} onError={fail} />
-                  <Divider>or with email</Divider>
-                </div>
-              )}
-
-              <div className={`${mode === 'login' || mode === 'register' ? 'mt-5' : 'mt-6'} flex flex-col gap-4`}>
-                {mode === 'verify' && (
-                  <Field label="Verification code" error={errors.code}>
-                    <input
-                      id={`${id}-code`}
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      pattern="[0-9]*"
-                      maxLength={7}
-                      autoFocus
-                      placeholder="123 456"
-                      value={form.code}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/[^\d\s]/g, '')
-                        setForm((f) => ({ ...f, code: value }))
-                        if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
-                      }}
-                      aria-invalid={Boolean(errors.code) || undefined}
-                      className={`${INPUT} font-mono tracking-[0.25em]`}
-                    />
-                  </Field>
                 )}
 
-                {mode === 'register' && (
-                  <Field label="Name" error={errors.name}>
-                    <input
-                      id={`${id}-name`}
-                      type="text"
-                      autoComplete="nickname"
-                      autoFocus
-                      maxLength={NAME_MAX}
-                      value={form.name}
-                      onChange={set('name')}
-                      aria-invalid={Boolean(errors.name) || undefined}
-                      className={INPUT}
-                    />
-                  </Field>
+                {(mode === 'login' || mode === 'register') && <Captcha handle={captcha} />}
+
+                <button type="submit" disabled={busy || guestBusy} className={`${CTA} mt-6`}>
+                  <span>{busy ? copy.busy : copy.cta}</span>
+                  {!busy && <span aria-hidden="true">→</span>}
+                </button>
+
+                {mode === 'login' && !guest && (
+                  <div className="mt-4 text-center md:hidden">
+                    <button
+                      type="button"
+                      onClick={continueAsGuest}
+                      disabled={busy || guestBusy}
+                      className="cursor-pointer text-[12.5px] text-ink-muted transition-colors hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {guestBusy ? 'Opening a guest session…' : <>Just looking? <span className={SWITCH}>Continue as guest</span></>}
+                    </button>
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-ink-faint">
+                      No email needed. You can try a board and claim it as yours later.
+                    </p>
+                  </div>
                 )}
 
-                {mode !== 'update' && mode !== 'verify' && (
-                  <Field label="Email" error={errors.email}>
-                    <input
-                      id={`${id}-email`}
-                      type="email"
-                      autoComplete="email"
-                      autoFocus={mode !== 'register'}
-                      inputMode="email"
-                      spellCheck={false}
-                      value={form.email}
-                      onChange={set('email')}
-                      aria-invalid={Boolean(errors.email) || undefined}
-                      className={INPUT}
-                    />
-                  </Field>
-                )}
-
-                {mode !== 'reset' && mode !== 'verify' && (
-                  <Field
-                    label={mode === 'update' ? 'New password' : 'Password'}
-                    error={errors.password}
-                    hint={
-                      mode === 'login' ? (
-                        <a {...link(RESET_PATH)} className={QUIET}>Forgot password?</a>
-                      ) : (
-                        <span className="text-[11px] text-ink-faint">{PASSWORD_MIN}+ characters</span>
-                      )
-                    }
-                  >
-                    <PasswordInput
-                      id={`${id}-password`}
-                      value={form.password}
-                      onChange={set('password')}
-                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                      autoFocus={mode === 'update'}
-                      invalid={Boolean(errors.password)}
-                    />
-                    {mode !== 'login' && form.password && <Strength password={form.password} />}
-                  </Field>
-                )}
-
-                {(mode === 'register' || mode === 'update') && (
-                  <Field label="Confirm password" error={errors.confirm}>
-                    <PasswordInput
-                      id={`${id}-confirm`}
-                      value={form.confirm}
-                      onChange={set('confirm')}
-                      autoComplete="new-password"
-                      invalid={Boolean(errors.confirm)}
-                    />
-                  </Field>
-                )}
-
-                {mode === 'login' && (
-                  <label className="flex cursor-pointer items-center gap-2.5 text-[12.5px] text-ink-muted">
-                    <input
-                      type="checkbox"
-                      checked={form.remember}
-                      onChange={set('remember')}
-                      className="h-3.5 w-3.5 cursor-pointer rounded border-line accent-ink-strong"
-                    />
-                    Keep me signed in
-                  </label>
-                )}
-              </div>
-
-              {error && (
-                <p role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-3.5 py-2.5 text-[12.5px] text-red-500">
-                  {error}
-                </p>
-              )}
-
-              {(mode === 'login' || mode === 'register' || mode === 'reset') && <Captcha handle={captcha} />}
-
-              <button type="submit" disabled={busy || guestBusy} className={`${CTA} mt-6`}>
-                <span>{busy ? copy.busy : copy.cta}</span>
-                {!busy && <span aria-hidden="true">→</span>}
-              </button>
-
-              {mode === 'login' && !guest && (
-                <div className="mt-4 text-center md:hidden">
-                  <button
-                    type="button"
-                    onClick={continueAsGuest}
-                    disabled={busy || guestBusy}
-                    className="cursor-pointer text-[12.5px] text-ink-muted transition-colors hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {guestBusy ? 'Opening a guest session…' : <>Just looking? <span className={SWITCH}>Continue as guest</span></>}
-                  </button>
-                  <p className="mt-1.5 text-[11px] leading-relaxed text-ink-faint">
-                    No email needed. You can try a board and claim it as yours later.
+                {mode === 'login' && guest && (
+                  <p className="mt-4 text-center text-[12px] text-ink-muted">
+                    Or{' '}
+                    <a {...link(DASHBOARD_PATH)} className={SWITCH}>back to the dashboard</a> as a guest.
                   </p>
-                </div>
-              )}
+                )}
+              </>
+            )}
 
-              {mode === 'login' && guest && (
-                <p className="mt-4 text-center text-[12px] text-ink-muted">
-                  Or{' '}
-                  <a {...link(DASHBOARD_PATH)} className={SWITCH}>back to the dashboard</a> as a guest.
-                </p>
-              )}
-            </>
-          )}
-
-          <p className="mt-5 text-center text-[12.5px] text-ink-muted">
-            {mode === 'login' ? (
-              <>
-                No account yet?{' '}
-                <a {...link(REGISTER_PATH)} className={SWITCH}>Create one</a>
-              </>
-            ) : mode === 'register' ? (
-              <>
-                Already have an account?{' '}
-                <a {...link(LOGIN_PATH)} className={SWITCH}>Sign in</a>
-              </>
-            ) : mode === 'verify' ? (
-              <>
-                Not you?{' '}
-                <a {...link(LOGIN_PATH, async () => { await authSignOut(); navigate(LOGIN_PATH, { replace: true }) })} className={SWITCH}>Sign out</a>
-              </>
-            ) : mode === 'update' ? (
-              updateLocked ? (
+            <p className="mt-5 text-center text-[12.5px] text-ink-muted">
+              {mode === 'login' ? (
                 <>
-                  Need a new link?{' '}
-                  <a {...link(RESET_PATH)} className={SWITCH}>Request one</a>
+                  No account yet?{' '}
+                  <a {...link(REGISTER_PATH)} className={SWITCH}>Create one</a>
+                </>
+              ) : mode === 'register' ? (
+                <>
+                  Already have an account?{' '}
+                  <a {...link(LOGIN_PATH)} className={SWITCH}>Sign in</a>
+                </>
+              ) : mode === 'verify' ? (
+                <>
+                  Not you?{' '}
+                  <a {...link(LOGIN_PATH, async () => { await authSignOut(); navigate(LOGIN_PATH, { replace: true }) })} className={SWITCH}>Sign out</a>
+                </>
+              ) : updateLocked ? (
+                <>
+                  Link expired?{' '}
+                  <a {...link(RESET_PATH)} className={SWITCH}>Get a new code</a>
                 </>
               ) : (
                 <>
                   Changed your mind?{' '}
                   <a {...link(next, () => { clearRecovery(); navigate(next, { replace: true }) })} className={SWITCH}>Skip for now</a>
                 </>
-              )
-            ) : (
-              <>
-                Remembered it?{' '}
-                <a {...link(LOGIN_PATH)} className={SWITCH}>Back to sign in</a>
-              </>
-            )}
-          </p>
-        </form>
+              )}
+            </p>
+          </form>
+        )}
       </main>
     </div>
   )

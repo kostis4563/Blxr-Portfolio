@@ -7,6 +7,7 @@ import Composer from './composer'
 import { TYPING_FOR, isImage, layout, mergeMessages, newestStamp, seenUpTo, toggleReaction, unreadIn } from '../../lib/messages'
 import * as api from '../../lib/messages-api'
 import { refreshUnread } from '../../lib/messages-unread'
+import { missionPassed } from '../../lib/memes'
 import { profilePath } from '../../lib/router'
 import { Sensitive } from '../sensitive'
 
@@ -235,11 +236,13 @@ export default function Thread({ thread: given, them, owner, uid, online = false
       updated_at: now,
       pending: true,
     }
+    const opening = !owner && !(messages || []).some((message) => mine(message) && !message.failed)
     stick.current = true
     setMessages((current) => [...(current || []), draft])
     try {
       const row = await api.sendMessage(threadId, { body, files, replyTo: quoted })
       setMessages((current) => mergeMessages((current || []).filter((message) => message.id !== draft.id), [row]))
+      if (opening) missionPassed()
     } catch (failure) {
       setMessages((current) => (current || []).map((message) => (message.id === draft.id ? { ...message, pending: false, failed: true, error: failure.message } : message)))
       if (failure.setup) setError(failure.message)

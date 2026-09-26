@@ -1,6 +1,4 @@
 import { currentSession } from './supabase'
-// Dashboard → Stats. The numbers are the site owner's — the server works out
-// whose token it holds and builds everything for that GitHub account.
 
 const CACHE_KEY = 'blxr:ghstats'
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000
@@ -41,17 +39,12 @@ function writeStatsCache(data) {
   try {
     store.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data }))
   } catch {
-    // quota or private mode — the page just refetches next time
   }
 }
 
-// Resolves to the stats payload; throws StatsError with one of:
-// stats_disabled, rate_limited, offline, failed.
 export async function fetchGithubStats({ signal, refresh = false } = {}) {
   let res
   try {
-    // Signed in as the token's GitHub account → private repositories come
-    // back with their names; anyone else gets them as "Private repository".
     const token = currentSession()?.access_token
     res = await fetch(`/api/github/stats${refresh ? '?refresh=1' : ''}`, {
       signal,
@@ -65,7 +58,6 @@ export async function fetchGithubStats({ signal, refresh = false } = {}) {
   try {
     body = await res.json()
   } catch {
-    // an HTML error page from the edge — treated as a failed call below
   }
   if (!res.ok) {
     const code = typeof body?.error === 'string' ? body.error : ''
@@ -75,8 +67,6 @@ export async function fetchGithubStats({ signal, refresh = false } = {}) {
   writeStatsCache(body)
   return body
 }
-
-// --- formatting ----------------------------------------------------------------
 
 const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 const plain = new Intl.NumberFormat('en')

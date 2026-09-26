@@ -67,7 +67,8 @@ for (const image of await publicImages()) {
   const stem = basename(image.name, extname(image.name))
   const ext = target.format ? `.${target.format}` : extname(image.name)
 
-  const widths = target.widths.filter((w) => w <= meta.width)
+  const fits = target.widths.filter((w) => w <= meta.width)
+  const widths = fits.length ? fits : [meta.width]
   const written = []
 
   for (const width of widths) {
@@ -99,7 +100,7 @@ for (const image of await publicImages()) {
 
 for (const image of await publicImages()) {
   if (manifest[image.url] || VARIANT_SUFFIX.test(image.name)) continue
-  if (!/\.(webp|png|jpe?g|svg|gif|avif)$/.test(image.name)) continue
+  if (!/\.(webp|png|jpe?g|svg|gif|avif|mp4)$/.test(image.name)) continue
   const source = await readFile(join(pub, image.dir, image.name))
   manifest[image.url] = {
     v: createHash('sha256').update(source).digest('hex').slice(0, 8),

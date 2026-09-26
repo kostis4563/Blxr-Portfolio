@@ -346,8 +346,6 @@ drop policy if exists "cards: delete own" on public.board_cards;
 create policy "cards: delete own" on public.board_cards
   for delete using ((select auth.uid()) = owner or (select public.is_board_admin()));
 
--- dropped first: `b.*` pins the column list at creation time, so a new column
--- on public.boards cannot be folded in by `create or replace` alone
 drop view if exists public.board_index;
 create view public.board_index
 with (security_invoker = on) as

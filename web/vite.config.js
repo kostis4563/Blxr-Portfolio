@@ -6,7 +6,7 @@ import JavaScriptObfuscator from 'javascript-obfuscator'
 
 const obfuscate = process.env.OBFUSCATE === '1'
 
-const ROUTE_PAGES = ['projects', 'library', 'reviews', 'uses', 'cv', 'login', 'dashboard', 'public-profile', 'not-found']
+const ROUTE_PAGES = ['projects', 'library', 'reviews', 'uses', 'cv', 'contact', 'login', 'dashboard', 'public-profile', 'not-found']
 
 const pageSource = (name) => fileURLToPath(new URL(`./src/${name}-page.jsx`, import.meta.url))
 const stubPage = fileURLToPath(new URL('./src/stub-page.js', import.meta.url))
@@ -120,10 +120,6 @@ function obfuscatorPlugin() {
   }
 }
 
-// `npm run dev` forwards /api to the live server, so search, reviews and stats
-// work without running the Node server locally. Set VITE_API_PROXY (shell or
-// .env.local; e.g. http://127.0.0.1:8899 where `npm start --workspace server`
-// listens) to point it somewhere else, or to '' to turn the proxy off.
 const PROD_API = 'https://blxr.net'
 const apiProxy = (mode) => {
   const set = process.env.VITE_API_PROXY ?? loadEnv(mode, process.cwd(), 'VITE_').VITE_API_PROXY
@@ -172,10 +168,8 @@ export default defineConfig(({ command, mode, isSsrBuild }) => ({
 
             { name: 'gsap', test: /[\\/]node_modules[\\/]gsap[\\/]/ },
 
-            // vendor and app are modulepreloaded on every page, so they only
-            // take what main.jsx reaches through static imports. Anything a
-            // lazy route alone needs (boards, messages, review panel...) is
-            // left to that route's own chunk instead of riding along.
+            { name: 'supabase', test: /[\\/]node_modules[\\/](@supabase|iceberg-js)[\\/]/ },
+
             { name: (id, ctx) => (onEntryPath(id, ctx) ? 'vendor' : null), test: /node_modules/ },
             { name: (id, ctx) => (onEntryPath(id, ctx) ? 'app' : null), test: /[\\/]src[\\/]/ },
           ],

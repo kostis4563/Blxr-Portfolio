@@ -24,8 +24,6 @@ async function request(path, { method = 'GET', signal } = {}) {
   return data
 }
 
-// Public profile by user ID. No OAuth: the server asks Discord's API (or a
-// public mirror) and hands back the normalised user object.
 export async function lookupDiscord(id, { signal } = {}) {
   const clean = String(id || '').replace(/\D/g, '')
   if (!DISCORD_ID_RE.test(clean)) throw new DiscordError('bad_id', { status: 400 })

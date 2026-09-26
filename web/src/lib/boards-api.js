@@ -1,7 +1,9 @@
-import { supabase, currentSession } from './supabase'
+import { supabase, loadSupabase, currentSession } from './supabase'
 import { isGuest } from './auth'
 import { LIMITS, STARTING_LISTS, shortId, sortCards, positionFor, needsRenumber, POSITION_STEP } from './boards'
 import { extensionFor } from './boards-files'
+
+await loadSupabase()
 
 export class BoardError extends Error {
   constructor(message, { status = 0, setup = false } = {}) {

@@ -30,6 +30,10 @@ const USES_DESCRIPTION =
 const CV_DESCRIPTION =
   'CV of Blxr, a full stack developer in Athens: experience, selected projects, education, skills and certifications. Printable.'
 
+const CONTACT_DESCRIPTION =
+  'How to reach Blxr: email for anything, a private thread on blxr.net, or GitHub and Discord. ' +
+  'Based in Athens, Greece (EET / EEST).'
+
 export function metaFor(pathname) {
   const path = normalizePath(pathname)
   const route = parseRoute(path)
@@ -92,6 +96,14 @@ export function metaFor(pathname) {
       ...base,
       title: 'CV — Blxr, Full Stack Developer in Athens',
       description: CV_DESCRIPTION,
+    }
+  }
+
+  if (route.name === 'contact') {
+    return {
+      ...base,
+      title: 'Contact — Get in Touch With Blxr',
+      description: CONTACT_DESCRIPTION,
     }
   }
 
@@ -304,6 +316,17 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'contact') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'ContactPage',
+      name: 'Contact',
+      description: CONTACT_DESCRIPTION,
+      url: `${SITE_URL}/contact`,
+      mainEntity: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'library') {
     if (realEntries.length === 0) return null
     return {
@@ -344,6 +367,8 @@ function crumbsFor(route) {
     items.push({ name: 'Uses', item: urlOf('/uses') })
   } else if (route.name === 'cv') {
     items.push({ name: 'CV', item: urlOf('/cv') })
+  } else if (route.name === 'contact') {
+    items.push({ name: 'Contact', item: urlOf('/contact') })
   } else if (route.name === 'library') {
     items.push({ name: 'FiveM Library', item: urlOf('/library') })
     if (route.itemId) {
@@ -413,6 +438,10 @@ export function headTags(pathname) {
     `<meta name="twitter:title" content="${escapeAttr(title)}" />`,
     `<meta name="twitter:description" content="${escapeAttr(description)}" />`,
     `<meta name="twitter:image" content="${escapeAttr(ogImage)}" />`,
+
+    ogRoute.name === 'home'
+      ? '<link rel="preload" href="/api/weather" as="fetch" crossorigin="anonymous" fetchpriority="low" />'
+      : '',
 
     jsonLd
       ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`

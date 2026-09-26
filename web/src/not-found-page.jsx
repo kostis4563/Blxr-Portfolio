@@ -14,6 +14,7 @@ import {
   REVIEWS_PATH,
   USES_PATH,
   CV_PATH,
+  CONTACT_PATH,
   projectPath,
   libraryPath,
 } from './lib/router'
@@ -24,6 +25,7 @@ import { projectsList } from './lib/projects'
 import { libraryList } from './lib/library'
 import { CONTACT_EMAIL, GITHUB_URL } from './lib/profile'
 import { SITE_NAME, SITE_URL } from './lib/seo'
+import { wasted } from './lib/memes'
 
 const REDIRECT_SECONDS = 5
 
@@ -49,6 +51,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
       { path: REVIEWS_PATH, label: 'Reviews' },
       { path: USES_PATH, label: 'Uses' },
       { path: CV_PATH, label: 'CV' },
+      { path: CONTACT_PATH, label: 'Contact' },
       ...SECTIONS.map((s) => ({ path: `/${s.id}`, label: s.label, section: s.id })),
     ],
     [],
@@ -82,6 +85,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
     setMac(isMacLike())
     setBack(canGoBack())
     setRecent(readRecent())
+    wasted()
     try {
       console.info(
         `%c404%c nothing at ${route} — the site's source is at ${GITHUB_URL}/blxr`,

@@ -36,7 +36,6 @@ function Menu({ trigger, children }) {
   )
 }
 
-// The header's text links, shown here only while the bar is too narrow to hold them.
 function PageItems({ pages, close }) {
   if (!pages.length) return null
   return (

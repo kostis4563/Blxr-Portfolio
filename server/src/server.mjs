@@ -102,26 +102,41 @@ async function fromInvidious(base, q, limit) {
     .slice(0, limit)
 }
 
-async function searchAll(q, limit, filter = 'music_songs') {
-  for (const base of PIPED) {
-    if (!mirrorUp(base)) continue
-    try {
-      const items = await fromPiped(base, q, limit, filter)
-      if (items.length) return items
-    } catch (err) {
-      markMirrorDown(base, err)
+const HEDGE_MS = 800
+
+function searchAll(q, limit, filter = 'music_songs') {
+  const tries = [
+    ...PIPED.filter(mirrorUp).map((base) => () => fromPiped(base, q, limit, filter).catch((err) => { markMirrorDown(base, err); return [] })),
+    ...INVIDIOUS.filter(mirrorUp).map((base) => () => fromInvidious(base, q, limit).catch((err) => { markMirrorDown(base, err); return [] })),
+  ]
+  return new Promise((resolve) => {
+    let next = 0
+    let pending = 0
+    let done = false
+    let timer = null
+    const finish = (items) => {
+      done = true
+      clearTimeout(timer)
+      resolve(items)
     }
-  }
-  for (const base of INVIDIOUS) {
-    if (!mirrorUp(base)) continue
-    try {
-      const items = await fromInvidious(base, q, limit)
-      if (items.length) return items
-    } catch (err) {
-      markMirrorDown(base, err)
+    const launch = () => {
+      clearTimeout(timer)
+      if (done) return
+      if (next >= tries.length) {
+        if (!pending) finish([])
+        return
+      }
+      pending += 1
+      tries[next++]().then((items) => {
+        pending -= 1
+        if (done) return
+        if (items.length) finish(items)
+        else launch()
+      })
+      timer = setTimeout(launch, HEDGE_MS)
     }
-  }
-  return []
+    launch()
+  })
 }
 
 const cache = new Map()
@@ -862,6 +877,26 @@ async function fetchContributions(user, year) {
   return ghFromMirror(user, year)
 }
 
+const ghInflight = new Map()
+const contributionsKey = (user, year) => `${user.toLowerCase()} ${year}`
+
+function refreshContributions(user, year) {
+  const key = contributionsKey(user, year)
+  let job = ghInflight.get(key)
+  if (!job) {
+    job = fetchContributions(user, year)
+      .then((data) => {
+        ghCache.delete(key)
+        ghCache.set(key, { at: Date.now(), data })
+        if (ghCache.size > GH_CACHE_MAX) ghCache.delete(ghCache.keys().next().value)
+        return data
+      })
+      .finally(() => ghInflight.delete(key))
+    ghInflight.set(key, job)
+  }
+  return job
+}
+
 const WEATHER_TTL_MS = 10 * 60 * 1000
 const WEATHER_URL =
   'https://api.open-meteo.com/v1/forecast?latitude=37.9838&longitude=23.7275&current=temperature_2m,weather_code&timezone=Europe%2FAthens'
@@ -877,6 +912,17 @@ async function fetchWeather() {
   if (!Number.isFinite(temp)) throw new Error('open-meteo: no temperature')
   const code = Number(data?.current?.weather_code)
   return { tempC: Math.round(temp * 10) / 10, code: Number.isFinite(code) ? code : null, at: Date.now() }
+}
+
+let weatherInflight = null
+function refreshWeather() {
+  weatherInflight ??= fetchWeather()
+    .then((data) => {
+      weatherCache = { at: Date.now(), data }
+      return data
+    })
+    .finally(() => { weatherInflight = null })
+  return weatherInflight
 }
 
 const GH_API = (process.env.GITHUB_API || 'https://api.github.com').replace(/\/$/, '')
@@ -1387,6 +1433,10 @@ async function githubStats(refresh) {
       .finally(() => ghStatsInflight.delete(key))
     ghStatsInflight.set(key, job)
   }
+  if (hit && !refresh) {
+    job.catch(() => {})
+    return hit.data
+  }
   return job
 }
 
@@ -1512,8 +1562,6 @@ function discordStatus(res, what) {
   if (!res.ok) throw new Error(`${what} ${res.status}`)
 }
 
-// Discord's own user endpoint: any bot token works, it need not share a
-// server with the user. Public profile fields only — no OAuth, no linking.
 async function discordFromApi(id) {
   return withTimeout(async (signal) => {
     const res = await fetch(`${DISCORD_API}/users/${id}`, {
@@ -1527,7 +1575,6 @@ async function discordFromApi(id) {
   })
 }
 
-// Without a bot token, a public lookup mirror relays the same user object.
 async function discordFromMirror(id) {
   return withTimeout(async (signal) => {
     const res = await fetch(`${DISCORD_LOOKUP}/${id}`, { signal, headers: { accept: 'application/json', 'user-agent': 'blxr.net' } })
@@ -1605,6 +1652,9 @@ function json(res, status, body, headers) {
 }
 
 const NO_STORE = { 'cache-control': 'no-store' }
+const WEATHER_CACHE = { 'cache-control': 'public, max-age=300, stale-while-revalidate=600' }
+const CHART_CACHE = { 'cache-control': 'public, max-age=300, stale-while-revalidate=3600' }
+const CONTRIBUTIONS_CACHE = { 'cache-control': 'public, max-age=600, stale-while-revalidate=86400' }
 
 const CLIENT_LOG_WINDOW_MS = 10 * 60_000
 const CLIENT_LOG_MAX = 40
@@ -2060,12 +2110,12 @@ const server = http.createServer(async (req, res) => {
       const country = ((url.searchParams.get('country') || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us').slice(0, 2)
       const limit = Math.min(15, Math.max(1, Number(url.searchParams.get('limit')) || 10))
       const hit = topCache.get(topKey(country, limit))
-      if (hit && Date.now() - hit.at < TOP_CACHE_TTL_MS) return json(res, 200, hit.data)
+      if (hit && Date.now() - hit.at < TOP_CACHE_TTL_MS) return json(res, 200, hit.data, CHART_CACHE)
 
       const refresh = refreshTop(country, limit)
       if (hit) {
         refresh.catch(() => {})
-        return json(res, 200, hit.data)
+        return json(res, 200, hit.data, CHART_CACHE)
       }
       let timer
       const budget = new Promise((resolve) => {
@@ -2073,7 +2123,7 @@ const server = http.createServer(async (req, res) => {
       })
       try {
         const data = await Promise.race([refresh, budget])
-        if (data) return json(res, 200, data)
+        if (data) return json(res, 200, data, CHART_CACHE)
         refresh.catch(() => {})
         return json(res, 503, { error: 'warming' }, { ...NO_STORE, 'retry-after': '15' })
       } finally {
@@ -2110,8 +2160,6 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/api/discord/user') {
       if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
-      // Signed-in dashboard users only, so the bot token never fronts an
-      // anonymous lookup proxy. Local runs without Supabase skip this.
       if (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && !(await supabaseUser(req))) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
       const id = (url.searchParams.get('id') || '').trim()
       if (!DISCORD_ID_RE.test(id)) return json(res, 400, { error: 'bad_id' }, NO_STORE)
@@ -2126,18 +2174,17 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/api/weather') {
       if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
-      const fresh = weatherCache && Date.now() - weatherCache.at < WEATHER_TTL_MS
-      if (!fresh) {
+      if (!weatherCache) {
         try {
-          weatherCache = { at: Date.now(), data: await fetchWeather() }
+          await refreshWeather()
         } catch (err) {
-          if (!weatherCache) {
-            log.warn('upstream', 'athens weather lookup failed', { detail: err?.message })
-            return json(res, 502, { error: 'weather_failed' }, NO_STORE)
-          }
+          log.warn('upstream', 'athens weather lookup failed', { detail: err?.message })
+          return json(res, 502, { error: 'weather_failed' }, NO_STORE)
         }
+      } else if (Date.now() - weatherCache.at >= WEATHER_TTL_MS) {
+        refreshWeather().catch((err) => log.warn('upstream', 'athens weather refresh failed', { detail: err?.message }))
       }
-      return json(res, 200, weatherCache.data, { 'cache-control': 'public, max-age=300' })
+      return json(res, 200, weatherCache.data, WEATHER_CACHE)
     }
 
     if (url.pathname === '/api/github/contributions') {
@@ -2157,14 +2204,12 @@ const server = http.createServer(async (req, res) => {
 
       if (!year) return json(res, 400, { error: 'bad_year' })
 
-      const key = `${user} ${year}`
-      const hit = ghCache.get(key)
-      if (hit && Date.now() - hit.at < GH_CACHE_TTL_MS) return json(res, 200, hit.data)
-
-      const data = await fetchContributions(user, year)
-      ghCache.set(key, { at: Date.now(), data })
-      if (ghCache.size > GH_CACHE_MAX) ghCache.delete(ghCache.keys().next().value)
-      return json(res, 200, data)
+      const hit = ghCache.get(contributionsKey(user, year))
+      if (hit) {
+        if (Date.now() - hit.at >= GH_CACHE_TTL_MS) refreshContributions(user, year).catch(() => {})
+        return json(res, 200, hit.data, CONTRIBUTIONS_CACHE)
+      }
+      return json(res, 200, await refreshContributions(user, year), CONTRIBUTIONS_CACHE)
     }
 
     return json(res, 404, { error: 'not_found' })
@@ -2198,6 +2243,18 @@ server.listen(PORT, HOST, () => {
 
 warmTop()
 setInterval(warmTop, TOP_CACHE_TTL_MS - 10 * 60_000).unref()
+
+refreshWeather().catch((err) => log.warn('upstream', 'athens weather warm-up failed', { detail: err?.message }))
+setInterval(() => refreshWeather().catch(() => {}), WEATHER_TTL_MS).unref()
+for (const user of GH_USERS) refreshContributions(user, 'last').catch(() => {})
+if (GH_TOKEN) {
+  githubOwner()
+    .then(({ login }) => {
+      if (!GH_USERS.has(login.toLowerCase())) refreshContributions(login, 'last').catch(() => {})
+      return githubStats(false)
+    })
+    .catch(() => {})
+}
 
 sweepInvites()
 setInterval(sweepInvites, INVITE_SWEEP_MS).unref()

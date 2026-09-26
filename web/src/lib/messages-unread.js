@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react'
-import { fetchUnread } from './messages-api'
 
 const EVERY = 45_000
 
@@ -16,7 +15,8 @@ function emit(next) {
 
 export function refreshUnread() {
   if (inflight) return inflight
-  inflight = fetchUnread()
+  inflight = import('./messages-api')
+    .then(({ fetchUnread }) => fetchUnread())
     .then((next) => emit(Number(next) || 0))
     .catch(() => {})
     .finally(() => {

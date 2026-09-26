@@ -1,4 +1,4 @@
-import { supabase, probeClient, isSupabaseConfigured, setRemember, clearRecovery, currentSession } from './supabase'
+import { supabase, loadSupabase, probeClient, isSupabaseConfigured, setRemember, clearRecovery, currentSession } from './supabase'
 import { LOGIN_PATH, DASHBOARD_PATH, dashboardPath } from './router'
 
 const SETTINGS_ACCOUNT_PATH = dashboardPath('settings/account')
@@ -66,14 +66,14 @@ function wrap(error) {
   return new AuthError(code, { fields, retryAfter, status: error.status || 0 })
 }
 
-function client() {
-  const sb = supabase()
+async function client() {
+  const sb = supabase() ?? (await loadSupabase())
   if (!sb) throw new AuthError('not_configured')
   return sb
 }
 
 async function run(fn) {
-  const sb = client()
+  const sb = await client()
   let result
   try {
     result = await fn(sb)
@@ -107,6 +107,10 @@ export async function authRegister({ name, email, password, captchaToken }) {
 
 export function authRequestReset(email, { captchaToken } = {}) {
   return run((sb) => sb.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl(LOGIN_PATH), ...(captchaToken ? { captchaToken } : {}) }))
+}
+
+export function authVerifyReset(email, code) {
+  return run((sb) => sb.auth.verifyOtp({ email, token: code, type: 'recovery' }))
 }
 
 export async function authUpdatePassword(password) {
@@ -144,7 +148,7 @@ export function authClaimWith(provider, next = DASHBOARD_PATH) {
 }
 
 export async function authSignOut() {
-  const sb = supabase()
+  const sb = supabase() ?? (await loadSupabase())
   if (!sb) return
   await sb.auth.signOut().catch(() => {})
 }
@@ -164,6 +168,7 @@ export async function authUpdateEmail(email) {
 }
 
 export async function authVerifyPassword(email, password, { captchaToken } = {}) {
+  await loadSupabase()
   const probe = probeClient()
   if (!probe) throw new AuthError('not_configured')
   let result
@@ -191,7 +196,7 @@ export async function mfaFactors() {
 }
 
 export async function mfaEnroll() {
-  const sb = client()
+  const sb = await client()
   const { data } = await sb.auth.mfa.listFactors()
   for (const f of data?.all || []) if (f.status !== 'verified') await sb.auth.mfa.unenroll({ factorId: f.id }).catch(() => {})
   const factor = await run((s) => s.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator app' }))
@@ -214,7 +219,7 @@ export function mfaUnenroll(factorId) {
 }
 
 export async function mfaRequired() {
-  const sb = supabase()
+  const sb = supabase() ?? (await loadSupabase())
   if (!sb) return false
   const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel()
   return Boolean(data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2')
@@ -231,7 +236,7 @@ export async function authDeleteAccount() {
   if (!token) throw new AuthError('failed', { status: 401 })
   const res = await deleteAccountRequest(token)
   if (res.status === 204) {
-    await client().auth.signOut({ scope: 'local' }).catch(() => {})
+    await (await client()).auth.signOut({ scope: 'local' }).catch(() => {})
     return
   }
   let body = null

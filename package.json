@@ -18,6 +18,10 @@
     "preview": "npm run preview --workspace web",
     "start:server": "npm start --workspace server",
     "lint": "oxlint && node scripts/check-query-strings.mjs",
+    "test": "npm run test:repo && npm test --workspaces --if-present",
+    "test:repo": "node --test tests/repo/*.test.mjs",
+    "test:dist": "npm run build && npm run test:dist --workspace web",
+    "test:live": "node --test tests/live/*.test.mjs",
     "deploy": "bash deploy/deploy.sh",
     "deploy:web": "bash deploy/deploy.sh web",
     "deploy:server": "bash deploy/deploy.sh server"

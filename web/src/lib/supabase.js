@@ -1,10 +1,10 @@
 import { useSyncExternalStore } from 'react'
-import { createClient } from '@supabase/supabase-js'
 
 const URL = import.meta.env.VITE_SUPABASE_URL
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
 
 const PERSIST_KEY = 'blxr-auth-persist'
+const SESSION_KEY = `sb-${/^https?:\/\/([^./]+)/.exec(URL || '')?.[1] ?? ''}-auth-token`
 
 export const isSupabaseConfigured = () => Boolean(URL && ANON_KEY)
 
@@ -49,12 +49,25 @@ const storage = {
   },
 }
 
+let lib = null
+let loading = null
 let client = null
 
+export function loadSupabase() {
+  if (typeof window === 'undefined' || !isSupabaseConfigured()) return Promise.resolve(null)
+  loading ??= import('@supabase/supabase-js').then((mod) => {
+    lib = mod
+    const sb = supabase()
+    listen(sb)
+    return sb
+  })
+  return loading
+}
+
 export function supabase() {
-  if (typeof window === 'undefined' || !isSupabaseConfigured()) return null
+  if (typeof window === 'undefined' || !isSupabaseConfigured() || !lib) return null
   if (!client) {
-    client = createClient(URL, ANON_KEY, {
+    client = lib.createClient(URL, ANON_KEY, {
       auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
     })
   }
@@ -62,8 +75,8 @@ export function supabase() {
 }
 
 export function probeClient() {
-  if (typeof window === 'undefined' || !isSupabaseConfigured()) return null
-  return createClient(URL, ANON_KEY, {
+  if (typeof window === 'undefined' || !isSupabaseConfigured() || !lib) return null
+  return lib.createClient(URL, ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'blxr-auth-probe' },
   })
 }
@@ -77,20 +90,49 @@ function update(patch) {
   listeners.forEach((fn) => fn())
 }
 
-function start() {
-  if (started) return
-  started = true
-  const sb = supabase()
-  if (!sb) {
-    update({ session: null })
-    return
+function storedSession() {
+  try {
+    const saved = JSON.parse(storage.getItem(SESSION_KEY) || 'null')
+    if (!saved?.access_token || !saved.user || !(saved.expires_at * 1000 > Date.now() + 10_000)) return null
+    return saved
+  } catch {
+    return null
   }
-  sb.auth.getSession().then(({ data }) => {
-    if (state.session === undefined) update({ session: data.session ?? null })
-  })
+}
+
+const hasStoredSession = () => {
+  try {
+    return Boolean(storage.getItem(SESSION_KEY))
+  } catch {
+    return false
+  }
+}
+
+let listening = false
+function listen(sb) {
+  if (!sb || listening) return
+  listening = true
+  sb.auth.getSession().then(({ data }) => update({ session: data.session ?? null }))
   sb.auth.onAuthStateChange((event, next) => {
     update({ session: next ?? null, recovery: event === 'PASSWORD_RECOVERY' ? true : event === 'SIGNED_OUT' ? false : state.recovery })
   })
+}
+
+function start() {
+  if (started) return
+  started = true
+  if (typeof window === 'undefined' || !isSupabaseConfigured()) {
+    update({ session: null })
+    return
+  }
+  if (lib) return
+  if (!hasStoredSession()) {
+    update({ session: null })
+    return
+  }
+  const saved = storedSession()
+  if (saved) update({ session: saved })
+  loadSupabase().catch(() => update({ session: null }))
 }
 
 const subscribe = (fn) => {

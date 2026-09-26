@@ -24,9 +24,6 @@ const RAIL_MIN_ROW = 420;
 
 const MONTH_LABEL_PX = 24;
 
-const REVEAL_STEP_MS = 9;
-const REVEAL_MAX_MS = 560;
-
 const SKELETON_ROWS = [1, 2, 3, 4, 5, 6, 7];
 
 const EDGE_FADE = 28;
@@ -384,28 +381,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
     return () => observer.disconnect();
   }, [measureEdges, cells.length]);
 
-    const [revealed, setRevealed] = React.useState(false);
-
-  React.useEffect(() => {
-    const card = cardRef.current;
-
-    if (!card || typeof IntersectionObserver === "undefined") {
-      setRevealed(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setRevealed(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "0px 0px -10% 0px" },
-    );
-    observer.observe(card);
-    return () => observer.disconnect();
-  }, []);
-
   React.useEffect(() => {
     if (!coarsePointer || tappedIdx == null) return;
     const dismiss = (e) => {
@@ -697,12 +672,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
                 : grid.map((day, idx) => {
                 const col = Math.floor(idx / 7);
 
-                const revealStyle =
-                  revealed && !skeleton
-                    ? { animationDelay: `${Math.min(col * REVEAL_STEP_MS, REVEAL_MAX_MS)}ms` }
-                    : undefined;
-                const revealClass = revealed && !skeleton ? "gh-cell-in" : "";
-
                 if (day === null) {
                   return (
                     <div
@@ -729,7 +698,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
                 };
 
                 const label = `${day.count} contributions · ${formatDay(day.date, locale)}`;
-                const cellClass = `relative block rounded-[2px] ring-inset ring-[var(--hairline)] ring-1 hover:z-20 hover:scale-[1.45] hover:ring-ink-strong hover:shadow-[0_1px_6px_var(--shadow-cast)] focus-visible:z-20 focus-visible:scale-[1.45] focus-visible:ring-ink-strong focus-visible:ring-2 outline-none transition-[transform,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:hover:scale-100 ${revealClass} ${LEVEL_CLASSES[day.level]}`;
+                const cellClass = `relative block rounded-[2px] ring-inset ring-[var(--hairline)] ring-1 hover:z-20 hover:scale-[1.45] hover:ring-ink-strong hover:shadow-[0_1px_6px_var(--shadow-cast)] focus-visible:z-20 focus-visible:scale-[1.45] focus-visible:ring-ink-strong focus-visible:ring-2 outline-none transition-[transform,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:hover:scale-100 ${LEVEL_CLASSES[day.level]}`;
 
                 const shared = {
                   "data-idx": idx,
@@ -749,7 +718,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
                       show(e.currentTarget);
                     }
                   },
-                  style: revealStyle,
                   className: cellClass,
                 };
 

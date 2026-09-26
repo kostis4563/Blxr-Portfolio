@@ -1,7 +1,3 @@
-// Transactional mail the app sends itself (Supabase only sends its own link
-// emails). Goes out through Resend's HTTP API as the same sender Supabase uses.
-// Layout mirrors deploy/supabase/email-templates/: dark, left-aligned, no images.
-
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
 const MAIL_FROM = process.env.MAIL_FROM || 'blxr <no-reply@blxr.net>'
 const SITE_URL = (process.env.SITE_URL || 'https://blxr.net').replace(/\/$/, '')
@@ -35,7 +31,6 @@ function layout({ preheader, eyebrow, title, intro, footer }) {
 </div>`
 }
 
-// "Chrome on macOS" from a user-agent string; falls back to "a browser".
 export function describeClient(ua = '') {
   const browser =
     /Edg\//.test(ua) ? 'Edge'

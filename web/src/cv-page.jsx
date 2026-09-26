@@ -220,7 +220,6 @@ export default function CvPage({ theme, onToggleTheme }) {
 
   const print = () => window.print()
 
-  // Deep links such as /cv#cv-skills land on their section.
   useEffect(() => {
     const id = window.location.hash.slice(1)
     if (!id) return
@@ -261,7 +260,6 @@ export default function CvPage({ theme, onToggleTheme }) {
         id="cv"
         className="w-full max-w-[960px] mx-auto px-5 sm:px-8 pt-24 pb-24 flex flex-col items-start min-h-screen bg-bg animate-rise-in print:pt-0 print:pb-0"
       >
-        {/* Identity */}
         <section aria-labelledby="cv-name" className="w-full mb-14 text-left">
           <p className={`${KICKER} mb-4 flex flex-wrap items-center gap-x-2 gap-y-1`}>
             <span>Curriculum vitae</span>
@@ -311,7 +309,6 @@ export default function CvPage({ theme, onToggleTheme }) {
           </dl>
         </section>
 
-        {/* Experience */}
         <section aria-labelledby="cv-experience" className="w-full mb-14">
           <SectionHeading id="cv-experience" kicker="01" title="Experience" />
           <ol className="w-full">
@@ -321,7 +318,6 @@ export default function CvPage({ theme, onToggleTheme }) {
           </ol>
         </section>
 
-        {/* Projects */}
         <section aria-labelledby="cv-projects" className="w-full mb-14">
           <SectionHeading id="cv-projects" kicker="02" title="Selected projects" />
           <ol className="w-full">
@@ -335,7 +331,6 @@ export default function CvPage({ theme, onToggleTheme }) {
           </a>
         </section>
 
-        {/* Education */}
         <section aria-labelledby="cv-education" className="w-full mb-14">
           <SectionHeading id="cv-education" kicker="03" title="Education" />
           <ol className="w-full">
@@ -364,7 +359,6 @@ export default function CvPage({ theme, onToggleTheme }) {
           </ol>
         </section>
 
-        {/* Skills */}
         <section aria-labelledby="cv-skills" className="w-full mb-14">
           <SectionHeading id="cv-skills" kicker="04" title="Skills" />
           <div className="w-full">
@@ -400,7 +394,6 @@ export default function CvPage({ theme, onToggleTheme }) {
           </div>
         </section>
 
-        {/* Languages */}
         <section aria-labelledby="cv-languages" className="w-full mb-14">
           <SectionHeading id="cv-languages" kicker="05" title="Languages" />
           <ul className="w-full max-w-[640px]">
@@ -413,7 +406,6 @@ export default function CvPage({ theme, onToggleTheme }) {
           </ul>
         </section>
 
-        {/* Footer */}
         <footer className="w-full max-w-[640px] border-t border-dashed border-line pt-8 print:hidden">
           <p className="text-[13px] leading-relaxed text-ink-muted">
             This is the formal version. For what I am working on at the moment, see{' '}

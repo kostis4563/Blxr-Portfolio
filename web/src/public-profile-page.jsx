@@ -7,14 +7,9 @@ import { useAuth } from './lib/supabase'
 import { fetchProfileByHandle, HANDLE_RE } from './lib/profiles'
 import { SITE_NAME } from './lib/seo'
 
-// /@<handle> — one member's public page. The prerendered shell is generic;
-// everything here loads in the browser and titles the tab once it has a name.
-
 const BTN =
   'inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-medium outline-none transition-[background-color,border-color,color,opacity,transform] duration-150 active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ink-strong/30 focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
 
-// A profile can force light or dark for its visitors. The app's own theme
-// hook keeps its state; we only override the root attribute while mounted.
 function useForcedTheme(forced) {
   useEffect(() => {
     if (!forced) return undefined

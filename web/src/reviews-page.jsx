@@ -6,6 +6,7 @@ import { Stars, StarPicker } from './components/star-rating'
 import { link, useRouteHash, HOME_PATH } from './lib/router'
 import { fetchReviews, submitReview, editReview, fetchInvite } from './lib/api'
 import { CONTACT_EMAIL } from './lib/profile'
+import { missionPassed } from './lib/memes'
 import {
   REVIEW_LIMITS,
   RATINGS,
@@ -478,6 +479,7 @@ function ReviewForm({ own, ownEditMinutes = 0, onEditOwn, nameRef, onPublished, 
       setPublished(result)
       setStatus('done')
       onPublished(result)
+      if (!editing) missionPassed()
     } catch (err) {
       setStatus('idle')
       const code = err?.code
@@ -762,6 +764,7 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
       setInviteOpen(false)
       setInvitePublished(result)
       onPublished(result)
+      missionPassed()
       window.setTimeout(() => (result.id ? viewReview(result.id) : focusForm()), 80)
     } catch (err) {
       const code = err?.code

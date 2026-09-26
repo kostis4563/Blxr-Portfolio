@@ -1,7 +1,9 @@
-import { supabase, currentSession } from './supabase'
+import { supabase, loadSupabase, currentSession } from './supabase'
 import { LIMITS, TYPING_EVERY } from './messages'
 import { extensionFor } from './boards-files'
 import { shortId } from './boards'
+
+await loadSupabase()
 
 export class MessageError extends Error {
   constructor(message, { status = 0, setup = false } = {}) {

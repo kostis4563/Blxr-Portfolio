@@ -17,6 +17,7 @@ export function parseRoute(path) {
   if (p === '/reviews') return { name: 'reviews' }
   if (p === '/uses') return { name: 'uses' }
   if (p === '/cv') return { name: 'cv' }
+  if (p === '/contact') return { name: 'contact' }
   if (p === '/login') return { name: 'login' }
   if (p === '/dashboard') return { name: 'dashboard' }
   if (p === PROFILE_BASE_PATH) return { name: 'profile', handle: null }
@@ -24,7 +25,6 @@ export function parseRoute(path) {
   const profileMatch = /^\/@([^/]+)$/.exec(p)
   if (profileMatch) return { name: 'profile', handle: decodeURIComponent(profileMatch[1]).toLowerCase() }
 
-  // Profiles used to live under /u/<handle>; old links fold onto /@<handle>.
   const legacyProfile = /^\/u\/([^/]+)$/.exec(p)
   if (legacyProfile) {
     const handle = decodeURIComponent(legacyProfile[1]).toLowerCase()
@@ -90,6 +90,7 @@ export const REVIEWS_PATH = '/reviews'
 export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
 export const USES_PATH = '/uses'
 export const CV_PATH = '/cv'
+export const CONTACT_PATH = '/contact'
 export const LOGIN_PATH = '/login'
 export const REGISTER_PATH = `${LOGIN_PATH}#register`
 export const RESET_PATH = `${LOGIN_PATH}#reset`
@@ -99,8 +100,6 @@ export const DASHBOARD_PATH = '/dashboard'
 export const dashboardPath = (id) => (id ? `${DASHBOARD_PATH}#${id}` : DASHBOARD_PATH)
 export const PROFILE_BASE_PATH = '/@'
 export const profilePath = (handle) => `${PROFILE_BASE_PATH}${encodeURIComponent(handle)}`
-// '@' is an awkward filename (and nginx reads a leading '@' as a named
-// location), so the prerendered shell for every profile is profile.html.
 export const PROFILE_SHELL_FILE = 'profile.html'
 
 export const staticPaths = () => [
@@ -111,6 +110,7 @@ export const staticPaths = () => [
   REVIEWS_PATH,
   USES_PATH,
   CV_PATH,
+  CONTACT_PATH,
 ]
 
 const listeners = new Set()

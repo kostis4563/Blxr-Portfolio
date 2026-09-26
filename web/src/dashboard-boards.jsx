@@ -742,7 +742,6 @@ export default function DashboardBoards({ hash, guest = false, onClaim }) {
     if (sort === 'made') sorted.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
     if (sort === 'open')
       sorted.sort((a, b) => b.counts.cards - b.counts.done - (a.counts.cards - a.counts.done) || a.name.localeCompare(b.name))
-    // pinned boards float to the top, keeping the chosen order inside each half
     sorted.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)))
     return sorted
   }, [index, search, sort, kind])

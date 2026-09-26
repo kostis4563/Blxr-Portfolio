@@ -24,4 +24,8 @@ const mount = () => {
 
 mount()
 
+if (document.documentElement.hasAttribute('data-entry')) {
+  setTimeout(() => document.documentElement.removeAttribute('data-entry'), 2000)
+}
+
 reportWebVitals()

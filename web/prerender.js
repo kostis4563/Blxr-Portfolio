@@ -56,7 +56,7 @@ const written = []
 for (const path of pages) {
   const { html, head } = await render(path)
   const out = template
-    .replace(HTML_RE, () => '<html lang="en" dir="ltr">')
+    .replace(HTML_RE, () => '<html lang="en" dir="ltr" data-entry>')
     .replace(TITLE_RE, () => head)
     .replace(ROOT_RE, () => `${EMAIL_OFF}<div id="root">${html}</div>${EMAIL_ON}`)
 
@@ -107,6 +107,7 @@ const ROUTE_SOURCES = {
   projects: ['src/projects-page.jsx', 'src/lib/projects.js', 'src/components/project-cover.jsx'],
   library: ['src/library-page.jsx', 'src/lib/library.js'],
   reviews: ['src/reviews-page.jsx'],
+  contact: ['src/contact-page.jsx', 'src/lib/profile.js'],
 }
 
 const repo = resolve(here, '..')

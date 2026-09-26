@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, useId, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { link } from '../lib/router'
-import { buildCommands, rankCommands, groupCommands } from '../lib/commands'
+import { link, navigate, CONTACT_PATH } from '../lib/router'
+import { buildCommands, rankCommands, groupCommands, sudoCommand } from '../lib/commands'
 import { usePaletteOpen, closePalette } from '../lib/palette'
 import { useAuth } from '../lib/supabase'
 import { matchRange, fold } from '../lib/text-match'
@@ -18,6 +18,7 @@ const ICONS = {
   user: { d: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'] },
   grid: { d: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'] },
   logout: { d: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'm16 17 5-5-5-5', 'M21 12H9'] },
+  terminal: { d: ['M5 7l5 5-5 5', 'M12 18h7'] },
   message: { d: 'M7.5 8.25h9m-9 3.75h5.25M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' },
   mail: { d: 'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75' },
   github: { fill: true, d: 'M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z' },
@@ -42,6 +43,30 @@ function Icon({ name, className = '' }) {
   )
 }
 
+function SudoOutput({ line, onContact }) {
+  const after = (delay) => ({ animationDelay: delay, animationDuration: '0.12s' })
+  return (
+    <div role="status" className="px-5 py-4 font-mono text-[12.5px] leading-[1.8]">
+      <p className="break-all text-ink-strong">
+        <span className="select-none text-ink-faint">$ </span>
+        {line}
+      </p>
+      <p className="text-ink-muted">[sudo] password for visitor:</p>
+      <p className="animate-fade-in text-red-400" style={after('0.9s')}>
+        visitor is not in the sudoers file. This incident will be reported.
+      </p>
+      <p className="animate-fade-in mt-3" style={after('1.8s')}>
+        <a
+          {...link(CONTACT_PATH, onContact)}
+          className="text-ink-secondary underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink-strong"
+        >
+          It was. To me. Say hi →
+        </a>
+      </p>
+    </div>
+  )
+}
+
 function Key({ children, wide = false }) {
   return (
     <kbd
@@ -58,6 +83,7 @@ export default function CommandPalette({ theme, onToggleTheme }) {
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const [flash, setFlash] = useState(null)
+  const [shell, setShell] = useState(null)
   const [keyboard, setKeyboard] = useState(false)
 
   const [edges, setEdges] = useState({ top: false, bottom: false })
@@ -80,10 +106,11 @@ export default function CommandPalette({ theme, onToggleTheme }) {
     [theme, onToggleTheme, signedIn]
   )
 
-  const results = useMemo(
-    () => groupCommands(rankCommands(commands, query)).flatMap((group) => group.items),
-    [commands, query]
-  )
+  const results = useMemo(() => {
+    const sudo = sudoCommand(query)
+    if (sudo) return [sudo]
+    return groupCommands(rankCommands(commands, query)).flatMap((group) => group.items)
+  }, [commands, query])
 
   const q = fold(query.trim())
 
@@ -97,6 +124,7 @@ export default function CommandPalette({ theme, onToggleTheme }) {
     setQuery('')
     setActive(0)
     setFlash(null)
+    setShell(null)
     const hasKeyboard = !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
     setKeyboard(hasKeyboard)
     if (hasKeyboard)
@@ -133,7 +161,10 @@ export default function CommandPalette({ theme, onToggleTheme }) {
     return () => document.removeEventListener('keydown', onKeyDown, true)
   }, [open, query, close])
 
-  useEffect(() => { setActive(0) }, [q])
+  useEffect(() => {
+    setActive(0)
+    setShell(null)
+  }, [q])
 
   const syncEdges = useCallback(() => {
     const el = listRef.current
@@ -166,6 +197,10 @@ export default function CommandPalette({ theme, onToggleTheme }) {
     if (command.external) {
       openExternal(command.href)
       close()
+      return
+    }
+    if (command.shell) {
+      setShell(command.label)
       return
     }
     command.run?.()
@@ -274,6 +309,9 @@ export default function CommandPalette({ theme, onToggleTheme }) {
         </div>
 
         <div className="relative">
+        {shell ? (
+          <SudoOutput line={shell} onContact={() => { navigate(CONTACT_PATH); close() }} />
+        ) : (
         <div
           ref={listRef}
           id={listId}
@@ -377,6 +415,7 @@ export default function CommandPalette({ theme, onToggleTheme }) {
             )
           })}
         </div>
+        )}
 
           {}
           <div

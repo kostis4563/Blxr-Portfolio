@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { flashbang } from './memes'
 
 const STORAGE_KEY = 'blxr-theme'
 const DEFAULT_THEME = 'dark'
@@ -28,8 +29,11 @@ export function resolveInitialTheme() {
   return stored ?? DEFAULT_THEME
 }
 
-// 'system' | 'light' | 'dark' — what the user picked, not what is showing.
 const readPreference = () => (typeof window === 'undefined' ? DEFAULT_THEME : readStoredTheme() ?? DEFAULT_THEME)
+
+function blindIfLeavingDark(next) {
+  if (next === 'light' && document.documentElement.dataset.theme === 'dark') flashbang()
+}
 
 export function useTheme() {
   const [theme, setTheme] = useState(resolveInitialTheme)
@@ -68,6 +72,7 @@ export function useTheme() {
   }, [])
 
   const toggleTheme = useCallback(() => {
+    blindIfLeavingDark(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
     setTheme((current) => {
       const next = current === 'dark' ? 'light' : 'dark'
       storeTheme(next)
@@ -78,12 +83,15 @@ export function useTheme() {
 
   const setPreference = useCallback((pref) => {
     if (pref === 'system') {
+      const resolved = systemTheme()
+      blindIfLeavingDark(resolved)
       storeTheme('system')
       setPreferenceState('system')
-      setTheme(systemTheme())
+      setTheme(resolved)
       return
     }
     if (pref !== 'light' && pref !== 'dark') return
+    blindIfLeavingDark(pref)
     storeTheme(pref)
     setPreferenceState(pref)
     setTheme(pref)

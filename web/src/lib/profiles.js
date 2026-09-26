@@ -1,7 +1,9 @@
-import { supabase } from './supabase'
+import { supabase, loadSupabase } from './supabase'
 import { AuthError } from './auth'
 import { profilePath } from './router'
 import { SITE_URL } from './seo'
+
+await loadSupabase()
 
 export const HANDLE_RE = /^[a-z0-9_]{3,20}$/
 export const RESERVED_HANDLES = new Set([

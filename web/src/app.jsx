@@ -2,12 +2,12 @@ import { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 're
 
 const AUTOPLAY_MS = 6000
 import GitHubContributions from './components/github-contribution'
-import ContactSection from './components/contact-section'
 import ProjectsPageImpl from '#ssr-page/projects'
 import LibraryPageImpl from '#ssr-page/library'
 import ReviewsPageImpl from '#ssr-page/reviews'
 import UsesPageImpl from '#ssr-page/uses'
 import CvPageImpl from '#ssr-page/cv'
+import ContactPageImpl from '#ssr-page/contact'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
 import PublicProfilePageImpl from '#ssr-page/public-profile'
@@ -16,15 +16,18 @@ import ThemeToggle from './components/theme-toggle'
 import CommandPaletteHost from './components/command-palette-host'
 import NavMenu from './components/nav-menu'
 import StudioFact from './components/studio-fact'
+import LandingMemes from './components/landing-memes'
+import { trackPageVisit } from './lib/memes'
 import { useTheme } from './lib/use-theme'
 import { projectsList } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
 import { SKILL_CATEGORIES, TOOL_CATEGORIES, themedIconFor } from './lib/skills'
-import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH } from './lib/router'
+import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
 import { Icon } from './components/icon'
 import { applyHead } from './lib/seo'
 import { recordHit } from './lib/api'
+import { loadSupabase } from './lib/supabase'
 import { rememberVisit } from './lib/recent'
 
 const routePage = (Static, loader) => (import.meta.env.SSR ? Static : lazy(loader))
@@ -34,9 +37,11 @@ const LibraryPage = routePage(LibraryPageImpl, () => import('#client-page/librar
 const ReviewsPage = routePage(ReviewsPageImpl, () => import('#client-page/reviews'))
 const UsesPage = routePage(UsesPageImpl, () => import('#client-page/uses'))
 const CvPage = routePage(CvPageImpl, () => import('#client-page/cv'))
-const LoginPage = routePage(LoginPageImpl, () => import('#client-page/login'))
-const DashboardPage = routePage(DashboardPageImpl, () => import('#client-page/dashboard'))
-const PublicProfilePage = routePage(PublicProfilePageImpl, () => import('#client-page/public-profile'))
+const ContactPage = routePage(ContactPageImpl, () => import('#client-page/contact'))
+const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
+const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
+const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
+const PublicProfilePage = routePage(PublicProfilePageImpl, withSupabase(() => import('#client-page/public-profile')))
 const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-found'))
 
 const PageFallback = () => (
@@ -103,6 +108,8 @@ function App() {
 
     rememberVisit(path)
   }, [path])
+
+  useEffect(() => trackPageVisit(currentView), [currentView])
 
   const isReturningHome = hasLeftHomeRef.current
 
@@ -172,7 +179,6 @@ function App() {
         .slice(0, 2)
     }))
   const restCount = projectsList.length - featuredProjects.length
-  // Small counts read better as words in a sentence.
   const countWord = (n) => ['zero', 'one', 'two', 'three', 'four', 'five', 'six'][n] ?? String(n)
 
   const goToSlide = (index, behavior) => {
@@ -259,7 +265,6 @@ function App() {
   const pauseCarousel = () => setCarouselPaused(true)
   const resumeCarousel = () => setCarouselPaused(false)
 
-  // "a, b and c" for the subjects line. Lowercased because it's mid-sentence.
   const listSentence = (items) => {
     const words = items.map((item) => item.toLowerCase())
     if (words.length < 2) return words.join('')
@@ -305,12 +310,11 @@ function App() {
 
   const navDivider = 'mx-1 h-full border-l border-dashed border-line'
 
-  // The primary nav. Text links from md up; below that the same list lives at the top of the ⋯ menu.
   const sectionLink = (id) => ({ href: `#${id}`, onClick: (event) => { event.preventDefault(); jumpToSection(id) } })
   const navLinks = [
     { id: 'projects', label: 'Projects', ...sectionLink('projects') },
     { id: 'about', label: 'About', ...sectionLink('skills') },
-    { id: 'contact', label: 'Contact', ...sectionLink('contact') },
+    { id: 'contact', label: 'Contact', ...link(CONTACT_PATH) },
   ]
 
   if (currentView === 'notFound') {
@@ -381,6 +385,17 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <CvPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'contact') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <ContactPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>
@@ -471,7 +486,7 @@ function App() {
       {}
       <main className={`w-full max-w-[960px] mx-auto px-6 pt-24 pb-6 flex flex-col items-start border-l border-dashed border-r border-line min-h-screen bg-bg ${isReturningHome ? '' : 'animate-rise-in'}`}>
 
-        <section className="flex flex-col items-start text-left w-[calc(100%+3rem)] border-b border-dashed border-line -mx-6 px-6 pb-12">
+        <section id="intro" className="flex flex-col items-start text-left w-[calc(100%+3rem)] border-b border-dashed border-line -mx-6 px-6 pb-12">
 
           {}
           <img
@@ -720,7 +735,6 @@ function App() {
             Background
           </h2>
 
-          {/* School first, then the tools. One section rather than two, since the second is really a footnote to the first. */}
           <div id="education" className="scroll-mt-8 flex flex-col">
             {educationEntries.map((entry, idx) => (
               <div
@@ -752,7 +766,6 @@ function App() {
             ))}
           </div>
 
-          {/* Hovering one chip fades the rest of the block so the eye lands on it. */}
           <div className="flex flex-col gap-5 w-full border-t border-dashed border-line pt-8 text-[14px] [&:has(.skill-chip:hover)_.skill-chip:not(:hover)]:opacity-45">
             {skillCategories.map((category, idx) => (
               <div
@@ -765,12 +778,10 @@ function App() {
 
                 <div className="flex flex-wrap gap-x-5 gap-y-3">
                   {category.items.map((skill) => {
-                    // Each chip opens the official site for that language / framework / service.
                     const Chip = skill.url ? 'a' : 'span'
                     const chipProps = skill.url
                       ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer', title: `${skill.name} — official site`, 'aria-label': `${skill.name} — official site (opens in a new tab)` }
                       : {}
-                    // Negative margins cancel the padding, so the pill background appears on hover without shifting the row.
                     return (
                       <Chip
                         key={skill.name}
@@ -779,7 +790,6 @@ function App() {
                           skill.url ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg' : 'cursor-default'
                         }`}
                       >
-                        {/* Icon pops with a slight overshoot and tilt; the name slides a hair to the right behind it. */}
                         <img
                           {...imageProps(skill.icon)}
                           alt=""
@@ -928,16 +938,14 @@ function App() {
           </details>
         </section>
 
-        <ContactSection />
-
-        <section aria-label="GitHub activity" className="w-[calc(100%+3rem)] -mx-6 mt-16 border-t border-dashed border-line px-6 pt-12 text-left">
+        <section id="activity" aria-label="GitHub activity" className="w-[calc(100%+3rem)] -mx-6 mt-16 border-t border-dashed border-line px-6 pt-12 text-left">
           <GitHubContributions
             username={GITHUB_USERNAME} since={GITHUB_JOINED}
             activeSince={GITHUB_ACTIVE_SINCE} minimal
           />
         </section>
 
-        <footer className="w-[calc(100%+3rem)] -mx-6 mt-16 flex flex-col gap-3 border-t border-dashed border-line px-6 py-6 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
+        <footer id="site-footer" className="w-[calc(100%+3rem)] -mx-6 mt-16 flex flex-col gap-3 border-t border-dashed border-line px-6 py-6 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
           <p>
             <span className="font-medium text-ink-strong">Blxr</span>
             <span aria-hidden="true" className="mx-2 text-ink-faint">·</span>
@@ -951,6 +959,8 @@ function App() {
         </footer>
 
       </main>
+
+      <LandingMemes />
 
       {palette}
 

@@ -37,7 +37,6 @@ export const SECTIONS = [
   { id: 'projects', label: 'Projects' },
   { id: 'skills', label: 'Background' },
   { id: 'education', label: 'Education' },
-  { id: 'contact', label: 'Contact' },
 ]
 
 export function jumpToSection(id) {
