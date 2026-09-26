@@ -8,7 +8,7 @@ import { Icon } from './icon'
 import { LABEL, INPUT, CTA, SWITCH, QUIET, Field, PasswordInput } from './auth-ui'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const CODE_LENGTH = 6
+const CODE_LENGTH = 8
 const RESEND_AFTER = 60
 const BLANK = Array(CODE_LENGTH).fill('')
 
@@ -19,7 +19,7 @@ const CTA_COPY = {
 }
 
 const BOX =
-  'h-12 w-full min-w-0 rounded-xl border bg-surface-raised/60 text-center font-mono text-[18px] font-semibold caret-transparent transition-colors focus:bg-surface focus:outline-none disabled:cursor-not-allowed'
+  'h-12 w-full min-w-0 rounded-lg border bg-surface-raised/60 text-center font-mono text-[16px] font-semibold sm:rounded-xl sm:text-[18px] caret-transparent transition-colors focus:bg-surface focus:outline-none disabled:cursor-not-allowed'
 
 function CodeInput({ digits, onChange, onComplete, inputs, labelledBy, readOnly, verified, invalid }) {
   const focus = (i) => inputs.current[Math.min(Math.max(i, 0), CODE_LENGTH - 1)]?.focus()
@@ -42,7 +42,7 @@ function CodeInput({ digits, onChange, onComplete, inputs, labelledBy, readOnly,
       : 'border-line text-ink-strong hover:border-line-strong focus:border-ink-strong/60'
 
   return (
-    <div role="group" aria-labelledby={labelledBy} className="grid grid-cols-6 gap-2">
+    <div role="group" aria-labelledby={labelledBy} className="grid grid-cols-8 gap-1.5 sm:gap-2">
       {digits.map((digit, i) => (
         <input
           key={i}
@@ -212,7 +212,7 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
       <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">{copy.title}</h1>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
         {step === 'email' ? (
-          'Enter your email and we will send you a 6-digit code.'
+          `Enter your email and we will send you a ${CODE_LENGTH}-digit code.`
         ) : verified ? (
           <>Code accepted for <span className="text-ink-strong">{sentTo}</span>. Pick a new password to finish.</>
         ) : (

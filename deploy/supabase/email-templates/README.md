@@ -25,10 +25,11 @@ it from `server/src/mail.mjs` in the same style.
 `{{ .ConfirmationURL }}` already carries the `redirect_to` the app passed
 (`/login?next=…`), so the links land on the login page and forward from there.
 The reauthentication one shows `{{ .Token }}` as a code instead of a button.
-So does reset password: `/login#reset` asks for that 6-digit code, and the
+So does reset password: `/login#reset` asks for that 8-digit code, and the
 link underneath still works for anyone who closed the tab. Leave
-**Providers → Email → Email OTP Length** at `6` — `CODE_LENGTH` in
-`web/src/components/reset-password.jsx` expects it.
+**Providers → Email → Email OTP Length** at `8` — `CODE_LENGTH` in
+`web/src/components/reset-password.jsx` expects it. A mismatch makes every
+code fail with "That code is wrong or has expired."
 
 To preview a template locally, replace the `{{ … }}` placeholders and open the
 file in a browser; all six share the same shell, so a change to one should be
