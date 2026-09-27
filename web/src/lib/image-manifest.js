@@ -19,6 +19,7 @@ export const IMAGES = {
   '/favicon-wordmark.png': { v: '9aa40b08', ext: '.png', widths: [] },
   '/favicon.png': { v: 'c91e4e50', ext: '.png', widths: [] },
   '/favicon.svg': { v: '61bc9a16', ext: '.svg', widths: [] },
+  '/fuse-bypass.webp': { v: 'bdbae815', ext: '.webp', widths: [480, 768, 1200] },
   '/hand-left.webp': { v: 'e0ef34a5', ext: '.webp', widths: [300] },
   '/hand-right.webp': { v: '1172d462', ext: '.webp', widths: [300] },
   '/icons.svg': { v: 'b45fa506', ext: '.svg', widths: [] },

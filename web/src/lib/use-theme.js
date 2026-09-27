@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { flashbang, smokeGrenade } from './memes'
+import { flashbang, NUKE_ODDS, nuke, smokeGrenade } from './memes'
 
 const STORAGE_KEY = 'blxr-theme'
 const DEFAULT_THEME = 'dark'
@@ -33,15 +33,32 @@ const readPreference = () => (typeof window === 'undefined' ? DEFAULT_THEME : re
 
 let themeChanges = 0
 
+const SPAM_FLIPS = 8
+const SPAM_MS = 6000
+let recentFlips = []
+
+function spamming() {
+  const now = Date.now()
+  recentFlips = [...recentFlips.filter((at) => now - at < SPAM_MS), now]
+  if (recentFlips.length < SPAM_FLIPS) return false
+  recentFlips = []
+  return true
+}
+
 function changeTheme(next, apply) {
   const change = ++themeChanges
   const applyIfLatest = () => {
     if (change === themeChanges) apply()
   }
   const current = document.documentElement.dataset.theme
-  if (next === 'light' && current === 'dark') flashbang(applyIfLatest)
-  else if (next === 'dark' && current === 'light') smokeGrenade(applyIfLatest)
-  else applyIfLatest()
+  const flipping = current === (next === 'light' ? 'dark' : 'light')
+  if (!flipping) applyIfLatest()
+  else if (spamming()) {
+    applyIfLatest()
+    import('./secret-effects').then(({ notResponding }) => notResponding()).catch(() => {})
+  } else if (Math.random() < 1 / NUKE_ODDS) nuke(applyIfLatest)
+  else if (next === 'light') flashbang(applyIfLatest)
+  else smokeGrenade(applyIfLatest)
 }
 
 export function useTheme() {

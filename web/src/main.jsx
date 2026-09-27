@@ -4,9 +4,13 @@ import Root from './root.jsx'
 import { reportWebVitals } from './lib/vitals'
 import { installErrorReporting } from './lib/report-errors'
 import { applyDevicePrefs } from './lib/prefs'
+import { installSecrets } from './lib/secrets'
+import { consoleHello } from './lib/console-hello'
 
 applyDevicePrefs()
 installErrorReporting()
+installSecrets()
+consoleHello()
 
 const container = document.getElementById('root')
 const hydrate = () => {

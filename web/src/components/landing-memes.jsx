@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ACHIEVEMENTS, achievement, reducedMotion } from '../lib/memes'
+import { ACHIEVEMENTS, achievement, onDesktop, reducedMotion } from '../lib/memes'
 import { imageUrl } from '../lib/images'
 
 const CLIP = imageUrl('/parkour.mp4')
@@ -40,6 +40,12 @@ let splitShare = 0.5
 const saveData = () => navigator.connection?.saveData || /2g/.test(navigator.connection?.effectiveType ?? '')
 
 export default function LandingMemes() {
+  const [desktop, setDesktop] = useState(false)
+  useEffect(() => setDesktop(onDesktop()), [])
+  return desktop ? <Memes /> : null
+}
+
+function Memes() {
   const [clip, setClip] = useState(null)
   const [called, setCalled] = useState(false)
   const [split, setSplit] = useState(false)

@@ -166,7 +166,7 @@ function App() {
 
   const palette = <CommandPaletteHost theme={theme} onToggleTheme={toggleTheme} />
 
-  const FEATURED_ORDER = ['amitista', 'async', '7x0-site']
+  const FEATURED_ORDER = ['amitista', 'fuse-bypass', 'async', '7x0-site']
   const featuredProjects = FEATURED_ORDER
     .map((id) => projectsList.find((project) => project.id === id))
     .filter(Boolean)

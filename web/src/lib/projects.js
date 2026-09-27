@@ -73,6 +73,51 @@ export const projectsList = [
   },
 
   {
+    id: 'fuse-bypass',
+    title: 'Fuse Bypass',
+    badge: 'Client Work',
+    date: '2026',
+    category: 'Web Platforms',
+    url: 'https://www.youtube.com/watch?v=FxBaP807axQ',
+    urlLabel: 'Watch showcase',
+    github: null,
+    image: '/fuse-bypass.webp',
+    imageAlt: 'The Fuse logo above projectfuse.xyz, from the website showcase video',
+    accent: '#a1a1aa',
+    shortDescription: 'The storefront and member platform for Fuse, a FiveM client. It has Discord sign in, automatic licensing, and a crypto checkout that pays straight into the project’s own wallets with no processor in between.',
+    fullDescription: 'Fuse Bypass is the full stack platform behind Fuse, a configurable FiveM client. A buyer signs in with Discord, pays in crypto and has a license issued to their account automatically, all in one flow. The checkout has no payment processor. Every coin goes straight into the project’s own wallets, and read only watchers on Litecoin, Ethereum, BNB Smart Chain and Solana spot the payment on chain and confirm the invoice. Every buyer sees the same address, so each invoice reserves an amount no other open invoice is asking for, which means a transfer can only belong to one order. Anything ambiguous goes to a staff queue instead of being guessed. Around the store sit a member dashboard with public profiles and custom handles, and a staff side covering users, licenses, announcements, maintenance mode and a searchable audit log of everything that happens on the site.',
+    metrics: [
+      { label: 'Coins Accepted', value: '6' },
+      { label: 'Chains Watched', value: '4' },
+      { label: 'Processor', value: 'None' }
+    ],
+    features: [
+      'Discord sign in through server side OAuth, with HttpOnly session cookies and roles checked again on every admin action',
+      'Crypto checkout in LTC, ETH, SOL, BNB, USDT and USDC, priced from a live EUR rate and paid directly into the project’s own wallets',
+      'Read only chain watchers that confirm a payment and issue its license in the same database transaction',
+      'Unique amount invoices that tie each transfer to exactly one order, with ambiguous payments queued for staff instead of guessed',
+      'Member dashboard with public profiles, custom handles and profile media',
+      'Staff panel for users, licenses, announcements and maintenance mode, backed by a searchable audit log'
+    ],
+    internals: [
+      'Every payable amount is BigInt arithmetic in the chain’s smallest unit, so no floating point number ever touches money',
+      'Quotes hold a live EUR rate for 30 minutes, and a payment that lands after the quote lapses is still matched for 12 hours',
+      'Deposits are keyed by their own transaction, so reading the same block twice can never credit an invoice twice',
+      'The server holds no private keys and has no code path that can move funds; it only reads public chains',
+      'Schema migrations run in a single transaction and pass a foreign key check before the server accepts traffic',
+      'Same origin checks and per client rate limits on sign in, uploads and checkout, with every event logged and mirrored to Discord',
+      'Push to deploy through a systemd timer, plus a health check every two minutes that restarts the app and alerts on DNS, certificate or domain problems'
+    ],
+    stack: [
+      { group: 'Frontend', items: ['React 19', 'Vite 8', 'Tailwind CSS 4', 'Lucide icons', 'QR codes'] },
+      { group: 'Backend', items: ['Node.js 22', 'Express 5', 'node:sqlite', 'Multer', 'Discord OAuth2', 'node:test'] },
+      { group: 'Payments', items: ['Ethereum JSON-RPC', 'Etherscan V2', 'Solana RPC', 'Esplora API', 'BigInt'] },
+      { group: 'Hosting', items: ['nginx', 'Cloudflare', 'pm2', 'systemd timers'] }
+    ],
+    tags: ['React', 'Vite', 'Tailwind CSS', 'Express', 'SQLite', 'Crypto payments']
+  },
+
+  {
     id: 'async',
     title: 'async',
     badge: 'Closed',

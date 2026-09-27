@@ -257,11 +257,36 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                         </ul>
                       </section>
 
+                      {project.internals?.length > 0 && (
+                        <section className={`${ROW} mt-8`}>
+                          <h3 className={LABEL}>Under the Hood</h3>
+                          <ul className="flex flex-col gap-2.5">
+                            {project.internals.map((detail) => (
+                              <li key={detail} className="flex gap-3 text-[13.5px] leading-relaxed text-ink-secondary">
+                                <span className="text-ink-faint shrink-0" aria-hidden="true">—</span>
+                                <span>{detail}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+
                       <section className={`${ROW} mt-8`}>
                         <h3 className={LABEL}>Technologies</h3>
-                        <p className="font-mono text-[12px] leading-relaxed text-ink-muted">
-                          {project.tags.join(' · ')}
-                        </p>
+                        {project.stack?.length > 0 ? (
+                          <dl className="flex flex-col gap-2 font-mono text-[12px] leading-relaxed">
+                            {project.stack.map(({ group, items }) => (
+                              <div key={group} className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-4">
+                                <dt className="text-ink-subtle">{group}</dt>
+                                <dd className="text-ink-muted">{items.join(' · ')}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        ) : (
+                          <p className="font-mono text-[12px] leading-relaxed text-ink-muted">
+                            {project.tags.join(' · ')}
+                          </p>
+                        )}
                       </section>
 
                       {project.gallery?.length > 0 && (

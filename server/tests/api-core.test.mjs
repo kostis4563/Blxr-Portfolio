@@ -54,6 +54,15 @@ describe('routing and methods', () => {
     }
   })
 
+  test("/api/ip echoes the caller's own address back, uncached", async () => {
+    const res = await srv.request('/api/ip', { ip: '198.51.100.23', headers: { 'cf-ipcountry': 'gr' } })
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.body, { ip: '198.51.100.23', country: 'GR' })
+    assert.equal(res.headers.get('cache-control'), 'no-store')
+    assert.equal((await srv.request('/api/ip', { headers: { 'cf-ipcountry': 'XX' } })).body.country, null, 'unknown country')
+    assert.equal((await srv.request('/api/ip', { headers: { 'cf-ipcountry': 'T1' } })).body.country, null, 'Tor')
+  })
+
   test('private and error responses are never cached', async () => {
     for (const p of ['/api/reviews', '/api/logs', '/api/vitals']) {
       assert.equal((await srv.request(p)).headers.get('cache-control'), 'no-store', p)

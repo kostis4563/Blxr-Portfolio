@@ -1241,7 +1241,8 @@ html[data-entry] .project-slide[data-active] .project-copy > * {
 
 .flashbang,
 .flashbang-throw,
-.smoke {
+.smoke,
+.nuke {
   position: fixed;
   inset: 0;
   z-index: 90;
@@ -1428,7 +1429,6 @@ html[data-entry] .project-slide[data-active] .project-copy > * {
     nade-roll 1.1s linear both,
     smoke-swallow 0.3s 1.7s both;
 }
-/* Haze and fog fill in behind the puffs as a soft-edged wall: the mask grows from nothing to past every corner. */
 .smoke-haze,
 .smoke-fog {
   position: absolute;
@@ -1474,7 +1474,6 @@ html[data-entry] .project-slide[data-active] .project-copy > * {
     mask-size: 360vmax 360vmax;
   }
 }
-/* Chrome skips an empty mask on a backdrop filter, so the haze also stays hidden until the can starts smoking. */
 @keyframes smoke-haze {
   0%,
   21% {
@@ -1519,6 +1518,936 @@ html[data-entry] .project-slide[data-active] .project-copy > * {
   to {
     opacity: 0;
     translate: var(--dx) var(--dy);
+  }
+}
+
+.nuke {
+  --lead: 0s;
+  --fall: 1.6s;
+  --drop: calc(var(--lead) + var(--fall));
+  --shock: 0.9s;
+  --ground: 88%;
+  --burst: 10;
+  --u: min(1.4vw, 1.1vh);
+}
+.nuke-launched {
+  --lead: 3.2s;
+}
+.nuke.is-leaving {
+  animation: gta-out 0.9s ease-in both;
+}
+.nuke-scene {
+  position: absolute;
+  inset: 0;
+  animation: nuke-shake 3.4s calc(var(--drop) + var(--shock)) both;
+}
+.nuke-sky {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.nuke-haze {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  -webkit-backdrop-filter: blur(5px) sepia(0.55) saturate(1.5) brightness(0.78) contrast(1.1);
+  backdrop-filter: blur(5px) sepia(0.55) saturate(1.5) brightness(0.78) contrast(1.1);
+  animation: nuke-haze 7.4s var(--drop) forwards;
+}
+.nuke-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: #fff;
+  animation: nuke-flash 2.2s var(--drop) forwards;
+}
+
+.nuke-bomb {
+  position: absolute;
+  top: calc(var(--ground) - var(--u) * var(--burst));
+  left: 50%;
+  width: calc(var(--u) * 6.5);
+  aspect-ratio: 60 / 124;
+  animation:
+    nuke-fall var(--fall) cubic-bezier(0.5, 0.05, 0.9, 0.6) var(--lead) both,
+    nuke-gone 0.01s var(--drop) forwards;
+}
+.nuke-bomb svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 1px rgb(255 255 255 / 0.35)) drop-shadow(0 10px 14px rgb(0 0 0 / 0.5));
+  animation: nuke-wobble 0.36s ease-in-out infinite alternate;
+}
+
+.nuke-alarm {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 16vmax rgb(214 32 32 / 0.5);
+  animation:
+    nuke-alarm 0.62s ease-in-out infinite alternate,
+    nuke-gone 0.01s var(--drop) forwards;
+}
+.nuke-alert {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: min(400px, calc(100vw - 32px));
+  padding: 14px 16px 15px;
+  border-radius: 20px;
+  background: rgb(28 28 30 / 0.95);
+  box-shadow:
+    0 18px 40px rgb(0 0 0 / 0.4),
+    inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  color: #fff;
+  font:
+    14px/1.35 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    var(--font-sans);
+  translate: -50% 0;
+  animation:
+    nuke-alert-in 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both,
+    nuke-alert-buzz 0.3s linear 0.5s 3,
+    nuke-gone 0.01s var(--drop) forwards;
+}
+.nuke-alert-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: rgb(255 255 255 / 0.6);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nuke-alert-head svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: #ffcc00;
+}
+.nuke-alert-head time {
+  margin-left: auto;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.nuke-alert-title {
+  font-weight: 700;
+}
+.nuke-alert-copy {
+  color: rgb(255 255 255 / 0.85);
+}
+.nuke-alert-count {
+  margin-top: 8px;
+  color: #ff453a;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.nuke-band {
+  position: absolute;
+  inset-inline: 0;
+  top: 11%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 0.7vw, 8px);
+  padding: clamp(14px, 2.2vw, 22px) 16px;
+  background: linear-gradient(90deg, transparent, rgb(0 0 0 / 0.8) 16%, rgb(0 0 0 / 0.8) 84%, transparent);
+  color: #fff;
+  font-family: var(--font-sans);
+  text-align: center;
+  text-wrap: balance;
+  animation: gta-band-in 0.35s ease-out calc(var(--drop) + 2.6s) both;
+}
+.nuke-band::before,
+.nuke-band::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 5px;
+  background: repeating-linear-gradient(-45deg, #f5d90a 0 12px, #111 12px 24px);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+}
+.nuke-band::before {
+  top: 0;
+}
+.nuke-band::after {
+  bottom: 0;
+}
+.nuke-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  color: #f5d90a;
+  font-size: clamp(11px, 1.4vw, 14px);
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  animation: gta-sub-in 0.4s ease-out calc(var(--drop) + 2.7s) both;
+}
+.nuke-sign {
+  width: 1.5em;
+  height: 1.5em;
+  flex: none;
+}
+.nuke-title {
+  color: #f5d90a;
+  font-size: clamp(30px, 6.5vw, 64px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 2px #000,
+    0 3px 0 #7a5a00,
+    0 6px 18px rgb(0 0 0 / 0.6);
+  animation: gta-word-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--drop) + 2.8s) both;
+}
+.nuke-odds {
+  color: rgb(255 255 255 / 0.86);
+  font-size: clamp(12px, 1.6vw, 16px);
+  font-weight: 600;
+  animation: gta-sub-in 0.4s ease-out calc(var(--drop) + 3.2s) both;
+}
+
+@keyframes nuke-fall {
+  from {
+    transform: translate(-50%, -100%) translateY(-100vh) scale(0.7);
+  }
+  to {
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+@keyframes nuke-wobble {
+  from {
+    rotate: -5deg;
+  }
+  to {
+    rotate: 5deg;
+  }
+}
+@keyframes nuke-gone {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes nuke-flash {
+  0%,
+  2.5% {
+    opacity: 1;
+    background: #fff;
+  }
+  6% {
+    opacity: 0.5;
+    background: #fff;
+  }
+  10%,
+  17% {
+    opacity: 1;
+    background: #fff;
+    animation-timing-function: ease-out;
+  }
+  35% {
+    opacity: 0.3;
+    background: #ffe2b0;
+  }
+  100% {
+    opacity: 0;
+    background: #ffb070;
+  }
+}
+@keyframes nuke-haze {
+  0% {
+    opacity: 0.3;
+  }
+  11.8% {
+    opacity: 0.4;
+  }
+  12.6% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.55;
+  }
+  26.8% {
+    opacity: 0.6;
+  }
+  27.6% {
+    opacity: 0.85;
+  }
+  35%,
+  43% {
+    opacity: 0.55;
+  }
+  43.8% {
+    opacity: 0.72;
+  }
+  52%,
+  75% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes nuke-shake {
+  0% {
+    translate: 0 0;
+  }
+  1.5% {
+    translate: -2.2vmin 1.6vmin;
+  }
+  3% {
+    translate: 1.9vmin -1.3vmin;
+  }
+  4.5% {
+    translate: -1.5vmin -1vmin;
+  }
+  6% {
+    translate: 1.2vmin 1.1vmin;
+  }
+  8% {
+    translate: -0.8vmin 0.5vmin;
+  }
+  10.5% {
+    translate: 0.4vmin -0.3vmin;
+  }
+  13%,
+  32.4% {
+    translate: 0 0;
+  }
+  34.4% {
+    translate: 1.1vmin -0.8vmin;
+  }
+  36.4% {
+    translate: -0.9vmin 0.6vmin;
+  }
+  38.4% {
+    translate: 0.5vmin 0.4vmin;
+  }
+  41% {
+    translate: -0.2vmin -0.2vmin;
+  }
+  43.5%,
+  67.6% {
+    translate: 0 0;
+  }
+  69.6% {
+    translate: -0.6vmin 0.4vmin;
+  }
+  71.6% {
+    translate: 0.4vmin -0.3vmin;
+  }
+  73.6% {
+    translate: -0.2vmin 0.1vmin;
+  }
+  76%,
+  100% {
+    translate: 0 0;
+  }
+}
+@keyframes nuke-alarm {
+  from {
+    opacity: 0.3;
+  }
+}
+@keyframes nuke-alert-in {
+  from {
+    translate: -50% calc(-100% - 24px);
+  }
+}
+@keyframes nuke-alert-buzz {
+  25% {
+    rotate: -1.2deg;
+  }
+  75% {
+    rotate: 1.2deg;
+  }
+}
+
+.gta-cheat {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  color: #fff;
+}
+.gta-cheat.is-leaving {
+  animation: gta-out 0.5s ease-in both;
+}
+.gta-help {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  max-width: calc(100vw - 48px);
+  padding: 12px 18px;
+  border-radius: 3px;
+  background: rgb(0 0 0 / 0.72);
+  font:
+    600 16px/1.3 Arial,
+    var(--font-sans);
+  animation: gta-help-in 0.18s ease-out both;
+}
+.gta-hud {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  font-family: Impact, 'Arial Black', var(--font-sans);
+  animation: gta-help-in 0.18s ease-out 0.05s both;
+}
+.gta-clock,
+.gta-money {
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0 -2px 0 #000,
+    0 2px 0 #000,
+    -2px 0 0 #000,
+    2px 0 0 #000;
+}
+.gta-clock {
+  color: #dcdcdc;
+}
+.gta-money {
+  color: #3d7a32;
+  font-variant-numeric: tabular-nums;
+}
+.gta-bar {
+  display: block;
+  width: clamp(110px, 11vw, 150px);
+  height: 14px;
+  border: 3px solid #000;
+  background: rgb(0 0 0 / 0.55);
+}
+.gta-bar i {
+  display: block;
+  height: 100%;
+  transform-origin: left;
+  animation: gta-fill 0.9s cubic-bezier(0.3, 0.7, 0.3, 1) 0.3s both;
+}
+.gta-armor i {
+  --from: 0.05;
+  background: linear-gradient(#f4f4f4, #c8c8c8 60%, #8f8f8f);
+}
+.gta-health i {
+  --from: 0.28;
+  background: linear-gradient(#e0413f, #b4191d 60%, #7d1012);
+}
+.gta-stars {
+  display: flex;
+  gap: 2px;
+}
+.gta-stars svg {
+  width: clamp(22px, 2.4vw, 30px);
+  overflow: visible;
+  fill: rgb(0 0 0 / 0.45);
+  stroke: #000;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.gta-stars svg:nth-child(-n + 4) {
+  fill: #e0ac3c;
+  animation:
+    gta-star-blink 0.36s steps(1) infinite,
+    gta-star-out 0.25s ease-in var(--out) forwards;
+}
+.gta-stars svg:nth-child(4) {
+  --out: 1s;
+}
+.gta-stars svg:nth-child(3) {
+  --out: 1.35s;
+}
+.gta-stars svg:nth-child(2) {
+  --out: 1.7s;
+}
+.gta-stars svg:nth-child(1) {
+  --out: 2.05s;
+}
+@keyframes gta-help-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes gta-fill {
+  from {
+    transform: scaleX(var(--from));
+  }
+}
+@keyframes gta-star-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes gta-star-out {
+  from {
+    opacity: 1;
+    scale: 1.25;
+  }
+  to {
+    opacity: 1;
+    fill: rgb(0 0 0 / 0.45);
+  }
+}
+
+html[data-roll]::view-transition-group(root) {
+  animation: barrel-roll 1.2s cubic-bezier(0.45, 0, 0.25, 1);
+}
+html[data-roll]::view-transition-old(root) {
+  display: none;
+}
+html[data-roll]::view-transition-new(root) {
+  animation: none;
+}
+@keyframes barrel-roll {
+  50% {
+    scale: 0.86;
+  }
+  to {
+    rotate: 360deg;
+  }
+}
+
+.sus,
+.doom,
+.mc-death,
+.rmrf,
+.hang {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+.sus,
+.doom,
+.mc-death,
+.rmrf {
+  pointer-events: none;
+}
+
+.sus {
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  animation: gta-help-in 0.5s ease-out both;
+}
+.sus.is-leaving {
+  animation: gta-out 0.6s ease-in both;
+}
+.sus-stars {
+  --tile: 260px;
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 18%, #fff 60%, transparent 70%),
+    radial-gradient(1.2px 1.2px at 38% 72%, #fff 60%, transparent 70%),
+    radial-gradient(1.8px 1.8px at 64% 34%, #fff 60%, transparent 70%),
+    radial-gradient(1.2px 1.2px at 82% 86%, #fff 60%, transparent 70%),
+    radial-gradient(1.4px 1.4px at 91% 12%, #fff 60%, transparent 70%);
+  background-size: var(--tile) var(--tile);
+  animation: sus-drift 7s linear infinite;
+}
+.sus-stars-far {
+  --tile: 170px;
+  opacity: 0.45;
+  animation-duration: 15s;
+}
+.sus-crew {
+  position: absolute;
+  top: 32%;
+  left: 0;
+  width: clamp(64px, 8vw, 104px);
+  overflow: visible;
+  animation: sus-eject 7.4s linear 0.2s both;
+}
+.sus-line,
+.sus-left {
+  position: absolute;
+  inset-inline: 16px;
+  font-family: Arial, var(--font-sans);
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+}
+.sus-line {
+  top: 58%;
+  min-height: 1.3em;
+  font-size: clamp(18px, 2.6vw, 34px);
+}
+.sus-left {
+  top: calc(58% + clamp(34px, 4.4vw, 56px));
+  color: rgb(255 255 255 / 0.85);
+  font-size: clamp(14px, 1.7vw, 22px);
+  animation: gta-help-in 0.6s ease-out 4.2s both;
+}
+@keyframes sus-drift {
+  to {
+    background-position: calc(var(--tile) * -1) 0;
+  }
+}
+@keyframes sus-eject {
+  from {
+    translate: -20vw 0;
+  }
+  to {
+    translate: 115vw 4vh;
+    rotate: 600deg;
+  }
+}
+
+.doom.is-leaving {
+  animation: gta-out 0.3s ease-in both;
+}
+.doom-tint {
+  position: absolute;
+  inset: 0;
+}
+.doom-god .doom-tint {
+  -webkit-backdrop-filter: invert(1) grayscale(1) contrast(1.15);
+  backdrop-filter: invert(1) grayscale(1) contrast(1.15);
+  animation: doom-god 3s step-end both;
+}
+.doom-ammo .doom-tint {
+  background: rgb(255 214 0 / 0.3);
+  animation: gta-out 0.4s ease-out both;
+}
+.doom-msg {
+  position: absolute;
+  top: 76px;
+  left: 20px;
+  color: #d42b1e;
+  font:
+    900 clamp(14px, 1.6vw, 20px) / 1 'Arial Black',
+    Impact,
+    var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 #000;
+}
+@keyframes doom-god {
+  0% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0;
+  }
+  76% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 0;
+  }
+  86% {
+    opacity: 1;
+  }
+  92%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.mc-death {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(rgb(80 0 0 / 0.5), rgb(160 48 48 / 0.72));
+  color: #fff;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  text-align: center;
+  text-shadow: 3px 3px 0 #3f3f3f;
+  animation: gta-help-in 0.6s ease-out both;
+}
+.mc-death.is-leaving {
+  animation: gta-out 0.5s ease-in both;
+}
+.mc-title {
+  margin-bottom: 20px;
+  font-size: clamp(40px, 7vw, 72px);
+  font-weight: 700;
+}
+.mc-cause,
+.mc-score {
+  font-size: clamp(14px, 1.8vw, 20px);
+}
+.mc-score b {
+  color: #ffff55;
+}
+.mc-button {
+  display: block;
+  width: min(400px, 100%);
+  padding: 10px 0;
+  border: 2px solid #000;
+  background: #6f6f6f;
+  box-shadow:
+    inset 2px 2px 0 #a8a8a8,
+    inset -2px -3px 0 #4a4a4a;
+  font-size: 16px;
+  text-shadow: 2px 2px 0 #383838;
+  animation: mc-button 0.01s 1s both;
+}
+.mc-button:first-of-type {
+  margin-top: 28px;
+}
+@keyframes mc-button {
+  from {
+    color: #a0a0a0;
+    background: #3a3a3a;
+  }
+}
+
+.coin-pop {
+  position: fixed;
+  z-index: 91;
+  width: 18px;
+  height: 24px;
+  margin-left: -9px;
+  pointer-events: none;
+  animation: coin-pop 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+.coin-pop svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: coin-spin 0.14s linear infinite alternate;
+}
+.coin-one-up {
+  width: auto;
+  height: auto;
+  margin-left: 0;
+  translate: -50% 0;
+  color: #3fbf3f;
+  font:
+    900 20px/1 'Arial Black',
+    Impact,
+    var(--font-sans);
+  text-shadow: 2px 2px 0 #000;
+}
+@keyframes coin-pop {
+  0% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(-64px);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-44px);
+    opacity: 0;
+  }
+}
+@keyframes coin-spin {
+  to {
+    scale: 0.15 1;
+  }
+}
+
+[data-fall='down'] {
+  animation: page-fall 1s cubic-bezier(0.5, 0, 1, 0.5) var(--fall-delay) forwards;
+  animation-composition: add;
+}
+[data-fall='up'] {
+  animation: page-rise 0.9s cubic-bezier(0, 0.5, 0.5, 1) var(--fall-delay) both;
+  animation-composition: add;
+}
+[data-fall-inline] {
+  display: inline-block;
+}
+@keyframes page-fall {
+  to {
+    transform: translate(var(--fall-x), 110vh) rotate(var(--fall-spin));
+  }
+}
+@keyframes page-rise {
+  from {
+    transform: translate(var(--fall-x), 110vh) rotate(var(--fall-spin));
+  }
+}
+.rmrf {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.rmrf.is-leaving {
+  animation: gta-out 0.4s ease-in both;
+}
+.rmrf-window {
+  width: min(460px, 100%);
+  overflow: hidden;
+  border-radius: 10px;
+  background: #0d1117;
+  box-shadow:
+    0 24px 60px rgb(0 0 0 / 0.45),
+    0 0 0 1px rgb(255 255 255 / 0.08);
+  animation: gta-help-in 0.2s ease-out both;
+}
+.rmrf-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  background: #1c2128;
+  color: rgb(255 255 255 / 0.55);
+  font: 600 12px/1 var(--font-sans);
+}
+.rmrf-bar i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ff5f57;
+}
+.rmrf-bar i:nth-child(2) {
+  background: #febc2e;
+}
+.rmrf-bar i:nth-child(3) {
+  background: #28c840;
+}
+.rmrf-bar span {
+  margin-left: 8px;
+}
+.rmrf-log {
+  min-height: 9.6em;
+  margin: 0;
+  padding: 14px 16px;
+  color: #d1f5d3;
+  font:
+    13px/1.6 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+}
+
+.hang {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  cursor: wait;
+  background: rgb(255 255 255 / 0.55);
+  animation: hang-in 0.8s ease-out both;
+}
+.hang.is-leaving {
+  animation: gta-out 0.3s ease-in both;
+}
+.hang-window {
+  width: min(440px, 100%);
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f3f3f3;
+  color: #1b1b1b;
+  box-shadow:
+    0 20px 50px rgb(0 0 0 / 0.3),
+    0 0 0 1px rgb(0 0 0 / 0.1);
+  font:
+    14px/1.45 'Segoe UI Variable Text',
+    'Segoe UI',
+    var(--font-sans);
+  animation: gta-help-in 0.2s ease-out 0.5s both;
+}
+.hang-title {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+  font-size: 12px;
+}
+.hang-body {
+  padding: 18px 20px 20px;
+}
+.hang-head {
+  margin-bottom: 6px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.hang-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid #e0e0e0;
+  background: #ebebeb;
+}
+.hang-actions span {
+  padding: 6px 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fbfbfb;
+}
+.hang-actions .hang-wait {
+  border-color: #005fb8;
+  background: #005fb8;
+  color: #fff;
+}
+@keyframes hang-in {
+  from {
+    background: rgb(255 255 255 / 0);
+  }
+}
+
+.dvd {
+  position: fixed;
+  inset: 0;
+  z-index: 89;
+  cursor: none;
+  background: #000;
+  animation: gta-help-in 1s ease-out both;
+}
+.dvd.is-leaving {
+  animation: gta-out 0.3s ease-in both;
+}
+.dvd-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: clamp(120px, 14vw, 190px);
+  transition: color 0.15s;
+}
+.dvd-logo span {
+  font: 400 clamp(44px, 5.2vw, 70px) / 0.9 var(--font-bagus);
+  letter-spacing: -0.02em;
+}
+.dvd-logo svg {
+  width: 100%;
+  margin-top: 4px;
+  fill: currentColor;
+}
+.dvd-logo text {
+  fill: #000;
+  font: 800 15px var(--font-sans);
+  letter-spacing: 3px;
+  text-anchor: middle;
+}
+.dvd-corner {
+  animation: dvd-corner 1.2s ease-out;
+}
+@keyframes dvd-corner {
+  0%,
+  30%,
+  60% {
+    background: #1d1d1d;
+  }
+  15%,
+  45% {
+    background: #3d3500;
   }
 }
 

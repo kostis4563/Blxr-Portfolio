@@ -344,6 +344,16 @@ bucket. Consumed by `web/src/lib/weather.js`, which falls back to Open-Meteo
 directly when this route isn't there (`npm run dev` forwards `/api` to
 production) — hence `api.open-meteo.com` in the CSP's `connect-src`.
 
+### `GET /api/ip`
+The caller's own address as nginx saw it (the last `X-Forwarded-For` hop), plus
+Cloudflare's `CF-IPCountry` guess when it sent a real one (`XX` and Tor's `T1`
+become `null`). Never cached and not stored — it only tells a visitor what they
+already are. Consumed by `web/src/lib/console-hello.js` for the DevTools banner.
+
+```json
+{ "ip": "203.0.113.7", "country": "GR" }
+```
+
 ### `GET /api/github/contributions?user=<login>&y=last|YYYY`
 `user` must be a valid GitHub login (`400 bad_user` otherwise) **and one
 the proxy is for**: the login that owns `GITHUB_TOKEN`, plus anything in

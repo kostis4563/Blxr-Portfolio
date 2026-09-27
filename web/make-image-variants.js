@@ -12,7 +12,7 @@ const LOGO_Q = 82
 
 const TARGETS = [
 
-  { glob: /^(async|amitista|delivo|7x0-site|web-scanner)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
+  { glob: /^(async|amitista|delivo|7x0-site|web-scanner|fuse-bypass)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
 
   { glob: /^7x0-site-(dashboard|landing)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
   { dir: 'library', glob: /\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },

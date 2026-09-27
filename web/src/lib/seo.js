@@ -156,6 +156,7 @@ const APP_CATEGORY = {
 const appCategoryFor = (p) => APP_CATEGORY[p.category] ?? 'UtilitiesApplication'
 
 const osFor = (p) => {
+  if (p.category === 'Web Platforms') return 'Web browser'
   const named = ['Windows', 'macOS', 'iOS', 'Android'].filter((os) => p.tags.includes(os))
   return named.length ? named.join(', ') : 'Windows'
 }

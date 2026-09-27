@@ -2172,6 +2172,12 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (url.pathname === '/api/ip') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      const country = String(req.headers['cf-ipcountry'] || '').toUpperCase()
+      return json(res, 200, { ip: address.replace(/^::ffff:/, ''), country: /^[A-Z]{2}$/.test(country) && country !== 'XX' ? country : null }, NO_STORE)
+    }
+
     if (url.pathname === '/api/weather') {
       if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
       if (!weatherCache) {
