@@ -7,7 +7,7 @@ export const LABEL = 'text-[11px] font-mono font-semibold text-ink-subtle upperc
 export const INPUT =
   'w-full rounded-xl border border-line bg-surface-raised/60 px-3.5 py-2.5 text-[13.5px] text-ink-strong placeholder:text-ink-faint transition-colors hover:border-line-strong focus:border-line-strong focus:bg-surface focus:outline-none aria-[invalid=true]:border-red-500/60'
 export const CTA =
-  'inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-surface-inverted px-5 text-[13px] font-medium text-ink-on-inverted outline-none transition-[transform,opacity] duration-200 hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0'
+  'inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-ink-on-inverted/15 bg-surface-inverted px-5 text-[13px] font-medium text-ink-on-inverted outline-none transition-[transform,opacity] duration-200 hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0'
 export const PROVIDER =
   'flex h-10 cursor-pointer items-center justify-center rounded-xl border border-line bg-surface-raised/60 text-ink-muted outline-none transition-colors duration-200 hover:border-line-strong hover:text-ink-strong focus-visible:border-line-strong focus-visible:text-ink-strong'
 export const SWITCH = 'cursor-pointer font-medium text-ink-strong underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink-strong'

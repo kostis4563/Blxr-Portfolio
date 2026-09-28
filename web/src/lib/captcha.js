@@ -34,12 +34,13 @@ export function loadTurnstile() {
   return loading
 }
 
-export async function mountCaptcha(container, { visible = false, theme = 'auto' } = {}) {
+export async function mountCaptcha(container, { visible = false, theme = 'auto', onState = () => {} } = {}) {
   const ts = await loadTurnstile()
   const el = document.createElement('div')
   container.append(el)
   let settle = null
   let ready = null
+  let interactive = false
   const drop = () => {
     ready = null
     settle?.(null)
@@ -47,27 +48,50 @@ export async function mountCaptcha(container, { visible = false, theme = 'auto' 
   const widgetId = ts.render(el, {
     sitekey: SITE_KEY,
     execution: visible ? 'render' : 'execute',
-    appearance: visible ? 'always' : 'interaction-only',
+    appearance: 'interaction-only',
     size: visible ? 'flexible' : 'normal',
     theme,
     callback: (token) => {
+      onState('ok')
       if (settle) settle(token)
       else ready = token
     },
-    'error-callback': drop,
-    'timeout-callback': drop,
-    'expired-callback': drop,
+    'before-interactive-callback': () => {
+      interactive = true
+      onState('interactive')
+    },
+    'after-interactive-callback': () => {
+      interactive = false
+    },
+    'error-callback': (code) => {
+      drop()
+      onState('error', code ? String(code) : undefined)
+    },
+    'timeout-callback': () => {
+      drop()
+      onState('checking')
+    },
+    'expired-callback': () => {
+      drop()
+      onState('checking')
+    },
   })
-  const take = (token) => {
-    if (visible && token) {
-      try {
-        ts.reset(widgetId)
-      } catch {
-      }
+  onState('checking')
+  const restart = () => {
+    drop()
+    onState('checking')
+    try {
+      ts.reset(widgetId)
+    } catch {
     }
+  }
+  const take = (token) => {
+    if (visible && token) restart()
     return token
   }
   return {
+    pending: () => visible && interactive && !ready,
+    retry: restart,
     run() {
       if (ready) {
         const token = ready

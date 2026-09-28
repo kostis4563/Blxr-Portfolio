@@ -4,7 +4,7 @@ import { link, navigate, useRouteHash, HOME_PATH, LOGIN_PATH, REGISTER_PATH, RES
 import { authLogin, authRegister, authUpdatePassword, authSignOut, authContinueAsGuest, isGuest, mfaRequired, mfaChallenge } from './lib/auth'
 import { useAuth, clearRecovery } from './lib/supabase'
 import { PASSWORD_MIN, passwordProblem } from './lib/password'
-import { Captcha } from './components/captcha'
+import { Captcha, TICK_FIRST } from './components/captcha'
 import { Icon } from './components/icon'
 import { LABEL, INPUT, CTA, SWITCH, QUIET, Field, PasswordInput, Strength, Providers, Divider } from './components/auth-ui'
 import ResetPassword from './components/reset-password'
@@ -74,7 +74,7 @@ function messageFor(err, mode) {
   if (code === 'bad_code') return 'That code is not right. Codes change every 30 seconds.'
   if (code === 'code_expired') return 'That code expired — enter the current one.'
   if (code === 'no_factor') return 'No authenticator is set up for this account.'
-  if (code === 'captcha') return 'The verification check did not pass. Reload the page and try again.'
+  if (code === 'captcha') return 'The security check did not pass. Give it a second, then try again.'
   if (code === 'guest_disabled') return 'Guest access is turned off right now. Create an account instead.'
   if (mode === 'verify') return 'Could not verify the code.'
   if (mode === 'guest') return 'Could not open a guest session.'
@@ -260,6 +260,10 @@ export default function LoginPage({ theme, onToggleTheme }) {
     const nextErrors = validate(mode, form, session?.user?.email || '')
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return
+    if (captcha.current?.pending()) {
+      setError(TICK_FIRST)
+      return
+    }
 
     setBusy(true)
     setError(null)
@@ -297,6 +301,10 @@ export default function LoginPage({ theme, onToggleTheme }) {
 
   const continueAsGuest = async () => {
     if (busy || guestBusy) return
+    if (captcha.current?.pending()) {
+      setError(TICK_FIRST)
+      return
+    }
     setGuestBusy(true)
     setError(null)
     try {
@@ -312,7 +320,7 @@ export default function LoginPage({ theme, onToggleTheme }) {
   }
 
   const wide = mode === 'login' || mode === 'register'
-  const card = `w-full max-w-[400px] rounded-2xl border border-line bg-surface-raised/40 p-7 transition-opacity ${leaving ? 'pointer-events-none opacity-60' : ''}`
+  const card = `w-full max-w-[400px] rounded-2xl border border-line bg-surface-raised/40 p-6 sm:p-7 transition-opacity ${leaving ? 'pointer-events-none opacity-60' : ''}`
   const leave = () => {
     setLeaving(true)
     navigate(next, { replace: true })
@@ -514,13 +522,13 @@ export default function LoginPage({ theme, onToggleTheme }) {
                   )}
                 </div>
 
+                {(mode === 'login' || mode === 'register') && <Captcha handle={captcha} visible />}
+
                 {error && (
                   <p role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-3.5 py-2.5 text-[12.5px] text-red-500">
                     {error}
                   </p>
                 )}
-
-                {(mode === 'login' || mode === 'register') && <Captcha handle={captcha} visible />}
 
                 <button type="submit" disabled={busy || guestBusy} className={`${CTA} mt-6`}>
                   <span>{busy ? copy.busy : copy.cta}</span>

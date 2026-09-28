@@ -3,7 +3,7 @@ import { authRequestReset, authVerifyReset, authUpdatePassword } from '../lib/au
 import { passwordChecks, passwordProblem } from '../lib/password'
 import { link, LOGIN_PATH } from '../lib/router'
 import { clearRecovery } from '../lib/supabase'
-import { Captcha } from './captcha'
+import { Captcha, TICK_FIRST } from './captcha'
 import { Icon } from './icon'
 import { LABEL, INPUT, CTA, SWITCH, QUIET, Field, PasswordInput } from './auth-ui'
 
@@ -133,6 +133,10 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
       setFieldError('Enter a valid email.')
       return
     }
+    if (captcha.current?.pending()) {
+      setError(TICK_FIRST)
+      return
+    }
     setBusy('send')
     setError(null)
     try {
@@ -212,7 +216,7 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
       <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">{copy.title}</h1>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
         {step === 'email' ? (
-          `Enter your email and we will send you a ${CODE_LENGTH}-digit code.`
+          'Enter your email and we will send you a reset code.'
         ) : verified ? (
           <>Code accepted for <span className="text-ink-strong">{sentTo}</span>. Pick a new password to finish.</>
         ) : (
@@ -312,13 +316,13 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
         )}
       </div>
 
+      {!verified && <Captcha handle={captcha} visible={step === 'email'} />}
+
       {error && (
         <p role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-3.5 py-2.5 text-[12.5px] text-red-500">
           {error}
         </p>
       )}
-
-      {!verified && <Captcha handle={captcha} visible={step === 'email'} />}
 
       <button
         type="submit"
