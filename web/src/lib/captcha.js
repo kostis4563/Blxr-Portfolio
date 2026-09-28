@@ -3,12 +3,17 @@ const SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=exp
 const LOAD_TIMEOUT_MS = 8000
 const RUN_TIMEOUT_MS = 20_000
 
+const TEST_SITE_KEY = '1x00000000000000000000AA'
+const GATE_SITE_KEY = SITE_KEY || (import.meta.env.DEV ? TEST_SITE_KEY : '')
+const GATE_PASSED_KEY = 'blxr-verified'
+
 export const captchaEnabled = () => Boolean(SITE_KEY)
+export const gateEnabled = () => Boolean(GATE_SITE_KEY)
 
 let loading = null
 
 export function loadTurnstile() {
-  if (typeof window === 'undefined' || !SITE_KEY) return Promise.reject(new Error('captcha off'))
+  if (typeof window === 'undefined' || !GATE_SITE_KEY) return Promise.reject(new Error('captcha off'))
   if (window.turnstile) return Promise.resolve(window.turnstile)
   if (loading) return loading
   loading = new Promise((resolve, reject) => {
@@ -32,6 +37,49 @@ export function loadTurnstile() {
     document.head.appendChild(el)
   })
   return loading
+}
+
+export function gatePassed() {
+  try {
+    return sessionStorage.getItem(GATE_PASSED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function rememberGatePassed() {
+  try {
+    sessionStorage.setItem(GATE_PASSED_KEY, '1')
+  } catch {
+  }
+}
+
+export async function mountGate(container, { theme, onPass, onFail }) {
+  const ts = await loadTurnstile()
+  let widgetId
+  try {
+    widgetId = ts.render(container, {
+      sitekey: GATE_SITE_KEY,
+      action: 'page-gate',
+      theme,
+      retry: 'never',
+      callback: () => onPass(),
+      'error-callback': () => {
+        onFail()
+        return true
+      },
+    })
+  } catch {
+    onFail()
+  }
+  return {
+    remove() {
+      try {
+        if (widgetId !== undefined) ts.remove(widgetId)
+      } catch {
+      }
+    },
+  }
 }
 
 export async function mountCaptcha(container) {

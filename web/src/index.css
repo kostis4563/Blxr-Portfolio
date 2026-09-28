@@ -689,6 +689,29 @@ html[data-entry] .project-slide[data-active] .project-copy > * {
   border-radius: 50%;
   animation: loader-turn 0.8s linear infinite;
 }
+.cf-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+.cf-gate.is-leaving {
+  pointer-events: none;
+  animation: cf-gate-out 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+html[data-verified] .cf-gate {
+  display: none;
+}
+html:not([data-verified]):has(.cf-gate) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+@keyframes cf-gate-out {
+  to { opacity: 0; filter: blur(6px); visibility: hidden; }
+}
 @keyframes loading-screen-in {
   from { opacity: 0; }
 }

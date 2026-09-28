@@ -6,6 +6,9 @@ import { installErrorReporting } from './lib/report-errors'
 import { applyDevicePrefs } from './lib/prefs'
 import { installSecrets } from './lib/secrets'
 import { consoleHello } from './lib/console-hello'
+import { gateEnabled, gatePassed, loadTurnstile } from './lib/captcha'
+
+if (gateEnabled() && !gatePassed()) loadTurnstile().catch(() => {})
 
 applyDevicePrefs()
 installErrorReporting()
