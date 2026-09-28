@@ -520,7 +520,7 @@ export default function LoginPage({ theme, onToggleTheme }) {
                   </p>
                 )}
 
-                {(mode === 'login' || mode === 'register') && <Captcha handle={captcha} />}
+                {(mode === 'login' || mode === 'register') && <Captcha handle={captcha} visible />}
 
                 <button type="submit" disabled={busy || guestBusy} className={`${CTA} mt-6`}>
                   <span>{busy ? copy.busy : copy.cta}</span>

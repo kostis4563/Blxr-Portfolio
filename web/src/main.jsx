@@ -7,10 +7,6 @@ import { applyDevicePrefs } from './lib/prefs'
 import { installSecrets } from './lib/secrets'
 import { consoleHello } from './lib/console-hello'
 
-import('./lib/captcha').then(({ gateEnabled, gatePassed, loadTurnstile }) => {
-  if (gateEnabled() && !gatePassed()) loadTurnstile().catch(() => {})
-})
-
 applyDevicePrefs()
 installErrorReporting()
 installSecrets()

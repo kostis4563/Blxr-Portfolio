@@ -98,6 +98,29 @@ also fine: it is an external script, so the CSP allows it by origin
 (`script-src` for the tag, `connect-src https://cloudflareinsights.com` for
 the RUM post). Turn it off in Cloudflare and both entries can go.
 
+### Challenge before the site
+
+Every visitor gets Cloudflare's own "Verify you are human" page before any
+page loads. Security -> WAF -> Custom rules -> Create rule, action **Managed
+Challenge**, expression (Edit expression):
+
+```
+(http.request.uri.path.extension eq "" or http.request.uri.path.extension eq "html") and not starts_with(http.request.uri.path, "/api/") and not starts_with(http.request.uri.path, "/.well-known/") and not cf.client.bot
+```
+
+- Pages only (no extension, or `.html`). Assets, `robots.txt`, `sitemap.xml`,
+  the manifest and the OG image stay open; once a visitor passes, the
+  `cf_clearance` cookie covers the rest anyway.
+- `/api/` is excluded: `fetch()` calls can't solve a challenge.
+- `/.well-known/` is excluded: certbot's http-01 renewal must reach nginx.
+- `cf.client.bot` lets verified crawlers and link-preview bots (Google,
+  Discord, Slack, X) through, so search and embeds keep working.
+- The challenge is its own page, not something injected into ours (unlike
+  Bot Fight Mode above), so the CSP is unaffected.
+- `npm run test:live` and the `curl` checks below get the challenge page
+  (`cf-mitigated: challenge`) instead of ours unless their IP is excluded:
+  append `and ip.src ne <box IP>` for the deploy runner.
+
 ### Early Hints
 
 Speed -> Optimization -> Early Hints (off by default, origin can't enable it

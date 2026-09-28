@@ -318,7 +318,7 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
         </p>
       )}
 
-      {!verified && <Captcha handle={captcha} />}
+      {!verified && <Captcha handle={captcha} visible={step === 'email'} />}
 
       <button
         type="submit"

@@ -11,16 +11,11 @@ const ROUTE_PAGES = ['projects', 'library', 'reviews', 'uses', 'cv', 'contact', 
 const pageSource = (name) => fileURLToPath(new URL(`./src/${name}-page.jsx`, import.meta.url))
 const stubPage = fileURLToPath(new URL('./src/stub-page.js', import.meta.url))
 
-const DEFERRED_MODULES = {
-  ...Object.fromEntries(ROUTE_PAGES.map((name) => [name, pageSource(name)])),
-  'cloudflare-gate': fileURLToPath(new URL('./src/components/cloudflare-gate.jsx', import.meta.url)),
-}
-
 const pageAliases = (ssr) => {
   const map = {}
-  for (const [name, source] of Object.entries(DEFERRED_MODULES)) {
-    map[`#ssr-page/${name}`] = ssr ? source : stubPage
-    map[`#client-page/${name}`] = ssr ? stubPage : source
+  for (const name of ROUTE_PAGES) {
+    map[`#ssr-page/${name}`] = ssr ? pageSource(name) : stubPage
+    map[`#client-page/${name}`] = ssr ? stubPage : pageSource(name)
   }
   return map
 }

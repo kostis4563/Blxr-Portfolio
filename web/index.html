@@ -29,12 +29,8 @@
         } catch (e) {
           document.documentElement.dataset.theme = 'dark'
         }
-        try {
-          if (sessionStorage.getItem('blxr-verified') === '1') document.documentElement.setAttribute('data-verified', '')
-        } catch (e) {}
       })()
     </script>
-    <noscript><style>.cf-gate { display: none !important; }</style></noscript>
   </head>
   <body>
     <div id="root"></div>
