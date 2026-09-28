@@ -110,13 +110,43 @@ deploy_server() {
   run systemctl daemon-reload
   run systemctl restart blxr-search
 
-  run sleep 1
   step "Health check"
   if [[ "$DRY_RUN" == "1" ]]; then
-    echo "  [dry-run] curl -fsS http://127.0.0.1:8899/api/music/health"
+    echo "  [dry-run] curl -fsS http://127.0.0.1:8899/api/music/health (retried for ${HEALTH_WAIT_S}s)"
   else
-    curl -fsS http://127.0.0.1:8899/api/music/health && echo
+    health_check
   fi
+}
+
+# The server loads every state file before it listens, so on a busy box it
+# can take longer than a fixed sleep. Poll instead, and if it never answers
+# (or only answers after systemd restarted it) print why, since the runner
+# has no other way to read the unit's journal.
+HEALTH_WAIT_S=20
+
+health_check() {
+  local deadline=$((SECONDS + HEALTH_WAIT_S)) restarts
+  until curl -fsS http://127.0.0.1:8899/api/music/health --max-time 2 2>/dev/null; do
+    if (( SECONDS >= deadline )); then
+      printf '\n\033[1;31m!! blxr-search did not answer on :8899 within %ss.\033[0m\n\n' "$HEALTH_WAIT_S" >&2
+      service_diagnostics
+      return 1
+    fi
+    sleep 0.5
+  done
+  echo
+
+  restarts="$(systemctl show -p NRestarts --value blxr-search 2>/dev/null || echo 0)"
+  if [[ "${restarts:-0}" != "0" ]]; then
+    printf '\n\033[1;33m!! blxr-search is up, but systemd restarted it %s time(s) first — it crashed on startup.\033[0m\n\n' "$restarts"
+    service_diagnostics
+  fi
+}
+
+service_diagnostics() {
+  systemctl status blxr-search --no-pager -l || true
+  echo
+  journalctl -u blxr-search -n 60 --no-pager -o short-iso || true
 }
 
 deploy_nginx() {
