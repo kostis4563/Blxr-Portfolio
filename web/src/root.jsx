@@ -1,12 +1,16 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense, lazy } from 'react'
 import App from './app.jsx'
-import CloudflareGate from './components/cloudflare-gate'
+import CloudflareGateImpl from '#ssr-page/cloudflare-gate'
+
+const CloudflareGate = import.meta.env.SSR ? CloudflareGateImpl : lazy(() => import('#client-page/cloudflare-gate'))
 
 export default function Root() {
   return (
     <StrictMode>
       <App />
-      <CloudflareGate />
+      <Suspense fallback={null}>
+        <CloudflareGate />
+      </Suspense>
     </StrictMode>
   )
 }
