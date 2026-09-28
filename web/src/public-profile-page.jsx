@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import ProfileCard from './components/profile-card'
 import { Icon } from './components/dashboard-sidebar'
+import { Loading } from './components/skeleton'
 import { link, HOME_PATH, LOGIN_PATH, dashboardPath } from './lib/router'
 import { useAuth } from './lib/supabase'
 import { fetchProfileByHandle, HANDLE_RE } from './lib/profiles'
@@ -65,20 +66,7 @@ function Missing({ handle }) {
   )
 }
 
-function Loading() {
-  return (
-    <div aria-busy="true" className="w-full max-w-[560px] overflow-hidden rounded-2xl border border-line bg-surface">
-      <div className="h-28 animate-pulse bg-surface-raised sm:h-32" />
-      <div className="px-6 pb-8 sm:px-8">
-        <div className="-mt-11 h-[96px] w-[96px] animate-pulse rounded-full bg-surface-hover ring-4 ring-surface" />
-        <div className="mt-4 h-6 w-48 animate-pulse rounded-md bg-surface-raised" />
-        <div className="mt-2 h-4 w-28 animate-pulse rounded-md bg-surface-raised" />
-        <div className="mt-5 h-4 w-full animate-pulse rounded-md bg-surface-raised" />
-        <div className="mt-2 h-4 w-3/4 animate-pulse rounded-md bg-surface-raised" />
-      </div>
-    </div>
-  )
-}
+const ProfileSkeleton = () => <Loading label="Loading profile" />
 
 export default function PublicProfilePage({ handle, theme, onToggleTheme }) {
   const [state, setState] = useState({ status: 'loading', profile: null })
@@ -111,7 +99,7 @@ export default function PublicProfilePage({ handle, theme, onToggleTheme }) {
 
   return (
     <Shell theme={theme} onToggleTheme={onToggleTheme} forced={forced} wide={state.status === 'ready' && layout === 'cover'}>
-      {state.status === 'loading' && <Loading />}
+      {state.status === 'loading' && <ProfileSkeleton />}
       {state.status === 'missing' && <Missing handle={handle} />}
       {state.status === 'ready' && (
         <div className={`flex w-full flex-col items-center animate-rise-in ${layout === 'cover' ? 'gap-10' : 'gap-8'} ${layout === 'cover' ? '' : layout === 'minimal' ? 'max-w-[560px] pt-2' : 'max-w-[560px]'}`}>

@@ -3,7 +3,7 @@ import { Icon } from './components/dashboard-sidebar'
 import GitHubContributions from './components/github-contribution'
 import StatsDayPicker from './components/stats-day-picker'
 import { Segmented, ToastProvider, DensityProvider, useToast, LABEL, BTN_SECONDARY, BTN_GHOST } from './components/settings-ui'
-import { Bone, Dot, Figure, Loading } from './components/skeleton'
+import { Loading, Spinner } from './components/skeleton'
 import { useDevicePrefs } from './lib/prefs'
 import {
   fetchGithubStats,
@@ -95,82 +95,11 @@ function useWidth(ref) {
   return width
 }
 
-function Spinner({ className = 'h-3.5 w-3.5' }) {
-  return (
-    <svg className={`${className} animate-spin`} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" className="opacity-20" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 const GitHubMark = ({ className = 'h-4 w-4' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={GITHUB_PATH} /></svg>
 )
 
-function Skeleton() {
-  const bars = [38, 62, 44, 80, 56, 70, 48, 90, 64, 42, 76, 58, 66, 50, 84, 40, 72, 60]
-  return (
-    <Loading label="Loading your stats" className="flex flex-col gap-5">
-      <div className={`${CARD} flex flex-wrap items-center gap-x-5 gap-y-4 px-5 py-4`}>
-        <Dot size={56} />
-        <div className="min-w-0 flex-1 basis-[240px]">
-          <div className="flex items-center gap-2"><Bone className="h-4 w-36" /><Bone className="h-3 w-20" /></div>
-          <Bone className="mt-2.5 h-2.5 w-72 max-w-full" />
-          <Bone className="mt-2 h-2.5 w-52 max-w-full" />
-        </div>
-        <div className="flex items-center gap-3">
-          <Figure />
-          <Bone className="h-[34px] w-24" />
-        </div>
-        <Bone className="ml-auto h-8 w-24 rounded-lg" />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between px-0.5">
-          <Bone className="h-3 w-24" />
-          <Bone className="h-7 w-56 rounded-lg" />
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className={`${CARD} flex flex-col gap-3 p-4 ${i === 4 ? 'col-span-2 sm:col-span-1' : ''}`}>
-              <div className="flex items-start justify-between"><Figure /><Bone className="h-7 w-7 rounded-md" /></div>
-              <Bone className="h-7 w-full" />
-              <Bone className="h-2.5 w-20" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className={`${CARD} p-5`}>
-          <div className="mb-4 flex items-center justify-between"><Bone className="h-3 w-24" /><Bone className="h-3 w-32" /></div>
-          <div className="flex h-[184px] items-end gap-1.5">
-            {bars.map((h, i) => <Bone key={i} style={{ height: `${h}%` }} className="flex-1 rounded-sm" />)}
-          </div>
-        </div>
-        <div className={`${CARD} p-5`}>
-          <div className="mb-4 flex items-center justify-between"><Bone className="h-3 w-20" /><Bone className="h-3 w-16" /></div>
-          <div className="flex flex-col divide-y divide-line">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center justify-between py-3">
-                <Bone className="h-2.5 w-20" />
-                <div className="flex gap-4"><Bone className="h-2.5 w-8" /><Bone className="h-2.5 w-8" /><Bone className="h-2.5 w-14" /></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className={`${CARD} p-5`}>
-        <div className="mb-4 flex items-center justify-between"><Bone className="h-3 w-28" /><Bone className="h-3 w-24" /></div>
-        <div className="grid grid-flow-col grid-rows-7 gap-[3px] overflow-hidden">
-          {Array.from({ length: 7 * 52 }, (_, i) => <Bone key={i} className="h-[10px] w-[10px] rounded-[2px]" />)}
-        </div>
-      </div>
-    </Loading>
-  )
-}
+const Skeleton = () => <Loading label="Loading your stats" />
 
 function Panel({ title, aside, children, className = '' }) {
   return (

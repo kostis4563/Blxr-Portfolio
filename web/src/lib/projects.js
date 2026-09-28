@@ -45,6 +45,7 @@ export const projectsList = [
     category: 'Studio',
     url: 'https://amitista.com',
     urlLabel: 'Visit site',
+    video: 'https://www.youtube.com/watch?v=g143S_DqIbA',
 
     github: null,
 

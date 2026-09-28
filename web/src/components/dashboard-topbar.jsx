@@ -1,21 +1,38 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Icon } from './icon'
+import { Bone } from './skeleton'
 import { useDismiss } from './account-menu'
-import { link, dashboardPath } from '../lib/router'
+import { link, navigate, dashboardPath } from '../lib/router'
 import { openPalette, isMacLike } from '../lib/palette'
-import { NOTIFICATIONS } from '../lib/dashboard'
+import { isSiteOwner } from '../lib/dashboard'
+import { mergeAccountPrefs } from '../lib/prefs'
+import { ago } from '../lib/boards'
+import { useUnread } from '../lib/messages-unread'
+import { useNotifications, refreshNotifications, markRead, markAllRead, isUnread } from '../lib/notifications'
 
 const ICON_BTN =
   'relative grid h-9 w-9 cursor-pointer place-items-center rounded-lg text-ink-muted outline-none transition-colors hover:bg-surface-hover hover:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30 aria-expanded:bg-surface-hover aria-expanded:text-ink-strong'
 const MENU = 'absolute right-0 top-full z-40 mt-2 origin-top-right rounded-xl border border-line bg-surface shadow-xl animate-menu-in'
 const CRUMB = 'truncate text-[13px] text-ink-muted transition-colors hover:text-ink-strong'
 
-function Notifications() {
+function Notifications({ user }) {
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState(NOTIFICATIONS)
+  const feed = useNotifications()
+  const messages = useUnread()
   const close = useCallback(() => setOpen(false), [])
   const ref = useDismiss(open, close)
-  const unread = items.filter((n) => n.unread).length
+  const items = feed.items
+  const unread = (items || []).filter((n) => isUnread(n, feed)).length
+  const badge = mergeAccountPrefs(user?.user_metadata?.prefs).notifications.badge
+  const now = Date.now()
+
+  useEffect(() => {
+    if (open) refreshNotifications()
+  }, [open])
+
+  useEffect(() => {
+    refreshNotifications()
+  }, [messages])
 
   return (
     <div ref={ref} className="relative">
@@ -28,7 +45,7 @@ function Notifications() {
         className={ICON_BTN}
       >
         <Icon name="bell" className="h-[18px] w-[18px]" />
-        {unread > 0 && (
+        {unread > 0 && badge && (
           <span aria-hidden="true" className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-ink-strong ring-2 ring-surface" />
         )}
       </button>
@@ -40,26 +57,64 @@ function Notifications() {
             <button
               type="button"
               disabled={!unread}
-              onClick={() => setItems((list) => list.map((n) => ({ ...n, unread: false })))}
+              onClick={markAllRead}
               className="cursor-pointer text-[12px] text-ink-muted transition-colors hover:text-ink-strong disabled:cursor-default disabled:text-ink-faint"
             >
               Mark all read
             </button>
           </div>
-          <ul className="max-h-[360px] overflow-y-auto border-t border-line">
-            {items.map((n) => (
-              <li key={n.id} className="flex gap-3 border-b border-line px-4 py-3 last:border-0">
-                <span
-                  aria-hidden="true"
-                  className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${n.unread ? 'bg-ink-strong' : 'bg-transparent'}`}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className={`truncate text-[13px] ${n.unread ? 'font-medium text-ink-strong' : 'text-ink'}`}>{n.title}</p>
-                  <p className="mt-0.5 truncate text-[12.5px] text-ink-muted">{n.body}</p>
-                </div>
-                <span className="shrink-0 text-[11.5px] text-ink-subtle">{n.time}</span>
+          <ul aria-busy={items === null} className="max-h-[360px] overflow-y-auto border-t border-line">
+            {items === null ? (
+              [0, 1, 2].map((i) => (
+                <li key={i} className="flex gap-3 border-b border-line px-4 py-3 last:border-0">
+                  <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 py-1">
+                    <Bone className="h-2.5 w-40 max-w-full" />
+                    <Bone className="h-2.5 w-56 max-w-full" />
+                  </div>
+                </li>
+              ))
+            ) : items.length === 0 ? (
+              <li className="px-4 py-8 text-center">
+                <p className="text-[13px] text-ink">{feed.failed ? 'Notifications could not be loaded' : 'Nothing new'}</p>
+                <p className="mt-1 text-[12px] text-ink-muted">
+                  {feed.failed
+                    ? 'Check your connection — this retries every minute.'
+                    : isSiteOwner(user)
+                      ? 'Messages, chased cards, reviews and server errors show up here.'
+                      : 'Messages and cards you chase from a board show up here.'}
+                </p>
               </li>
-            ))}
+            ) : (
+              items.map((n) => {
+                const fresh = isUnread(n, feed)
+                const to = dashboardPath(n.path)
+                return (
+                  <li key={n.id} className="border-b border-line last:border-0">
+                    <a
+                      {...link(to, () => {
+                        markRead(n)
+                        close()
+                        navigate(to)
+                      })}
+                      className="flex gap-3 px-4 py-3 outline-none transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${fresh ? 'bg-ink-strong' : 'bg-transparent'}`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className={`truncate text-[13px] ${fresh ? 'font-medium text-ink-strong' : 'text-ink'}`}>{n.title}</p>
+                        {n.body && <p className="mt-0.5 truncate text-[12.5px] text-ink-muted">{n.body}</p>}
+                      </div>
+                      <time dateTime={new Date(n.at).toISOString()} className="shrink-0 text-[11.5px] text-ink-subtle">
+                        {ago(n.at, now)}
+                      </time>
+                    </a>
+                  </li>
+                )
+              })
+            )}
           </ul>
         </div>
       )}
@@ -67,7 +122,7 @@ function Notifications() {
   )
 }
 
-export default function DashboardTopbar({ item, theme, onToggleTheme, onOpenMobile }) {
+export default function DashboardTopbar({ item, user, theme, onToggleTheme, onOpenMobile }) {
   const [mac, setMac] = useState(true)
   const [mounted, setMounted] = useState(false)
 
@@ -127,7 +182,7 @@ export default function DashboardTopbar({ item, theme, onToggleTheme, onOpenMobi
             <Icon name={shownTheme === 'dark' ? 'sun' : 'moon'} className="h-[17px] w-[17px]" />
           </button>
 
-          <Notifications />
+          <Notifications user={user} />
         </div>
       </div>
     </header>

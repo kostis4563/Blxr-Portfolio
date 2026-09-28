@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Stars, StarPicker } from './star-rating'
 import { Sensitive } from './sensitive'
+import { Loading } from './skeleton'
 import { link, REVIEWS_PATH } from '../lib/router'
 import {
   fetchPanel,
@@ -633,7 +634,7 @@ export default function ReviewPanel({ tab, auth = () => ({}), onUnauthorized, on
       {error && <p role="alert" className="mb-6 w-full rounded-xl border border-red-500/30 bg-red-500/[0.06] px-4 py-3 text-[12.5px] text-red-500">{error}</p>}
 
       {!data ? (
-        <p className="text-[13px] text-ink-subtle">Loading…</p>
+        !error && <Loading label="Loading reviews" />
       ) : tab === 'overview' ? (
         <div className="w-full">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

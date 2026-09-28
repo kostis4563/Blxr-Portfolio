@@ -4,7 +4,7 @@ import { BTN_QUIET, Empty, Note } from './components/boards/ui'
 import Thread from './components/messages/thread'
 import Inbox from './components/messages/inbox'
 import { InboxSkeleton, ThreadSkeleton } from './components/messages/ui'
-import { Bone, Loading } from './components/skeleton'
+import { Loading } from './components/skeleton'
 import { inboxUnread, readHash } from './lib/messages'
 import * as api from './lib/messages-api'
 import { refreshUnread, setUnread } from './lib/messages-unread'
@@ -90,10 +90,7 @@ function OwnerInbox({ uid, threadId }) {
       <div className={`${CARD} flex min-h-0 flex-1 overflow-hidden`}>
         <aside className={`w-full shrink-0 md:w-[320px] md:border-r md:border-line ${active ? 'hidden md:block' : ''}`}>
           {rows === null ? (
-            <div className="flex h-full min-h-0 flex-col">
-              <div className="flex h-14 shrink-0 items-center border-b border-line px-3"><Bone className="h-7 w-full rounded-lg" /></div>
-              <InboxSkeleton />
-            </div>
+            !error && <InboxSkeleton />
           ) : (
             <Inbox rows={rows} activeId={threadId} onOpen={open} />
           )}
@@ -177,13 +174,7 @@ function MemberThread({ uid }) {
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 flex-col">
-            {!error && (
-              <>
-                <div className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4"><Bone className="h-8 w-8 rounded-full" /><Bone className="h-3 w-28" /></div>
-                <div className="min-h-0 flex-1"><ThreadSkeleton /></div>
-                <div className="shrink-0 border-t border-line p-3"><Bone className="h-9 w-full rounded-lg" /></div>
-              </>
-            )}
+            {!error && <ThreadSkeleton />}
           </div>
         )}
       </div>
@@ -242,18 +233,7 @@ export default function DashboardMessages({ hash, user }) {
     )
   }
 
-  if (!role) {
-    return (
-      <div className={`flex flex-col ${HEIGHT}`}>
-        <Heading title="Messages" blurb="A private line between your account and the owner." />
-        <Loading label="Opening messages" className={`${CARD} flex min-h-0 flex-1 flex-col overflow-hidden`}>
-          <div className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4"><Bone className="h-8 w-8 rounded-full" /><Bone className="h-3 w-28" /></div>
-          <div className="min-h-0 flex-1"><ThreadSkeleton /></div>
-          <div className="shrink-0 border-t border-line p-3"><Bone className="h-9 w-full rounded-lg" /></div>
-        </Loading>
-      </div>
-    )
-  }
+  if (!role) return <Loading label="Opening messages" />
 
   return role === 'owner' ? <OwnerInbox uid={user.id} threadId={thread} /> : <MemberThread uid={user.id} />
 }

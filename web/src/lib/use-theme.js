@@ -32,6 +32,11 @@ export function resolveInitialTheme() {
 const readPreference = () => (typeof window === 'undefined' ? DEFAULT_THEME : readStoredTheme() ?? DEFAULT_THEME)
 
 let themeChanges = 0
+let forced = null
+
+export function forceTheme(next) {
+  forced?.(next)
+}
 
 const SPAM_FLIPS = 8
 const SPAM_MS = 6000
@@ -83,6 +88,19 @@ export function useTheme() {
     }, 300)
     return () => clearTimeout(done)
   }, [theme])
+
+  useEffect(() => {
+    forced = (next) => {
+      themeChanges += 1
+      if (document.documentElement.dataset.theme === next) return
+      storeTheme(next)
+      setPreferenceState(next)
+      setTheme(next)
+    }
+    return () => {
+      forced = null
+    }
+  }, [])
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)')

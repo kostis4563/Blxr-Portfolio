@@ -14,6 +14,7 @@ const ROW = 'grid gap-y-3 sm:grid-cols-[152px_minmax(0,1fr)] sm:gap-x-8'
 
 export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
   const actionLabel = (p) => p.urlLabel || 'Live Demo'
+  const videoLabel = (p) => (p.video ? 'Watch showcase' : actionLabel(p))
 
   const hash = useRouteHash()
   const targetId = hash ? findProject(decodeURIComponent(hash.slice(1)))?.id ?? null : null
@@ -110,7 +111,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
         <div className="w-full mt-12 flex flex-col">
           {projectsList.map((project, index) => {
             const isOpen = open.has(project.id)
-            const videoId = isVideoLink(project.url) ? youtubeId(project.url) : null
+            const videoId = youtubeId(project.video ?? (isVideoLink(project.url) ? project.url : null))
             const isPlaying = videoId && playing.has(project.id)
             const detailsId = `${project.id}-details`
 
@@ -154,14 +155,14 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
                     <button
                       type="button"
                       onClick={(event) => { event.stopPropagation(); play(project.id) }}
-                      aria-label={`${actionLabel(project)} — ${project.title}`}
+                      aria-label={`${videoLabel(project)} — ${project.title}`}
                       className="project-play absolute inset-0 flex items-end justify-start p-3 sm:p-4 outline-none cursor-pointer"
                     >
                       <span className="project-play-pill inline-flex items-center gap-2.5 h-11 pl-4 pr-5 rounded-full bg-black/55 text-white text-[13px] font-semibold backdrop-blur-md ring-1 ring-white/15">
                         <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white text-black">
                           <svg className="w-2.5 h-2.5 translate-x-px" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2.5 1.5v9l8-4.5z" /></svg>
                         </span>
-                        {actionLabel(project)}
+                        {videoLabel(project)}
                       </span>
                     </button>
                   )}

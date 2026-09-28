@@ -60,21 +60,21 @@ export const CV_EXPERIENCE = [
     location: 'Remote',
     summary: 'I build frontends for clients and help with the product design side too. I like working close to the product, and shipping things that still work once real people use them.',
     bullets: [
-      'UIs, HUDs and standalone resources for FiveM servers: NUI in HTML, CSS and JavaScript, React + TypeScript for ox_inventory, Lua on the game side.',
+      'UIs, HUDs and standalone resources for FiveM servers: NUI in HTML, CSS and JavaScript, React for ox_inventory, Lua on the game side.',
       'Product design alongside the build: wireframes in Figma, then the real thing.',
     ],
     stack: ['React', 'Tailwind CSS', 'JavaScript', 'Lua', 'NUI'],
   },
 ]
 
-export const CV_PROJECT_IDS = ['7x0-site', 'web-scanner', 'async', 'padoofood']
+export const CV_PROJECT_IDS = ['web-scanner', 'async',]
 
 export const CV_EDUCATION = [
   {
     degree: 'International Baccalaureate Diploma Programme (IBDP)',
     org: 'Athens',
     period: { from: '2025', present: true },
-    note: 'Final year. Computer Science is the focus subject, alongside Mathematics AA, Physics, Business, English B and Greek, plus the Extended Essay, Theory of Knowledge and CAS.',
+    note: 'Computer Science is the focus subject, alongside Mathematics AA, Physics, Business, English B and Greek, plus the Extended Essay, Theory of Knowledge and CAS.',
     highlights: [
       'Software Engineering',
       'Computer Systems',

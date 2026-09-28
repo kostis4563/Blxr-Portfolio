@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } fr
 import { Icon } from './components/dashboard-sidebar'
 import { Segmented, Modal, ToastProvider, useToast, LABEL, INPUT, BTN_PRIMARY, BTN_SECONDARY, BTN_GHOST, BTN_DANGER } from './components/settings-ui'
 import { Chip, Empty, Note } from './components/boards/ui'
-import { Bone, Loading } from './components/skeleton'
+import { Loading, Spinner } from './components/skeleton'
 import { link, navigate, dashboardPath } from './lib/router'
 import {
   fetchLogs, clearLogs, LEVELS, SOURCES, SOURCE_LABEL, RANGES, STATUS_CLASSES, LogsError,
@@ -29,15 +29,6 @@ const LEVEL_DOT = { error: 'bg-red-500', warn: 'bg-amber-500', info: 'bg-ink-fai
 const LEVEL_LABEL = { error: 'Error', warn: 'Warning', info: 'Info' }
 
 const when = (e) => e.last || e.at
-
-function Spinner({ className = 'h-3.5 w-3.5' }) {
-  return (
-    <svg className={`${className} animate-spin`} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" className="opacity-20" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  )
-}
 
 function Tile({ label, value, hint, tone }) {
   return (
@@ -82,36 +73,7 @@ function Fact({ label, children, mono = true }) {
   )
 }
 
-function Skeleton({ list = true }) {
-  return (
-    <Loading label="Loading the log" className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className={`${CARD} flex flex-col gap-3 px-4 py-3.5`}>
-            <Bone className="h-2.5 w-16" />
-            <Bone className="h-5 w-10" />
-            <Bone className="h-2 w-20" />
-          </div>
-        ))}
-      </div>
-      {list ? (
-        <div className={CARD}>
-          <div className="flex items-center gap-3 border-b border-line px-4 py-3"><Bone className="h-8 w-56 max-w-full rounded-lg" /><Bone className="ml-auto h-7 w-40 rounded-lg" /></div>
-          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-0">
-              <Bone className="h-2.5 w-14" /><Bone className="h-2 w-2 rounded-full" /><Bone className="h-4 w-12 rounded-md" />
-              <Bone className={`h-2.5 ${['w-64', 'w-40', 'w-80', 'w-52', 'w-72', 'w-36', 'w-60'][i]} max-w-full`} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[0, 1, 2, 3].map((i) => <div key={i} className={`${CARD} h-[200px]`} />)}
-        </div>
-      )}
-    </Loading>
-  )
-}
+const Skeleton = () => <Loading label="Loading the log" />
 
 function Row({ entry, open, onToggle, now }) {
   const toast = useToast()
@@ -683,7 +645,7 @@ function LogsBody({ hash }) {
       </div>
     )
   }
-  if (!data) return <div>{tabBar}<Skeleton list={!isSystem} /></div>
+  if (!data) return <div>{tabBar}<Skeleton /></div>
 
   const { summary, system, items, facets } = data
   const recent = summary.recent

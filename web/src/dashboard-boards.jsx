@@ -26,7 +26,7 @@ import {
   UndoBar,
 } from './components/boards/ui'
 import Columns from './components/boards/columns'
-import { Bone, Lines, Loading } from './components/skeleton'
+import { Loading } from './components/skeleton'
 import CardDialog from './components/boards/card-dialog'
 import BoardSettings from './components/boards/board-settings'
 import MoveDialog from './components/boards/move-dialog'
@@ -70,50 +70,9 @@ const go = (next) => {
   navigate(dashboardPath(path), { replace: Boolean(next.replace) })
 }
 
-function IndexSkeleton() {
-  return (
-    <Loading label="Loading your boards" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="flex flex-col rounded-xl border border-line bg-surface p-4">
-          <div className="flex items-center gap-2"><Bone className="h-5 w-5 rounded-md" /><Bone className="h-3.5 w-32" /></div>
-          <Lines count={2} className="mt-3" />
-          <Bone className="mt-3 h-2.5 w-24" />
-          <div className="mt-5 flex items-baseline gap-2"><Bone className="h-4 w-6" /><Bone className="h-2.5 w-20" /></div>
-          <Bone className="mt-2 h-1 w-full" />
-          <Bone className="mt-3 h-2.5 w-16" />
-        </div>
-      ))}
-    </Loading>
-  )
-}
+const IndexSkeleton = () => <Loading label="Loading your boards" />
 
-function BoardSkeleton() {
-  const cards = [[3, 2], [2, 3, 1], [1]]
-  return (
-    <Loading label="Opening the board" className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <Bone className="h-7 w-7 rounded-md" />
-        <Bone className="h-5 w-44" />
-        <span className="flex-1" />
-        <Bone className="h-7 w-24 rounded-lg" />
-        <Bone className="h-7 w-7 rounded-lg" />
-      </div>
-      <div className="flex gap-3 overflow-hidden">
-        {cards.map((column, i) => (
-          <div key={i} className="flex w-[280px] shrink-0 flex-col gap-2 rounded-xl border border-line bg-surface-raised/35 p-2 max-sm:w-[86vw]">
-            <div className="flex items-center gap-2 px-1 py-1.5"><Bone className="h-3 w-20" /><Bone className="h-3 w-4" /></div>
-            {column.map((lines, j) => (
-              <div key={j} className="rounded-lg border border-line bg-surface p-3">
-                <Lines count={lines} />
-                <div className="mt-2.5 flex gap-2"><Bone className="h-2 w-10" /><Bone className="h-2 w-6" /></div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </Loading>
-  )
-}
+const BoardSkeleton = () => <Loading label="Opening the board" />
 
 function ComingUp({ boards, onOpen }) {
   const [rows, setRows] = useState(null)

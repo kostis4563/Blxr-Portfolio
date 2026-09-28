@@ -703,7 +703,7 @@ export function nuke(onBlast = () => {}, { launched = false } = {}) {
     { hold: lead + NUKE_MS, out: 900 },
   )
   cloud()
-    .then(({ mushroomCloud }) => mushroomCloud(el.querySelector('.nuke-sky'), { detonateAt, shock: SHOCK_MS / 1000 }))
+    .then(({ mushroomCloud }) => mushroomCloud(el.querySelector('.nuke-sky'), { detonateAt }))
     .catch(() => {})
   if (launched) countDown(el.querySelector('.nuke-alert-count b'), detonateAt)
   setTimeout(() => {

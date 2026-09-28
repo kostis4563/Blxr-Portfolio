@@ -4,7 +4,7 @@ import { Icon } from '../dashboard-sidebar'
 import { Avatar } from '../account-menu'
 import { signedUrl } from '../../lib/messages-api'
 import { readableSize } from '../../lib/boards-files'
-import { Bone, Dot, Loading } from '../skeleton'
+import { Loading } from '../skeleton'
 
 export function Face({ name, avatar, size = 32, online = false, className = '' }) {
   return (
@@ -129,39 +129,6 @@ export function Lightbox({ files, at, onStep, onClose, onDownload }) {
   )
 }
 
-export function InboxSkeleton({ rows = 6 }) {
-  return (
-    <Loading label="Loading conversations" className="divide-y divide-line/60">
-      {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex items-center gap-3 px-3 py-2.5">
-          <Dot size={36} />
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center justify-between gap-2"><Bone className="h-3 w-24" /><Bone className="h-2 w-8" /></span>
-            <Bone className={`mt-2 h-2.5 ${i % 3 === 0 ? 'w-4/5' : i % 3 === 1 ? 'w-3/5' : 'w-2/3'}`} />
-          </span>
-        </div>
-      ))}
-    </Loading>
-  )
-}
+export const InboxSkeleton = () => <Loading label="Loading conversations" />
 
-export function ThreadSkeleton() {
-  const bubbles = [
-    { mine: false, w: 'w-[56%]', h: 'h-9' },
-    { mine: false, w: 'w-[38%]', h: 'h-9' },
-    { mine: true, w: 'w-[48%]', h: 'h-9' },
-    { mine: false, w: 'w-[64%]', h: 'h-14' },
-    { mine: true, w: 'w-[30%]', h: 'h-9' },
-    { mine: true, w: 'w-[52%]', h: 'h-9' },
-  ]
-  return (
-    <Loading label="Loading messages" className="flex h-full flex-col justify-end gap-2 px-4 py-3">
-      {bubbles.map((b, i) => (
-        <span key={i} className={`flex items-end gap-2 ${b.mine ? 'justify-end' : ''}`}>
-          {!b.mine && <Dot size={24} />}
-          <Bone className={`${b.w} ${b.h} rounded-2xl`} />
-        </span>
-      ))}
-    </Loading>
-  )
-}
+export const ThreadSkeleton = () => <Loading label="Loading messages" />

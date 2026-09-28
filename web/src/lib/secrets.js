@@ -10,6 +10,7 @@ import {
   unlockedAchievements,
   wasted,
 } from './memes'
+import { forceTheme } from './use-theme'
 
 const effects = () => import('./secret-effects')
 const withEffects = (run) => effects().then(run).catch(() => {})
@@ -127,7 +128,7 @@ function listSecrets() {
 
 const COMMANDS = {
   mpoum() {
-    if (!nuke(undefined, { launched: true })) return 'something is already in the air, give it a second'
+    if (!nuke(() => forceTheme('light'), { launched: true })) return 'something is already in the air, give it a second'
     console.log('%c☢ launch codes accepted%c impact in 5 seconds', LABEL, PLAIN)
     return '💥'
   },

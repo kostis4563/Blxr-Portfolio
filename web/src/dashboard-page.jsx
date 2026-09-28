@@ -9,7 +9,7 @@ import DashboardMessages from './dashboard-messages'
 import DashboardReviewPanel from './dashboard-reviewpanel'
 import DashboardLogs from './dashboard-logs'
 import { navigate, useRouteHash, dashboardPath, DASHBOARD_PATH } from './lib/router'
-import { Bone, Loading } from './components/skeleton'
+import { Loading } from './components/skeleton'
 import { useAuth, profileOf } from './lib/supabase'
 import { loginUrlFor, mfaRequired, isGuest } from './lib/auth'
 import { itemForHash, isSiteOwner, SIDEBAR_STORAGE_KEY, BLURBS } from './lib/dashboard'
@@ -29,29 +29,7 @@ function isTyping(target) {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable
 }
 
-function Shell() {
-  return (
-    <Loading label="Opening the dashboard" className="flex min-h-dvh bg-bg">
-      <div className="hidden w-[240px] shrink-0 flex-col border-r border-line bg-surface md:flex">
-        <div className="flex h-14 items-center gap-2 pl-4"><Bone className="h-6 w-6" /><Bone className="h-3 w-10" /></div>
-        <div className="flex flex-col px-3 pt-1">
-          <Bone className="mb-2 ml-2.5 h-2 w-16" />
-          {['w-16', 'w-20'].map((w) => <span key={w} className="flex h-9 items-center gap-2.5 px-2.5"><Bone className="h-4 w-4" /><Bone className={`h-2.5 ${w}`} /></span>)}
-          <Bone className="mb-2 ml-2.5 mt-5 h-2 w-8" />
-          {['w-14', 'w-12'].map((w) => <span key={w} className="flex h-9 items-center gap-2.5 px-2.5"><Bone className="h-4 w-4" /><Bone className={`h-2.5 ${w}`} /></span>)}
-        </div>
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-14 items-center border-b border-line bg-surface px-4 sm:px-6"><Bone className="h-3 w-24" /></div>
-        <div className="mx-auto w-full max-w-[1080px] px-4 py-6 sm:px-8 sm:py-8">
-          <Bone className="h-6 w-32" />
-          <Bone className="mt-2.5 h-3 w-64 max-w-full" />
-          <div aria-hidden="true" className="mt-6 h-[320px] w-full rounded-xl border border-line bg-surface" />
-        </div>
-      </div>
-    </Loading>
-  )
-}
+const Shell = () => <Loading label="Opening the dashboard" />
 
 export default function DashboardPage({ theme, themePreference, onToggleTheme, onSetTheme }) {
   const hash = useRouteHash()
@@ -154,7 +132,7 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <DashboardTopbar item={item} theme={theme} onToggleTheme={onToggleTheme} onOpenMobile={() => setMobileOpen(true)} />
+        <DashboardTopbar item={item} user={session.user} theme={theme} onToggleTheme={onToggleTheme} onOpenMobile={() => setMobileOpen(true)} />
 
         <main className={`mx-auto w-full flex-1 px-4 py-6 sm:px-8 sm:py-8 ${top.subnav && !top.roomy ? 'max-w-[820px]' : top.wide ? 'max-w-[1440px]' : 'max-w-[1080px]'}`}>
           {guest && <GuestBar user={user} boards={work} onClaim={openClaim} />}

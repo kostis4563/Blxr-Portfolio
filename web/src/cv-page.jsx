@@ -30,7 +30,7 @@ const ROW = 'grid grid-cols-1 gap-1 border-b border-dashed border-line py-5 last
 const PERIOD = 'font-mono text-[11.5px] tabular-nums text-ink-subtle sm:pt-[3px]'
 const LINK = 'text-ink-secondary underline decoration-line-strong underline-offset-4 transition-colors duration-200 hover:text-ink-strong hover:decoration-ink-strong'
 
-const MAX_LEVEL = 4
+const MAX_LEVEL = 1
 
 function formatUpdated(iso) {
   const date = new Date(`${iso}T00:00:00Z`)

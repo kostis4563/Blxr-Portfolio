@@ -6,7 +6,7 @@ import {
   Section, Row, Field, Badge, Toggle, Segmented, Modal, CopyButton, ErrorNote, InfoNote, TabStrip,
   ToastProvider, DensityProvider, useToast, INPUT, TEXTAREA, LABEL, BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER, BTN_GHOST,
 } from './components/settings-ui'
-import { Bone, Dot, Lines, Loading } from './components/skeleton'
+import { Loading, Spinner } from './components/skeleton'
 import { useDevicePrefs } from './lib/prefs'
 import { profileOf } from './lib/supabase'
 import { profilePath } from './lib/router'
@@ -61,60 +61,7 @@ const DiscordMark = ({ className = 'h-3.5 w-3.5' }) => (
   <svg className={`${className} shrink-0`} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={SOCIAL_ICON_PATHS.Discord} /></svg>
 )
 
-function Skeleton() {
-  return (
-    <Loading label="Loading your profile" className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
-      <div className="flex min-w-0 flex-col gap-5">
-        <div className="flex gap-1 border-b border-line pb-2.5">
-          {['w-14', 'w-12', 'w-16', 'w-14'].map((w, i) => <Bone key={i} className={`mx-3 h-3 ${w}`} />)}
-        </div>
-        <div className="rounded-xl border border-line bg-surface">
-          <div className="border-b border-line px-5 py-4">
-            <Bone className="h-3.5 w-20" />
-            <Bone className="mt-2 h-2.5 w-64 max-w-full" />
-          </div>
-          <div className="flex items-center gap-4 border-b border-line px-5 py-4">
-            <Dot size={56} />
-            <div className="flex-1"><Bone className="h-3 w-12" /><Bone className="mt-2 h-2.5 w-48 max-w-full" /></div>
-            <Bone className="h-8 w-20 rounded-lg" />
-          </div>
-          <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className={i === 4 ? 'sm:col-span-2' : ''}>
-                <Bone className="h-2.5 w-16" />
-                <Bone className="mt-2 h-9 w-full rounded-lg" />
-              </div>
-            ))}
-            <div className="sm:col-span-2"><Bone className="h-2.5 w-12" /><Bone className="mt-2 h-9 w-full rounded-lg" /></div>
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <Bone className="h-2.5 w-40" />
-          <Bone className="h-8 w-28 rounded-lg" />
-        </div>
-      </div>
-      <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface lg:block">
-        <Bone className="h-24 w-full rounded-none" />
-        <div className="-mt-8 px-5 pb-5">
-          <Dot size={64} className="ring-4 ring-surface" />
-          <Bone className="mt-3 h-4 w-32" />
-          <Bone className="mt-2 h-2.5 w-40" />
-          <Lines count={3} className="mt-4" />
-          <div className="mt-4 flex gap-1.5">{[0, 1, 2].map((i) => <Bone key={i} className="h-6 w-14 rounded-full" />)}</div>
-        </div>
-      </div>
-    </Loading>
-  )
-}
-
-function Spinner({ className = 'h-3.5 w-3.5' }) {
-  return (
-    <svg className={`${className} animate-spin`} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" className="opacity-20" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  )
-}
+const Skeleton = () => <Loading label="Loading your profile" />
 
 function HandleInput({ id, value, onChange, status, invalid }) {
   const tone = status?.kind === 'taken' || status?.kind === 'invalid' ? 'text-red-500' : status?.kind === 'ok' ? 'text-emerald-500' : 'text-ink-subtle'

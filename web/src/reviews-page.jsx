@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { Stars, StarPicker } from './components/star-rating'
+import { Loading } from './components/skeleton'
 import { link, useRouteHash, HOME_PATH } from './lib/router'
 import { fetchReviews, submitReview, editReview, fetchInvite } from './lib/api'
 import { CONTACT_EMAIL } from './lib/profile'
@@ -61,39 +62,7 @@ function Field({ id, label, hint, counter, error, group = false, children }) {
   )
 }
 
-function Skeleton({ className = '' }) {
-  return <div aria-hidden="true" className={`animate-pulse rounded-md bg-surface-hover ${className}`} />
-}
-
-function LoadingState() {
-  return (
-    <div className="w-full">
-      <div className="mb-8 grid grid-cols-1 gap-8 rounded-2xl border border-line bg-surface-raised/40 p-6 sm:grid-cols-[auto_1fr] sm:gap-12 sm:p-7">
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-14 w-24" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-3 w-28" />
-        </div>
-        <div className="flex flex-col justify-center gap-3">
-          {RATINGS.map((n) => <Skeleton key={n} className="h-2 w-full" />)}
-        </div>
-      </div>
-      <div className="border-t border-line">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="flex gap-3.5 border-b border-line py-6">
-            <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
-            <div className="flex-1 space-y-3">
-              <Skeleton className="h-3.5 w-40" />
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-4/5" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+const LoadingState = () => <Loading label="Loading reviews" />
 
 function Summary({ summary, filter, onFilter }) {
   const { count, average, distribution } = summary

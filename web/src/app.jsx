@@ -25,6 +25,7 @@ import { SKILL_CATEGORIES, TOOL_CATEGORIES, themedIconFor } from './lib/skills'
 import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
 import { Icon } from './components/icon'
+import { Loading } from './components/skeleton'
 import { applyHead } from './lib/seo'
 import { recordHit } from './lib/api'
 import { loadSupabase } from './lib/supabase'
@@ -44,15 +45,7 @@ const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#c
 const PublicProfilePage = routePage(PublicProfilePageImpl, withSupabase(() => import('#client-page/public-profile')))
 const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-found'))
 
-const PageFallback = () => (
-  <div
-    className="flex min-h-screen items-center justify-center bg-bg text-ink"
-    role="status"
-    aria-busy="true"
-  >
-    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-subtle" />
-  </div>
-)
+const PageFallback = () => <Loading label="Loading the page" />
 import {
   GITHUB_USERNAME,
   GITHUB_JOINED,
@@ -516,7 +509,7 @@ function App() {
           <dl className="mt-6 flex flex-col gap-2.5 text-[13.5px] leading-[1.55] animate-fade-in-up delay-300">
             {[
               { key: 'now', label: 'Currently', value: 'Final year of the IB Diploma in Athens, so most of this gets built after school' },
-              { key: 'stack', label: 'Mostly', value: 'TypeScript, React and Express, with C++ when it has to run on the machine itself' },
+              { key: 'stack', label: 'Mostly', value: 'I build modern web experiences with JavaScript, React, Next.js, Node.js, Express.js, Python, Tailwind, and Bootstrap.' },
               { key: 'studio', label: 'Studio', value: 'Not a house, but a home <3', live: true }
             ].map((fact) => (
               <div key={fact.key} className="grid grid-cols-[5.5rem_1fr] gap-x-4 items-baseline">

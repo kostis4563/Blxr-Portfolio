@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../dashboard-sidebar'
 import { BTN_BARE, BTN_QUIET, BTN_RISK, CAPS, Menu, MenuItem, MenuLine, Note, Sheet } from '../boards/ui'
 import { Face, Lightbox, ThreadSkeleton, TypingDots } from './ui'
+import { Spinner } from '../skeleton'
 import Bubble from './bubble'
 import Composer from './composer'
 import { TYPING_FOR, isImage, layout, mergeMessages, newestStamp, seenUpTo, toggleReaction, unreadIn } from '../../lib/messages'
@@ -414,7 +415,7 @@ export default function Thread({ thread: given, them, owner, uid, online = false
 
       <div ref={list} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
         {messages === null ? (
-          <ThreadSkeleton />
+          !error && <ThreadSkeleton />
         ) : messages.filter((message) => !message.deleted_at).length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <Face name={them?.name} avatar={them?.avatar} size={56} />
@@ -430,7 +431,7 @@ export default function Thread({ thread: given, them, owner, uid, online = false
             {more && (
               <div className="flex justify-center pb-2">
                 <button type="button" onClick={loadMore} disabled={loadingMore} className={`${BTN_QUIET} h-7 text-[11.5px]`}>
-                  {loadingMore ? 'Loading…' : 'Earlier messages'}
+                  {loadingMore ? <><Spinner className="h-3 w-3" /> Loading…</> : 'Earlier messages'}
                 </button>
               </div>
             )}

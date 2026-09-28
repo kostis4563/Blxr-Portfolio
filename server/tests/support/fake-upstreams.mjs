@@ -117,7 +117,7 @@ function resend(init, s) {
   return reply(200, { id: 'email_123' })
 }
 
-function github(url, init, s) {
+async function github(url, init, s) {
   if (s.github === 'unauthorized') return reply(401, { message: 'Bad credentials' })
   if (s.github === 'rate_limited') return reply(403, { message: 'rate limit' })
   if (url.pathname === '/user/emails') return reply(200, [{ email: 'owner@example.com', verified: true }, { email: 'unverified@example.com', verified: false }])
@@ -173,6 +173,7 @@ function github(url, init, s) {
   }
 
   if (query.includes('history(')) {
+    if (s.githubHistoryDelay) await new Promise((resolve) => setTimeout(resolve, s.githubHistoryDelay))
     const data = {}
     for (const m of query.matchAll(/(r\d+): repository\(owner: "([^"]+)", name: "([^"]+)"\)/g)) {
       const [, alias, , name] = m

@@ -933,14 +933,29 @@ const GH_STATS_TIMEOUT_MS = 25_000
 const GH_STATS_YEARS = 12
 const GH_STATS_REPOS = 120
 const GH_STATS_BATCH = 5
+const GH_STATS_CONCURRENCY = 4
 const GH_STATS_PAGE = 100
 const GH_STATS_PAGES_PER_REPO = 20
 const GH_STATS_MAX_PAGES = 90
 const GH_STATS_MONTHS = 120
 const GH_STATS_DAY_REPOS = 8
+const GH_STATS_WARM_MS = GH_STATS_TTL_MS - 10 * 60_000
+const GH_STATS_FILE = path.join(STATE_DIR, 'github-stats.json')
 const ghStatsCache = new Map()
 const ghStatsInflight = new Map()
 let ghOwner = null
+
+try {
+  const saved = JSON.parse(fs.readFileSync(GH_STATS_FILE, 'utf8'))
+  if (typeof saved?.key === 'string' && Number.isFinite(saved.at) && saved.data?.user?.login) ghStatsCache.set(saved.key, { at: saved.at, data: saved.data })
+} catch {
+}
+function saveGithubStats(key, entry) {
+  try {
+    fs.writeFileSync(GH_STATS_FILE, JSON.stringify({ key, ...entry }), { mode: 0o600 })
+  } catch {
+  }
+}
 
 const GH_STATS_USER_QUERY = `query($login: String!, $from: DateTime!, $to: DateTime!) {
   user(login: $login) {
@@ -1111,11 +1126,13 @@ async function ghContributedRepos(login, years) {
 
 async function ghHistories(userId, repos, onCommit) {
   const cursors = new Map(repos.map((r) => [r.fullName, { after: null, pages: 0 }]))
-  let pending = repos.filter((r) => r.branch)
+  const pending = repos.filter((r) => r.branch)
+  const inflight = new Set()
   let pagesUsed = 0
   let truncated = false
-  while (pending.length && pagesUsed < GH_STATS_MAX_PAGES) {
-    const batch = pending.slice(0, GH_STATS_BATCH)
+  let failure = null
+
+  const fetchBatch = async (batch) => {
     const parts = batch.map((r, i) => {
       const [owner, name] = r.fullName.split('/')
       const after = cursors.get(r.fullName).after
@@ -1123,8 +1140,6 @@ async function ghHistories(userId, repos, onCommit) {
         history(first: ${GH_STATS_PAGE}, author: { id: $uid }${after ? `, after: ${JSON.stringify(after)}` : ''}) { ${GH_STATS_HISTORY_FIELDS} } } } } }`
     })
     const json = await ghGraphql(`query($uid: ID!) { ${parts.join('\n')} }`, { uid: userId })
-    pagesUsed += batch.length
-    const next = []
     batch.forEach((r, i) => {
       const history = json?.data?.[`r${i}`]?.defaultBranchRef?.target?.history
       const state = cursors.get(r.fullName)
@@ -1134,12 +1149,29 @@ async function ghHistories(userId, repos, onCommit) {
         if (state.pages >= GH_STATS_PAGES_PER_REPO) truncated = true
         else {
           state.after = history.pageInfo.endCursor
-          next.push(r)
+          pending.push(r)
         }
       }
     })
-    pending = [...pending.slice(GH_STATS_BATCH), ...next]
   }
+
+  const launch = () => {
+    while (!failure && pending.length && pagesUsed < GH_STATS_MAX_PAGES && inflight.size < GH_STATS_CONCURRENCY) {
+      const size = Math.min(GH_STATS_BATCH, GH_STATS_MAX_PAGES - pagesUsed, Math.ceil(pending.length / (GH_STATS_CONCURRENCY - inflight.size)))
+      const batch = pending.splice(0, size)
+      pagesUsed += batch.length
+      const job = fetchBatch(batch)
+        .catch((err) => { failure ??= err })
+        .finally(() => inflight.delete(job))
+      inflight.add(job)
+    }
+  }
+  launch()
+  while (inflight.size) {
+    await Promise.race(inflight)
+    launch()
+  }
+  if (failure) throw failure
   if (pending.length) truncated = true
   return { truncated, pagesUsed }
 }
@@ -1413,26 +1445,39 @@ function redactStats(data, owner) {
   return { ...data, repos, owners: owners.map(({ public: _p, ...o }) => o), access: { owner: false } }
 }
 
-async function githubStats(refresh) {
-  const { login } = await githubOwner()
+function rebuildGithubStats(login) {
   const key = login.toLowerCase()
-  const hit = ghStatsCache.get(key)
-  if (hit) {
-    const age = Date.now() - hit.at
-    if (age < GH_STATS_TTL_MS && !(refresh && age >= GH_STATS_REFRESH_MIN_MS)) return hit.data
-  }
   let job = ghStatsInflight.get(key)
   if (!job) {
     job = buildGithubStats(login)
       .then((data) => {
+        const entry = { at: Date.now(), data }
         ghStatsCache.delete(key)
-        ghStatsCache.set(key, { at: Date.now(), data })
+        ghStatsCache.set(key, entry)
         if (ghStatsCache.size > GH_STATS_CACHE_MAX) ghStatsCache.delete(ghStatsCache.keys().next().value)
+        saveGithubStats(key, entry)
         return data
       })
       .finally(() => ghStatsInflight.delete(key))
     ghStatsInflight.set(key, job)
   }
+  return job
+}
+
+function warmGithubStats() {
+  return githubOwner()
+    .then(({ login }) => rebuildGithubStats(login))
+    .catch((err) => log.warn('github', 'developer stats warm-up failed', { detail: err?.message }))
+}
+
+async function githubStats(refresh) {
+  const { login } = await githubOwner()
+  const hit = ghStatsCache.get(login.toLowerCase())
+  if (hit) {
+    const age = Date.now() - hit.at
+    if (age < GH_STATS_TTL_MS && !(refresh && age >= GH_STATS_REFRESH_MIN_MS)) return hit.data
+  }
+  const job = rebuildGithubStats(login)
   if (hit && !refresh) {
     job.catch(() => {})
     return hit.data
@@ -2149,9 +2194,9 @@ const server = http.createServer(async (req, res) => {
       if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
       if (!GH_TOKEN) return json(res, 503, { error: 'stats_disabled' }, NO_STORE)
       try {
-        const data = await githubStats(url.searchParams.get('refresh') === '1')
         const owner = await githubOwner()
-        return json(res, 200, (await isStatsOwner(req, owner)) ? data : redactStats(data, owner), NO_STORE)
+        const [data, isOwner] = await Promise.all([githubStats(url.searchParams.get('refresh') === '1'), isStatsOwner(req, owner)])
+        return json(res, 200, isOwner ? data : redactStats(data, owner), NO_STORE)
       } catch (err) {
         if (err instanceof GhError) return json(res, err.status, { error: err.code }, NO_STORE)
         return json(res, 502, { error: 'github_failed' }, NO_STORE)
@@ -2257,9 +2302,10 @@ if (GH_TOKEN) {
   githubOwner()
     .then(({ login }) => {
       if (!GH_USERS.has(login.toLowerCase())) refreshContributions(login, 'last').catch(() => {})
-      return githubStats(false)
     })
     .catch(() => {})
+  warmGithubStats()
+  setInterval(warmGithubStats, GH_STATS_WARM_MS).unref()
 }
 
 sweepInvites()

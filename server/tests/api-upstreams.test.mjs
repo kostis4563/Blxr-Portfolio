@@ -287,6 +287,26 @@ describe('github developer stats', () => {
     assert.equal((await srv.calls('api.github.com/graphql')).length, 0)
   })
 
+  test('a restart serves the saved stats while it rebuilds in the background', async () => {
+    const first = await startServer()
+    const built = (await first.request('/api/github/stats', { headers: as('owner') })).body
+    assert.equal(built.access.owner, true)
+    await first.cleanup({ keepState: true })
+
+    const second = await startServer({ stateDir: first.stateDir, scenario: { githubHistoryDelay: 5000 } })
+    try {
+      const started = Date.now()
+      const { status, body } = await second.request('/api/github/stats')
+      assert.equal(status, 200)
+      assert.ok(Date.now() - started < 2000, 'answered without waiting on GitHub')
+      assert.equal(body.fetchedAt, built.fetchedAt)
+      assert.equal(body.access.owner, false, 'saved stats are still redacted for visitors')
+      assert.ok(!JSON.stringify(body).includes('secret-org'))
+    } finally {
+      await second.cleanup()
+    }
+  })
+
   test('a rejected token or GitHub rate limit map to 503 / 429', async () => {
     const broken = await startServer({ scenario: { github: 'unauthorized' } })
     const limited = await startServer({ scenario: { github: 'rate_limited' } })

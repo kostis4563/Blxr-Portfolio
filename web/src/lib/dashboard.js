@@ -197,10 +197,3 @@ export function itemForHash(hash) {
 }
 
 export const SIDEBAR_STORAGE_KEY = 'blxr:dashboard:sidebar'
-
-export const NOTIFICATIONS = [
-  { id: 1, title: 'New review awaiting approval', body: 'Maria K. · 5 stars on 7x0', time: '2 min ago', unread: true },
-  { id: 2, title: 'Deploy #412 finished', body: 'main · 1m 08s', time: '38 min ago', unread: true },
-  { id: 3, title: 'New message', body: 'Contact form · "Freelance inquiry"', time: '1 hr ago', unread: false },
-  { id: 4, title: 'Domain verified', body: 'blxr.net · DNS records look good', time: 'Yesterday', unread: false },
-]

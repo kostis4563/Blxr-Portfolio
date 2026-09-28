@@ -1,36 +1,79 @@
+import { useId, useLayoutEffect, useSyncExternalStore } from 'react'
+
 export function Bone({ className = '', style }) {
   return <span aria-hidden="true" style={style} className={`skeleton block rounded-md ${className}`} />
 }
 
-export function Dot({ size = 36, className = '' }) {
-  return <span aria-hidden="true" style={{ width: size, height: size }} className={`skeleton block shrink-0 rounded-full ${className}`} />
-}
-
-export function Figure({ className = '' }) {
+export function Spinner({ className = 'h-3.5 w-3.5' }) {
   return (
-    <span className={`flex flex-col gap-2 ${className}`}>
-      <Bone className="h-2.5 w-16" />
-      <Bone className="h-5 w-12" />
-    </span>
+    <svg className={`spinner shrink-0 ${className}`} viewBox="0 0 50 50" fill="none" aria-hidden="true">
+      <circle cx="25" cy="25" r="20" stroke="currentColor" strokeWidth="5" className="opacity-20" />
+      <circle cx="25" cy="25" r="20" stroke="currentColor" strokeWidth="5" strokeLinecap="round" className="spinner-arc" />
+    </svg>
   )
 }
 
-export function Lines({ count = 2, className = '' }) {
-  const widths = ['w-full', 'w-11/12', 'w-4/5', 'w-2/3']
-  return (
-    <span className={`flex flex-col gap-2 ${className}`}>
-      {Array.from({ length: count }, (_, i) => (
-        <Bone key={i} className={`h-2.5 ${i === count - 1 ? widths[Math.min(count, 3)] : widths[i % 2]}`} />
-      ))}
-    </span>
-  )
+const HANDOVER_MS = 40
+const FADE_MS = 700
+const GIVE_UP_MS = 15_000
+
+const claims = new Map()
+let curtain = null
+let hideTimer = 0
+let giveUpTimer = 0
+
+function showCurtain() {
+  clearTimeout(hideTimer)
+  if (!curtain) {
+    const adopting = document.querySelector('.loading-screen') !== null
+    curtain = document.createElement('div')
+    curtain.className = adopting ? 'loading-screen' : 'loading-screen is-fresh'
+    curtain.setAttribute('role', 'status')
+    curtain.setAttribute('aria-live', 'polite')
+    curtain.innerHTML = '<span class="sr-only"></span><span class="loader" aria-hidden="true"></span>'
+    document.body.append(curtain)
+    clearTimeout(giveUpTimer)
+    giveUpTimer = setTimeout(dropCurtain, GIVE_UP_MS)
+  }
+  curtain.firstChild.textContent = [...claims.values()].at(-1)
 }
 
-export function Loading({ label, className = '', children }) {
+function dropCurtain() {
+  clearTimeout(giveUpTimer)
+  if (!curtain) return
+  const leaving = curtain
+  curtain = null
+  leaving.classList.add('is-leaving')
+  leaving.addEventListener('animationend', (event) => event.target === leaving && leaving.remove())
+  setTimeout(() => leaving.remove(), FADE_MS)
+}
+
+function hideCurtain() {
+  clearTimeout(hideTimer)
+  hideTimer = setTimeout(() => claims.size || dropCurtain(), HANDOVER_MS)
+}
+
+const noSubscribe = () => () => {}
+
+export function Loading({ label = 'Loading' }) {
+  const id = useId()
+  const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false)
+
+  useLayoutEffect(() => {
+    claims.set(id, label)
+    showCurtain()
+    return () => {
+      claims.delete(id)
+      if (claims.size) showCurtain()
+      else hideCurtain()
+    }
+  }, [id, label])
+
+  if (hydrated) return null
   return (
-    <div role="status" aria-busy="true" aria-live="polite" className={className}>
+    <div className="loading-screen" role="status" aria-live="polite">
       <span className="sr-only">{label}</span>
-      {children}
+      <span className="loader" aria-hidden="true" />
     </div>
   )
 }
