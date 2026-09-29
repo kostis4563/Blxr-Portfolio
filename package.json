@@ -30,6 +30,9 @@
     "oxlint": "^1.71.0"
   },
   "dependencies": {
-    "@vercel/speed-insights": "^2.0.0"
+    "@vercel/speed-insights": "^2.0.0",
+    "moment": "^2.31.0",
+    "random": "^5.5.1",
+    "simple-git": "^4.0.2"
   }
 }

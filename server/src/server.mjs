@@ -799,9 +799,10 @@ function ghRange(year, now) {
     from.setUTCDate(from.getUTCDate() + 1)
     return { from, to: now }
   }
+  // The whole calendar year, even the part still ahead, so the total matches the GitHub profile,
+  // which also counts commits dated later in the year. The client drops those days from the graph.
   const from = new Date(Date.UTC(Number(year), 0, 1))
-  const end = new Date(Date.UTC(Number(year), 11, 31, 23, 59, 59))
-  return { from, to: end > now ? now : end }
+  return { from, to: new Date(Date.UTC(Number(year), 11, 31, 23, 59, 59)) }
 }
 
 const GH_QUERY = `query($login: String!, $from: DateTime!, $to: DateTime!) {

@@ -73,13 +73,13 @@ export const CV_EDUCATION = [
   {
     degree: 'International Baccalaureate Diploma Programme (IBDP)',
     org: 'Athens',
-    period: { from: '2025', present: true },
+    period: { from: '2026', present: true },
     note: 'Computer Science is the focus subject, alongside Mathematics AA, Physics, Business, English B and Greek, plus the Extended Essay, Theory of Knowledge and CAS.',
     highlights: [
       'Software Engineering',
       'Computer Systems',
       'Data Structures & Algorithms',
-      'Databases',
+      'Databases / SQLITE',
       'Web / Software Development Concepts',
     ],
   },

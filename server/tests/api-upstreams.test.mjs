@@ -229,6 +229,16 @@ describe('github contributions', () => {
     assert.equal((await srv.calls('github')).length, 0)
   })
 
+  test('asks for the whole of the current year, not just up to today', async () => {
+    const year = String(new Date().getUTCFullYear())
+    await srv.clearCalls()
+    assert.equal((await get(`user=octo&y=${year}`)).status, 200)
+    const [call] = await srv.calls('api.github.com/graphql')
+    const { variables } = JSON.parse(call.body)
+    assert.equal(variables.from, `${year}-01-01T00:00:00.000Z`)
+    assert.equal(variables.to, `${year}-12-31T23:59:59.000Z`)
+  })
+
   test('falls back to the public mirror when GraphQL fails', async () => {
     await srv.scenario({ github: 'unauthorized' })
     const res = await get('user=octo&y=2024')
