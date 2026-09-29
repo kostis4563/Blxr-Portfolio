@@ -27,13 +27,12 @@
           document.documentElement.dataset.theme = theme
           document.documentElement.style.colorScheme = theme
           try {
-            var colors = JSON.parse(localStorage.getItem('blxr-colors') || 'null')
-            var custom = colors && colors[theme]
-            var hex = /^#[0-9a-f]{6}$/i
-            if (custom && hex.test(custom.bg) && hex.test(custom.ink)) {
-              document.documentElement.style.setProperty('--custom-bg', custom.bg)
-              document.documentElement.style.setProperty('--custom-ink', custom.ink)
-              document.documentElement.dataset.customColors = ''
+            var colors = localStorage.getItem('blxr-colors-css')
+            if (colors) {
+              var sheet = document.createElement('style')
+              sheet.id = 'custom-colors'
+              sheet.textContent = colors
+              document.head.appendChild(sheet)
             }
           } catch (e) {}
         } catch (e) {

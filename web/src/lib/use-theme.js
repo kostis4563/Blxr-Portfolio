@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { flashbang, NUKE_ODDS, nuke, smokeGrenade } from './memes'
-import { applyCustomColors } from './colors'
 
 const STORAGE_KEY = 'blxr-theme'
 const DEFAULT_THEME = 'dark'
@@ -81,7 +80,6 @@ export function useTheme() {
 
     root.dataset.theme = theme
     root.style.colorScheme = theme
-    applyCustomColors(theme)
 
     if (isInitialPaint) return
 

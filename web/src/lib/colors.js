@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react'
 
 const STORAGE_KEY = 'blxr-colors'
+const CSS_KEY = 'blxr-colors-css'
+const STYLE_ID = 'custom-colors'
 const HEX_RE = /^#[0-9a-f]{6}$/i
 const SCHEMES = ['dark', 'light']
 
@@ -35,6 +37,79 @@ export function normalizeHex(text) {
   return null
 }
 
+function tokens(scheme, { bg, ink }) {
+  const tint = (a, b, pct) => `color-mix(in oklab, ${a}, ${b} ${pct}%)`
+  const fade = (pct) => `color-mix(in srgb, ${ink} ${pct}%, transparent)`
+  const shared = { '--color-bg': bg, '--color-ink': ink, '--color-ink-inverse': bg }
+  if (scheme === 'light') {
+    return {
+      ...shared,
+      '--color-surface': tint(bg, '#fff', 85),
+      '--color-surface-raised': tint(bg, '#fff', 45),
+      '--color-surface-hover': tint(bg, ink, 6),
+      '--color-surface-hover-strong': tint(bg, ink, 12),
+      '--color-surface-inverted': tint(ink, '#000', 20),
+      '--color-ink-on-inverted': bg,
+      '--color-line': tint(bg, ink, 13),
+      '--color-line-strong': tint(bg, ink, 24),
+      '--color-ink-strong': tint(ink, '#000', 25),
+      '--color-ink-secondary': tint(ink, bg, 10),
+      '--color-ink-muted': tint(ink, bg, 20),
+      '--color-ink-subtle': tint(ink, bg, 32),
+      '--color-ink-faint': tint(ink, bg, 50),
+      '--color-selection': tint(bg, ink, 15),
+      '--hairline': fade(10),
+      '--hairline-strong': fade(16),
+      '--glow-strong': fade(14),
+      '--glow-soft': fade(4),
+      '--glow-sweep': fade(4),
+      '--gh-0': 'var(--color-surface-hover)',
+    }
+  }
+  return {
+    ...shared,
+    '--color-surface': tint(bg, ink, 2),
+    '--color-surface-raised': tint(bg, ink, 4),
+    '--color-surface-hover': tint(bg, ink, 7),
+    '--color-surface-hover-strong': tint(bg, ink, 11),
+    '--color-surface-inverted': 'var(--color-surface)',
+    '--color-ink-on-inverted': ink,
+    '--color-line': tint(bg, ink, 8),
+    '--color-line-strong': tint(bg, ink, 13),
+    '--color-ink-strong': tint(ink, '#fff', 25),
+    '--color-ink-secondary': tint(ink, bg, 16),
+    '--color-ink-muted': tint(ink, bg, 45),
+    '--color-ink-subtle': tint(ink, bg, 56),
+    '--color-ink-faint': tint(ink, bg, 68),
+    '--color-selection': 'var(--color-surface-hover-strong)',
+    '--hairline': fade(5),
+    '--hairline-strong': fade(10),
+    '--glow-strong': fade(40),
+    '--glow-soft': fade(8),
+    '--glow-sweep': fade(9),
+  }
+}
+
+// :root:root outranks index.css's :root[data-theme] palettes wherever this lands in <head>
+function stylesheet(all) {
+  const rules = Object.entries(all).map(([scheme, colors]) => {
+    const body = Object.entries(tokens(scheme, colors)).map(([name, value]) => `${name}:${value}`).join(';')
+    return `:root:root[data-theme="${scheme}"]{${body}}`
+  })
+  return rules.length ? `@media screen{${rules.join('')}}` : ''
+}
+
+function applyStylesheet(css) {
+  let el = document.getElementById(STYLE_ID)
+  if (!css) return el?.remove()
+  if (!el) {
+    el = document.createElement('style')
+    el.id = STYLE_ID
+    document.head.append(el)
+  }
+  el.textContent = css
+}
+
 function read() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
@@ -49,26 +124,28 @@ function read() {
   }
 }
 
+function save() {
+  const css = stylesheet(custom)
+  try {
+    if (css) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(custom))
+      localStorage.setItem(CSS_KEY, css)
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(CSS_KEY)
+    }
+  } catch {
+  }
+  applyStylesheet(css)
+}
+
 const EMPTY = {}
 let custom = typeof window === 'undefined' ? EMPTY : read()
 const listeners = new Set()
 
-export function applyCustomColors(scheme) {
-  if (typeof document === 'undefined') return
-  const root = document.documentElement
-  const c = custom[scheme ?? root.dataset.theme]
-  if (c) {
-    root.style.setProperty('--custom-bg', c.bg)
-    root.style.setProperty('--custom-ink', c.ink)
-    root.dataset.customColors = ''
-  } else {
-    root.style.removeProperty('--custom-bg')
-    root.style.removeProperty('--custom-ink')
-    delete root.dataset.customColors
-  }
-}
+if (typeof window !== 'undefined' && custom !== EMPTY) save()
 
-let fade = 0
+let fadeTimer = 0
 
 export function setCustomColors(scheme, colors, { animate = false } = {}) {
   const def = DEFAULT_COLORS[scheme]
@@ -76,21 +153,14 @@ export function setCustomColors(scheme, colors, { animate = false } = {}) {
   if (!colors || (colors.bg === def.bg && colors.ink === def.ink)) delete next[scheme]
   else next[scheme] = { bg: colors.bg, ink: colors.ink }
   custom = next
-  try {
-    if (Object.keys(custom).length) localStorage.setItem(STORAGE_KEY, JSON.stringify(custom))
-    else localStorage.removeItem(STORAGE_KEY)
-  } catch {
-  }
 
   const root = document.documentElement
-  if (root.dataset.theme === scheme) {
-    if (animate) {
-      clearTimeout(fade)
-      root.dataset.themeTransition = ''
-      fade = setTimeout(() => delete root.dataset.themeTransition, 300)
-    }
-    applyCustomColors(scheme)
+  if (animate && root.dataset.theme === scheme) {
+    clearTimeout(fadeTimer)
+    root.dataset.themeTransition = ''
+    fadeTimer = setTimeout(() => delete root.dataset.themeTransition, 300)
   }
+  save()
   listeners.forEach((fn) => fn())
 }
 
