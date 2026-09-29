@@ -557,6 +557,88 @@ body {
   transition-delay: var(--reveal-delay, 0ms);
 }
 
+.contact-title .hl-word {
+  margin-right: 0;
+}
+.contact-title .hl-word::after {
+  content: none;
+}
+
+.contact-email-wrap {
+  container-type: inline-size;
+}
+.contact-email {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.contact-email-text {
+  display: inline-block;
+  font-size: min(7.6cqi, 72px);
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+  padding-bottom: 0.1em;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 0.05em;
+  transition: background-size 600ms var(--ease-out), color 300ms ease;
+}
+.contact-email:hover .contact-email-text,
+.contact-email:focus-visible .contact-email-text {
+  background-size: 100% 0.05em;
+}
+.contact-email-text > span {
+  display: inline-block;
+}
+.contact-email-text[data-wave] > span {
+  animation: contact-wave 700ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 16ms);
+}
+@keyframes contact-wave {
+  0% { transform: none; }
+  30% { transform: translateY(-0.16em); }
+  100% { transform: none; }
+}
+
+.contact-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.contact-pill > span {
+  display: inline-flex;
+  translate: -50% -50%;
+  scale: 0.5;
+  opacity: 0;
+  transition: scale 350ms var(--ease-out), opacity 200ms ease;
+}
+.contact-email:hover .contact-pill > span {
+  scale: 1;
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .contact-email { cursor: none; }
+}
+@media (hover: none), (pointer: coarse) {
+  .contact-pill { display: none; }
+}
+
+.contact-row-fill {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.contact-row:hover .contact-row-fill,
+.contact-row:focus-visible .contact-row-fill {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact-email-text[data-wave] > span { animation: none; }
+  .contact-row-fill { transition: none; }
+}
+
 html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .animate-fade-in),
 html[data-entry] .project-slide[data-active] .project-copy > * {
   animation-duration: 0s;
