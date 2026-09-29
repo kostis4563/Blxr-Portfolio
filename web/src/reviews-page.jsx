@@ -795,7 +795,7 @@ export default function ReviewsPage({ theme, onToggleTheme }) {
             Feedback
             {ready && summary.count > 0 && ` / ${reviewCount(summary.count)}`}
           </p>
-          <h1 className="text-[34px] sm:text-[40px] font-bold text-ink-strong tracking-[-0.035em] leading-tight mb-4">
+          <h1 className="text-[314px] cursor-not-allowed sm:text-[50px] font-bold glow-67 text-shadow-2xs text-shadow-gray-700 text-white tracking-[-0.035em] leading-tight mb-4">
             Reviews
           </h1>
           <p className="text-[15px] sm:text-[16px] text-ink-muted font-normal leading-relaxed">

@@ -12,6 +12,7 @@ import {
   authSignOutOthers, authDeleteAccount, mfaFactors, mfaEnroll, mfaVerify, mfaUnenroll, AUTH_PROVIDERS,
 } from './lib/auth'
 import { useDevicePrefs, setDevicePref, mergeAccountPrefs, DATE_FORMATS, timeZones, localTimeZone, formatDate } from './lib/prefs'
+import { COLOR_PRESETS, colorsFor, contrast, mix, normalizeHex, setCustomColors, useCustomColors } from './lib/colors'
 import { clearRecent } from './lib/recent'
 import { SOCIAL_ICON_PATHS } from './lib/profile'
 import { normalizeUrl } from './lib/profiles'
@@ -854,13 +855,18 @@ function SecurityTab({ user, prefs, setPref }) {
   )
 }
 
-const SWATCH = {
-  light: { bg: '#f4f3f0', surface: '#ffffff', line: '#dbd8d2', ink: '#97918a', strong: '#17150f' },
-  dark: { bg: '#090909', surface: '#131313', line: '#282828', ink: '#4f4f4f', strong: '#f5f5f5' },
+function swatchFor(scheme, { bg, ink }) {
+  const light = scheme === 'light'
+  return {
+    bg,
+    surface: light ? mix(bg, '#ffffff', 0.85) : mix(bg, ink, 0.04),
+    line: mix(bg, ink, 0.13),
+    ink: mix(ink, bg, light ? 0.5 : 0.68),
+    strong: ink,
+  }
 }
 
-function Preview({ scheme }) {
-  const s = SWATCH[scheme]
+function Preview({ swatch: s }) {
   return (
     <svg viewBox="0 0 120 76" className="h-full w-full" aria-hidden="true">
       <rect width="120" height="76" fill={s.bg} />
@@ -879,7 +885,7 @@ function Preview({ scheme }) {
   )
 }
 
-function ThemeTile({ value, label, current, onSelect }) {
+function ThemeTile({ value, label, current, onSelect, swatches }) {
   const on = current === value
   return (
     <button
@@ -894,11 +900,11 @@ function ThemeTile({ value, label, current, onSelect }) {
       <span className="relative block aspect-[120/76] w-full overflow-hidden rounded-lg border border-line">
         {value === 'system' ? (
           <>
-            <span className="absolute inset-0"><Preview scheme="light" /></span>
-            <span className="absolute inset-0 [clip-path:polygon(50%_0,100%_0,100%_100%,50%_100%)]"><Preview scheme="dark" /></span>
+            <span className="absolute inset-0"><Preview swatch={swatches.light} /></span>
+            <span className="absolute inset-0 [clip-path:polygon(50%_0,100%_0,100%_100%,50%_100%)]"><Preview swatch={swatches.dark} /></span>
           </>
         ) : (
-          <Preview scheme={value} />
+          <Preview swatch={swatches[value]} />
         )}
       </span>
       <span className="flex items-center justify-between px-1.5 pb-1">
@@ -911,20 +917,147 @@ function ThemeTile({ value, label, current, onSelect }) {
   )
 }
 
-function AppearanceTab({ themePreference, onSetTheme, sidebarCollapsed, onSetSidebarCollapsed }) {
+function PresetTile({ preset, on, onSelect }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      onClick={onSelect}
+      className={`group flex cursor-pointer flex-col gap-1.5 rounded-xl border p-1.5 text-left outline-none transition-[border-color,transform] duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ink-strong/30 active:translate-y-0 ${
+        on ? 'border-ink-strong' : 'border-line hover:border-line-strong'
+      }`}
+    >
+      <span
+        className="relative flex aspect-[4/3] w-full flex-col justify-end gap-1.5 overflow-hidden rounded-lg border border-line p-2"
+        style={{ background: preset.bg, color: preset.ink }}
+      >
+        <span className="text-[17px] font-semibold leading-none tracking-tight">Aa</span>
+        <span className="h-[3px] w-3/4 rounded-full opacity-40" style={{ background: preset.ink }} />
+        {on && (
+          <span className="absolute right-1.5 top-1.5 grid h-4 w-4 place-items-center rounded-full" style={{ background: preset.ink, color: preset.bg }}>
+            <Icon name="check" className="h-2.5 w-2.5 animate-menu-in" strokeWidth={3} />
+          </span>
+        )}
+      </span>
+      <span className={`px-1 pb-0.5 text-[12.5px] ${on ? 'font-medium text-ink-strong' : 'text-ink-muted group-hover:text-ink-strong'}`}>{preset.label}</span>
+    </button>
+  )
+}
+
+function ColorField({ id, label, value, onChange }) {
+  const [draft, setDraft] = useState(value)
+  const [shown, setShown] = useState(value)
+  if (shown !== value) {
+    setShown(value)
+    setDraft(value)
+  }
+
+  const type = (text) => {
+    setDraft(text)
+    const hex = text.trim().replace(/^#/, '').length === 6 && normalizeHex(text)
+    if (hex && hex !== value) onChange(hex)
+  }
+  const settle = () => {
+    const hex = normalizeHex(draft)
+    if (hex && hex !== value) onChange(hex)
+    setDraft(hex ?? value)
+  }
+
+  return (
+    <>
+      <span
+        className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-line-strong shadow-sm transition-transform duration-150 hover:scale-105 focus-within:ring-2 focus-within:ring-ink-strong/30"
+        style={{ background: value }}
+      >
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={`${label} color picker`}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        />
+      </span>
+      <input
+        id={id}
+        value={draft}
+        onChange={(e) => type(e.target.value)}
+        onBlur={settle}
+        onKeyDown={(e) => e.key === 'Enter' && settle()}
+        maxLength={7}
+        spellCheck={false}
+        autoComplete="off"
+        className={`${INPUT} w-[104px] font-mono uppercase`}
+      />
+    </>
+  )
+}
+
+function ColorsSection({ scheme }) {
+  const custom = useCustomColors()
+  const colors = colorsFor(custom, scheme)
+  const set = (next, animate = false) => setCustomColors(scheme, next, { animate })
+  const ratio = contrast(colors.bg, colors.ink)
+
+  return (
+    <Section
+      id="colors"
+      title="Colors"
+      description={`Background and text for the ${scheme} theme on this browser. Cards, borders and muted text are shaded from these two, and light and dark each keep their own.`}
+      footer={
+        <>
+          <span className="flex items-center gap-2 text-[12.5px] text-ink-muted">
+            Contrast
+            <span className="font-mono tabular-nums text-ink-strong">{ratio.toFixed(1)}:1</span>
+            <Badge tone={ratio >= 4.5 ? 'ok' : 'warn'}>{ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : 'Hard to read'}</Badge>
+          </span>
+          <button type="button" className={BTN_SECONDARY} disabled={!custom[scheme]} onClick={() => set(null, true)}>
+            Reset to default
+          </button>
+        </>
+      }
+    >
+      <div role="radiogroup" aria-label="Color presets" className="grid grid-cols-3 gap-3 px-5 py-4 sm:grid-cols-6">
+        {COLOR_PRESETS[scheme].map((preset) => (
+          <PresetTile
+            key={preset.id}
+            preset={preset}
+            on={preset.bg === colors.bg && preset.ink === colors.ink}
+            onSelect={() => set(preset, true)}
+          />
+        ))}
+      </div>
+      <Row label="Background" description="The page behind everything." htmlFor="color-bg">
+        <ColorField id="color-bg" label="Background" value={colors.bg} onChange={(bg) => set({ ...colors, bg })} />
+      </Row>
+      <Row label="Text" description="Body copy. Headings and secondary text follow it." htmlFor="color-ink">
+        <ColorField id="color-ink" label="Text" value={colors.ink} onChange={(ink) => set({ ...colors, ink })} />
+      </Row>
+    </Section>
+  )
+}
+
+function AppearanceTab({ theme, themePreference, onSetTheme, sidebarCollapsed, onSetSidebarCollapsed }) {
   const device = useDevicePrefs()
+  const custom = useCustomColors()
   const toast = useToast()
   const setDevice = (key, value) => { setDevicePref(key, value); toast('Saved') }
+  const swatches = {
+    dark: swatchFor('dark', colorsFor(custom, 'dark')),
+    light: swatchFor('light', colorsFor(custom, 'light')),
+  }
 
   return (
     <>
       <Section id="theme" title="Theme" description="Dark by default. System follows your operating system and switches automatically.">
         <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-3 px-5 py-4">
-          <ThemeTile value="system" label="System" current={themePreference} onSelect={onSetTheme} />
-          <ThemeTile value="light" label="Light" current={themePreference} onSelect={onSetTheme} />
-          <ThemeTile value="dark" label="Dark" current={themePreference} onSelect={onSetTheme} />
+          <ThemeTile value="system" label="System" current={themePreference} onSelect={onSetTheme} swatches={swatches} />
+          <ThemeTile value="light" label="Light" current={themePreference} onSelect={onSetTheme} swatches={swatches} />
+          <ThemeTile value="dark" label="Dark" current={themePreference} onSelect={onSetTheme} swatches={swatches} />
         </div>
       </Section>
+
+      <ColorsSection scheme={theme === 'light' ? 'light' : 'dark'} />
 
       <Section id="layout" title="Layout" description="These apply to this browser only.">
         <Row label="Density" description="Compact tightens spacing across the dashboard.">

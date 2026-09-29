@@ -150,6 +150,7 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
             <DashboardSettings
               item={item}
               user={session.user}
+              theme={theme}
               themePreference={themePreference}
               onSetTheme={onSetTheme}
               sidebarCollapsed={collapsed}
