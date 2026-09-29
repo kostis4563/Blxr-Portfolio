@@ -11,11 +11,19 @@ const ROUTE_PAGES = ['projects', 'library', 'reviews', 'uses', 'cv', 'contact', 
 const pageSource = (name) => fileURLToPath(new URL(`./src/${name}-page.jsx`, import.meta.url))
 const stubPage = fileURLToPath(new URL('./src/stub-page.js', import.meta.url))
 
+// Homepage pieces below the fold: in the prerendered HTML, but a separate chunk in the browser.
+const LAZY_WIDGETS = ['github-contribution']
+const widgetSource = (name) => fileURLToPath(new URL(`./src/components/${name}.jsx`, import.meta.url))
+
 const pageAliases = (ssr) => {
   const map = {}
   for (const name of ROUTE_PAGES) {
     map[`#ssr-page/${name}`] = ssr ? pageSource(name) : stubPage
     map[`#client-page/${name}`] = ssr ? stubPage : pageSource(name)
+  }
+  for (const name of LAZY_WIDGETS) {
+    map[`#ssr-widget/${name}`] = ssr ? widgetSource(name) : stubPage
+    map[`#client-widget/${name}`] = ssr ? stubPage : widgetSource(name)
   }
   return map
 }
