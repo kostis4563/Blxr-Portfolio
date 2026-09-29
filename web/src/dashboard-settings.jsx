@@ -12,7 +12,7 @@ import {
   authSignOutOthers, authDeleteAccount, mfaFactors, mfaEnroll, mfaVerify, mfaUnenroll, AUTH_PROVIDERS,
 } from './lib/auth'
 import { useDevicePrefs, setDevicePref, mergeAccountPrefs, DATE_FORMATS, timeZones, localTimeZone, formatDate } from './lib/prefs'
-import { COLOR_PRESETS, colorsFor, contrast, mix, normalizeHex, setCustomColors, useCustomColors } from './lib/colors'
+import { PALETTES, TEXT_COLORS, contrast, mix, resetColors, resolveColors, setColor, useCustomColors } from './lib/colors'
 import { clearRecent } from './lib/recent'
 import { SOCIAL_ICON_PATHS } from './lib/profile'
 import { normalizeUrl } from './lib/profiles'
@@ -855,14 +855,14 @@ function SecurityTab({ user, prefs, setPref }) {
   )
 }
 
-function swatchFor(scheme, { bg, ink }) {
+function swatchFor(scheme, { palette: { bg, ink }, text }) {
   const light = scheme === 'light'
   return {
     bg,
     surface: light ? mix(bg, '#ffffff', 0.85) : mix(bg, ink, 0.04),
     line: mix(bg, ink, 0.13),
-    ink: mix(ink, bg, light ? 0.5 : 0.68),
-    strong: ink,
+    ink: mix(text.ink, bg, light ? 0.5 : 0.68),
+    strong: text.ink,
   }
 }
 
@@ -917,147 +917,92 @@ function ThemeTile({ value, label, current, onSelect, swatches }) {
   )
 }
 
-function PresetTile({ preset, on, onSelect }) {
+const SWATCH = 'grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-full border border-line-strong outline-none transition-transform duration-150 hover:scale-105'
+const ANY_COLOR = 'conic-gradient(from 210deg, #e8b4b8, #e8d4b0, #b8d8e8, #c4b8e8, #e8b4d8, #e8b4b8)'
+
+function Swatch({ label, color, dot, on, onSelect }) {
   return (
     <button
       type="button"
       role="radio"
       aria-checked={on}
+      aria-label={label}
+      title={label}
       onClick={onSelect}
-      className={`group flex cursor-pointer flex-col gap-1.5 rounded-xl border p-1.5 text-left outline-none transition-[border-color,transform] duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ink-strong/30 active:translate-y-0 ${
-        on ? 'border-ink-strong' : 'border-line hover:border-line-strong'
-      }`}
+      className={`${SWATCH} focus-visible:ring-2 focus-visible:ring-ink-strong/30`}
+      style={{ background: color }}
     >
-      <span
-        className="relative flex aspect-[4/3] w-full flex-col justify-end gap-1.5 overflow-hidden rounded-lg border border-line p-2"
-        style={{ background: preset.bg, color: preset.ink }}
-      >
-        <span className="text-[17px] font-semibold leading-none tracking-tight">Aa</span>
-        <span className="h-[3px] w-3/4 rounded-full opacity-40" style={{ background: preset.ink }} />
-        {on && (
-          <span className="absolute right-1.5 top-1.5 grid h-4 w-4 place-items-center rounded-full" style={{ background: preset.ink, color: preset.bg }}>
-            <Icon name="check" className="h-2.5 w-2.5 animate-menu-in" strokeWidth={3} />
-          </span>
-        )}
-      </span>
-      <span className={`px-1 pb-0.5 text-[12.5px] ${on ? 'font-medium text-ink-strong' : 'text-ink-muted group-hover:text-ink-strong'}`}>{preset.label}</span>
+      {on && <span className="h-2 w-2 rounded-full animate-menu-in" style={{ background: dot }} />}
     </button>
   )
 }
 
-function ColorField({ id, label, value, onChange }) {
-  const [draft, setDraft] = useState(value)
-  const [shown, setShown] = useState(value)
-  if (shown !== value) {
-    setShown(value)
-    setDraft(value)
-  }
-
-  const type = (text) => {
-    setDraft(text)
-    const hex = text.trim().replace(/^#/, '').length === 6 && normalizeHex(text)
-    if (hex && hex !== value) onChange(hex)
-  }
-  const settle = () => {
-    const hex = normalizeHex(draft)
-    if (hex && hex !== value) onChange(hex)
-    setDraft(hex ?? value)
-  }
-
+function CustomSwatch({ label, value, dot, on, onChange }) {
   return (
-    <>
-      <span
-        className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-line-strong shadow-sm transition-transform duration-150 hover:scale-105 focus-within:ring-2 focus-within:ring-ink-strong/30"
-        style={{ background: value }}
-      >
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          aria-label={`${label} color picker`}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        />
-      </span>
-      <input
-        id={id}
-        value={draft}
-        onChange={(e) => type(e.target.value)}
-        onBlur={settle}
-        onKeyDown={(e) => e.key === 'Enter' && settle()}
-        maxLength={7}
-        spellCheck={false}
-        autoComplete="off"
-        className={`${INPUT} w-[104px] font-mono uppercase`}
-      />
-    </>
+    <span title={label} className={`${SWATCH} relative overflow-hidden focus-within:ring-2 focus-within:ring-ink-strong/30`} style={{ background: on ? value : ANY_COLOR }}>
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+      {on && <span className="pointer-events-none h-2 w-2 rounded-full animate-menu-in" style={{ background: dot }} />}
+    </span>
   )
 }
 
-function ColorsSection({ scheme }) {
-  const custom = useCustomColors()
-  const colors = colorsFor(custom, scheme)
-  const set = (next, animate = false) => setCustomColors(scheme, next, { animate })
-  const ratio = contrast(colors.bg, colors.ink)
-
-  return (
-    <Section
-      id="colors"
-      title="Colors"
-      description={`Background and text for the ${scheme} theme on this browser. Cards, borders and muted text are shaded from these two, and light and dark each keep their own.`}
-      footer={
-        <>
-          <span className="flex items-center gap-2 text-[12.5px] text-ink-muted">
-            Contrast
-            <span className="font-mono tabular-nums text-ink-strong">{ratio.toFixed(1)}:1</span>
-            <Badge tone={ratio >= 4.5 ? 'ok' : 'warn'}>{ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : 'Hard to read'}</Badge>
-          </span>
-          <button type="button" className={BTN_SECONDARY} disabled={!custom[scheme]} onClick={() => set(null, true)}>
-            Reset to default
-          </button>
-        </>
-      }
-    >
-      <div role="radiogroup" aria-label="Color presets" className="grid grid-cols-3 gap-3 px-5 py-4 sm:grid-cols-6">
-        {COLOR_PRESETS[scheme].map((preset) => (
-          <PresetTile
-            key={preset.id}
-            preset={preset}
-            on={preset.bg === colors.bg && preset.ink === colors.ink}
-            onSelect={() => set(preset, true)}
-          />
-        ))}
-      </div>
-      <Row label="Background" description="The page behind everything." htmlFor="color-bg">
-        <ColorField id="color-bg" label="Background" value={colors.bg} onChange={(bg) => set({ ...colors, bg })} />
-      </Row>
-      <Row label="Text" description="Body copy. Headings and secondary text follow it." htmlFor="color-ink">
-        <ColorField id="color-ink" label="Text" value={colors.ink} onChange={(ink) => set({ ...colors, ink })} />
-      </Row>
-    </Section>
-  )
-}
+const nameOf = (choice, value) => (choice.id === 'custom' ? `Custom ${value.toUpperCase()}` : choice.label)
 
 function AppearanceTab({ theme, themePreference, onSetTheme, sidebarCollapsed, onSetSidebarCollapsed }) {
   const device = useDevicePrefs()
   const custom = useCustomColors()
   const toast = useToast()
   const setDevice = (key, value) => { setDevicePref(key, value); toast('Saved') }
-  const swatches = {
-    dark: swatchFor('dark', colorsFor(custom, 'dark')),
-    light: swatchFor('light', colorsFor(custom, 'light')),
-  }
+  const scheme = theme === 'light' ? 'light' : 'dark'
+  const resolved = { dark: resolveColors(custom, 'dark'), light: resolveColors(custom, 'light') }
+  const swatches = { dark: swatchFor('dark', resolved.dark), light: swatchFor('light', resolved.light) }
+  const { palette, text } = resolved[scheme]
+  const pick = (key, value, animate = true) => setColor(scheme, key, value, { animate })
 
   return (
     <>
-      <Section id="theme" title="Theme" description="Dark by default. System follows your operating system and switches automatically.">
+      <Section
+        id="theme"
+        title="Theme"
+        description={`Dark by default. System follows your operating system. The colors below are for the ${scheme} theme on this browser.`}
+        footer={
+          <>
+            <span className="text-[12px] text-ink-subtle">Light and dark each keep their own colors.</span>
+            <button type="button" className={BTN_GHOST} disabled={!custom[scheme]} onClick={() => resetColors(scheme)}>Reset colors</button>
+          </>
+        }
+      >
         <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-3 px-5 py-4">
           <ThemeTile value="system" label="System" current={themePreference} onSelect={onSetTheme} swatches={swatches} />
           <ThemeTile value="light" label="Light" current={themePreference} onSelect={onSetTheme} swatches={swatches} />
           <ThemeTile value="dark" label="Dark" current={themePreference} onSelect={onSetTheme} swatches={swatches} />
         </div>
+        <Row label="Background" description={nameOf(palette, palette.bg)}>
+          <div role="radiogroup" aria-label="Background" className="flex flex-wrap items-center gap-2">
+            {PALETTES[scheme].map((p) => (
+              <Swatch key={p.id} label={p.label} color={p.bg} dot={p.ink} on={p.id === palette.id} onSelect={() => pick('bg', p.bg)} />
+            ))}
+            <CustomSwatch label="Custom background" value={palette.bg} dot={palette.ink} on={palette.id === 'custom'} onChange={(v) => pick('bg', v, false)} />
+          </div>
+        </Row>
+        <Row
+          label={
+            <span className="flex items-center gap-2">
+              Text
+              {contrast(palette.bg, text.ink) < 4.5 && <Badge tone="warn">Low contrast</Badge>}
+            </span>
+          }
+          description={`${nameOf(text, text.ink)} · titles and paragraphs only`}
+        >
+          <div role="radiogroup" aria-label="Text color" className="flex flex-wrap items-center gap-2">
+            <Swatch label="Default" color={palette.ink} dot={palette.bg} on={text.id === 'default'} onSelect={() => pick('ink', null)} />
+            {TEXT_COLORS[scheme].map((t) => (
+              <Swatch key={t.id} label={t.label} color={t.ink} dot={palette.bg} on={t.id === text.id} onSelect={() => pick('ink', t.ink)} />
+            ))}
+            <CustomSwatch label="Custom text color" value={text.ink} dot={palette.bg} on={text.id === 'custom'} onChange={(v) => pick('ink', v, false)} />
+          </div>
+        </Row>
       </Section>
-
-      <ColorsSection scheme={theme === 'light' ? 'light' : 'dark'} />
 
       <Section id="layout" title="Layout" description="These apply to this browser only.">
         <Row label="Density" description="Compact tightens spacing across the dashboard.">
