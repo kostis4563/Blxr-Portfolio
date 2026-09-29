@@ -48,8 +48,6 @@ const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-
 const PageFallback = () => <Loading label="Loading the page" />
 import {
   GITHUB_USERNAME,
-  GITHUB_JOINED,
-  GITHUB_ACTIVE_SINCE,
   GITHUB_URL,
   CONTACT_EMAIL,
 } from './lib/profile'
@@ -554,6 +552,10 @@ function App() {
           </div>
         </section>
 
+        <section id="activity" aria-label="GitHub activity" className="w-[calc(100%+3rem)] -mx-6 border-b border-dashed border-line px-6 py-8 text-left empty:hidden">
+          <GitHubContributions username={GITHUB_USERNAME} minimal />
+        </section>
+
         <section id="projects" className="scroll-mt-8 w-full mt-14">
 
           <div ref={projectsRef} className="flex flex-col items-start w-full">
@@ -929,13 +931,6 @@ function App() {
               </aside>
             </div>
           </details>
-        </section>
-
-        <section id="activity" aria-label="GitHub activity" className="w-[calc(100%+3rem)] -mx-6 mt-16 border-t border-dashed border-line px-6 pt-12 text-left">
-          <GitHubContributions
-            username={GITHUB_USERNAME} since={GITHUB_JOINED}
-            activeSince={GITHUB_ACTIVE_SINCE} minimal
-          />
         </section>
 
         <footer id="site-footer" className="w-[calc(100%+3rem)] -mx-6 mt-16 flex flex-col gap-3 border-t border-dashed border-line px-6 py-6 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">

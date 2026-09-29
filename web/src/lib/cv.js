@@ -79,7 +79,7 @@ export const CV_EDUCATION = [
       'Software Engineering',
       'Computer Systems',
       'Data Structures & Algorithms',
-      'Databases',
+      'Databases / SQLITE',
       'Web / Software Development Concepts',
     ],
   },

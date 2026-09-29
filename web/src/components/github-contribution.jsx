@@ -16,6 +16,9 @@ const ROLLING = "last";
 const MAX_CELL = 13;
 
 const MIN_CELL = 3;
+
+// A whole year of 3px squares is unreadable on a phone.
+const MINIMAL_MIN_CELL = 8;
 const MIN_GAP = 1;
 const GAP_RATIO = 0.3;
 const RAIL_GAP = 8;
@@ -31,13 +34,15 @@ const EDGE_FADE = 28;
 const gapFor = (cell) => Math.max(2, Math.round(cell * GAP_RATIO));
 const round2 = (n) => Math.round(n * 100) / 100;
 
-const fitCell = (avail, columns) => {
+const fitCell = (avail, columns, minCell = MIN_CELL) => {
   const idealGap = gapFor(MAX_CELL);
   if (columns * (MAX_CELL + idealGap) - idealGap <= avail) {
     return { cell: MAX_CELL, gap: idealGap };
   }
 
   let cell = avail / (columns * (1 + GAP_RATIO) - GAP_RATIO);
+  // Past this the grid scrolls sideways instead of shrinking further.
+  if (cell < minCell) return { cell: minCell, gap: gapFor(minCell) };
   let gap = cell * GAP_RATIO;
 
   if (gap < MIN_GAP) {
@@ -99,6 +104,56 @@ const longestStreak = (days) => {
   return longest;
 };
 
+// A day with nothing yet doesn't break the streak — it isn't over.
+const currentStreak = (days) => {
+  let i = days.length - 1;
+  if (i >= 0 && days[i].count === 0) i--;
+  let run = 0;
+  for (; i >= 0 && days[i].count > 0; i--) run++;
+  return run;
+};
+
+const toIso = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const restOfYear = (iso) => {
+  const out = [];
+  const date = parseDay(iso);
+  const year = date.getFullYear();
+  for (date.setDate(date.getDate() + 1); date.getFullYear() === year; date.setDate(date.getDate() + 1)) {
+    out.push({ date: toIso(date), future: true });
+  }
+  return out;
+};
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+function useCountUp(target, run, duration = 1400) {
+  const [value, setValue] = React.useState(0);
+  const shown = React.useRef(0);
+  React.useEffect(() => {
+    if (!run) return;
+    const from = shown.current;
+    if (from === target || prefersReducedMotion()) {
+      shown.current = target;
+      setValue(target);
+      return;
+    }
+    let frame;
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      shown.current = Math.round(from + (target - from) * (1 - (1 - t) ** 4));
+      setValue(shown.current);
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, run, duration]);
+  return value;
+}
+
 const dayUrl = (username, date) =>
   `https://github.com/${encodeURIComponent(username)}?tab=overview&from=${date}&to=${date}`;
 
@@ -107,7 +162,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
 
   const WEEKDAYS = ["", 'Mon', "", 'Wed', "", 'Fri', ""];
 
-  const [year, setYear] = React.useState(ROLLING);
+  const [year, setYear] = React.useState(() => (minimal ? String(new Date().getFullYear()) : ROLLING));
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [state, setState] = React.useState({
     status: "loading",
@@ -161,6 +216,29 @@ export default function GitHubContributions({ username, since, activeSince, mini
     return () => observer.disconnect();
   }, [nearViewport]);
 
+  const [revealed, setRevealed] = React.useState(!minimal);
+
+  React.useEffect(() => {
+    if (revealed) return;
+    const card = cardRef.current;
+    if (!card || typeof IntersectionObserver === "undefined" || prefersReducedMotion()) {
+      setRevealed(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setRevealed(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "0px 0px -15% 0px", threshold: 0.2 },
+    );
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [revealed]);
+
   React.useLayoutEffect(() => {
     if (!username) return;
 
@@ -201,8 +279,11 @@ export default function GitHubContributions({ username, since, activeSince, mini
   const cells = React.useMemo(() => {
     if (!days.length) return [];
     const lead = parseDay(days[0].date).getDay();
-    return [...Array.from({ length: lead }, () => null), ...days];
-  }, [days]);
+    const upcoming = minimal ? restOfYear(days[days.length - 1].date) : [];
+    return [...Array.from({ length: lead }, () => null), ...days, ...upcoming];
+  }, [days, minimal]);
+
+  const lastDayIdx = React.useMemo(() => cells.findLastIndex((c) => c && !c.future), [cells]);
 
   const columnsCount = Math.ceil(cells.length / 7) || 53;
 
@@ -219,7 +300,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
 
   const coarsePointer = useCoarsePointer();
 
-  const showRail = rowWidth == null || rowWidth >= RAIL_MIN_ROW;
+  const showRail = !minimal && (rowWidth == null || rowWidth >= RAIL_MIN_ROW);
 
   const [railWidth, setRailWidth] = React.useState(0);
 
@@ -242,8 +323,8 @@ export default function GitHubContributions({ username, since, activeSince, mini
     () =>
       avail == null || avail <= 0
         ? { cell: MAX_CELL, gap: gapFor(MAX_CELL) }
-        : fitCell(avail, columnsCount),
-    [avail, columnsCount],
+        : fitCell(avail, columnsCount, minimal ? MINIMAL_MIN_CELL : MIN_CELL),
+    [avail, columnsCount, minimal],
   );
   const step = cellSize + cellGap;
 
@@ -266,13 +347,36 @@ export default function GitHubContributions({ username, since, activeSince, mini
 
     return {
       best,
+      sum,
       longest: longestStreak(days),
+      current: currentStreak(days),
+      today: days[days.length - 1].count > 0,
       activeDays,
       perWeek,
 
       busiest: byWeekday[busiestWd] > 0 ? sampleFor[busiestWd] : null,
     };
   }, [days]);
+
+  // GitHub's own yearly figure, which also counts commits dated later in the year than today.
+  const headline = stats ? Math.max(total, stats.sum) : 0;
+  const shownHeadline = useCountUp(headline, minimal && revealed && !!stats);
+
+  // Shown in place of the handle while the graph is being looked at.
+  const peekItems = React.useMemo(() => {
+    if (!minimal || !stats || stats.best.count === 0) return [];
+    const daysOf = (n) => `${n} ${n === 1 ? "day" : "days"}`;
+    const items = [];
+    if (stats.current > 0) {
+      items.push({ key: "streak", label: "Streak", value: daysOf(stats.current), live: stats.today });
+    }
+    items.push(
+      { key: "longest", label: "Longest", value: daysOf(stats.longest) },
+      { key: "best", label: "Best day", value: stats.best.count.toLocaleString(locale) },
+      { key: "active", label: "Active", value: daysOf(stats.activeDays), wide: true },
+    );
+    return items;
+  }, [minimal, stats, locale]);
 
   const statItems = React.useMemo(() => {
     if (!stats) return [];
@@ -336,10 +440,16 @@ export default function GitHubContributions({ username, since, activeSince, mini
 
     const minColumns = Math.max(3, Math.ceil(26 / step));
     for (let col = 0; col < columnsCount; col++) {
-      const cell = cells[col * 7];
+      // The first column usually starts mid-week, so use its first real day.
+      const cell = cells[col * 7] ?? cells.slice(col * 7, col * 7 + 7).find(Boolean);
       if (!cell) continue;
       const date = parseDay(cell.date);
       const month = date.getMonth();
+      // A month that's nearly over by the first column gets no label; it would crowd out the next one.
+      if (col === 0 && date.getDate() > 7) {
+        lastMonth = month;
+        continue;
+      }
 
       if (month !== lastMonth && (!labels.length || col - labels.at(-1).colIndex >= minColumns)) {
         labels.push({
@@ -365,12 +475,15 @@ export default function GitHubContributions({ username, since, activeSince, mini
     setEdges({ start: offset > 2, end: max - offset > 2 });
   }, []);
 
+  // The minimal grid runs to Dec 31, so land on today rather than the empty end of the year.
+  const todayScroll = minimal ? (Math.floor(lastDayIdx / 7) + 4) * step : null;
+
   React.useEffect(() => {
     const el = scrollerRef.current;
     if (status !== "ready" || !el) return;
-    el.scrollLeft = el.scrollWidth;
+    el.scrollLeft = todayScroll == null ? el.scrollWidth : todayScroll - el.clientWidth;
     measureEdges();
-  }, [status, year, columnsCount, measureEdges]);
+  }, [status, year, columnsCount, measureEdges, todayScroll]);
 
   React.useEffect(() => {
     const el = scrollerRef.current;
@@ -418,11 +531,8 @@ export default function GitHubContributions({ username, since, activeSince, mini
     for (let i = cells.length - 1; i >= 0; i--) {
       if (cells[i]?.count > 0) return i;
     }
-    for (let i = cells.length - 1; i >= 0; i--) {
-      if (cells[i]) return i;
-    }
-    return -1;
-  }, [cells]);
+    return lastDayIdx;
+  }, [cells, lastDayIdx]);
 
   React.useEffect(() => setFocusIdx(null), [cells]);
 
@@ -433,7 +543,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
 
       for (let i = from + delta; i >= 0 && i < cells.length; i += delta) {
         const day = cells[i];
-        if (!day) continue;
+        if (!day || day.future) continue;
         setFocusIdx(i);
         gridRef.current?.querySelector(`[data-idx="${i}"]`)?.focus();
         return true;
@@ -489,6 +599,72 @@ export default function GitHubContributions({ username, since, activeSince, mini
           : "relative w-full rounded-[14px] border border-line bg-surface-raised/40 p-4 sm:p-5 font-sans select-none"
       }
     >
+      {minimal && (
+        <div className="flex items-baseline justify-between gap-4 mb-4 text-[12.5px] text-ink-muted">
+          {stats ? (
+            <p className="shrink-0">
+              <span className="font-medium tabular-nums text-ink-strong">
+                <span className="sr-only">{headline.toLocaleString(locale)}</span>
+                {/* The invisible final value holds the width so the count-up doesn't jitter. */}
+                <span aria-hidden="true" className="inline-grid">
+                  <span className="invisible col-start-1 row-start-1">{headline.toLocaleString(locale)}</span>
+                  <span className="col-start-1 row-start-1">{shownHeadline.toLocaleString(locale)}</span>
+                </span>
+              </span>{" "}
+              contributions in {year}
+            </p>
+          ) : (
+            <span className="block h-3.5 w-52 rounded bg-surface-hover animate-pulse" />
+          )}
+
+          <div className="relative hidden sm:flex justify-end">
+            <a
+              href={`https://github.com/${username}`}
+              target="_blank"
+              rel="noreferrer"
+              tabIndex={active ? -1 : undefined}
+              className={`group/gh inline-flex items-center gap-1 text-ink-faint outline-none transition-[color,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-ink-strong focus-visible:text-ink-strong motion-reduce:transition-none ${
+                active ? "pointer-events-none opacity-0 -translate-y-1" : ""
+              }`}
+            >
+              @{username}
+              <span
+                aria-hidden="true"
+                className="inline-block transition-transform duration-200 group-hover/gh:-translate-y-px group-hover/gh:translate-x-px group-focus-visible/gh:-translate-y-px group-focus-visible/gh:translate-x-px"
+              >
+                ↗
+              </span>
+            </a>
+
+            {peekItems.length > 0 && (
+              <dl className="pointer-events-none absolute right-0 top-0 flex items-baseline gap-5 whitespace-nowrap">
+                {peekItems.map((item, i) => (
+                  <div
+                    key={item.key}
+                    // Left to right on the way in, all at once on the way out.
+                    style={{ transitionDelay: active ? `${i * 45}ms` : "0ms" }}
+                    className={`${item.wide ? "hidden md:flex" : "flex"} items-baseline gap-1.5 transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+                      active ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+                    }`}
+                  >
+                    <dt className="text-ink-faint">{item.label}</dt>
+                    <dd className="font-medium tabular-nums text-ink-strong">
+                      {item.value}
+                      {item.live && (
+                        <>
+                          <LiveDot />
+                          <span className="sr-only">, pushed today</span>
+                        </>
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
+        </div>
+      )}
+
       {!minimal && (
         <div className="flex items-baseline justify-between gap-4 mb-3">
           <h3 className="flex items-baseline gap-1.5 text-[13px] font-medium text-ink-strong tracking-tight">
@@ -630,7 +806,10 @@ export default function GitHubContributions({ username, since, activeSince, mini
           ref={scrollerRef}
           onScroll={measureEdges}
           style={{ maskImage: edgeMask, WebkitMaskImage: edgeMask }}
-          className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          // The padding keeps the hover outline on edge squares from being clipped.
+          className={`min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+            minimal ? "-m-[3px] p-[3px]" : ""
+          }`}
         >
           <div ref={gridRef} className="relative shrink-0" style={{ width: gridWidth }}>
             <div className="relative h-4 mb-1.5 text-[9.5px] text-ink-faint font-medium">
@@ -648,8 +827,9 @@ export default function GitHubContributions({ username, since, activeSince, mini
             <div
               role="group"
               aria-label="Contributions"
-              className={`grid grid-flow-col transition-opacity duration-200 ${
-                offline ? "opacity-70" : "opacity-100"
+              data-active={minimal && active ? "" : undefined}
+              className={`grid grid-flow-col transition-opacity duration-200 ${minimal ? "gh-grid" : ""} ${
+                !revealed ? "opacity-0" : offline ? "opacity-70" : "opacity-100"
               }`}
               style={{
                 gridTemplateRows: `repeat(7, ${cellSize}px)`,
@@ -673,10 +853,29 @@ export default function GitHubContributions({ username, since, activeSince, mini
                 const col = Math.floor(idx / 7);
 
                 if (day === null) {
-                  return (
+                  return minimal ? (
+                    <div key={idx} />
+                  ) : (
                     <div
                       key={idx}
                       className={`rounded-[2px] bg-surface-raised ${skeleton ? "animate-pulse" : ""}`}
+                    />
+                  );
+                }
+
+                // Diagonal wave, left to right, timed to finish with the count-up.
+                const cellIn = minimal && revealed ? "gh-cell-in" : "";
+                // A 3px corner turns the small phone-size squares into dots.
+                const cellRound = cellSize >= 11 ? "rounded-[3px]" : "rounded-[2px]";
+                const cellDelay = minimal ? { "--cell-delay": `${col * 11 + (idx % 7) * 14}ms` } : undefined;
+
+                if (day.future) {
+                  return (
+                    <div
+                      key={idx}
+                      aria-hidden="true"
+                      style={cellDelay}
+                      className={`gh-upcoming ${cellRound} ${cellIn}`}
                     />
                   );
                 }
@@ -698,10 +897,15 @@ export default function GitHubContributions({ username, since, activeSince, mini
                 };
 
                 const label = `${day.count} contributions · ${formatDay(day.date, locale)}`;
-                const cellClass = `relative block rounded-[2px] ring-inset ring-[var(--hairline)] ring-1 hover:z-20 hover:scale-[1.45] hover:ring-ink-strong hover:shadow-[0_1px_6px_var(--shadow-cast)] focus-visible:z-20 focus-visible:scale-[1.45] focus-visible:ring-ink-strong focus-visible:ring-2 outline-none transition-[transform,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:hover:scale-100 ${LEVEL_CLASSES[day.level]}`;
+                const cellClass = minimal
+                  ? `block ${cellRound} ${LEVEL_CLASSES[day.level]} ${cellIn}`
+                  : `relative block rounded-[2px] ring-inset ring-[var(--hairline)] ring-1 hover:z-20 hover:scale-[1.45] hover:ring-ink-strong hover:shadow-[0_1px_6px_var(--shadow-cast)] focus-visible:z-20 focus-visible:scale-[1.45] focus-visible:ring-ink-strong focus-visible:ring-2 outline-none transition-[transform,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:hover:scale-100 ${LEVEL_CLASSES[day.level]} ${cellIn}`;
 
                 const shared = {
                   "data-idx": idx,
+                  // Stays on while the pointer crosses the gaps between squares.
+                  "data-lit": minimal && active && hovered?.day === day ? "" : undefined,
+                  style: cellDelay,
                   tabIndex: idx === tabIdx ? 0 : -1,
                   onMouseEnter: (e) => show(e.currentTarget),
                   onFocus: (e) => {
@@ -754,13 +958,14 @@ export default function GitHubContributions({ username, since, activeSince, mini
             transform: `translate(-${hovered.align}%, -100%) translateX(${tipShift}px) translateY(${active ? 0 : 3}px)`,
           }}
         >
-          <span className="text-ink-strong">
+          {/* Page ink tokens flip with the theme; the inverted surface doesn't, so inherit its text colour. */}
+          <span className="font-semibold tabular-nums">
             {hovered.day.count === 0 ? 'No' : hovered.day.count}
           </span>{" "}
           {hovered.day.count === 1 ? 'contribution' : 'contributions'}
-          <span className="text-ink-subtle">
+          <span className="opacity-55">
             {" "}
-            · {formatDay(hovered.day.date, locale)}
+            · {minimal && hovered.day === cells[lastDayIdx] ? "today" : formatDay(hovered.day.date, locale)}
           </span>
         </div>
       )}
@@ -796,6 +1001,15 @@ export default function GitHubContributions({ username, since, activeSince, mini
         </div>
       )}
     </div>
+  );
+}
+
+function LiveDot() {
+  return (
+    <span aria-hidden="true" title="Pushed today" className="relative ml-1.5 inline-flex h-1.5 w-1.5 align-middle">
+      <span className="absolute inset-0 rounded-full bg-[var(--gh-4)] opacity-60 animate-ping motion-reduce:animate-none" />
+      <span className="relative h-1.5 w-1.5 rounded-full bg-[var(--gh-4)]" />
+    </span>
   );
 }
 
