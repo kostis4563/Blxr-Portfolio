@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 'react'
 
 const AUTOPLAY_MS = 6000
-import GitHubContributionsImpl from '#ssr-widget/github-contribution'
 import ProjectsPageImpl from '#ssr-page/projects'
 import LibraryPageImpl from '#ssr-page/library'
 import ReviewsPageImpl from '#ssr-page/reviews'
@@ -44,12 +43,9 @@ const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-pa
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
 const PublicProfilePage = routePage(PublicProfilePageImpl, withSupabase(() => import('#client-page/public-profile')))
 const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-found'))
-// Kept out of the first-load bundle; hydration leaves the prerendered graph in place until it arrives.
-const GitHubContributions = routePage(GitHubContributionsImpl, () => import('#client-widget/github-contribution'))
 
 const PageFallback = () => <Loading label="Loading the page" />
 import {
-  GITHUB_USERNAME,
   GITHUB_URL,
   CONTACT_EMAIL,
 } from './lib/profile'
@@ -552,12 +548,6 @@ function App() {
               <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5">→</span>
             </a>
           </div>
-        </section>
-
-        <section id="activity" aria-label="GitHub activity" className="w-[calc(100%+3rem)] -mx-6 border-b border-dashed border-line px-6 py-8 text-left empty:hidden">
-          <Suspense fallback={null}>
-            <GitHubContributions username={GITHUB_USERNAME} minimal />
-          </Suspense>
         </section>
 
         <section id="projects" className="scroll-mt-8 w-full mt-14">

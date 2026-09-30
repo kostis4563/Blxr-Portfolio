@@ -251,7 +251,7 @@ totals. Nothing to connect and no table: the Node server asks GitHub whose
 token it holds and builds the page for that account.
 
 The one thing it needs is `GITHUB_TOKEN` in `/etc/blxr-search.env` — the
-same token the home page's contribution graph uses; it gets there from the
+same token the contributions route uses; it gets there from the
 `BLXR_GITHUB_TOKEN` repository secret on every deploy. Until it is set the
 page says "Developer stats are not enabled on this server yet". Results are
 cached an hour on the server.

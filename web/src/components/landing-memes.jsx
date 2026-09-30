@@ -12,9 +12,9 @@ const HEART_EDGE =
 const HEART_FILL = 'M2 1h2v1H2zM5 1h2v1H5zM1 2h7v2H1zM2 4h5v1H2zM3 5h3v1H3zM4 6h1v1H4z'
 const HEART_SHINE = 'M2 2h1v1H2z'
 
-const READ_SECONDS = { intro: 5, projects: 12, skills: 20, activity: 4 }
+const READ_SECONDS = { intro: 5, projects: 12, skills: 20 }
 
-const readMs = { intro: 0, projects: 0, skills: 0, activity: 0 }
+const readMs = { intro: 0, projects: 0, skills: 0 }
 const slidesSeen = new Set()
 
 function holdsScreen(el) {
