@@ -33,7 +33,10 @@ export function imageUrl(src, width) {
 
 export const SIZES = {
     contentColumn: '(min-width: 768px) 720px, calc(100vw - 48px)',
-    archiveCover: '(min-width: 960px) 896px, (min-width: 640px) calc(100vw - 64px), calc(100vw - 40px)',
+    archiveCover: '(min-width: 960px) 878px, (min-width: 640px) calc(100vw - 82px), calc(100vw - 50px)',
+    archivePreview: '(min-width: 1024px) 320px, (min-width: 768px) 288px, calc(100vw - 50px)',
+    archiveGallery: '(min-width: 960px) 361px, (min-width: 640px) calc(50vw - 119px), calc(100vw - 50px)',
+    archiveGalleryWide: '(min-width: 960px) 734px, (min-width: 640px) calc(100vw - 226px), calc(100vw - 50px)',
     mark: '24px',
     avatar: '64px',
 }

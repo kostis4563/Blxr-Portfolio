@@ -516,8 +516,13 @@ body {
   transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .contact-row:hover .contact-row-fill,
-.contact-row:focus-visible .contact-row-fill {
+.contact-row:focus-visible .contact-row-fill,
+.project-index-row:hover .contact-row-fill,
+.project-index-row:focus-visible .contact-row-fill {
   transform: scaleX(1);
+}
+@media (hover: hover) {
+  .project-toggle:hover .contact-row-fill { transform: scaleX(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -565,10 +570,38 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
 .project-play:hover .project-play-pill,
 .project-play:focus-visible .project-play-pill { transform: scale(1.04); background-color: rgba(0, 0, 0, 0.7); }
 .project-play:focus-visible .project-play-pill { box-shadow: 0 0 0 2px #fff; }
-.project-toggle svg { transition: transform 300ms var(--ease-out); }
-.project-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.project-toggle-plus {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.project-toggle[aria-expanded='true'] .project-toggle-plus { transform: rotate(90deg); }
+
+.project-index:has(.project-index-row:hover) .project-index-row:not(:hover) .project-index-title { opacity: 0.4; }
+@media (min-width: 768px) {
+  .project-index-row[data-active] > span:nth-child(2) { color: var(--color-ink-strong); }
+}
+
+.project-preview {
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 380ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.project-preview[data-active] {
+  opacity: 1;
+  transform: none;
+}
+@keyframes project-caption-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+.project-preview-caption {
+  animation: project-caption-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .project-details, .project-details-inner, .project-toggle svg, .project-entry-img, .project-play-pill { transition: none; }
+  .project-details, .project-details-inner, .project-toggle-plus, .project-entry-img, .project-play-pill, .project-preview { transition: none; }
+  .project-preview { transform: none; }
+  .project-preview-caption { animation: none; }
   .project-play:hover .project-play-pill { transform: none; }
   .project-entry-cover:hover .project-entry-img { transform: none; }
 }

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { ACHIEVEMENTS, achievement, onDesktop, reducedMotion } from '../lib/memes'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { ACHIEVEMENTS, achievement, funEnabled, onDesktop, onFunChange, reducedMotion } from '../lib/memes'
 import { imageUrl } from '../lib/images'
 
 const CLIP = imageUrl('/parkour.mp4')
@@ -39,8 +39,9 @@ const saveData = () => navigator.connection?.saveData || /2g/.test(navigator.con
 
 export default function LandingMemes() {
   const [desktop, setDesktop] = useState(false)
+  const fun = useSyncExternalStore(onFunChange, funEnabled, () => false)
   useEffect(() => setDesktop(onDesktop()), [])
-  return desktop ? <Memes /> : null
+  return desktop && fun ? <Memes /> : null
 }
 
 function Memes() {

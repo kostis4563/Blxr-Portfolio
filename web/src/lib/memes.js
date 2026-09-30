@@ -4,6 +4,36 @@ export const reducedMotion = () =>
 
 export const onDesktop = () => Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches)
 
+const FUN_KEY = 'blxr:fun'
+const funListeners = new Set()
+let fun = null
+
+export function funEnabled() {
+  if (fun === null) {
+    try {
+      fun = localStorage.getItem(FUN_KEY) === 'on'
+    } catch {
+      fun = false
+    }
+  }
+  return fun
+}
+
+export function setFun(on) {
+  fun = on
+  try {
+    if (on) localStorage.setItem(FUN_KEY, 'on')
+    else localStorage.removeItem(FUN_KEY)
+  } catch {
+  }
+  funListeners.forEach((fn) => fn())
+}
+
+export function onFunChange(fn) {
+  funListeners.add(fn)
+  return () => funListeners.delete(fn)
+}
+
 let dismiss = null
 let cleared = Promise.resolve()
 
@@ -803,7 +833,7 @@ const EXPLORER_PAGES = ['home', 'projects', 'library', 'reviews', 'uses', 'cv', 
 const PAGE_OPEN_MS = 4000
 
 export function trackPageVisit(page) {
-  if (!EXPLORER_PAGES.includes(page) || !onDesktop()) return undefined
+  if (!EXPLORER_PAGES.includes(page) || !onDesktop() || !funEnabled()) return undefined
   const timer = setTimeout(() => {
     const visited = addToSessionList(VISITED_KEY, page)
     if (visited && EXPLORER_PAGES.every((name) => visited.includes(name))) achievement(ACHIEVEMENTS.explorer)
@@ -824,7 +854,7 @@ const GAMERSCORE =
 let achievementTurn = Promise.resolve()
 
 export function achievement({ id, gamerscore, title }) {
-  if (!onDesktop()) return false
+  if (!onDesktop() || !funEnabled()) return false
   const unlocked = addToSessionList(ACHIEVEMENTS_KEY, id)
   if (!unlocked) return false
   const html =

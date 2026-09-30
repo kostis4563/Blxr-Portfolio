@@ -314,7 +314,10 @@ function print(rows) {
     args.push(LABEL_STYLE, VALUE_STYLE, value)
   }
   console.log(format.trimEnd(), ...args)
-  console.log('%c  psst, type %c secrets %c for everything hidden on this site and how to set it off', HINT_STYLE, COMMAND_STYLE, HINT_STYLE)
+  console.log(
+    '%c  psst, type %c enable %c for flashbangs, Minecraft parkour and achievements, or %c secrets %c for everything hidden on this site',
+    HINT_STYLE, COMMAND_STYLE, HINT_STYLE, COMMAND_STYLE, HINT_STYLE,
+  )
 }
 
 export function consoleHello() {

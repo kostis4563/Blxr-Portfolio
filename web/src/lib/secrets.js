@@ -2,11 +2,13 @@ import {
   ACHIEVEMENTS,
   barrelRoll,
   cheat,
+  funEnabled,
   missionPassed,
   NUKE_ODDS,
   nuke,
   onDesktop,
   reducedMotion,
+  setFun,
   unlockedAchievements,
   wasted,
 } from './memes'
@@ -28,6 +30,8 @@ const LIST = [
   [
     'type these right here in the console',
     [
+      ['enable', 'turn on flashbangs, Minecraft parkour and achievements'],
+      ['disable', 'back to the plain site'],
       ['mpoum', 'launch a nuke at this page'],
       ['respect', 'mission passed'],
       ['wasted', 'wasted'],
@@ -54,15 +58,21 @@ const LIST = [
     ],
   ],
   [
-    'around the site',
+    'after you type enable',
     [
       ['theme toggle', 'going light throws a flashbang, going dark a smoke grenade'],
       ['', `1 in ${ODDS} switches drops a nuke instead`],
       ['', 'eight switches in a few seconds and the site stops responding'],
-      ['home avatar', "it's a ? block. keep clicking"],
-      ['doing nothing', 'three minutes idle and the screensaver comes on'],
       ['skills section', 'skim past it on the home page and Minecraft parkour steps in'],
       ['', 'Focus mode gives it half the screen'],
+      ['achievements', 'listed below, desktop only'],
+    ],
+  ],
+  [
+    'around the site',
+    [
+      ['home avatar', "it's a ? block. keep clicking"],
+      ['doing nothing', 'three minutes idle and the screensaver comes on'],
       ['any 404', "you're wasted on arrival. double-click the 404 for the Game of Life"],
       ['reviews', 'leaving one is a mission passed'],
       ['messages', 'so is your first message in a dashboard thread'],
@@ -113,7 +123,8 @@ function listSecrets() {
   const achievements = Object.entries(ACHIEVEMENTS)
   const titleWidth = Math.max(...achievements.map(([, { title }]) => title.length)) + 2
   const done = achievements.filter(([, { id }]) => unlocked.includes(id)).length
-  lines.push([], [['achievements', HEAD], [`  desktop only · ${done} of ${achievements.length} this session`, DIM]])
+  const status = funEnabled() ? `${done} of ${achievements.length} this session` : 'off, type enable to start'
+  lines.push([], [['achievements', HEAD], [`  desktop only · ${status}`, DIM]])
   for (const [key, { id, gamerscore, title }] of achievements) {
     const got = unlocked.includes(id)
     lines.push([
@@ -127,6 +138,18 @@ function listSecrets() {
 }
 
 const COMMANDS = {
+  enable() {
+    if (funEnabled()) return 'already on. type disable to turn it off'
+    setFun(true)
+    console.log('%cenabled%c flashbangs, Minecraft parkour and achievements are live. type disable to turn them off', LABEL, PLAIN)
+    return '🎉'
+  },
+  disable() {
+    if (!funEnabled()) return 'already off. type enable to turn it on'
+    setFun(false)
+    console.log('%cdisabled%c back to the plain site', LABEL, PLAIN)
+    return '👋'
+  },
   mpoum() {
     if (!nuke(() => forceTheme('light'), { launched: true })) return 'something is already in the air, give it a second'
     console.log('%c☢ launch codes accepted%c impact in 5 seconds', LABEL, PLAIN)

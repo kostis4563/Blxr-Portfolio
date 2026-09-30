@@ -55,7 +55,7 @@ const warmed = new Set()
 function heroImageFor(route) {
   if (route.name === 'projects') {
     const src = projectsList[0]?.image
-    return src ? { src, sizes: SIZES.archiveCover } : null
+    return src ? { src, sizes: SIZES.archivePreview } : null
   }
   if (route.name === 'library' && route.itemId) {
     const src = libraryList.find((entry) => entry.id === route.itemId)?.image

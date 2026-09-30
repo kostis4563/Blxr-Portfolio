@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { flashbang, NUKE_ODDS, nuke, smokeGrenade } from './memes'
+import { flashbang, funEnabled, NUKE_ODDS, nuke, smokeGrenade } from './memes'
 
 const STORAGE_KEY = 'blxr-theme'
 const DEFAULT_THEME = 'dark'
@@ -57,7 +57,7 @@ function changeTheme(next, apply) {
   }
   const current = document.documentElement.dataset.theme
   const flipping = current === (next === 'light' ? 'dark' : 'light')
-  if (!flipping) applyIfLatest()
+  if (!flipping || !funEnabled()) applyIfLatest()
   else if (spamming()) {
     applyIfLatest()
     import('./secret-effects').then(({ notResponding }) => notResponding()).catch(() => {})
