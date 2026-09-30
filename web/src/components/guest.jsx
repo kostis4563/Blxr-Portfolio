@@ -30,7 +30,7 @@ export function useGuestWork(hash) {
   useEffect(() => {
     if (hash === null) return undefined
     let cancelled = false
-    const load = () => fetchBoards().then((rows) => { if (!cancelled) setBoards(rows) }).catch(() => {})
+    const load = () => fetchBoards(false, { mine: true }).then((rows) => { if (!cancelled) setBoards(rows) }).catch(() => {})
     load()
     window.addEventListener('focus', load)
     return () => {

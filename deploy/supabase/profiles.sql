@@ -159,7 +159,7 @@ begin
   end if;
 end $$;
 
-create index if not exists profiles_visibility_idx on public.profiles (visibility) where visibility = 'public';
+drop index if exists public.profiles_visibility_idx;
 
 create or replace function public.profiles_touch()
 returns trigger language plpgsql as $$

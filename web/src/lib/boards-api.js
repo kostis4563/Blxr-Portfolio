@@ -73,14 +73,15 @@ const INDEX_COLUMNS = `${BOARD_COLUMNS}, count_cards, count_done, count_overdue,
 const CARD_COLUMNS =
   'id, board_id, seq, list_id, position, title, notes, done, archived, due, labels, checklist, comments, links, files, activity, deleted_at, completed_at, created_at, updated_at'
 
-export async function fetchBoards(archived = false) {
+export async function fetchBoards(archived = false, { mine = false } = {}) {
+  let query = client().from('board_index').select(INDEX_COLUMNS).eq('archived', archived)
+  if (mine) {
+    const me = myId()
+    if (!me) return []
+    query = query.eq('owner', me)
+  }
   const rows = unwrap(
-    await client()
-      .from('board_index')
-      .select(INDEX_COLUMNS)
-      .eq('archived', archived)
-      .order('pinned', { ascending: false })
-      .order('updated_at', { ascending: false }),
+    await query.order('pinned', { ascending: false }).order('updated_at', { ascending: false }),
     'Boards could not be loaded',
   )
   return (rows || []).map(shapeBoard)
@@ -226,13 +227,14 @@ export async function moveList(board, listId, index) {
   return updateBoard(board.id, { lists })
 }
 
+async function patchCards(changes, what = 'Those cards could not be changed') {
+  if (!changes.length) return
+  unwrap(await client().rpc('board_cards_patch', { changes }), what)
+}
+
 export async function sortList(boardId, listId, cards, by) {
   const ordered = sortCards(cards, by)
-  await Promise.all(
-    ordered.map((card, index) =>
-      client().from('board_cards').update({ position: (index + 1) * POSITION_STEP }).eq('id', card.id),
-    ),
-  )
+  await patchCards(ordered.map((card, index) => ({ id: card.id, position: (index + 1) * POSITION_STEP })), 'That column could not be sorted')
 }
 
 export async function setLabel(board, label) {
@@ -248,14 +250,7 @@ export async function setLabel(board, label) {
 export async function removeLabel(board, labelId, cards) {
   const labels = (board.labels || []).filter((entry) => entry.id !== labelId)
   const wearing = (cards || []).filter((card) => (card.labels || []).includes(labelId))
-  await Promise.all(
-    wearing.map((card) =>
-      client()
-        .from('board_cards')
-        .update({ labels: card.labels.filter((id) => id !== labelId) })
-        .eq('id', card.id),
-    ),
-  )
+  await patchCards(wearing.map((card) => ({ id: card.id, labels: card.labels.filter((id) => id !== labelId) })))
   return updateBoard(board.id, { labels })
 }
 
@@ -305,11 +300,7 @@ export async function moveCard(card, listId, index, siblings, { done = undefined
   if (needsRenumber(ordered, index)) {
     const rebuilt = [...ordered]
     rebuilt.splice(index, 0, moved)
-    await Promise.all(
-      rebuilt.map((entry, place) =>
-        client().from('board_cards').update({ position: (place + 1) * POSITION_STEP }).eq('id', entry.id),
-      ),
-    )
+    await patchCards(rebuilt.map((entry, place) => ({ id: entry.id, position: (place + 1) * POSITION_STEP })))
     return { ...moved, position: (index + 1) * POSITION_STEP, renumbered: true }
   }
   return moved
@@ -387,27 +378,21 @@ export async function bulkCards(cards, action, value, { siblings = [] } = {}) {
   }
 
   if (action === 'label' || action === 'unlabel') {
-    await Promise.all(
-      held.map((card) => {
-        const labels = action === 'label'
+    await patchCards(
+      held.map((card) => ({
+        id: card.id,
+        labels: action === 'label'
           ? [...new Set([...(card.labels || []), value])]
-          : (card.labels || []).filter((id) => id !== value)
-        return sb.from('board_cards').update({ labels }).eq('id', card.id)
-      }),
+          : (card.labels || []).filter((id) => id !== value),
+      })),
     )
     return held.length
   }
 
   if (action === 'move') {
     const ordered = [...siblings].sort((a, b) => a.position - b.position)
-    let position = (ordered[ordered.length - 1]?.position ?? 0) + POSITION_STEP
-    await Promise.all(
-      held.map((card) => {
-        const at = position
-        position += POSITION_STEP
-        return sb.from('board_cards').update({ list_id: value, position: at }).eq('id', card.id)
-      }),
-    )
+    const start = (ordered[ordered.length - 1]?.position ?? 0) + POSITION_STEP
+    await patchCards(held.map((card, index) => ({ id: card.id, list_id: value, position: start + index * POSITION_STEP })))
     return held.length
   }
 

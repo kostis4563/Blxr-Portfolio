@@ -34,7 +34,6 @@ export function isMacLike() {
 }
 
 export const SECTIONS = [
-  { id: 'projects', label: 'Projects' },
   { id: 'skills', label: 'Background' },
   { id: 'education', label: 'Education' },
 ]

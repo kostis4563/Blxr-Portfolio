@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 'react'
 
-const AUTOPLAY_MS = 6000
 import ProjectsPageImpl from '#ssr-page/projects'
 import LibraryPageImpl from '#ssr-page/library'
 import ReviewsPageImpl from '#ssr-page/reviews'
@@ -18,10 +17,9 @@ import StudioFact from './components/studio-fact'
 import LandingMemes from './components/landing-memes'
 import { trackPageVisit } from './lib/memes'
 import { useTheme } from './lib/use-theme'
-import { projectsList } from './lib/projects'
 import { imageProps, SIZES } from './lib/images'
-import { SKILL_CATEGORIES, TOOL_CATEGORIES, themedIconFor } from './lib/skills'
-import { useRoutePath, parseRoute, navigate, link, projectPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
+import { SKILL_CATEGORIES, themedIconFor } from './lib/skills'
+import { useRoutePath, parseRoute, navigate, link, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
 import { Icon } from './components/icon'
 import { Loading } from './components/skeleton'
@@ -50,6 +48,33 @@ import {
   CONTACT_EMAIL,
 } from './lib/profile'
 
+function SkillTile({ skill, featured }) {
+  const Tile = skill.url ? 'a' : 'span'
+  const tileProps = skill.url
+    ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `${skill.name} — official site (opens in a new tab)` }
+    : { role: 'img', 'aria-label': skill.name }
+  const size = featured ? 48 : 28
+
+  return (
+    <Tile
+      {...tileProps}
+      title={skill.name}
+      className={`skill-cell flex h-full items-center justify-center outline-none transition-[background-color,opacity] duration-300 hover:bg-surface-hover/70 focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-strong/50 motion-reduce:transition-none ${featured ? 'py-14 sm:py-20' : 'py-8 sm:py-10'}`}
+    >
+      <img
+        {...imageProps(skill.icon)}
+        alt=""
+        aria-hidden="true"
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
+        className={`skill-logo object-contain ${featured ? 'h-10 w-10 sm:h-12 sm:w-12' : 'h-6 w-6 sm:h-7 sm:w-7'}`}
+      />
+    </Tile>
+  )
+}
+
 function App() {
 
   const path = useRoutePath()
@@ -62,21 +87,12 @@ function App() {
   const homeScrollRef = useRef(0)
 
   const hasLeftHomeRef = useRef(false)
-  const projectsRef = useRef(null)
-  const carouselRef = useRef(null)
-  const carouselRafRef = useRef(0)
-  const autoplayRemainingRef = useRef(null)
-  const autoplaySlideRef = useRef(0)
-  const [carouselPaused, setCarouselPaused] = useState(false)
-  const [carouselVisible, setCarouselVisible] = useState(false)
-  const [autoplayTick, setAutoplayTick] = useState(0)
-  const [activeSlide, setActiveSlide] = useState(0)
-  const toolboxRef = useRef(null)
+  const [skillsOpen, setSkillsOpen] = useState(false)
 
-  const openProject = (projectId) => {
+  const openProjects = () => {
     homeScrollRef.current = window.scrollY
     hasLeftHomeRef.current = true
-    navigate(projectId ? projectPath(projectId) : PROJECTS_PATH)
+    navigate(PROJECTS_PATH)
   }
 
   useLayoutEffect(() => {
@@ -102,157 +118,7 @@ function App() {
 
   const isReturningHome = hasLeftHomeRef.current
 
-  useEffect(() => {
-    const el = toolboxRef.current
-    if (!el) return
-
-    const closeOnOutside = (e) => {
-      if (el.open && !el.contains(e.target)) el.open = false
-    }
-
-    const closeOnEscape = (e) => {
-      if (e.key !== 'Escape' || !el.open) return
-      const hadFocus = el.contains(document.activeElement)
-      el.open = false
-      if (hadFocus) el.querySelector('summary')?.focus()
-    }
-
-    document.addEventListener('pointerdown', closeOnOutside, true)
-    document.addEventListener('keydown', closeOnEscape)
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutside, true)
-      document.removeEventListener('keydown', closeOnEscape)
-    }
-  }, [currentView])
-
-  useEffect(() => {
-    if (currentView !== 'home') return
-    const root = projectsRef.current
-    if (!root || typeof IntersectionObserver === 'undefined') return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    const items = Array.from(root.querySelectorAll('[data-reveal]'))
-    const pending = items.filter((el) => el.getBoundingClientRect().top > window.innerHeight * 0.92)
-    if (!pending.length) return
-
-    for (const el of pending) el.classList.add('reveal-pending')
-
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue
-        entry.target.classList.add('reveal-in')
-        observer.unobserve(entry.target)
-      }
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 })
-
-    for (const el of pending) observer.observe(el)
-
-    return () => {
-      observer.disconnect()
-      for (const el of items) el.classList.remove('reveal-pending', 'reveal-in')
-    }
-  }, [currentView])
-
   const palette = <CommandPaletteHost theme={theme} onToggleTheme={toggleTheme} />
-
-  const FEATURED_ORDER = ['amitista', 'fuse-bypass', 'async', '7x0-site']
-  const featuredProjects = FEATURED_ORDER
-    .map((id) => projectsList.find((project) => project.id === id))
-    .filter(Boolean)
-    .map((project) => ({
-      ...project,
-      categoryLabel: project.category,
-      description: project.shortDescription,
-      metrics: (project.metrics ?? [])
-        .filter((metric) => metric.value.length <= 18)
-        .slice(0, 2)
-    }))
-  const restCount = projectsList.length - featuredProjects.length
-  const countWord = (n) => ['zero', 'one', 'two', 'three', 'four', 'five', 'six'][n] ?? String(n)
-
-  const goToSlide = (index, behavior) => {
-    const track = carouselRef.current
-    if (!track) return
-    const count = featuredProjects.length
-    const next = ((index % count) + count) % count
-    const slide = track.children[next]
-    if (!slide) return
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    track.scrollTo({
-      left: slide.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2,
-      behavior: behavior ?? (reduce ? 'auto' : 'smooth')
-    })
-  }
-
-  const handleCarouselScroll = () => {
-    const track = carouselRef.current
-    if (!track) return
-    if (carouselRafRef.current) return
-    carouselRafRef.current = requestAnimationFrame(() => {
-      carouselRafRef.current = 0
-      const center = track.scrollLeft + track.clientWidth / 2
-      let best = 0
-      let bestDist = Infinity
-      for (let i = 0; i < track.children.length; i++) {
-        const el = track.children[i]
-        const dist = Math.abs(el.offsetLeft + el.offsetWidth / 2 - center)
-        if (dist < bestDist) { bestDist = dist; best = i }
-      }
-      setActiveSlide((prev) => (prev === best ? prev : best))
-    })
-  }
-
-  const handleCarouselKeyDown = (event) => {
-    if (event.key === 'ArrowRight') { event.preventDefault(); goToSlide(activeSlide + 1) }
-    else if (event.key === 'ArrowLeft') { event.preventDefault(); goToSlide(activeSlide - 1) }
-  }
-
-  const autoplayEnabled = currentView === 'home' && carouselVisible && !carouselPaused && featuredProjects.length > 1
-
-  useEffect(() => {
-    if (currentView !== 'home') return
-    const root = carouselRef.current
-    if (!root || typeof IntersectionObserver === 'undefined') return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    let intersecting = false
-    const sync = () => setCarouselVisible(intersecting && document.visibilityState === 'visible')
-    const observer = new IntersectionObserver(([entry]) => {
-      intersecting = entry.isIntersecting
-      sync()
-    }, { threshold: 0.5 })
-    observer.observe(root)
-    document.addEventListener('visibilitychange', sync)
-    return () => {
-      observer.disconnect()
-      document.removeEventListener('visibilitychange', sync)
-      setCarouselVisible(false)
-    }
-  }, [currentView])
-
-  useEffect(() => {
-    if (!autoplayEnabled) return
-    if (autoplaySlideRef.current !== activeSlide) {
-      autoplaySlideRef.current = activeSlide
-      autoplayRemainingRef.current = null
-    }
-    const duration = autoplayRemainingRef.current ?? AUTOPLAY_MS
-    const started = Date.now()
-    let fired = false
-    const id = setTimeout(() => {
-      fired = true
-      autoplayRemainingRef.current = null
-      goToSlide(activeSlide + 1)
-      setAutoplayTick((tick) => tick + 1)
-    }, duration)
-    return () => {
-      clearTimeout(id)
-      autoplayRemainingRef.current = fired ? null : Math.max(0, duration - (Date.now() - started))
-    }
-  }, [autoplayEnabled, activeSlide, autoplayTick])
-
-  const pauseCarousel = () => setCarouselPaused(true)
-  const resumeCarousel = () => setCarouselPaused(false)
 
   const listSentence = (items) => {
     const words = items.map((item) => item.toLowerCase())
@@ -283,16 +149,9 @@ function App() {
     items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon) }))
   }))
 
-  const toolCategories = TOOL_CATEGORIES.map((category) => ({
-    name: category.name,
-    wide: category.wide,
-    items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon) }))
-  }))
-
-  const toolboxPreview = ['Git', 'Figma', 'VS Code', 'macOS']
-    .map((name) => toolCategories.flatMap((category) => category.items).find((item) => item.name === name))
-    .filter(Boolean)
-  const toolboxCount = toolCategories.reduce((total, category) => total + category.items.length, 0)
+  const stackSkills = skillCategories.flatMap((category) => category.items)
+  const featuredSkills = stackSkills.filter((skill) => skill.featured)
+  const otherSkills = stackSkills.filter((skill) => !skill.featured)
 
   const navItemClass = 'h-9 w-9 flex items-center justify-center hover:text-ink-strong focus-visible:text-ink-strong aria-expanded:text-ink-strong transition-colors duration-200'
   const navLinkClass = 'inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-md px-2.5 text-[13px] font-medium outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30'
@@ -301,7 +160,7 @@ function App() {
 
   const sectionLink = (id) => ({ href: `#${id}`, onClick: (event) => { event.preventDefault(); jumpToSection(id) } })
   const navLinks = [
-    { id: 'projects', label: 'Projects', ...sectionLink('projects') },
+    { id: 'projects', label: 'Projects', ...link(PROJECTS_PATH, openProjects) },
     { id: 'about', label: 'About', ...sectionLink('skills') },
     { id: 'contact', label: 'Contact', ...link(CONTACT_PATH) },
   ]
@@ -477,18 +336,28 @@ function App() {
 
         <section id="intro" className="flex flex-col items-start text-left w-[calc(100%+3rem)] border-b border-dashed border-line -mx-6 px-6 pb-12">
 
-          {}
-          <img
+          <div className="mb-6 flex w-full items-start justify-between gap-4">
+            {}
+            <img
 
-            {...imageProps('/pfp.webp', SIZES.avatar)}
-            alt="Blxr avatar"
-            width="64"
-            height="64"
-            draggable="false"
-            onContextMenu={(e) => e.preventDefault()}
-            onDragStart={(e) => e.preventDefault()}
-            className="w-[64px] h-[64px] rounded-[18px] object-cover mb-6 select-none [-webkit-user-drag:none] [-webkit-touch-callout:none]"
-          />
+              {...imageProps('/pfp.webp', SIZES.avatar)}
+              alt="Blxr avatar"
+              width="64"
+              height="64"
+              draggable="false"
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
+              className="w-[64px] h-[64px] rounded-[18px] object-cover select-none [-webkit-user-drag:none] [-webkit-touch-callout:none]"
+            />
+
+            <a
+              {...link(PROJECTS_PATH, openProjects)}
+              className="project-cta group inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface pl-3 pr-2.5 text-[12.5px] font-medium text-ink-strong outline-none hover:border-line-strong focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+            >
+              <span>Go to projects</span>
+              <span className="project-arrow inline-block" aria-hidden="true">→</span>
+            </a>
+          </div>
 
           {}
           <h1 className="hero-title font-bagus text-[36px] sm:text-[44px] font-normal tracking-[-0.02em] leading-none mb-3 animate-fade-in-up">
@@ -534,7 +403,7 @@ function App() {
           {}
           <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3 animate-fade-in-up delay-450">
             <a
-              {...link(PROJECTS_PATH, () => openProject(null))}
+              {...link(PROJECTS_PATH, openProjects)}
               className="project-cta group inline-flex h-10 items-center gap-2 rounded-[10px] bg-surface-inverted pl-4 pr-3.5 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
               <span>See the work</span>
@@ -550,176 +419,7 @@ function App() {
           </div>
         </section>
 
-        <section id="projects" className="scroll-mt-8 w-full mt-14">
-
-          <div ref={projectsRef} className="flex flex-col items-start w-full">
-            <div data-reveal className="flex w-full flex-col items-start text-left">
-              <div className="flex w-full items-baseline justify-between gap-4">
-                <h2 className="text-[22px] leading-none tracking-[-0.02em] text-ink-strong sm:text-[26px] font-bagus">
-                  Projects
-                </h2>
-                <span className="font-mono text-[11px] tabular-nums text-ink-subtle" aria-live="polite">
-                  {String(activeSlide + 1).padStart(2, '0')}
-                  <span className="mx-1.5 text-ink-faint">/</span>
-                  {String(featuredProjects.length).padStart(2, '0')}
-                </span>
-              </div>
-              <p className="mt-3 max-w-[48ch] text-[13.5px] leading-relaxed text-ink-muted">
-                The {countWord(featuredProjects.length)} I'd show first. The rest, and the FiveM library, are on the projects page.
-              </p>
-            </div>
-
-            <div
-              data-reveal
-              data-paused={autoplayEnabled ? undefined : ''}
-              style={{ '--reveal-delay': '90ms', '--autoplay': `${AUTOPLAY_MS}ms` }}
-              className="project-carousel relative mt-8 w-[calc(100%+3rem)] -mx-6"
-              onKeyDown={handleCarouselKeyDown}
-              onMouseEnter={pauseCarousel}
-              onMouseLeave={resumeCarousel}
-              onPointerDown={(event) => { if (event.pointerType !== 'mouse') pauseCarousel() }}
-              onPointerUp={(event) => { if (event.pointerType !== 'mouse') resumeCarousel() }}
-              onPointerCancel={(event) => { if (event.pointerType !== 'mouse') resumeCarousel() }}
-              onFocusCapture={(event) => { if (event.target.matches?.(':focus-visible')) pauseCarousel() }}
-              onBlurCapture={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(':hover')) resumeCarousel()
-              }}
-            >
-              <div
-                ref={carouselRef}
-                className="project-track"
-                onScroll={handleCarouselScroll}
-                aria-roledescription="carousel"
-                aria-label="Projects"
-              >
-                {featuredProjects.map((project, idx) => {
-                  const active = idx === activeSlide
-                  return (
-                    <article
-                      key={project.id}
-                      data-active={active ? '' : undefined}
-                      aria-roledescription="slide"
-                      aria-label={`${idx + 1} / ${featuredProjects.length}`}
-                      className="project-slide"
-                    >
-                      <div className="project-panel group relative grid grid-cols-1 gap-2 rounded-[20px] border border-line bg-surface p-2 sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-                        <div className="project-media relative aspect-[16/11] min-w-0 overflow-hidden rounded-[13px] bg-surface-raised sm:aspect-auto sm:min-h-[248px]">
-                          <img
-                            {...imageProps(project.image, '(min-width: 960px) 404px, (min-width: 640px) 45vw, calc(100vw - 48px)')}
-                            alt={project.imageAlt ?? `${project.title} cover`}
-                            loading={idx === 0 ? 'eager' : 'lazy'}
-                            fetchPriority={idx === 0 ? 'high' : undefined}
-                            decoding="async"
-                            width="1200"
-                            height="825"
-                            style={{ objectPosition: project.imagePosition ?? 'center' }}
-                            className={`project-media-img absolute inset-0 h-full w-full object-cover ${theme === 'light' ? '' : 'brightness-[0.92]'}`}
-                          />
-                        </div>
-
-                        <div className="project-copy flex min-w-0 flex-col px-3 pb-3 pt-3 sm:px-6 sm:py-5">
-                          <div className="flex min-w-0 items-center gap-2.5">
-                            {project.logo && !project.logoInCover && (
-                              <img
-                                {...imageProps(project.logo, project.logoWide ? '72px' : '20px')}
-                                alt=""
-                                width={project.logoWide ? 72 : 20}
-                                height={project.logoWide ? 18 : 20}
-                                loading="lazy"
-                                decoding="async"
-                                className={`shrink-0 object-contain ${project.logoWide ? 'h-[18px] w-auto' : 'h-5 w-5'}`}
-                              />
-                            )}
-                            <span className="min-w-0 truncate font-mono text-[11px] text-ink-subtle">
-                              {project.categoryLabel}
-                              {project.date && <> · {project.date}</>}
-                            </span>
-                          </div>
-
-                          <h3 className="mt-4 text-[19px] font-semibold leading-tight tracking-tight text-ink-strong sm:text-[20px]">
-                            <a
-                              {...link(projectPath(project.id), () => openProject(project.id))}
-                              tabIndex={active ? 0 : -1}
-                              className="outline-none after:absolute after:inset-0 after:z-10 after:rounded-[20px] focus-visible:after:ring-2 focus-visible:after:ring-ink-strong/60"
-                            >
-                              {project.title}
-                            </a>
-                          </h3>
-                          <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed text-ink-muted">{project.description}</p>
-
-                          <span className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-strong">
-                            <span className="project-underline">View</span>
-                            <span className="project-arrow inline-block" aria-hidden="true">→</span>
-                          </span>
-
-                          {project.metrics.length > 0 && (
-                            <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3 border-t border-dashed border-line pt-4 sm:mt-auto">
-                              {project.metrics.map((metric) => (
-                                <div key={metric.label} className="min-w-0">
-                                  <dd className="whitespace-nowrap text-[14px] font-semibold leading-snug tracking-tight text-ink-strong">{metric.value}</dd>
-                                  <dt className="mt-0.5 whitespace-nowrap text-[10.5px] text-ink-subtle">{metric.label}</dt>
-                                </div>
-                              ))}
-                            </dl>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => goToSlide(activeSlide - 1)}
-                aria-label="Previous project"
-                className="project-nav left-4 hidden sm:flex"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => goToSlide(activeSlide + 1)}
-                aria-label="Next project"
-                className="project-nav right-4 hidden sm:flex"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
-              </button>
-            </div>
-
-            <div data-reveal style={{ '--reveal-delay': '160ms' }} className="mt-5 flex items-center gap-1.5 self-center" role="tablist" aria-label="Choose project">
-              {featuredProjects.map((project, idx) => (
-                <button
-                  key={project.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={idx === activeSlide}
-                  aria-label={project.title}
-                  onClick={() => goToSlide(idx)}
-                  className="project-dot"
-                >
-                  <span className="project-dot-fill">
-                    {idx === activeSlide && (
-                      <span key={`${activeSlide}-${autoplayTick}`} className="project-dot-progress" />
-                    )}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <a
-              {...link(PROJECTS_PATH, () => openProject(null))}
-              data-reveal
-              style={{ '--reveal-delay': '220ms' }}
-              className="group relative mt-6 inline-flex items-center gap-1.5 self-center text-[13px] font-medium text-ink-muted outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong"
-            >
-              <span>The other {countWord(restCount)}, plus the library</span>
-              <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5">→</span>
-            </a>
-          </div>
-        </section>
-
-        <section id="skills" className="scroll-mt-8 w-[calc(100%+3rem)] mt-16 border-t border-dashed border-line -mx-6 px-6 pt-12 text-left">
+        <section id="skills" className="scroll-mt-8 w-[calc(100%+3rem)] -mx-6 px-6 pt-12 text-left">
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             Background
           </h2>
@@ -755,176 +455,133 @@ function App() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-5 w-full border-t border-dashed border-line pt-8 text-[14px] [&:has(.skill-chip:hover)_.skill-chip:not(:hover)]:opacity-45">
-            {skillCategories.map((category, idx) => (
-              <div
-                key={idx}
-                className="group/row grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] gap-2 sm:gap-6 w-full"
+          <h3 className="mb-4 text-[14px] font-medium text-ink-subtle select-none">Stack</h3>
+
+          <div className="-mx-6 w-[calc(100%+3rem)] border-y border-dashed border-line">
+            <div className="overflow-hidden [&:has(.skill-cell:hover)_.skill-cell:not(:hover)]:opacity-50">
+              <ul className="-mr-px grid grid-cols-3 border-b border-dashed border-line" aria-label="Main stack">
+                {featuredSkills.map((skill) => (
+                  <li key={skill.name} className="border-r border-dashed border-line">
+                    <SkillTile skill={skill} featured />
+                  </li>
+                ))}
+              </ul>
+
+              <ul
+                className="-mb-px -mr-px grid"
+                style={{ gridTemplateColumns: `repeat(${otherSkills.length}, minmax(0, 1fr))` }}
+                aria-label="Also working with"
               >
-                <span className="text-ink-subtle font-medium select-none transition-colors duration-200 group-hover/row:text-ink-secondary">
-                  {category.name}
-                </span>
+                {otherSkills.map((skill) => (
+                  <li key={skill.name} className="border-b border-r border-dashed border-line">
+                    <SkillTile skill={skill} />
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-                <div className="flex flex-wrap gap-x-5 gap-y-3">
-                  {category.items.map((skill) => {
-                    const Chip = skill.url ? 'a' : 'span'
-                    const chipProps = skill.url
-                      ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer', title: `${skill.name} — official site`, 'aria-label': `${skill.name} — official site (opens in a new tab)` }
-                      : {}
-                    return (
-                      <Chip
-                        key={skill.name}
-                        {...chipProps}
-                        className={`skill-chip group/chip inline-flex items-center gap-2 -mx-1.5 -my-1 rounded-md px-1.5 py-1 text-ink-muted text-[12.5px] font-medium outline-none transition-[background-color,color,opacity,transform] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:-translate-y-px hover:bg-surface-hover hover:text-ink-strong focus-visible:-translate-y-px focus-visible:bg-surface-hover focus-visible:text-ink-strong motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0 ${
-                          skill.url ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg' : 'cursor-default'
-                        }`}
+            <div id="skills-all" className="skills-all" data-open={skillsOpen ? '' : undefined}>
+              <div inert={!skillsOpen}>
+                <div className="flex flex-col gap-8 border-t border-dashed border-line px-6 pt-9 pb-14">
+                  {skillCategories.map((category, idx) => (
+                    <div key={category.name} className="grid grid-cols-1 gap-2 sm:grid-cols-[7.5rem_1fr] sm:gap-6">
+                      <h4
+                        className="skills-all-item font-mono text-[12px] text-ink-subtle select-none sm:pt-3.5"
+                        style={{ '--delay': `${60 + idx * 60}ms` }}
                       >
-                        <img
-                          {...imageProps(skill.icon)}
-                          alt=""
-                          aria-hidden="true"
-                          width="14"
-                          height="14"
-                          loading="lazy"
-                          decoding="async"
-                          className="w-3.5 h-3.5 object-contain opacity-70 grayscale transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover/chip:-rotate-6 group-hover/chip:scale-125 group-hover/chip:opacity-100 group-hover/chip:grayscale-0 group-focus-visible/chip:-rotate-6 group-focus-visible/chip:scale-125 group-focus-visible/chip:opacity-100 group-focus-visible/chip:grayscale-0 motion-reduce:transition-none motion-reduce:group-hover/chip:rotate-0 motion-reduce:group-hover/chip:scale-100 motion-reduce:group-focus-visible/chip:rotate-0 motion-reduce:group-focus-visible/chip:scale-100"
-                        />
-                        <span className="transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover/chip:translate-x-0.5 group-focus-visible/chip:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/chip:translate-x-0 motion-reduce:group-focus-visible/chip:translate-x-0">
-                          {skill.name}
-                        </span>
-                      </Chip>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <details ref={toolboxRef} className="toolbox group/more relative z-30 mt-5 border-t border-dashed border-line pt-3.5">
-            <summary className="-mx-2 grid min-h-10 w-[calc(100%+1rem)] grid-cols-1 items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 list-none cursor-pointer outline-none transition-[background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:border-line hover:bg-surface-hover/60 active:scale-[0.995] focus-visible:border-line-strong focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg sm:grid-cols-[7.5rem_1fr] sm:gap-6 motion-reduce:transition-none motion-reduce:active:scale-100 [&::-webkit-details-marker]:hidden">
-              <span className="text-ink-subtle font-medium select-none transition-colors duration-200 group-hover/more:text-ink-secondary group-open/more:text-ink-secondary">
-                More
-              </span>
-
-              <span className="inline-flex min-w-0 items-center gap-2.5 text-[12.5px] font-medium text-ink-muted transition-colors duration-200 group-hover/more:text-ink-strong group-open/more:text-ink-strong">
-                <span className="flex shrink-0 -space-x-1" aria-hidden="true">
-                  {toolboxPreview.map((tool, toolIdx) => (
-                    <span
-                      key={tool.name}
-                      className="flex h-6 w-6 items-center justify-center rounded-[8px] border border-line bg-surface-raised shadow-[0_4px_10px_-7px_var(--shadow-cast)] transition-[transform,border-color] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover/more:-translate-y-0.5 group-hover/more:border-line-strong group-open/more:-translate-y-0.5 group-open/more:border-line-strong motion-reduce:transition-none motion-reduce:group-hover/more:translate-y-0 motion-reduce:group-open/more:translate-y-0"
-                      style={{ transitionDelay: `${toolIdx * 25}ms` }}
-                    >
-                      <img
-                        {...imageProps(tool.icon)}
-                        alt=""
-                        width="12"
-                        height="12"
-                        loading="lazy"
-                        decoding="async"
-                        className="h-3 w-3 object-contain opacity-80"
-                      />
-                    </span>
-                  ))}
-                </span>
-                <span className="truncate">Tools, editors &amp; systems</span>
-                <span className="shrink-0 rounded-md bg-surface-raised px-1.5 py-0.5 font-mono text-[9.5px] tabular-nums leading-none text-ink-subtle ring-1 ring-inset ring-line">
-                  {toolboxCount}
-                </span>
-                <span className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-raised text-ink-subtle ring-1 ring-inset ring-line transition-[background-color,color,transform] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover/more:bg-surface-hover-strong group-hover/more:text-ink-strong group-open/more:bg-surface-hover-strong group-open/more:text-ink-strong">
-                  <svg
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-open/more:rotate-180 motion-reduce:transition-none"
-                  >
-                    <path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-              </span>
-            </summary>
-
-            <div className="absolute left-0 right-0 top-full z-40 pt-2">
-              <aside className="toolbox-panel relative max-h-[min(60vh,430px)] overflow-y-auto overscroll-contain rounded-[18px] border border-line-strong bg-surface/95 p-4 shadow-[0_28px_72px_-30px_var(--shadow-cast),0_8px_24px_-18px_var(--shadow-cast-soft)] backdrop-blur-xl [scrollbar-width:thin] sm:p-5" aria-label="Tools, editors & systems">
-                <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-ink-faint/60 to-transparent" aria-hidden="true" />
-
-                <div className="mb-4 flex items-center gap-2.5 border-b border-dashed border-line pb-3">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-raised text-ink-secondary ring-1 ring-inset ring-line" aria-hidden="true">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4"
-                      aria-hidden="true"
-                    >
-                      <path d="M9.4 8.6V6.9A1.8 1.8 0 0 1 11.2 5.1h1.6A1.8 1.8 0 0 1 14.6 6.9v1.7" />
-                      <rect x="3" y="8.6" width="18" height="10.4" rx="2.3" />
-                      <path d="M3 13.4h18" />
-                    </svg>
-                  </span>
-                  <span className="text-[11.5px] font-semibold text-ink-secondary">Tools, editors &amp; systems</span>
-                  <span className="ml-auto font-mono text-[10px] tabular-nums text-ink-subtle">{toolboxCount}</span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-6">
-                  {toolCategories.map((category, categoryIdx) => (
-                    <div
-                      key={category.name}
-                      className={`toolbox-col ${category.wide ? 'sm:col-span-3' : 'sm:col-span-2'}`}
-                      style={{ '--toolbox-delay': `${Math.min(categoryIdx, 5) * 28}ms` }}
-                    >
-                      <span className="mb-2.5 block border-t border-line pt-2.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
                         {category.name}
-                      </span>
+                      </h4>
 
-                      <div className="flex flex-wrap gap-x-1 gap-y-1" role="list">
-                        {category.items.map((tool) => (
-                          <span
-                            key={tool.name}
-                            role="listitem"
-                            tabIndex={tool.desc ? 0 : undefined}
-                            className="group/tool relative inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11.5px] font-medium text-ink-muted outline-none transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:-translate-y-px hover:bg-surface-hover hover:text-ink-strong focus-visible:-translate-y-px focus-visible:bg-surface-hover focus-visible:text-ink-strong motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-                          >
-                            {tool.desc && (
-                              <span
-                                role="tooltip"
-                                className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 origin-bottom-left translate-y-1 scale-[0.96] opacity-0 transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/tool:translate-y-0 group-hover/tool:scale-100 group-hover/tool:opacity-100 group-focus-visible/tool:translate-y-0 group-focus-visible/tool:scale-100 group-focus-visible/tool:opacity-100 motion-reduce:transition-none motion-reduce:scale-100"
+                      <ul className="-mx-2 grid grid-cols-1 md:grid-cols-2 md:gap-x-2">
+                        {category.items.map((skill, itemIdx) => {
+                          const Row = skill.url ? 'a' : 'span'
+                          return (
+                            <li
+                              key={skill.name}
+                              className="skills-all-item"
+                              style={{ '--delay': `${90 + idx * 60 + itemIdx * 35}ms` }}
+                            >
+                              <Row
+                                {...(skill.url ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                className="group/item flex items-center gap-3 rounded-xl p-2 outline-none transition-colors duration-200 hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 motion-reduce:transition-none"
                               >
-                                <span className="relative flex w-max max-w-[210px] flex-col rounded-lg border border-ink-on-inverted/10 bg-surface-inverted text-left shadow-[0_14px_32px_-16px_var(--shadow-cast)]">
-                                  <span className="whitespace-normal px-2.5 pb-1.5 pt-2 text-[11.5px] font-medium leading-snug tracking-tight text-ink-on-inverted">
-                                    {tool.desc}
-                                  </span>
-                                  <span className="border-t border-dashed border-ink-on-inverted/10 px-2.5 py-1.5 text-[9.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-on-inverted/55">
-                                    {category.name}
-                                  </span>
-                                  <span
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-raised transition-colors duration-200 group-hover/item:border-line-strong motion-reduce:transition-none">
+                                  <img
+                                    {...imageProps(skill.icon)}
+                                    alt=""
                                     aria-hidden="true"
-                                    className="absolute left-3 top-full -mt-[4px] h-[7px] w-[7px] rotate-45 rounded-[1px] border-b border-r border-ink-on-inverted/10 bg-surface-inverted"
+                                    width="18"
+                                    height="18"
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="h-4.5 w-4.5 object-contain"
                                   />
                                 </span>
-                              </span>
-                            )}
-                            <img
-                              {...imageProps(tool.icon)}
-                              alt=""
-                              aria-hidden="true"
-                              width="13"
-                              height="13"
-                              loading="lazy"
-                              decoding="async"
-                              className="h-[13px] w-[13px] object-contain opacity-70 transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover/tool:scale-110 group-hover/tool:opacity-100 motion-reduce:transition-none motion-reduce:group-hover/tool:scale-100"
-                            />
-                            <span>{tool.name}</span>
-                          </span>
-                        ))}
-                      </div>
+                                <span className="min-w-0 flex-1">
+                                  <span className="flex items-center gap-1 text-[13px] font-medium text-ink-strong">
+                                    {skill.name}
+                                    {skill.url && (
+                                      <svg
+                                        viewBox="0 0 16 16"
+                                        aria-hidden="true"
+                                        className="h-3 w-3 -translate-x-1 text-ink-subtle opacity-0 transition-[opacity,transform] duration-200 group-hover/item:translate-x-0 group-hover/item:opacity-100 group-focus-visible/item:translate-x-0 group-focus-visible/item:opacity-100 motion-reduce:transition-none"
+                                      >
+                                        <path d="M5.5 10.5 10.5 5.5M6 5.5h4.5V10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                      </svg>
+                                    )}
+                                  </span>
+                                  <span className="mt-0.5 block truncate text-[12px] text-ink-subtle">{skill.desc}</span>
+                                </span>
+                              </Row>
+                            </li>
+                          )
+                        })}
+                      </ul>
                     </div>
                   ))}
                 </div>
-              </aside>
+              </div>
             </div>
-          </details>
+          </div>
+
+          <div className="relative z-10 -mt-5 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setSkillsOpen((open) => !open)}
+              aria-expanded={skillsOpen}
+              aria-controls="skills-all"
+              className="skills-toggle inline-flex h-10 items-center gap-3 rounded-full border border-line bg-bg pl-1.5 pr-1.5 text-[12.5px] font-medium text-ink-muted shadow-[0_8px_24px_-12px_rgb(0_0_0/0.5)] outline-none transition-[color,border-color,background-color] duration-200 hover:border-line-strong hover:bg-surface-raised hover:text-ink-strong focus-visible:border-line-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg aria-expanded:text-ink-strong motion-reduce:transition-none"
+            >
+              <span className="flex" aria-hidden="true">
+                {featuredSkills.map((skill) => (
+                  <span
+                    key={skill.name}
+                    className="skills-toggle-chip flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface-raised"
+                  >
+                    <img
+                      {...imageProps(skill.icon)}
+                      alt=""
+                      width="14"
+                      height="14"
+                      loading="lazy"
+                      decoding="async"
+                      className="skill-logo h-3.5 w-3.5 object-contain"
+                    />
+                  </span>
+                ))}
+              </span>
+              <span className="skills-toggle-label">
+                <span aria-hidden={skillsOpen}>View all skills</span>
+                <span aria-hidden={!skillsOpen}>Show less</span>
+              </span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-hover text-ink-strong" aria-hidden="true">
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5">
+                  <path d="M3.5 8h9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path className="skills-toggle-plus" d="M8 3.5v9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+            </button>
+          </div>
         </section>
 
         <footer id="site-footer" className="w-[calc(100%+3rem)] -mx-6 mt-16 flex flex-col gap-3 border-t border-dashed border-line px-6 py-6 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">

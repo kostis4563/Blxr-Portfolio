@@ -79,13 +79,7 @@ export async function fetchUnread() {
 
 export async function fetchLatestFromOwner() {
   const rows = unwrap(
-    await client()
-      .from('messages')
-      .select('id, thread_id, body, files, deleted_at, created_at')
-      .eq('from_owner', true)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(1),
+    await client().rpc('messages_latest').select('id, thread_id, body, files, deleted_at, created_at'),
     'The latest message could not be loaded',
   )
   return rows?.[0] || null

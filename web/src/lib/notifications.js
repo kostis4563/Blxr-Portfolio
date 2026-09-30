@@ -92,12 +92,12 @@ async function messageItems(owner, now) {
   }]
 }
 
-async function cardItems(me, now) {
+async function cardItems(now) {
   const api = await import('./boards-api')
   const chased = new Map()
-  for (const board of await api.fetchBoards()) {
+  for (const board of await api.fetchBoards(false, { mine: true })) {
     const remind = remindOf(board)
-    if (board.owner === me && remind.on && !remind.quiet) chased.set(board.id, remind)
+    if (remind.on && !remind.quiet) chased.set(board.id, remind)
   }
   if (!chased.size) return []
   const ahead = Math.max(0, ...[...chased.values()].flatMap((remind) => remind.lead.map(stepSeconds)))
@@ -168,7 +168,7 @@ export function refreshNotifications() {
   const owner = isSiteOwner(user) && mfaSatisfied(session)
   const jobs = [
     ['messages', () => (user.is_anonymous ? [] : messageItems(owner, now))],
-    ['cards', () => cardItems(me, now)],
+    ['cards', () => cardItems(now)],
     ...(owner ? [['reviews', () => reviewItems(session.access_token, now)], ['logs', () => errorItems()]] : []),
   ].filter(([name]) => !blocked.has(name))
 

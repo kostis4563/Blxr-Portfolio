@@ -304,14 +304,33 @@ $$;
 
 create or replace function public.messages_unread()
 returns integer
+language plpgsql stable as $$
+begin
+  if public.is_site_owner() then
+    return (
+      select count(*)::integer
+      from public.threads t
+      join public.messages m on m.thread_id = t.id
+      where not m.from_owner and m.deleted_at is null and m.created_at > t.owner_seen_at
+    );
+  end if;
+  return (
+    select count(*)::integer
+    from public.threads t
+    join public.messages m on m.thread_id = t.id
+    where t.member = (select auth.uid()) and m.from_owner and m.deleted_at is null and m.created_at > t.member_seen_at
+  );
+end $$;
+
+create or replace function public.messages_latest()
+returns setof public.messages
 language sql stable as $$
-  with me as (select public.is_site_owner() as owner)
-  select count(*)::integer
-  from me, public.threads t
-  join public.messages m on m.thread_id = t.id
-  where m.deleted_at is null
-    and m.from_owner <> me.owner
-    and m.created_at > case when me.owner then t.owner_seen_at else t.member_seen_at end;
+  select m.*
+  from public.messages m
+  where m.thread_id = (select t.id from public.threads t where t.member = (select auth.uid()))
+    and m.from_owner and m.deleted_at is null
+  order by m.created_at desc
+  limit 1;
 $$;
 
 create or replace function public.messages_seen(thread uuid)
@@ -327,11 +346,13 @@ revoke all on function public.messages_open() from public;
 revoke all on function public.messages_owner() from public;
 revoke all on function public.messages_inbox() from public;
 revoke all on function public.messages_unread() from public;
+revoke all on function public.messages_latest() from public;
 revoke all on function public.messages_seen(uuid) from public;
 grant execute on function public.messages_open() to authenticated;
 grant execute on function public.messages_owner() to authenticated;
 grant execute on function public.messages_inbox() to authenticated;
 grant execute on function public.messages_unread() to authenticated;
+grant execute on function public.messages_latest() to authenticated;
 grant execute on function public.messages_seen(uuid) to authenticated;
 
 do $$

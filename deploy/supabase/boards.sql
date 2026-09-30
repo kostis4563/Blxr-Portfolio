@@ -64,7 +64,7 @@ create table if not exists public.boards (
 alter table public.boards add column if not exists pinned boolean not null default false;
 
 create index if not exists boards_owner_idx on public.boards (owner, archived);
-create index if not exists boards_pinned_idx on public.boards (owner) where pinned;
+drop index if exists public.boards_pinned_idx;
 
 create table if not exists public.board_cards (
   id          uuid primary key default gen_random_uuid(),
@@ -404,6 +404,26 @@ language sql volatile as $$
 $$;
 
 grant execute on function public.boards_sweep_bin() to authenticated;
+
+create or replace function public.board_cards_patch(changes jsonb)
+returns integer
+language sql volatile as $$
+  with patched as (
+    update public.board_cards c set
+      position = coalesce((x.patch ->> 'position')::double precision, c.position),
+      list_id  = coalesce(x.patch ->> 'list_id', c.list_id),
+      labels   = case when x.patch ? 'labels'
+                   then array(select jsonb_array_elements_text(x.patch -> 'labels'))
+                   else c.labels end
+    from jsonb_array_elements(changes) x(patch)
+    where c.id = (x.patch ->> 'id')::uuid
+    returning 1
+  )
+  select count(*)::integer from patched;
+$$;
+
+revoke all on function public.board_cards_patch(jsonb) from public;
+grant execute on function public.board_cards_patch(jsonb) to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

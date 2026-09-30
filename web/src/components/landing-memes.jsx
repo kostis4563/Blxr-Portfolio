@@ -12,10 +12,9 @@ const HEART_EDGE =
 const HEART_FILL = 'M2 1h2v1H2zM5 1h2v1H5zM1 2h7v2H1zM2 4h5v1H2zM3 5h3v1H3zM4 6h1v1H4z'
 const HEART_SHINE = 'M2 2h1v1H2z'
 
-const READ_SECONDS = { intro: 5, projects: 12, skills: 20 }
+const READ_SECONDS = { intro: 5, skills: 20 }
 
-const readMs = { intro: 0, projects: 0, skills: 0 }
-const slidesSeen = new Set()
+const readMs = { intro: 0, skills: 0 }
 
 function holdsScreen(el) {
   const box = el.getBoundingClientRect()
@@ -24,8 +23,7 @@ function holdsScreen(el) {
 }
 
 const readEverything = () =>
-  Object.entries(READ_SECONDS).every(([id, seconds]) => readMs[id] >= seconds * 1000) &&
-  slidesSeen.size >= document.querySelectorAll('.project-slide').length
+  Object.entries(READ_SECONDS).every(([id, seconds]) => readMs[id] >= seconds * 1000)
 
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']
 
@@ -236,10 +234,6 @@ function Memes() {
       for (const [id, el] of sections) {
         if (!holdsScreen(el)) continue
         readMs[id] += step
-        if (id !== 'projects') continue
-        const slides = [...el.querySelectorAll('.project-slide')]
-        const active = slides.findIndex((slide) => slide.hasAttribute('data-active'))
-        if (active !== -1) slidesSeen.add(active)
       }
       unlock()
     }, 250)

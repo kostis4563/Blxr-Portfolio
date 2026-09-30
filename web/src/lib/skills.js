@@ -12,8 +12,8 @@ export const SKILL_CATEGORIES = [
   {
     name: 'Languages',
     items: [
-      { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable', url: 'https://developer.mozilla.org/docs/Web/JavaScript', desc: 'Scripting language for the web' },
-      { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', url: 'https://www.python.org', desc: 'General purpose scripting & automation' },
+      { name: 'JavaScript', icon: '/icons/javascript.svg', level: 'comfortable', url: 'https://developer.mozilla.org/docs/Web/JavaScript', desc: 'Scripting language for the web', featured: true },
+      { name: 'Python', icon: '/icons/python.svg', level: 'comfortable', url: 'https://www.python.org', desc: 'General purpose scripting & automation', featured: true },
       { name: 'CSS', icon: '/icons/css.svg', level: 'advanced', url: 'https://developer.mozilla.org/docs/Web/CSS', desc: 'Styling & layout for the web' },
       { name: 'HTML', icon: '/icons/html5.svg', level: 'advanced', url: 'https://developer.mozilla.org/docs/Web/HTML', desc: 'Markup that structures web pages' },
     ],
@@ -22,14 +22,20 @@ export const SKILL_CATEGORIES = [
     name: 'Frameworks',
     items: [
       { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'comfortable', url: 'https://getbootstrap.com', desc: 'Bootstrap is a framework for building responsive websites.' },
-      { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'comfortable', url: 'https://tailwindcss.com', desc: 'Utility-first CSS framework' },
+      { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'comfortable', url: 'https://tailwindcss.com', desc: 'Utility-first CSS framework', featured: true },
     ],
   },
   {
     name: 'Infrastructure',
     items: [
-      { name: 'PM2', icon: '/icons/pm2.svg', level: 'comfortable', url: 'https://pm2.keymetrics.io', desc: 'Process manager for Node.js' },
       { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', url: 'https://www.cloudflare.com', desc: 'CDN, DNS & edge security' },
+    ],
+  },
+  {
+    name: 'Tools',
+    items: [
+      { name: 'Visual Studio', icon: '/icons/visual-studio.svg', url: 'https://visualstudio.microsoft.com', desc: 'IDE for app development' },
+      { name: 'VS Code', icon: '/icons/vscode.svg', url: 'https://code.visualstudio.com', desc: 'Code editor' },
     ],
   },
 ]
@@ -58,8 +64,6 @@ export const TOOL_CATEGORIES = [
     name: 'Editors',
     wide: true,
     items: [
-      { name: 'VS Code', icon: '/icons/vscode.svg', desc: 'Code editor' },
-      { name: 'Visual Studio', icon: '/icons/visual-studio.svg', desc: 'IDE for app development' },
       { name: 'Xcode', icon: '/icons/xcode.svg', desc: "Apple's IDE for iOS & macOS" },
     ],
   },
