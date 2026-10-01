@@ -14,6 +14,7 @@ import ThemeToggle from './components/theme-toggle'
 import CommandPaletteHost from './components/command-palette-host'
 import NavMenu from './components/nav-menu'
 import StudioFact from './components/studio-fact'
+import ScrambleText from './components/scramble-text'
 import LandingMemes from './components/landing-memes'
 import { trackPageVisit } from './lib/memes'
 import { useTheme } from './lib/use-theme'
@@ -361,7 +362,7 @@ function App() {
 
           {}
           <h1 className="hero-title font-bagus text-[36px] sm:text-[44px] font-normal tracking-[-0.02em] leading-none mb-3 animate-fade-in-up">
-            Blxr
+            <ScrambleText text="Blxr" alt="Kostis" />
           </h1>
 
           {}
