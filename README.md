@@ -1,69 +1,50 @@
 <div align="center">
 
-<img src="web/public/og.png" alt="blxr" width="640">
+<a href="https://blxr.net"><img src="web/public/og.png" alt="blxr" width="560"></a>
 
-<h1>blxr</h1>
+### blxr
 
-<p><strong>Source for <a href="https://blxr.net">blxr.net</a></strong><br>
-A personal site plus a small.</p>
-
-<p>
-  <a href="https://blxr.net"><img alt="Live site" src="https://img.shields.io/badge/live-blxr.net-8b5cf6?style=flat-square"></a>
-  <a href="https://github.com/kostis4563/Blxr-Portfolio/actions/workflows/deploy.yml"><img alt="Deploy" src="https://img.shields.io/github/actions/workflow/status/kostis4563/Blxr-Portfolio/deploy.yml?branch=main&style=flat-square&label=deploy&logo=githubactions&logoColor=white"></a>
-  <img alt="License" src="https://img.shields.io/badge/license-all%20rights%20reserved-262626?style=flat-square">
-</p>
+Source for [blxr.net](https://blxr.net) — a personal site and a tiny keyless music proxy.
 
 <p>
-  <img alt="React" src="https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black">
-  <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white">
-  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind-4-38bdf8?style=flat-square&logo=tailwindcss&logoColor=white">
-  <img alt="Node" src="https://img.shields.io/badge/Node-%E2%89%A520-5fa04e?style=flat-square&logo=nodedotjs&logoColor=white">
-  <img alt="Dependencies" src="https://img.shields.io/badge/backend%20deps-0-8b5cf6?style=flat-square">
+  <a href="https://blxr.net"><img alt="Live" src="https://img.shields.io/badge/blxr.net-live-8b5cf6?style=flat-square&labelColor=0d0d0d"></a>
+  <a href="https://github.com/kostis4563/Blxr-Portfolio/actions/workflows/deploy.yml"><img alt="Deploy" src="https://img.shields.io/github/actions/workflow/status/kostis4563/Blxr-Portfolio/deploy.yml?branch=main&style=flat-square&labelColor=0d0d0d&label=deploy&logo=githubactions&logoColor=f5f5f5"></a>
+  <a href="https://github.com/kostis4563/Blxr-Portfolio/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/kostis4563/Blxr-Portfolio?style=flat-square&labelColor=0d0d0d&color=6366f1&label=updated"></a>
+  <img alt="Backend deps" src="https://img.shields.io/badge/backend_deps-0-f5f5f5?style=flat-square&labelColor=0d0d0d">
 </p>
 
-<p>
-  <a href="#-quick-start">Quick start</a> ·
-  <a href="#-frontend-layout">Frontend</a> ·
-  <a href="#-routes">Routes</a> ·
-  <a href="#-build">Build</a> ·
-  <a href="#-backend">Backend</a>
-</p>
+<a href="https://skillicons.dev"><img alt="Stack" src="https://skillicons.dev/icons?i=react,vite,tailwind,threejs,nodejs,supabase,nginx,githubactions&theme=dark&perline=8" height="36"></a>
+
+<sub><a href="#start">Start</a> · <a href="#layout">Layout</a> · <a href="#routes">Routes</a> · <a href="#build">Build</a> · <a href="#backend">Backend</a></sub>
 
 </div>
 
----
+<br>
 
-## 📦 Workspaces
+| | |
+| :-- | :-- |
+| [`web/`](web/) | React 19 + Vite. Prerendered to static HTML, served by nginx. |
+| [`server/`](server/) | Zero-dependency Node proxy behind `/api/` + the reviews store (`blxr-search`). |
+| [`deploy/`](deploy/) | nginx config, deploy script, runbook. |
 
-| | Package | What it is |
-| :-- | :-- | :-- |
-| 🎨 | [`web/`](web/) | React 19 + Vite frontend. Prerendered to static HTML, served by nginx. |
-| ⚙️ | [`server/`](server/) | Zero-dependency Node proxy behind `/api/`, plus the reviews store. systemd service `blxr-search`. |
-| 🚀 | [`deploy/`](deploy/) | nginx config, deploy script, deploy runbook. |
-
----
-
-## ⚡ Quick start
+<h2 id="start">Start</h2>
 
 ```bash
-npm install          # install all workspaces
-npm run dev          # frontend dev server
-npm run start:server # api proxy
-npm run build        # full static build
-npm run lint         # oxlint
+npm install            # all workspaces
+npm run dev            # frontend + api
+npm run build          # full static build
+npm run lint           # oxlint
+npm test               # repo + workspace tests
 ```
 
-**Deploy:** `npm run deploy` (or `deploy:web` / `deploy:server`). See [`deploy/README.md`](deploy/README.md).
+Deploy with `npm run deploy` (or `deploy:web` / `deploy:server`) — see [`deploy/README.md`](deploy/README.md).
 
----
+<h2 id="layout">Layout</h2>
 
-## 🎨 Frontend layout
+> JSX lives in `components/`, everything else in `lib/`. Components never hit the network directly — that goes through `lib/api.js` (or `lib/auth.js` for accounts).
 
-> **Convention:** JSX-returning code lives in `components/`, everything else in `lib/`.
-> Components never call the network directly — that goes through `lib/api.js` (or `lib/auth.js` for accounts).
-
-<details open>
-<summary><b>web/src/</b> — click to collapse</summary>
+<details>
+<summary><code>web/src/</code></summary>
 
 ```
 web/src/
@@ -122,136 +103,97 @@ web/src/
 
 </details>
 
----
+<h2 id="routes">Routes</h2>
 
-## 🧭 Routes
-
-| URL | File |
+| URL | Output |
 | :-- | :-- |
 | `/` | `index.html` |
-| `/projects` | `projects.html` |
-| `/projects/<id>` | `projects/<id>.html` |
-| `/library` | `library.html` |
-| `/library/<id>` | `library/<id>.html` |
-| `/reviews` | `reviews.html` |
-| `/now` | `now.html` |
-| `/cv` | `cv.html` — printable CV, `Print` in the header uses the browser's print / save as PDF |
-| `/login` | `login.html` — sign in / register (`#register`) / reset (`#reset`) / new password (`#update`), English only, noindex |
-| `/dashboard` | `dashboard.html` — signed-in dashboard, sections via hash (`#settings/domains`, `#boards/<board>/<card>`), English only, noindex; bounces to `/login?next=…` without a session. `#reviewpanel/…` and `#logs/…` only exist for the owner account (`OWNER_EMAIL` in `lib/dashboard.js`, `SITE_OWNER_EMAIL` on the server) |
+| `/projects` · `/projects/<id>` | `projects.html` · `projects/<id>.html` |
+| `/library` · `/library/<id>` | `library.html` · `library/<id>.html` |
+| `/reviews` · `/now` · `/cv` | `reviews.html` · `now.html` · `cv.html` |
+| `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
+| `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |
 | *anything else* | `404.html`, HTTP 404 |
 
-English only. The old `/<lang>/…` URLs 301 to the plain path in nginx.
-Routing lives entirely in `lib/router.js`; valid ids come from `lib/projects.js` / `lib/library.js`.
+<details>
+<summary>Notes</summary>
 
----
+- English only. Old `/<lang>/…` URLs 301 to the plain path in nginx.
+- Routing lives in `lib/router.js`; valid ids come from `lib/projects.js` / `lib/library.js`.
+- `/cv` has a `Print` button that uses the browser's print / save as PDF.
+- Dashboard sections use the hash (`#settings/domains`, `#boards/<board>/<card>`). `#reviewpanel/…` and `#logs/…` exist only for the owner account (`OWNER_EMAIL` in `lib/dashboard.js`, `SITE_OWNER_EMAIL` on the server).
 
-## 🔨 Build
+</details>
 
-`npm run build` runs, in order:
+<h2 id="build">Build</h2>
 
-| # | Step | Does |
-| :-- | :-- | :-- |
-| 1 | `vite build` | client bundle |
-| 2 | `vite build --ssr entry-server` | SSR bundle |
-| 3 | `prerender.js` | renders every route to its own `.html`, writes `sitemap.xml` (each url's `<lastmod>` is the last git commit that touched the page's sources, so it does not reset on every deploy), hashes inline scripts for the CSP, deletes the SSR bundle |
-| 4 | `compress.js` | writes `.gz` / `.br` next to every compressible file |
-
-`npm run build:protected` additionally runs the app chunk through an obfuscator.
+`npm run build` → `vite build` → `vite build --ssr` → `prerender.js` → `compress.js`
 
 <details>
-<summary><b>One-off tools</b> — not part of the build</summary>
+<summary>What each step does</summary>
 
-`fetch-fonts.js` · `fetch-icons.js` · `make-og-image.js` · `make-image-variants.js`
+| Step | Does |
+| :-- | :-- |
+| `vite build` | client bundle |
+| `vite build --ssr entry-server` | SSR bundle |
+| `prerender.js` | renders every route to its own `.html`, writes `sitemap.xml` (`<lastmod>` = last git commit touching the page's sources), hashes inline scripts for the CSP, deletes the SSR bundle |
+| `compress.js` | writes `.gz` / `.br` next to every compressible file |
 
-### make-image-variants.js
+`npm run build:protected` also runs the app chunk through an obfuscator.
+
+**One-off tools** (not part of the build): `fetch-fonts.js` · `fetch-icons.js` · `make-og-image.js` · `make-image-variants.js`
 
 ```bash
 npm install --no-save sharp && node make-image-variants.js
 ```
 
-Run after adding or replacing any image. Resizes into the display widths, writes
-`<name>-<width>.webp`, regenerates `src/lib/image-manifest.js` (used by
-`src/lib/images.js` for `srcset` and the `?v=` cache-busting hash).
-
-> ⚠️ Commit the variants and the manifest together with the source image.
+Run after adding or replacing any image. Writes `<name>-<width>.webp` and regenerates `src/lib/image-manifest.js` (used by `src/lib/images.js` for `srcset` and the `?v=` cache-busting hash). Commit the variants and the manifest with the source image.
 
 </details>
 
----
+<h2 id="backend">Backend</h2>
 
-## 🔌 Backend
+[`server/`](server/) has **no dependencies** and **no API keys**. Search fans out across public Piped/Invidious mirrors with caching; the top chart comes from Apple's public RSS. It also stores the reviews behind `/reviews` — moderation, invites and settings live in Dashboard → Review panel, and Dashboard → Logs shows failed requests, exceptions and browser errors. Both are gated on the owner's session (`SITE_OWNER_EMAIL`). `REMOVED_REVIEWS` in [`server/src/moderation.mjs`](server/src/moderation.mjs) still deletes by id on deploy.
 
-[`server/`](server/) has **no dependencies**. Search fans out across public Piped/Invidious
-mirrors, results are cached, and the top chart comes from Apple's public RSS.
-**No API keys required.**
+Route contract → [`server/README.md`](server/README.md)
 
-It also stores the reviews behind `/reviews`. Moderation, invite links and
-settings live in Dashboard → Review panel, where the owner's own session
-(`SITE_OWNER_EMAIL`) is the only key. The same
-account gets Dashboard → Logs: every failed request, exception, upstream
-hiccup and browser error the server kept, plus a system report. `REMOVED_REVIEWS` in
-[`server/src/moderation.mjs`](server/src/moderation.mjs) still deletes by id
-on deploy.
+<details>
+<summary>Accounts (Supabase)</summary>
 
-Route contract: [`server/README.md`](server/README.md).
+<br>
 
-### Accounts (Supabase)
+`/login` and `/dashboard` use [Supabase Auth](https://supabase.com/docs/guides/auth) straight from the browser — the Node server is not involved.
 
-`/login` and `/dashboard` use [Supabase Auth](https://supabase.com/docs/guides/auth)
-straight from the browser — the Node server is not involved. Setup:
+1. Copy `web/.env.example` → `web/.env.local` and set `VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY` (legacy `VITE_SUPABASE_ANON_KEY` also works). Baked in at build time, so the file must exist on the box before `npm run build`.
+2. **URL Configuration** — Site URL `https://blxr.net`; Redirect URLs `https://blxr.net/login` and `http://localhost:5173/login`. Every email link and OAuth round-trip lands on `/login`, which forwards to `?next=`.
+3. **Providers** — Email (confirmation on or off) plus any of Google / Discord / GitHub, each with `https://<project-ref>.supabase.co/auth/v1/callback` as callback. See [`deploy/supabase/README.md`](deploy/supabase/README.md) §5–7.
+4. Resets and "Keep me signed in" live in [`auth.js`](web/src/lib/auth.js) / [`supabase.js`](web/src/lib/supabase.js). Reset links must open in the browser that requested them (PKCE).
+5. **Email Templates** — paste from [`deploy/supabase/email-templates/`](deploy/supabase/email-templates/).
+6. Custom sender (`no-reply@blxr.net`) via Resend + Cloudflare DNS — see [`deploy/supabase/README.md`](deploy/supabase/README.md).
 
-1. Create a project, then copy `web/.env.example` to `web/.env.local` and fill in
-   `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (Project Settings → API Keys; the legacy anon key also works as `VITE_SUPABASE_ANON_KEY`). They are
-   baked in at build time, so the file has to exist on the box before `npm run build`.
-2. Authentication → URL Configuration: set **Site URL** to `https://blxr.net` and add
-   `https://blxr.net/login` and `http://localhost:5173/login` to **Redirect URLs**.
-   Every email link and OAuth round-trip lands on `/login`, which then forwards to `?next=`.
-3. Authentication → Providers: enable Email (confirmation on or off both work — the
-   register form shows a "check your inbox" notice when it is on) and any of
-   Google / Discord / GitHub. Each provider needs its own OAuth app with
-   `https://<project-ref>.supabase.co/auth/v1/callback` as the callback URL;
-   [`deploy/supabase/README.md`](deploy/supabase/README.md) §5–7 walk through Google, Discord and GitHub.
-4. Password resets and "Keep me signed in" are handled in
-   [`web/src/lib/auth.js`](web/src/lib/auth.js) / [`supabase.js`](web/src/lib/supabase.js).
-   Reset links must be opened in the browser that requested them (PKCE).
-5. Authentication → Email Templates: paste the branded bodies from
-   [`deploy/supabase/email-templates/`](deploy/supabase/email-templates/) (subjects listed in its README).
-6. To send as `no-reply@blxr.net` instead of Supabase's shared sender, follow
-   [`deploy/supabase/README.md`](deploy/supabase/README.md) (Resend + Cloudflare DNS + the SMTP form).
+The CSP in [`blxr-security-headers.conf`](deploy/nginx/blxr-security-headers.conf) already allows `*.supabase.co` and the Google / GitHub / Discord avatar hosts.
 
-The CSP in [`deploy/nginx/blxr-security-headers.conf`](deploy/nginx/blxr-security-headers.conf)
-already allows `*.supabase.co` and the Google / GitHub / Discord avatar hosts.
+</details>
 
-### Tables
+<details>
+<summary>Tables</summary>
 
-Three dashboard sections keep data in Postgres. All are read and written
-straight from the browser with the publishable key, and row-level security is
-the whole access model — there is no server route in front of them.
+<br>
 
-| Section | SQL | What it holds |
+Read and written straight from the browser with the publishable key — row-level security is the whole access model.
+
+| Section | SQL | Holds |
 | :-- | :-- | :-- |
-| `#profile` | [`deploy/supabase/profiles.sql`](deploy/supabase/profiles.sql) | `public.profiles` + the public `avatars` bucket |
-| `#boards` | [`deploy/supabase/boards.sql`](deploy/supabase/boards.sql) | `public.boards`, `public.board_cards`, the `board_index` view + the private `boards` bucket |
-| `#messages` | [`deploy/supabase/messages.sql`](deploy/supabase/messages.sql) | `public.threads`, `public.messages`, the realtime publication + the private `messages` bucket |
+| `#profile` | [`profiles.sql`](deploy/supabase/profiles.sql) | `profiles` + public `avatars` bucket |
+| `#boards` | [`boards.sql`](deploy/supabase/boards.sql) | `boards`, `board_cards`, `board_index` view + private `boards` bucket |
+| `#messages` | [`messages.sql`](deploy/supabase/messages.sql) | `threads`, `messages`, realtime publication + private `messages` bucket |
 
-Paste each into Supabase → SQL editor → Run. All three files are safe to
-re-run. Until then the section says it is not set up on this project yet.
+Paste each into Supabase → SQL editor → Run (safe to re-run). Boards are private per account; the owner in `is_board_admin()` sees all. Messages give every account one private thread with the owner in `is_site_owner()`, who sees them as an inbox. Full details in [`deploy/supabase/README.md`](deploy/supabase/README.md) §9, §11, §12.
 
-Boards are private to one account with no sharing; the owner account named in
-`is_board_admin()` at the top of `boards.sql` sees every board. Messages are
-the same idea turned around: every account has one private conversation, and
-the other side is always the owner account named in `is_site_owner()` at the
-top of `messages.sql`, who sees them all as an inbox.
-[`deploy/supabase/README.md`](deploy/supabase/README.md) §9, §11 and §12 cover
-all three in full.
+</details>
 
----
-
-## 📄 License
-
-**All rights reserved.** Source is here for reference; no license is granted to copy,
-modify, or redistribute it.
+<br>
 
 <div align="center">
-<sub>Built by <a href="https://github.com/kostis4563">kostis4563</a> · <a href="https://blxr.net">blxr.net</a></sub>
+<sub>All rights reserved — source shared for reference only. Built by <a href="https://github.com/kostis4563">kostis4563</a>.</sub>
 </div>
