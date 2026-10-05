@@ -140,6 +140,27 @@ describe('JavaScript and CSS', () => {
     expect(missing).toEqual([])
   })
 
+  test('no source path survives into the bundle as a runtime import', () => {
+    const offenders = []
+    for (const file of files.filter((f) => f.endsWith('.js') || f.endsWith('.html'))) {
+      const hits = [...read(file).matchAll(/["'`](\/src\/[^"'`]+)["'`]/g)].map((m) => m[1])
+      if (hits.length) offenders.push(`${file} → ${hits.join(', ')}`)
+    }
+    expect(offenders).toEqual([])
+    expect(has('src')).toBe(false)
+  })
+
+  test('every runtime dynamic import points at a chunk this build ships', () => {
+    const missing = []
+    for (const file of files.filter((f) => /^assets\/.*\.js$/.test(f))) {
+      for (const [, spec] of read(file).matchAll(/import\(\s*[`"'](\.[^`"']+)[`"']\s*\)/g)) {
+        const target = path.posix.join(path.posix.dirname(file), spec)
+        if (!has(target)) missing.push(`${file} → ${spec}`)
+      }
+    }
+    expect(missing).toEqual([])
+  })
+
   test('CSS url() references resolve', () => {
     const missing = []
     for (const file of files.filter((f) => f.endsWith('.css'))) {
@@ -188,6 +209,13 @@ describe('JavaScript and CSS', () => {
     for (const file of files.filter((f) => /^assets\/.*\.js$/.test(f))) {
       expect(gzipSync(readFileSync(path.join(DIST, file))).length / 1024, file).toBeLessThan(150)
     }
+  })
+
+  test('the parkour clip is not preloaded, so its failure cannot cost a visitor bandwidth', () => {
+    for (const file of files.filter((f) => f.endsWith('.html'))) {
+      expect(read(file), file).not.toMatch(/parkour\.mp4[^>]*\bpreload=["']?auto/)
+    }
+    expect(has('parkour.mp4'), 'the clip is still shipped for when it is asked for').toBe(true)
   })
 })
 

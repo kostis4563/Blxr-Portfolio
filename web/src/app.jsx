@@ -12,10 +12,13 @@ import PublicProfilePageImpl from '#ssr-page/public-profile'
 import NotFoundPageImpl from '#ssr-page/not-found'
 import ThemeToggle from './components/theme-toggle'
 import CommandPaletteHost from './components/command-palette-host'
+import CommentLayer from './components/comments'
 import NavMenu from './components/nav-menu'
 import StudioFact from './components/studio-fact'
 import ScrambleText from './components/scramble-text'
 import LandingMemes from './components/landing-memes'
+import LiveSelect from './components/live-select'
+import { Facepile, CommentPin, Inspect, FrameLabel, CanvasLayer, GridToggle, EditedAgo } from './components/figma'
 import { trackPageVisit } from './lib/memes'
 import { useTheme } from './lib/use-theme'
 import { imageProps, SIZES } from './lib/images'
@@ -60,7 +63,7 @@ function SkillTile({ skill, featured }) {
     <Tile
       {...tileProps}
       title={skill.name}
-      className={`skill-cell flex h-full items-center justify-center outline-none transition-[background-color,opacity] duration-300 hover:bg-surface-hover/70 focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-strong/50 motion-reduce:transition-none ${featured ? 'py-14 sm:py-20' : 'py-8 sm:py-10'}`}
+      className={`skill-cell flex h-full flex-col items-center justify-center gap-2.5 outline-none transition-[background-color,opacity] duration-300 hover:bg-surface-hover/70 active:bg-surface-hover/70 focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-strong/50 motion-reduce:transition-none sm:gap-0 ${featured ? 'py-9 sm:py-20' : 'py-6 sm:py-10'}`}
     >
       <img
         {...imageProps(skill.icon)}
@@ -70,8 +73,11 @@ function SkillTile({ skill, featured }) {
         height={size}
         loading="lazy"
         decoding="async"
-        className={`skill-logo object-contain ${featured ? 'h-10 w-10 sm:h-12 sm:w-12' : 'h-6 w-6 sm:h-7 sm:w-7'}`}
+        className={`skill-logo object-contain ${featured ? 'h-9 w-9 sm:h-12 sm:w-12' : 'h-6 w-6 sm:h-7 sm:w-7'}`}
       />
+      <span aria-hidden="true" className="max-w-full truncate px-1 font-mono text-[10.5px] text-ink-subtle sm:hidden">
+        {skill.name}
+      </span>
     </Tile>
   )
 }
@@ -119,7 +125,12 @@ function App() {
 
   const isReturningHome = hasLeftHomeRef.current
 
-  const palette = <CommandPaletteHost theme={theme} onToggleTheme={toggleTheme} />
+  const palette = (
+    <>
+      <CommandPaletteHost theme={theme} onToggleTheme={toggleTheme} />
+      <CommentLayer />
+    </>
+  )
 
   const listSentence = (items) => {
     const words = items.map((item) => item.toLowerCase())
@@ -147,10 +158,11 @@ function App() {
 
   const skillCategories = SKILL_CATEGORIES.map((category) => ({
     name: category.name,
+    minor: category.minor,
     items: category.items.map((item) => ({ ...item, icon: themedIcon(item.icon) }))
   }))
 
-  const stackSkills = skillCategories.flatMap((category) => category.items)
+  const stackSkills = skillCategories.filter((category) => !category.minor).flatMap((category) => category.items)
   const featuredSkills = stackSkills.filter((skill) => skill.featured)
   const otherSkills = stackSkills.filter((skill) => !skill.featured)
 
@@ -282,7 +294,7 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-clip antialiased font-sans ${isReturningHome ? '' : 'animate-view-in'}`}>
+    <div className={`min-h-screen bg-bg text-ink flex flex-col selection:bg-[#0d99ff]/30 selection:text-ink-strong relative overflow-x-clip antialiased font-sans ${isReturningHome ? '' : 'animate-view-in'}`}>
 
       <header
         id="main-header"
@@ -312,7 +324,11 @@ function App() {
             aria-label="Site links"
             className="flex items-center h-full text-ink-muted sm:-mr-4"
           >
-            <div className="hidden md:flex items-center gap-0.5 mr-1">
+            <Facepile name="Kostis" />
+
+            <span aria-hidden="true" className={`${navDivider} hidden md:block`} />
+
+            <div className="hidden md:flex items-center gap-0.5 mx-1">
               {navLinks.map(({ id, label, external, ...props }) => (
                 <a key={id} {...props} {...(external ? { target: '_blank', rel: 'noreferrer' } : {})} className={navLinkClass}>
                   {label}
@@ -335,24 +351,28 @@ function App() {
       {}
       <main className={`w-full max-w-[960px] mx-auto px-6 pt-24 pb-6 flex flex-col items-start border-l border-dashed border-r border-line min-h-screen bg-bg ${isReturningHome ? '' : 'animate-rise-in'}`}>
 
-        <section id="intro" className="flex flex-col items-start text-left w-[calc(100%+3rem)] border-b border-dashed border-line -mx-6 px-6 pb-12">
+        <section id="intro" className="relative flex flex-col items-start text-left w-[calc(100%+3rem)] border-b border-dashed border-line -mx-6 px-6 pb-12">
+          <FrameLabel className="left-6 -top-7">Intro</FrameLabel>
 
           <div className="mb-6 flex w-full items-start justify-between gap-4">
             {}
-            <img
+            <Inspect size="64 × 64">
+              <img
 
-              {...imageProps('/pfp.webp', SIZES.avatar)}
-              alt="Blxr avatar"
-              width="64"
-              height="64"
-              draggable="false"
-              onContextMenu={(e) => e.preventDefault()}
-              onDragStart={(e) => e.preventDefault()}
-              className="w-[64px] h-[64px] rounded-[18px] object-cover select-none [-webkit-user-drag:none] [-webkit-touch-callout:none]"
-            />
+                {...imageProps('/pfp.webp', SIZES.avatar)}
+                alt="Blxr avatar"
+                width="64"
+                height="64"
+                draggable="false"
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+                className="w-[64px] h-[64px] rounded-[18px] object-cover select-none [-webkit-user-drag:none] [-webkit-touch-callout:none]"
+              />
+            </Inspect>
 
             <a
               {...link(PROJECTS_PATH, openProjects)}
+              data-component="Button / Secondary"
               className="project-cta group inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface pl-3 pr-2.5 text-[12.5px] font-medium text-ink-strong outline-none hover:border-line-strong focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
               <span>Go to projects</span>
@@ -367,7 +387,7 @@ function App() {
 
           {}
           <p className="max-w-[54ch] text-[15px] text-ink-muted leading-[1.6] animate-fade-in-up delay-150">
-            I'm Kostis. I build the whole thing: the backend, the interface on top of it, and the Linux box it ships to.
+            I'm Kostis. I build <LiveSelect name="Kostis">the whole thing</LiveSelect>: the backend, the interface on top of it, and the Linux box it ships to.
             Most of it so far has been security tooling and Detectors, plus client work through a studio I run.
           </p>
 
@@ -405,6 +425,7 @@ function App() {
           <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3 animate-fade-in-up delay-450">
             <a
               {...link(PROJECTS_PATH, openProjects)}
+              data-component="Button / Primary"
               className="project-cta group inline-flex h-10 items-center gap-2 rounded-[10px] bg-surface-inverted pl-4 pr-3.5 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
               <span>See the work</span>
@@ -420,7 +441,9 @@ function App() {
           </div>
         </section>
 
-        <section id="skills" className="scroll-mt-8 w-[calc(100%+3rem)] -mx-6 px-6 pt-12 text-left">
+        <section id="skills" className="relative scroll-mt-8 w-[calc(100%+3rem)] -mx-6 px-6 pt-12 text-left">
+          <FrameLabel className="left-6 top-4">About</FrameLabel>
+
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
             Background
           </h2>
@@ -456,10 +479,13 @@ function App() {
             ))}
           </div>
 
-          <h3 className="mb-4 text-[14px] font-medium text-ink-subtle select-none">Stack</h3>
+          <div className="mb-4 flex items-center gap-2">
+            <h3 className="text-[14px] font-medium text-ink-subtle select-none">Stack</h3>
+            <CommentPin name="Client" initial="C" text="Can you build ours on this?" time="2m" className="-my-2 -translate-y-2.5" />
+          </div>
 
           <div className="-mx-6 w-[calc(100%+3rem)] border-y border-dashed border-line">
-            <div className="overflow-hidden [&:has(.skill-cell:hover)_.skill-cell:not(:hover)]:opacity-50">
+            <div className="skills-grid overflow-hidden">
               <ul className="-mr-px grid grid-cols-3 border-b border-dashed border-line" aria-label="Main stack">
                 {featuredSkills.map((skill) => (
                   <li key={skill.name} className="border-r border-dashed border-line">
@@ -469,8 +495,8 @@ function App() {
               </ul>
 
               <ul
-                className="-mb-px -mr-px grid"
-                style={{ gridTemplateColumns: `repeat(${otherSkills.length}, minmax(0, 1fr))` }}
+                className={`-mr-px grid grid-cols-[repeat(var(--cols-mobile),minmax(0,1fr))] sm:grid-cols-[repeat(var(--cols),minmax(0,1fr))] -mb-px`}
+                style={{ '--cols': otherSkills.length, '--cols-mobile': Math.min(otherSkills.length, 4) }}
                 aria-label="Also working with"
               >
                 {otherSkills.map((skill) => (
@@ -483,16 +509,53 @@ function App() {
 
             <div id="skills-all" className="skills-all" data-open={skillsOpen ? '' : undefined}>
               <div inert={!skillsOpen}>
-                <div className="flex flex-col gap-8 border-t border-dashed border-line px-6 pt-9 pb-14">
+                <div className="flex flex-col gap-7 border-t border-dashed border-line px-6 pt-7 pb-12 sm:gap-8 sm:pt-9 sm:pb-14">
                   {skillCategories.map((category, idx) => (
                     <div key={category.name} className="grid grid-cols-1 gap-2 sm:grid-cols-[7.5rem_1fr] sm:gap-6">
+                      {!category.minor && (
                       <h4
                         className="skills-all-item font-mono text-[12px] text-ink-subtle select-none sm:pt-3.5"
                         style={{ '--delay': `${60 + idx * 60}ms` }}
                       >
                         {category.name}
                       </h4>
+                      )}
 
+                      {category.minor ? (
+                      <ul
+                        className="flex flex-wrap items-center gap-x-5 gap-y-2.5 border-t border-dashed border-line pt-5 sm:col-start-2"
+                        aria-label={category.name}
+                      >
+                        {category.items.map((skill, itemIdx) => {
+                          const Item = skill.url ? 'a' : 'span'
+                          return (
+                            <li
+                              key={skill.name}
+                              className="skills-all-item"
+                              style={{ '--delay': `${90 + idx * 60 + itemIdx * 35}ms` }}
+                            >
+                              <Item
+                                {...(skill.url ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                title={skill.desc}
+                                className="tool-tile inline-flex items-center gap-1.5 rounded text-[12px] text-ink-subtle outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/50 motion-reduce:transition-none"
+                              >
+                                <img
+                                  {...imageProps(skill.icon)}
+                                  alt=""
+                                  aria-hidden="true"
+                                  width="14"
+                                  height="14"
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="skill-logo h-3.5 w-3.5 object-contain"
+                                />
+                                {skill.name}
+                              </Item>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                      ) : (
                       <ul className="-mx-2 grid grid-cols-1 md:grid-cols-2 md:gap-x-2">
                         {category.items.map((skill, itemIdx) => {
                           const Row = skill.url ? 'a' : 'span'
@@ -504,7 +567,7 @@ function App() {
                             >
                               <Row
                                 {...(skill.url ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer' } : {})}
-                                className="group/item flex items-center gap-3 rounded-xl p-2 outline-none transition-colors duration-200 hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 motion-reduce:transition-none"
+                                className="group/item flex items-center gap-3 rounded-xl p-2 outline-none transition-colors duration-200 hover:bg-surface-hover active:bg-surface-hover focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 motion-reduce:transition-none"
                               >
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-raised transition-colors duration-200 group-hover/item:border-line-strong motion-reduce:transition-none">
                                   <img
@@ -531,13 +594,14 @@ function App() {
                                       </svg>
                                     )}
                                   </span>
-                                  <span className="mt-0.5 block truncate text-[12px] text-ink-subtle">{skill.desc}</span>
+                                  <span className="mt-0.5 block text-[12px] leading-snug text-ink-subtle sm:truncate">{skill.desc}</span>
                                 </span>
                               </Row>
                             </li>
                           )
                         })}
                       </ul>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -590,15 +654,20 @@ function App() {
             <span className="font-medium text-ink-strong">Blxr</span>
             <span aria-hidden="true" className="mx-2 text-ink-faint">·</span>
             Athens, Greece
+            <EditedAgo />
           </p>
           <nav aria-label="Footer" className="flex items-center gap-4">
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="transition-colors duration-200 hover:text-ink-strong">GitHub</a>
             <a {...link(CV_PATH)} className="transition-colors duration-200 hover:text-ink-strong">CV</a>
             <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors duration-200 hover:text-ink-strong">Email</a>
+            <span aria-hidden="true" className="h-3.5 border-l border-dashed border-line" />
+            <GridToggle className="inline-flex items-center gap-1.5 rounded-md outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30 aria-pressed:text-ink-strong" />
           </nav>
         </footer>
 
       </main>
+
+      <CanvasLayer />
 
       <LandingMemes />
 

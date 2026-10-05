@@ -111,3 +111,42 @@ describe('deploy.sh', () => {
     assert.ok(at('deploy/deploy.sh') > at('npm test'), 'deploy only after tests pass')
   })
 })
+
+describe('log levels match what actually went wrong', () => {
+  const server = async () => read('server/src/server.mjs')
+
+  test('a feature switched off in the environment is info, not error', async () => {
+    const src = await server()
+    assert.match(src, /const EXPECTED_OFF = /)
+    assert.match(src, /function apiLevel\(status, code\)/)
+    assert.doesNotMatch(src, /level: status >= 500 \? 'error' : 'warn',/)
+    assert.match(src, /level: apiLevel\(status, body\?\.error\),/)
+  })
+
+  test('every *_disabled 503 the server can emit is covered by that rule', async () => {
+    const src = await server()
+    const codes = [...src.matchAll(/return json\(res, 503, \{ error: '([a-z_]+)'/g)].map((m) => m[1])
+    assert.ok(codes.length >= 4, `expected several 503 codes, found ${codes.join(', ')}`)
+    for (const code of codes) {
+      assert.ok(
+        code === 'warming' || code.endsWith('_disabled') || code === 'paused',
+        `${code} is a deliberate "unavailable" response and must not be logged as an error`,
+      )
+    }
+  })
+
+  test('a 5xx from GitHub is warn, since stats are optional and cached', async () => {
+    const src = await server()
+    const graphql = /async function ghGraphql[\s\S]*?\n}/.exec(src)[0]
+    assert.doesNotMatch(graphql, /log\.error\('github', `GraphQL answered/)
+    assert.match(graphql, /log\.warn\('github', `GraphQL answered/)
+  })
+
+  test('weather serves the last good reading instead of 502-ing', async () => {
+    const src = await server()
+    assert.match(src, /const WEATHER_STALE = /)
+    const route = /if \(url\.pathname === '\/api\/weather'\) \{[\s\S]*?\n {4}\}/.exec(src)[0]
+    assert.match(route, /return json\(res, 200, weatherCache\.data, stale \? WEATHER_STALE : WEATHER_CACHE\)/)
+    assert.match(route, /weather_failed/)
+  })
+})

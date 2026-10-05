@@ -43,6 +43,7 @@ export const IMAGES = {
   '/icons/figma.svg': { v: '5bcdea34', ext: '.svg', widths: [] },
   '/icons/firebase.svg': { v: 'd7237dee', ext: '.svg', widths: [] },
   '/icons/git.svg': { v: 'cc43d5b0', ext: '.svg', widths: [] },
+  '/icons/github-desktop.svg': { v: '2f6b2239', ext: '.svg', widths: [] },
   '/icons/github.svg': { v: '45262793', ext: '.svg', widths: [] },
   '/icons/github_dark.svg': { v: '1ee45567', ext: '.svg', widths: [] },
   '/icons/homebrew.svg': { v: '81baf508', ext: '.svg', widths: [] },

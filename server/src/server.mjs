@@ -799,8 +799,6 @@ function ghRange(year, now) {
     from.setUTCDate(from.getUTCDate() + 1)
     return { from, to: now }
   }
-  // The whole calendar year, even the part still ahead, so the total matches the GitHub profile,
-  // which also counts commits dated later in the year. The client drops those days from the graph.
   const from = new Date(Date.UTC(Number(year), 0, 1))
   return { from, to: new Date(Date.UTC(Number(year), 11, 31, 23, 59, 59)) }
 }
@@ -1012,7 +1010,7 @@ async function ghGraphql(query, variables) {
       signal: ctrl.signal,
     })
   } catch (err) {
-    log.error('github', `GraphQL request failed: ${err?.name === 'AbortError' ? 'timed out' : err?.message || 'network error'}`)
+    log.warn('github', `GraphQL request failed: ${err?.name === 'AbortError' ? 'timed out' : err?.message || 'network error'}`)
     throw new GhError('github_failed', 502)
   } finally {
     clearTimeout(t)
@@ -1026,7 +1024,7 @@ async function ghGraphql(query, variables) {
     throw new GhError('rate_limited', 429)
   }
   if (!res.ok) {
-    log.error('github', `GraphQL answered ${res.status}`)
+    log.warn('github', `GraphQL answered ${res.status}`)
     throw new GhError('github_failed', 502)
   }
   const json = await res.json()
@@ -1675,6 +1673,14 @@ async function isSiteOwner(req) {
 
 const ownerDenied = (owner) => ({ error: owner === 'needs_mfa' ? 'needs_mfa' : 'unauthorized' })
 
+const EXPECTED_OFF = /^(?:[a-z]+_)?disabled$|^paused$|^warming$/
+
+function apiLevel(status, code) {
+  if (status < 500) return 'warn'
+  if (typeof code === 'string' && EXPECTED_OFF.test(code)) return 'info'
+  return 'error'
+}
+
 function json(res, status, body, headers) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
@@ -1685,7 +1691,7 @@ function json(res, status, body, headers) {
   if (status >= 400) {
     const req = res.req
     record({
-      level: status >= 500 ? 'error' : 'warn',
+      level: apiLevel(status, body?.error),
       source: 'api',
       message: `${status} ${body?.error || 'error'}`,
       method: req?.method,
@@ -1699,6 +1705,7 @@ function json(res, status, body, headers) {
 
 const NO_STORE = { 'cache-control': 'no-store' }
 const WEATHER_CACHE = { 'cache-control': 'public, max-age=300, stale-while-revalidate=600' }
+const WEATHER_STALE = { 'cache-control': 'public, max-age=60, stale-while-revalidate=3600' }
 const CHART_CACHE = { 'cache-control': 'public, max-age=300, stale-while-revalidate=3600' }
 const CONTRIBUTIONS_CACHE = { 'cache-control': 'public, max-age=600, stale-while-revalidate=86400' }
 
@@ -2236,7 +2243,9 @@ const server = http.createServer(async (req, res) => {
       } else if (Date.now() - weatherCache.at >= WEATHER_TTL_MS) {
         refreshWeather().catch((err) => log.warn('upstream', 'athens weather refresh failed', { detail: err?.message }))
       }
-      return json(res, 200, weatherCache.data, WEATHER_CACHE)
+      const stale = weatherCache && Date.now() - weatherCache.at >= WEATHER_TTL_MS
+      if (stale) log.info('upstream', 'serving stale athens weather while the upstream recovers')
+      return json(res, 200, weatherCache.data, stale ? WEATHER_STALE : WEATHER_CACHE)
     }
 
     if (url.pathname === '/api/github/contributions') {

@@ -3,10 +3,11 @@ import ThemeToggle from './components/theme-toggle'
 import ProfileCard from './components/profile-card'
 import { Icon } from './components/dashboard-sidebar'
 import { Loading } from './components/skeleton'
-import { link, HOME_PATH, LOGIN_PATH, dashboardPath } from './lib/router'
+import { link, HOME_PATH, LOGIN_PATH, dashboardPath, profilePath } from './lib/router'
 import { useAuth } from './lib/supabase'
 import { fetchProfileByHandle, HANDLE_RE } from './lib/profiles'
-import { SITE_NAME } from './lib/seo'
+import { SITE_NAME, metaFor } from './lib/seo'
+import { setTitleNow } from './lib/title-animation'
 
 const BTN =
   'inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-medium outline-none transition-[background-color,border-color,color,opacity,transform] duration-150 active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ink-strong/30 focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
@@ -92,10 +93,10 @@ export default function PublicProfilePage({ handle, theme, onToggleTheme }) {
 
   useEffect(() => {
     if (state.status !== 'ready') return undefined
-    const prev = document.title
-    document.title = `${state.profile.name} (@${state.profile.handle}) — ${SITE_NAME}`
-    return () => { document.title = prev }
-  }, [state])
+    const prev = metaFor(profilePath(handle)).title
+    setTitleNow(`${state.profile.name} (@${state.profile.handle}) — ${SITE_NAME}`)
+    return () => { setTitleNow(prev) }
+  }, [state, handle])
 
   return (
     <Shell theme={theme} onToggleTheme={onToggleTheme} forced={forced} wide={state.status === 'ready' && layout === 'cover'}>

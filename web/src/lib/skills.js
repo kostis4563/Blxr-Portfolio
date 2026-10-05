@@ -33,9 +33,18 @@ export const SKILL_CATEGORIES = [
   },
   {
     name: 'Tools',
+    minor: true,
     items: [
       { name: 'Visual Studio', icon: '/icons/visual-studio.svg', url: 'https://visualstudio.microsoft.com', desc: 'IDE for app development' },
       { name: 'VS Code', icon: '/icons/vscode.svg', url: 'https://code.visualstudio.com', desc: 'Code editor' },
+      { name: 'Git', icon: '/icons/git.svg', url: 'https://git-scm.com', desc: 'Version control' },
+      { name: 'GitHub Desktop', icon: '/icons/github-desktop.svg', url: 'https://desktop.github.com', desc: 'Git client for commits & branches' },
+      { name: 'npm', icon: '/icons/npm.svg', url: 'https://www.npmjs.com', desc: 'Package manager for Node.js' },
+      { name: 'PM2', icon: '/icons/pm2.svg', url: 'https://pm2.keymetrics.io', desc: 'Process manager for Node.js servers' },
+      { name: 'Notion', icon: '/icons/notion.svg', url: 'https://www.notion.com', desc: 'Notes, docs & planning' },
+      { name: 'Photoshop', icon: '/icons/photoshop.svg', url: 'https://www.adobe.com/products/photoshop.html', desc: 'Image editing & compositing' },
+      { name: 'macOS', icon: '/icons/apple_dark.svg', url: 'https://www.apple.com/macos', desc: "Apple's desktop OS" },
+      { name: 'Windows', icon: '/icons/windows.svg', url: 'https://www.microsoft.com/windows', desc: "Microsoft's desktop OS" },
     ],
   },
 ]

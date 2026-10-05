@@ -25,6 +25,7 @@ import { projectsList } from './lib/projects'
 import { libraryList } from './lib/library'
 import { CONTACT_EMAIL, GITHUB_URL } from './lib/profile'
 import { SITE_NAME, SITE_URL } from './lib/seo'
+import { setTitleNow } from './lib/title-animation'
 import { wasted } from './lib/memes'
 
 const REDIRECT_SECONDS = 5
@@ -121,7 +122,7 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
   )
 
   useEffect(() => {
-    if (asked) document.title = `404 · ${asked.route} — ${SITE_NAME}`
+    if (asked) setTitleNow(`404 · ${asked.route} — ${SITE_NAME}`)
   }, [asked])
 
   const obvious = useMemo(() => {

@@ -17,7 +17,6 @@ const MAX_CELL = 13;
 
 const MIN_CELL = 3;
 
-// A whole year of 3px squares is unreadable on a phone.
 const MINIMAL_MIN_CELL = 8;
 const MIN_GAP = 1;
 const GAP_RATIO = 0.3;
@@ -41,7 +40,6 @@ const fitCell = (avail, columns, minCell = MIN_CELL) => {
   }
 
   let cell = avail / (columns * (1 + GAP_RATIO) - GAP_RATIO);
-  // Past this the grid scrolls sideways instead of shrinking further.
   if (cell < minCell) return { cell: minCell, gap: gapFor(minCell) };
   let gap = cell * GAP_RATIO;
 
@@ -104,7 +102,6 @@ const longestStreak = (days) => {
   return longest;
 };
 
-// A day with nothing yet doesn't break the streak — it isn't over.
 const currentStreak = (days) => {
   let i = days.length - 1;
   if (i >= 0 && days[i].count === 0) i--;
@@ -358,11 +355,9 @@ export default function GitHubContributions({ username, since, activeSince, mini
     };
   }, [days]);
 
-  // GitHub's own yearly figure, which also counts commits dated later in the year than today.
   const headline = stats ? Math.max(total, stats.sum) : 0;
   const shownHeadline = useCountUp(headline, minimal && revealed && !!stats);
 
-  // Shown in place of the handle while the graph is being looked at.
   const peekItems = React.useMemo(() => {
     if (!minimal || !stats || stats.best.count === 0) return [];
     const daysOf = (n) => `${n} ${n === 1 ? "day" : "days"}`;
@@ -440,12 +435,10 @@ export default function GitHubContributions({ username, since, activeSince, mini
 
     const minColumns = Math.max(3, Math.ceil(26 / step));
     for (let col = 0; col < columnsCount; col++) {
-      // The first column usually starts mid-week, so use its first real day.
       const cell = cells[col * 7] ?? cells.slice(col * 7, col * 7 + 7).find(Boolean);
       if (!cell) continue;
       const date = parseDay(cell.date);
       const month = date.getMonth();
-      // A month that's nearly over by the first column gets no label; it would crowd out the next one.
       if (col === 0 && date.getDate() > 7) {
         lastMonth = month;
         continue;
@@ -475,7 +468,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
     setEdges({ start: offset > 2, end: max - offset > 2 });
   }, []);
 
-  // The minimal grid runs to Dec 31, so land on today rather than the empty end of the year.
   const todayScroll = minimal ? (Math.floor(lastDayIdx / 7) + 4) * step : null;
 
   React.useEffect(() => {
@@ -641,7 +633,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
                 {peekItems.map((item, i) => (
                   <div
                     key={item.key}
-                    // Left to right on the way in, all at once on the way out.
                     style={{ transitionDelay: active ? `${i * 45}ms` : "0ms" }}
                     className={`${item.wide ? "hidden md:flex" : "flex"} items-baseline gap-1.5 transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
                       active ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
@@ -806,7 +797,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
           ref={scrollerRef}
           onScroll={measureEdges}
           style={{ maskImage: edgeMask, WebkitMaskImage: edgeMask }}
-          // The padding keeps the hover outline on edge squares from being clipped.
           className={`min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
             minimal ? "-m-[3px] p-[3px]" : ""
           }`}
@@ -863,9 +853,7 @@ export default function GitHubContributions({ username, since, activeSince, mini
                   );
                 }
 
-                // Diagonal wave, left to right, timed to finish with the count-up.
                 const cellIn = minimal && revealed ? "gh-cell-in" : "";
-                // A 3px corner turns the small phone-size squares into dots.
                 const cellRound = cellSize >= 11 ? "rounded-[3px]" : "rounded-[2px]";
                 const cellDelay = minimal ? { "--cell-delay": `${col * 11 + (idx % 7) * 14}ms` } : undefined;
 
@@ -903,7 +891,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
 
                 const shared = {
                   "data-idx": idx,
-                  // Stays on while the pointer crosses the gaps between squares.
                   "data-lit": minimal && active && hovered?.day === day ? "" : undefined,
                   style: cellDelay,
                   tabIndex: idx === tabIdx ? 0 : -1,

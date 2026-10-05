@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import JavaScriptObfuscator from 'javascript-obfuscator'
 
 const obfuscate = process.env.OBFUSCATE === '1'
+const BUILT_AT = process.env.BUILT_AT || new Date().toISOString()
 
 const ROUTE_PAGES = ['projects', 'library', 'reviews', 'uses', 'cv', 'contact', 'login', 'dashboard', 'public-profile', 'not-found']
 
@@ -148,10 +149,12 @@ export default defineConfig(({ command, mode, isSsrBuild }) => ({
   resolve: {
     alias: pageAliases(command === 'build' ? isSsrBuild : false),
   },
-  define:
-    command === 'build' && typeof isSsrBuild === 'boolean'
+  define: {
+    __BUILT_AT__: JSON.stringify(BUILT_AT),
+    ...(command === 'build' && typeof isSsrBuild === 'boolean'
       ? { 'import.meta.env.SSR': isSsrBuild ? 'true' : 'false' }
-      : undefined,
+      : null),
+  },
   plugins: [
     react(),
     tailwindcss(),

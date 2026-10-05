@@ -299,6 +299,10 @@ function Memes() {
 
   const fail = () => {
     broken.current = true
+    if (video.current) {
+      video.current.removeAttribute('src')
+      video.current.load()
+    }
     setCalled(false)
     setSplit(false)
     setLeaving(null)
@@ -371,7 +375,7 @@ function Memes() {
           ref={video}
           src={CLIP}
           poster={POSTER}
-          preload="auto"
+          preload="none"
           muted
           loop
           playsInline

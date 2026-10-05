@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import { normalizePath, parseRoute, staticPaths, projectPath, libraryPath, profilePath, dashboardPath } from '../../src/lib/router.js'
-import { metaFor, headTags, lastmodFor, SITE_URL } from '../../src/lib/seo.js'
+import { metaFor, headTags, lastmodFor, labelFor, SITE_URL } from '../../src/lib/seo.js'
 import { projectsList } from '../../src/lib/projects.js'
 import { libraryList } from '../../src/lib/library.js'
 
@@ -111,5 +111,36 @@ describe('SEO metadata for every prerendered page', () => {
     expect(lastmodFor('/uses')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(lastmodFor('/cv')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(lastmodFor('/projects')).toBeNull()
+  })
+})
+
+describe('labelFor: the short string the animated tab title types out', () => {
+  test('home greets, every other route names itself', () => {
+    expect(labelFor('/')).toBe('Hello')
+    expect(labelFor('/projects')).toBe('Projects')
+    expect(labelFor('/library')).toBe('Library')
+    expect(labelFor('/reviews')).toBe('Reviews')
+    expect(labelFor('/uses')).toBe('Uses')
+    expect(labelFor('/cv')).toBe('CV')
+    expect(labelFor('/contact')).toBe('Contact')
+    expect(labelFor('/login')).toBe('Sign in')
+    expect(labelFor('/dashboard')).toBe('Dashboard')
+    expect(labelFor('/@kostis')).toBe('Profile')
+    expect(labelFor('/nope')).toBe('404')
+  })
+
+  test('library items label with their own name, capped so the tab stays readable', () => {
+    for (const item of libraryList) {
+      const label = labelFor(libraryPath(item.id))
+      expect(label.length, item.id).toBeGreaterThan(0)
+      expect(label.length, item.id).toBeLessThanOrEqual(18)
+    }
+  })
+
+  test('every label is a short single-line string with no dashes or newlines', () => {
+    for (const path of [...staticPaths(), '/login', '/dashboard', '/@kostis', '/nope']) {
+      const label = labelFor(path)
+      expect(label, path).toMatch(/^[^\n—–-]{1,18}$/)
+    }
   })
 })

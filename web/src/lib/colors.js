@@ -147,7 +147,6 @@ function textTokens(scheme, bg, ink) {
 
 const block = (selector, vars) => `${selector}{${Object.entries(vars).map(([name, value]) => `${name}:${value}`).join(';')}}`
 
-// :root:root outranks index.css's :root[data-theme] palettes wherever this lands in <head>
 function stylesheet(all) {
   const rules = Object.entries(all).flatMap(([scheme, { bg, ink }]) => {
     const root = `:root:root[data-theme="${scheme}"]`

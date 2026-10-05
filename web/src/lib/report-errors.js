@@ -29,6 +29,20 @@ const describe = (value) => {
   }
 }
 
+const chunkMessage = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Unable to preload CSS/i
+
+const isStaleChunk = (message) => typeof message === 'string' && chunkMessage.test(message)
+
+const sameOrigin = (url) => {
+  try {
+    return new URL(url, window.location.href).origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
+const isOurs = (url) => Boolean(url) && sameOrigin(url)
+
 export function installErrorReporting() {
   if (typeof window === 'undefined' || window.__blxrErrorsInstalled) return
   window.__blxrErrorsInstalled = true
@@ -37,16 +51,21 @@ export function installErrorReporting() {
     const target = event.target
     if (target && target !== window && target.tagName) {
       const url = target.src || target.href
-      if (url) post({ kind: 'resource', message: `${target.tagName.toLowerCase()} ${String(url).slice(0, 300)}` })
+      if (!url) return
+      if (!isOurs(String(url))) return
+      post({ kind: 'resource', message: `${target.tagName.toLowerCase()} ${String(url).slice(0, 300)}` })
       return
     }
     const { message, stack } = event.error ? describe(event.error) : { message: event.message }
+    if (isStaleChunk(message)) return
     post({ kind: 'error', message, stack, detail: event.filename ? `${event.filename.split('/').pop()}:${event.lineno}:${event.colno}` : undefined })
   }, true)
 
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason
     if (reason?.name === 'AbortError') return
-    post({ kind: 'rejection', ...describe(reason) })
+    const described = describe(reason)
+    if (isStaleChunk(described.message)) return
+    post({ kind: 'rejection', ...described })
   })
 }

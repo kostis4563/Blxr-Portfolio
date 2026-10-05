@@ -3,6 +3,7 @@ import { libraryList, findLibraryItem } from './library'
 import { USES_UPDATED } from './uses'
 import { CV_UPDATED } from './cv'
 import { libraryPath, normalizePath, parseRoute, projectPath } from './router'
+import { setDocumentTitle } from './title-animation'
 
 export const SITE_URL = 'https://blxr.net'
 export const SITE_NAME = 'blxr'
@@ -140,6 +141,35 @@ export function metaFor(pathname) {
     description: 'That page does not exist on blxr.net.',
     noindex: true,
   }
+}
+
+const SHORT_LABELS = {
+  projects: 'Projects',
+  library: 'Library',
+  reviews: 'Reviews',
+  uses: 'Uses',
+  cv: 'CV',
+  contact: 'Contact',
+  login: 'Sign in',
+  dashboard: 'Dashboard',
+  profile: 'Profile',
+  notFound: '404',
+}
+
+const LABEL_MAX = 18
+
+export function labelFor(pathname) {
+  const route = parseRoute(pathname)
+
+  if (route.name === 'home') return 'Hello'
+
+  if (route.name === 'library' && route.itemId) {
+    const item = findLibraryItem(route.itemId)
+    const head = item?.title?.split(/\s+[—–-]\s+/)[0]?.trim() || ''
+    return head ? head.slice(0, LABEL_MAX) : SHORT_LABELS.library
+  }
+
+  return SHORT_LABELS[route.name] ?? ''
 }
 
 export function lastmodFor(pathname) {
@@ -463,7 +493,7 @@ function setMeta(selector, create, value) {
 
 export function applyHead(pathname) {
   const { path, title, description, noindex } = metaFor(pathname)
-  document.title = title
+  setDocumentTitle(title, labelFor(pathname))
   setMeta(
     'meta[name="description"]',
     () => Object.assign(document.createElement('meta'), { name: 'description' }),

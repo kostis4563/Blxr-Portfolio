@@ -5,9 +5,134 @@ import { libraryList } from './library'
 import { SECTIONS, jumpToSection } from './palette'
 import { fold } from './text-match'
 import { CONTACT_EMAIL, SOCIALS } from './profile'
-import { SITE_NAME } from './seo'
+import { SITE_NAME, SITE_URL } from './seo'
+import {
+  startCommenting,
+  toggleCommentsHidden,
+  focusComment,
+  clearComments,
+  restoreComments,
+  commentsOn,
+  commentsMarkdown,
+  shortAgo,
+} from './comments'
+import { toast } from './figma'
 
-export function buildCommands({ theme, toggleTheme, signedIn = false }) {
+export const SCOPES = [
+  { id: 'all', label: 'All' },
+  { id: 'pages', label: 'Pages' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'library', label: 'Library' },
+  { id: 'actions', label: 'Actions' },
+  { id: 'comments', label: 'Comments' },
+]
+
+const SCOPE_OF_GROUP = {
+  'Jump to': 'pages',
+  Projects: 'projects',
+  'FiveM Library': 'library',
+  Actions: 'actions',
+  Links: 'actions',
+  Comments: 'comments',
+  'Your comments': 'comments',
+}
+
+export const inScope = (command, scope) => scope === 'all' || command.scope === scope
+
+const firstLine = (text, max = 64) => {
+  const line = text.trim().split('\n')[0]
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line
+}
+
+function commentCommands({ comments, commentsHidden, path, pageName }) {
+  const group = 'Comments'
+  const here = commentsOn(comments, path)
+  const resolved = here.filter((c) => c.resolved)
+  const undo = (gone, what) =>
+    toast(what, '', { label: 'Undo', run: () => restoreComments(gone) })
+
+  return [
+    {
+      id: 'comment-add',
+      group,
+      label: 'Add a comment',
+      hint: 'Only saved in this browser',
+      icon: 'message',
+      shortcut: ['/'],
+      run: startCommenting,
+      keywords: 'comment note annotate pin feedback figma',
+    },
+    (comments.length > 0 || commentsHidden) && {
+      id: 'comment-toggle',
+      group,
+      label: commentsHidden ? 'Show comments' : 'Hide comments',
+      hint: here.length ? `${here.length} on this page` : '',
+      icon: 'eye',
+      shortcut: ['⇧', 'C'],
+      run: () => {
+        toggleCommentsHidden()
+        toast(commentsHidden ? 'Comments shown' : 'Comments hidden', '⇧C')
+      },
+      keywords: 'comments toggle hide show visibility',
+    },
+    comments.length > 0 && {
+      id: 'comment-copy',
+      group,
+      label: 'Copy all comments as Markdown',
+      hint: `${comments.length} total`,
+      icon: 'copy',
+      verb: 'Copy',
+      run: () => navigator.clipboard?.writeText(commentsMarkdown(comments, SITE_URL)).catch(() => {}),
+      flash: 'Copied',
+      keywords: 'comments export markdown clipboard notes',
+    },
+    resolved.length > 0 && {
+      id: 'comment-clear-resolved',
+      group,
+      label: 'Delete resolved comments on this page',
+      hint: `${resolved.length} resolved`,
+      icon: 'trash',
+      run: () => undo(clearComments(path, { resolvedOnly: true }), 'Resolved comments deleted'),
+      keywords: 'comments clear clean resolved delete',
+    },
+    here.length > 0 && {
+      id: 'comment-clear',
+      group,
+      label: 'Delete all comments on this page',
+      hint: `${here.length} on ${pageName(path)}`,
+      icon: 'trash',
+      run: () => undo(clearComments(path), 'Comments deleted'),
+      keywords: 'comments clear delete remove reset',
+    },
+    ...comments
+      .slice()
+      .reverse()
+      .map((c) => ({
+        id: `comment-${c.id}`,
+        group: 'Your comments',
+        label: firstLine(c.text),
+        hint: `${pageName(c.path)} · ${shortAgo(c.at)}${c.resolved ? ' · resolved' : ''}`,
+        icon: 'message',
+        verb: 'Open',
+        where: c.path,
+        run: () => {
+          if (c.path !== path) navigate(c.path)
+          focusComment(c.id)
+        },
+        keywords: `comment ${c.text} ${c.path}`,
+      })),
+  ]
+}
+
+export function buildCommands({
+  theme,
+  toggleTheme,
+  toggleGrid,
+  signedIn = false,
+  comments = [],
+  commentsHidden = false,
+  path = HOME_PATH,
+}) {
   const jump = 'Jump to'
   const actions = 'Actions'
   const links = 'Links'
@@ -97,6 +222,7 @@ export function buildCommands({ theme, toggleTheme, signedIn = false }) {
       label: project.title,
       hint: project.category,
       icon: 'project',
+      accent: project.accent,
       href: projectPath(project.id),
       run: () => navigate(projectPath(project.id)),
 
@@ -111,6 +237,7 @@ export function buildCommands({ theme, toggleTheme, signedIn = false }) {
         label: entry.title,
         hint: entry.category,
         icon: 'project',
+        accent: entry.accent,
         href: libraryPath(entry.id),
         run: () => navigate(libraryPath(entry.id)),
         keywords: `fivem ${entry.tags.join(' ')} ${entry.shortDescription}`,
@@ -124,6 +251,25 @@ export function buildCommands({ theme, toggleTheme, signedIn = false }) {
       icon: theme === 'dark' ? 'sun' : 'moon',
       run: toggleTheme,
       keywords: 'theme dark light',
+    },
+    toggleGrid && {
+      id: 'action-grid',
+      group: actions,
+      label: 'Toggle layout grid',
+      icon: 'layout',
+      shortcut: ['⇧', 'G'],
+      run: toggleGrid,
+      keywords: 'grid columns layout guides figma',
+    },
+    {
+      id: 'action-copy-link',
+      group: actions,
+      label: 'Copy link to this page',
+      icon: 'link',
+      verb: 'Copy',
+      run: () => navigator.clipboard?.writeText(window.location.href).catch(() => {}),
+      flash: 'Copied',
+      keywords: 'share url link copy',
     },
     {
       id: 'action-write-review',
@@ -177,6 +323,7 @@ export function buildCommands({ theme, toggleTheme, signedIn = false }) {
       label: 'Copy email address',
       hint: CONTACT_EMAIL,
       icon: 'copy',
+      verb: 'Copy',
 
       run: () => navigator.clipboard?.writeText(CONTACT_EMAIL).catch(() => {}),
       flash: 'Copied',
@@ -202,11 +349,29 @@ export function buildCommands({ theme, toggleTheme, signedIn = false }) {
     },
   ]
 
+  const pageName = (to) => commands.find((c) => c && c.group === jump && c.href === to)?.label ?? to
+  commands.push(...commentCommands({ comments, commentsHidden, path, pageName }))
+
   return commands.filter(Boolean).map((command) => ({
     ...command,
+    scope: SCOPE_OF_GROUP[command.group],
+    verb: command.verb || (command.external ? 'Visit' : command.href ? 'Open' : 'Run'),
     fLabel: fold(command.label),
     haystack: fold([command.label, command.hint || '', command.group, command.keywords || ''].join(' ')),
   }))
+}
+
+export function recentCommands(commands, paths, { exclude = null, limit = 4 } = {}) {
+  const byHref = new Map()
+  for (const command of commands) {
+    if (command.href && !command.external && !byHref.has(command.href)) byHref.set(command.href, command)
+  }
+  return paths
+    .filter((path) => path !== exclude)
+    .map((path) => byHref.get(path))
+    .filter(Boolean)
+    .slice(0, limit)
+    .map((command) => ({ ...command, id: `recent-${command.id}`, group: 'Recent' }))
 }
 
 export function sudoCommand(query) {

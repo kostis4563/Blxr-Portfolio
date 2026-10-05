@@ -3,12 +3,14 @@ import './index.css'
 import Root from './root.jsx'
 import { reportWebVitals } from './lib/vitals'
 import { installErrorReporting } from './lib/report-errors'
+import { installChunkRecovery } from './lib/chunk-recovery'
 import { applyDevicePrefs } from './lib/prefs'
 import { installSecrets } from './lib/secrets'
 import { consoleHello } from './lib/console-hello'
 
 applyDevicePrefs()
 installErrorReporting()
+installChunkRecovery()
 installSecrets()
 consoleHello()
 
