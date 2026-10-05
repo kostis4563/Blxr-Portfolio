@@ -5,7 +5,7 @@
 <h1>blxr</h1>
 
 <p><strong>Source for <a href="https://blxr.net">blxr.net</a></strong><br>
-A personal site plus a small, keyless proxy for the music widget.</p>
+A personal site plus a small.</p>
 
 <p>
   <a href="https://blxr.net"><img alt="Live site" src="https://img.shields.io/badge/live-blxr.net-8b5cf6?style=flat-square"></a>
