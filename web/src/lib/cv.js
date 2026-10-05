@@ -11,7 +11,7 @@ export const CV_ROLE = 'Developer working across backends, the interfaces on top
 export const CV_STATUS = 'Final year of the IB Diploma, Athens.'
 
 export const CV_SUMMARY =
-  'Final year of the IB Diploma Programme, building software on the side since 2023. I do the whole thing: React ' +
+  'Final year of the IB Diploma Programme :), building software on the side since 2023. I do the whole thing: React ' +
   'frontends, Node and Express backends, and the Linux box it ships to. Most of my work so far has been security ' +
   'tooling and UIs for FiveM communities, plus client sites through my own studio. I like being close to the ' +
   'product, and I care most about whether it still works once real people are using it.'
