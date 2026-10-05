@@ -12,7 +12,6 @@ import PublicProfilePageImpl from '#ssr-page/public-profile'
 import NotFoundPageImpl from '#ssr-page/not-found'
 import ThemeToggle from './components/theme-toggle'
 import CommandPaletteHost from './components/command-palette-host'
-import CommentLayer from './components/comments'
 import NavMenu from './components/nav-menu'
 import StudioFact from './components/studio-fact'
 import ScrambleText from './components/scramble-text'
@@ -47,6 +46,13 @@ const PublicProfilePage = routePage(PublicProfilePageImpl, withSupabase(() => im
 const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-found'))
 
 const PageFallback = () => <Loading label="Loading the page" />
+
+const CommentLayerImpl = lazy(() => import('./components/comments'))
+function CommentLayer() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted ? <Suspense fallback={null}><CommentLayerImpl /></Suspense> : null
+}
 import {
   GITHUB_URL,
   CONTACT_EMAIL,
