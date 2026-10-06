@@ -1,8 +1,3 @@
-// Messages are sealed in the browser before they are sent, with AES-256-GCM and a fresh
-// 96-bit nonce per message. Every conversation has its own random 256-bit key, created by
-// the database when the conversation opens and readable only by its two participants.
-// The messages table and the storage bucket only ever hold ciphertext.
-
 import { SEALED_PREFIX } from './messages'
 
 const subtle = () => globalThis.crypto?.subtle

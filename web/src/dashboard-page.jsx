@@ -36,7 +36,6 @@ function isTyping(target) {
 
 const Shell = () => <Loading label="Opening the dashboard" />
 
-// Local dev only: lets `npm run dev` open the dashboard without signing in. Stripped from production builds.
 const PREVIEW_SESSION = import.meta.env.DEV
   ? {
       user: {

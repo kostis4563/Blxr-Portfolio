@@ -5,8 +5,8 @@ import { Note, Empty, CARD } from './components/boards/ui'
 import { Spinner } from './components/skeleton'
 import { LiveStage } from './components/live-piece'
 import { navigate, dashboardPath, link, GALLERY_PATH } from './lib/router'
-import { LIMITS, KINDS, LIVE_TYPES, liveType, newLive, draftLive, formFrom, itemFrom, problemsOf, sortItems, filterItems, countsOf, formatDay, imageUrl, isVideo, kindLabel } from './lib/gallery'
-import { listItems, saveItem, deleteItem, uploadImage, removeImages, addFromFile, isMediaFile, errorText } from './lib/gallery-api'
+import { LIMITS, KINDS, LIVE_TYPES, liveType, newLive, draftLive, formFrom, itemFrom, problemsOf, sortItems, countsOf, formatDay, imageUrl, isVideo, kindLabel, moveItem, mergeOrder, withPositions } from './lib/gallery'
+import { listItems, saveItem, deleteItem, uploadImage, removeImages, addFromFile, isMediaFile, patchItem, reorderItems, errorText } from './lib/gallery-api'
 
 const ACCEPT = 'image/*,video/mp4,video/webm,video/quicktime'
 
@@ -100,7 +100,7 @@ export default function DashboardGallery({ hash }) {
     return <ItemEditor key={sub} item={item} onSaved={onSaved} onDeleted={onDeleted} />
   }
 
-  return <ItemGrid items={items} loading={loading} onReload={load} onAdded={onSaved} />
+  return <ItemGrid items={items} loading={loading} onReload={load} onAdded={onSaved} onReorder={setItems} />
 }
 
 function GridSkeleton() {
@@ -113,12 +113,95 @@ function GridSkeleton() {
   )
 }
 
-function ItemGrid({ items, loading, onReload, onAdded }) {
+const TOOL = 'grid h-7 w-7 cursor-pointer place-items-center rounded-md bg-black/60 text-white backdrop-blur-sm outline-none transition-colors hover:bg-black/80 focus-visible:ring-2 focus-visible:ring-white/60 disabled:cursor-default disabled:opacity-40'
+
+function GridCard({ item, index, count, dragged, onDragStart, onDragOver, onDragEnd, onMove, onPatch }) {
+  const ui = item.kind === 'ui'
+  const type = item.live ? liveType(item.live.type)?.label : isVideo(item.image) ? 'Video' : kindLabel(item.kind)
+  return (
+    <li
+      draggable
+      onDragStart={(e) => onDragStart(e, item)}
+      onDragOver={(e) => onDragOver(e, item)}
+      onDragEnd={onDragEnd}
+      className={`group relative cursor-grab transition-opacity active:cursor-grabbing ${ui && item.wide ? 'col-span-2' : ''} ${dragged ? 'opacity-40' : ''}`}
+    >
+      <a
+        {...link(dashboardPath(`gallery/${item.id}`))}
+        draggable={false}
+        className={`block overflow-hidden rounded-xl border bg-surface-raised outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink-strong/30 ${
+          item.published ? 'border-line hover:border-line-strong' : 'border-dashed border-line-strong'
+        }`}
+      >
+        <span className={`relative block overflow-hidden ${ui ? 'h-48' : 'aspect-[4/5]'} ${item.published ? '' : 'opacity-50'}`}>
+          {item.live ? (
+            <span className="pointer-events-none absolute left-0 top-0 flex h-[166.667%] w-[166.667%] origin-top-left scale-[0.6]" inert>
+              <LiveStage live={item.live} title={item.title} className="flex-1" />
+            </span>
+          ) : (
+            <img src={imageUrl(item.poster || item.image)} alt="" draggable={false} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+          )}
+          {isVideo(item.image) && <PlayBadge />}
+        </span>
+      </a>
+
+      <div className="pointer-events-none absolute left-2 top-2 flex gap-1">
+        <span className="rounded bg-black/60 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-white">{type}</span>
+        {!item.published && <span className="rounded bg-amber-500/90 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-black">Hidden</span>}
+      </div>
+
+      <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+        <button type="button" className={TOOL} onClick={() => onMove(item, -1)} disabled={index === 0} aria-label={`Move ${item.title} earlier`} title="Move earlier">
+          <Icon name="chevronLeft" className="h-3.5 w-3.5" />
+        </button>
+        <button type="button" className={TOOL} onClick={() => onMove(item, 1)} disabled={index === count - 1} aria-label={`Move ${item.title} later`} title="Move later">
+          <Icon name="chevronRight" className="h-3.5 w-3.5" />
+        </button>
+        {ui && (
+          <button
+            type="button"
+            className={`${TOOL} w-auto! px-2 text-[10.5px] font-semibold ${item.wide ? 'bg-white! text-black! hover:bg-white/85!' : ''}`}
+            onClick={() => onPatch(item, { wide: !item.wide })}
+            aria-pressed={item.wide}
+            aria-label={`Show ${item.title} wide`}
+            title={item.wide ? 'Wide: takes two columns' : 'Normal: one column'}
+          >
+            2×
+          </button>
+        )}
+        <button
+          type="button"
+          className={TOOL}
+          onClick={() => onPatch(item, { published: !item.published })}
+          aria-label={item.published ? `Hide ${item.title}` : `Show ${item.title}`}
+          title={item.published ? 'Hide from /gallery' : 'Show on /gallery'}
+        >
+          <Icon name={item.published ? 'eye' : 'eyeOff'} className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="mt-1.5 flex items-baseline justify-between gap-2 px-0.5">
+        <p className="truncate text-[12.5px] font-medium text-ink-strong">{item.title}</p>
+        <p className="shrink-0 font-mono text-[11px] tabular-nums text-ink-faint">{formatDay(item.takenOn)}</p>
+      </div>
+    </li>
+  )
+}
+
+function ItemGrid({ items, loading, onReload, onAdded, onReorder }) {
   const [filter, setFilterState] = useState(readFilter)
-  const [uploading, setUploading] = useState(0)
+  const [uploading, setUploading] = useState({ photo: 0, ui: 0 })
   const [error, setError] = useState(null)
   const [dragging, setDragging] = useState(false)
+  const [drag, setDrag] = useState(null)
+  const [orderState, setOrderState] = useState(null)
   const photoInput = useRef(null)
+
+  useEffect(() => {
+    if (orderState !== 'saved') return undefined
+    const t = setTimeout(() => setOrderState(null), 2000)
+    return () => clearTimeout(t)
+  }, [orderState])
   const uiInput = useRef(null)
 
   const setFilter = (value) => {
@@ -127,14 +210,17 @@ function ItemGrid({ items, loading, onReload, onAdded }) {
   }
 
   const counts = countsOf(items)
-  const shown = filterItems(items, filter)
   const dropKind = filter === 'ui' ? 'ui' : 'photo'
+  const kindsShown = KINDS.filter((k) => filter === 'all' || filter === k.value)
+  const sectionOf = (kind) => (drag?.kind === kind ? drag.list : items.filter((i) => i.kind === kind))
+  const nothing = kindsShown.every((k) => counts[k.value] === 0 && uploading[k.value] === 0)
 
   const addFiles = async (fileList, kind) => {
     const files = [...(fileList || [])].filter(isMediaFile)
     if (!files.length) return
     setError(null)
-    setUploading((n) => n + files.length)
+    const bump = (by) => setUploading((u) => ({ ...u, [kind]: u[kind] + by }))
+    bump(files.length)
     await Promise.all(
       files.map(async (file) => {
         try {
@@ -142,10 +228,69 @@ function ItemGrid({ items, loading, onReload, onAdded }) {
         } catch (err) {
           setError(err)
         } finally {
-          setUploading((n) => n - 1)
+          bump(-1)
         }
       }),
     )
+  }
+
+  const commit = async (section) => {
+    const next = withPositions(mergeOrder(items, section))
+    if (next.every((i, n) => i.id === items[n].id && i.position === items[n].position)) return
+    const before = items
+    onReorder(next)
+    setOrderState('saving')
+    try {
+      await reorderItems(next.map((i) => i.id))
+      setOrderState('saved')
+    } catch (err) {
+      onReorder(before)
+      setError(err)
+      setOrderState(null)
+    }
+  }
+
+  const move = (item, by) => {
+    const section = items.filter((i) => i.kind === item.kind)
+    const at = section.findIndex((i) => i.id === item.id)
+    const target = section[at + by]
+    if (target) commit(moveItem(section, item.id, target.id))
+  }
+
+  const patch = async (item, change) => {
+    onAdded({ ...item, ...change })
+    try {
+      onAdded(await patchItem(item.id, change))
+    } catch (err) {
+      onAdded(item)
+      setError(err)
+    }
+  }
+
+  const dragRef = useRef(null)
+  const setDragBoth = (next) => {
+    dragRef.current = next
+    setDrag(next)
+  }
+  const dragStart = (e, item) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', item.title)
+    setDragBoth({ id: item.id, kind: item.kind, list: items.filter((i) => i.kind === item.kind) })
+  }
+  const dragOver = (e, target) => {
+    const d = dragRef.current
+    if (!d || target.kind !== d.kind) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (target.id !== d.id) {
+      const list = moveItem(d.list, d.id, target.id)
+      if (list !== d.list) setDragBoth({ ...d, list })
+    }
+  }
+  const dragEnd = (e) => {
+    const d = dragRef.current
+    setDragBoth(null)
+    if (d && e.dataTransfer.dropEffect !== 'none') commit(d.list)
   }
 
   const picker = (ref, kind) => (
@@ -178,12 +323,16 @@ function ItemGrid({ items, loading, onReload, onAdded }) {
       }}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented
-          label="Show"
-          value={filter}
-          onChange={setFilter}
-          options={[{ value: 'all', label: `All ${counts.all}` }, ...KINDS.map((k) => ({ value: k.value, label: `${k.label} ${counts[k.value]}`, icon: k.icon }))]}
-        />
+        <div className="flex items-center gap-3">
+          <Segmented
+            label="Show"
+            value={filter}
+            onChange={setFilter}
+            options={[{ value: 'all', label: `All ${counts.all}` }, ...KINDS.map((k) => ({ value: k.value, label: `${k.label} ${counts[k.value]}`, icon: k.icon }))]}
+          />
+          {orderState === 'saving' && <span className="text-[11.5px] text-ink-faint">Saving order…</span>}
+          {orderState === 'saved' && <span className="text-[11.5px] text-emerald-500 animate-menu-in">Order saved</span>}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <a href={GALLERY_PATH} target="_blank" rel="noreferrer" className={BTN_GHOST}>
             View page ↗
@@ -207,7 +356,7 @@ function ItemGrid({ items, loading, onReload, onAdded }) {
 
       {error && <Note tone="error" onDismiss={() => setError(null)}>{errorText(error)}</Note>}
 
-      {shown.length === 0 && uploading === 0 ? (
+      {nothing ? (
         <button
           type="button"
           onClick={() => (dropKind === 'ui' ? uiInput : photoInput).current?.click()}
@@ -220,43 +369,51 @@ function ItemGrid({ items, loading, onReload, onAdded }) {
           <span className="text-[12px] text-ink-faint">Each file becomes its own item and goes live on /gallery right away.</span>
         </button>
       ) : (
-        <ul className={`grid grid-cols-2 gap-3 rounded-xl transition-colors sm:grid-cols-3 lg:grid-cols-4 ${dragging ? 'bg-surface-hover/50 outline-2 outline-dashed outline-offset-4 outline-line-strong' : ''}`}>
-          {Array.from({ length: uploading }, (_, i) => (
-            <li key={`up-${i}`} className="grid aspect-[4/3] place-items-center rounded-xl border border-dashed border-line text-ink-subtle">
-              <Spinner className="h-5 w-5" />
-            </li>
-          ))}
-          {shown.map((item) => (
-            <li key={item.id} className="group relative">
-              <a
-                {...link(dashboardPath(`gallery/${item.id}`))}
-                className="block overflow-hidden rounded-xl border border-line bg-surface-raised outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/30"
-              >
-                {item.live ? (
-                  <span className="pointer-events-none block aspect-[4/3] overflow-hidden" inert>
-                    <LiveStage live={item.live} title={item.title} className="h-full min-h-0! py-0!" />
-                  </span>
-                ) : (
-                  <img src={imageUrl(item.poster || item.image)} alt="" loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
-                )}
-                {isVideo(item.image) && <PlayBadge />}
-              </a>
-              <div className="pointer-events-none absolute left-2 top-2 flex gap-1">
-                <span className="rounded bg-black/60 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-white">
-                  {item.live ? `Live · ${liveType(item.live.type)?.label}` : kindLabel(item.kind)}
-                </span>
-                {!item.published && <span className="rounded bg-amber-500/90 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-black">Hidden</span>}
-              </div>
-              <p className="mt-1.5 truncate px-0.5 text-[12.5px] font-medium text-ink-strong">{item.title}</p>
-              <p className="truncate px-0.5 font-mono text-[11px] tabular-nums text-ink-subtle">{formatDay(item.takenOn)}</p>
-            </li>
-          ))}
-        </ul>
+        <div className={`flex flex-col gap-8 rounded-xl transition-colors ${dragging ? 'bg-surface-hover/50 outline-2 outline-dashed outline-offset-4 outline-line-strong' : ''}`}>
+          {kindsShown.map((kind) => {
+            const section = sectionOf(kind.value)
+            const pending = uploading[kind.value]
+            if (!section.length && !pending) return null
+            const ui = kind.value === 'ui'
+            return (
+              <section key={kind.value} aria-label={kind.label}>
+                <div className="mb-3 flex items-baseline gap-2">
+                  <h3 className="text-[13px] font-medium text-ink-strong">{ui ? 'Interfaces' : kind.label}</h3>
+                  <span className="font-mono text-[11px] tabular-nums text-ink-faint">{section.length}</span>
+                </div>
+                <ul
+                  onDragOver={(e) => { if (dragRef.current?.kind === kind.value) e.preventDefault() }}
+                  className={`grid gap-3 ${ui ? 'grid-flow-row-dense grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'}`}
+                >
+                  {Array.from({ length: pending }, (_, i) => (
+                    <li key={`up-${i}`} className={`grid place-items-center rounded-xl border border-dashed border-line text-ink-subtle ${ui ? 'h-48' : 'aspect-[4/5]'}`}>
+                      <Spinner className="h-5 w-5" />
+                    </li>
+                  ))}
+                  {section.map((item, i) => (
+                    <GridCard
+                      key={item.id}
+                      item={item}
+                      index={i}
+                      count={section.length}
+                      dragged={drag?.id === item.id}
+                      onDragStart={dragStart}
+                      onDragOver={dragOver}
+                      onDragEnd={dragEnd}
+                      onMove={move}
+                      onPatch={patch}
+                    />
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
       )}
 
       {items.length > 0 && (
         <p className="text-[12px] text-ink-faint">
-          Drop images or videos anywhere here to add them as {dropKind === 'ui' ? 'UI' : 'photos'}. Images are resized to WebP; videos (MP4, WebM, MOV, up to 50 MB) go up as they are.
+          Drag cards to change the order on /gallery, or use the arrows on each card. Drop images or videos anywhere here to add them as {dropKind === 'ui' ? 'UI' : 'photos'}; images are resized to WebP, videos (MP4, WebM, MOV, up to 50 MB) go up as they are.
         </p>
       )}
     </div>
@@ -559,6 +716,17 @@ function ItemEditor({ item, isNew = false, onSaved, onDeleted }) {
           <Field label="Link" htmlFor="gal-url" error={shown('url')} hint="optional">
             <input id="gal-url" type="url" className={`${INPUT} font-mono text-[12.5px]`} value={form.url} onChange={(e) => set('url')(e.target.value)} placeholder={form.kind === 'ui' ? 'https://figma.com/…' : 'https://…'} aria-invalid={Boolean(shown('url'))} />
           </Field>
+
+          {(form.live || form.kind === 'ui') && (
+            <Field label="Width on the page" hint="wide takes two columns">
+              <Segmented
+                label="Width on the page"
+                value={form.wide ? 'wide' : 'normal'}
+                onChange={(v) => set('wide')(v === 'wide')}
+                options={[{ value: 'normal', label: 'Normal' }, { value: 'wide', label: 'Wide' }]}
+              />
+            </Field>
+          )}
 
           <div className="flex items-center justify-between gap-4">
             <div>

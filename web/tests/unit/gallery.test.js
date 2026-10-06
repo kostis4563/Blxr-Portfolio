@@ -11,10 +11,14 @@ import {
   toRow,
   fromRow,
   IMAGE_RE,
+  imageUrl,
   isVideo,
   LIVE_TYPES,
   cleanLive,
   draftLive,
+  moveItem,
+  mergeOrder,
+  withPositions,
 } from '../../src/lib/gallery.js'
 
 const item = (over = {}) => ({
@@ -41,6 +45,26 @@ describe('ordering and filtering', () => {
       item({ id: 'c', takenOn: '2026-03-01', createdAt: '2026-03-01T12:00:00Z' }),
     ])
     expect(list.map((i) => i.id)).toEqual(['c', 'b', 'a'])
+  })
+
+  test('a set order wins over dates, and unmoved items stay on top', () => {
+    const list = sortItems([
+      item({ id: 'a', takenOn: '2026-09-01', position: 2 }),
+      item({ id: 'b', takenOn: '2026-01-01', position: 1 }),
+      item({ id: 'new', takenOn: '2026-01-01', position: 0 }),
+    ])
+    expect(list.map((i) => i.id)).toEqual(['new', 'b', 'a'])
+  })
+
+  test('moving, and folding a section back into the full order', () => {
+    const ids = (list) => list.map((i) => i.id)
+    const all = ['p1', 'u1', 'p2', 'u2', 'p3'].map((id) => item({ id, kind: id[0] === 'u' ? 'ui' : 'photo' }))
+    const photos = all.filter((i) => i.kind === 'photo')
+    expect(ids(moveItem(photos, 'p3', 'p1'))).toEqual(['p3', 'p1', 'p2'])
+    expect(ids(moveItem(photos, 'p1', 'p2'))).toEqual(['p2', 'p1', 'p3'])
+    expect(moveItem(photos, 'p1', 'nope')).toBe(photos)
+    expect(ids(mergeOrder(all, moveItem(photos, 'p3', 'p1')))).toEqual(['p3', 'u1', 'p1', 'u2', 'p2'])
+    expect(withPositions(photos).map((i) => i.position)).toEqual([1, 2, 3])
   })
 
   test('filter and counts by kind', () => {
@@ -115,6 +139,13 @@ describe('rows', () => {
     expect(IMAGE_RE.test('../etc/passwd.webp')).toBe(false)
     expect(IMAGE_RE.test('00000000-0000-4000-8000-000000000000/clip-a1b2c3.mp4')).toBe(true)
     expect(IMAGE_RE.test('00000000-0000-4000-8000-000000000000/clip-a1b2c3.gif')).toBe(false)
+    expect(IMAGE_RE.test('/photos/sunset-a1b2c3d4.webp')).toBe(true)
+    expect(IMAGE_RE.test('/photos/../dashboard.webp')).toBe(false)
+    expect(IMAGE_RE.test('/assets/sunset.webp')).toBe(false)
+  })
+
+  test('site photos are served from the site, not the bucket', () => {
+    expect(imageUrl('/photos/sunset-a1b2c3d4.webp')).toBe('/photos/sunset-a1b2c3d4.webp')
   })
 
   test('videos keep their poster; images never carry one', () => {

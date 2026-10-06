@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from './icon'
+import { imageProps, SIZES } from '../lib/images'
 
 const stillMotion = () =>
   document.documentElement.dataset.motion === 'reduced' || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -67,16 +68,12 @@ function useCanvas(setup) {
   return ref
 }
 
-// Comet border, from the async landing hero. A bright head with a fading tail
-// travels the rounded edge of the card.
-
 const COMET_TAIL = 0.14
 const COMET_LOOP = 7600
 const COMET_SAMPLES = 150
 const COMET_STROKE = 2.4
 const COMET_RADIUS = 16
 
-// Maps 0..1 around the loop to a point on the rounded rectangle's edge.
 function edgePoint(width, height, radius, inset) {
   const left = inset
   const top = inset
@@ -153,9 +150,6 @@ export function CometCard({ title, sub }) {
     </div>
   )
 }
-
-// Contour field, from the Amitista Studio backdrop. Marching squares trace
-// eleven height levels of a slowly moving sum of sines.
 
 const CONTOUR_LEVELS = 11
 const CONTOUR_CELL = 8
@@ -241,20 +235,15 @@ export function ContourField() {
   )
 }
 
-// Floating paths and the word loop, together the Fresh Finds hero.
-
 const PATHS_W = 696
 const PATHS_H = 316
 const DASH = 0.45
 const GAP = 0.08
 
-// The hero's mirrored set (position -1 in the original), sweeping in from the top left.
 const pathData = (i) =>
   `M-${380 + i * 5} -${189 + i * 6}C-${380 + i * 5} -${189 + i * 6} -${312 + i * 5} ${216 - i * 6} ${152 + i * 5} ${343 - i * 6}` +
   `C${616 + i * 5} ${470 - i * 6} ${684 + i * 5} ${875 - i * 6} ${684 + i * 5} ${875 - i * 6}`
 
-// Canvas dashes are in path units, so each curve's length is needed up front,
-// and only SVG can measure that.
 function curveLengths(data) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden'
@@ -402,287 +391,402 @@ export function GlowButton({ text }) {
   )
 }
 
+const TRACK = '/audio/sunset-drive.mp3'
+const EQ_DELAYS = [0, 0.22, 0.44, 0.12]
 
-const OCEAN_VERT = `
-  attribute vec3 position;
-  uniform mat4 projectionMatrix;
-  uniform mat4 viewMatrix;
-  uniform vec3 cameraPosition;
-  uniform float uTime;
-  varying vec3 vPos;
-  varying vec3 vNrm;
-  varying float vRise;
-
-  const float G = 9.81;
-  const float PI2 = 6.28318531;
-  const float NW = 6.0;
-
-  void gerstner(vec2 dir, float len, float amp, float steep, vec2 p, float t, inout vec3 disp, inout vec3 nrm) {
-    float k = PI2 / len;
-    float w = sqrt(G * k);
-    float q = steep / (k * max(amp, 1e-4) * NW);
-    float ph = k * dot(dir, p) - w * t;
-    float c = cos(ph);
-    float sn = sin(ph);
-    float wa = k * amp;
-    disp.xz += q * amp * dir * c;
-    disp.y += amp * sn;
-    nrm.x -= dir.x * wa * c;
-    nrm.z -= dir.y * wa * c;
-    nrm.y -= q * wa * sn;
-  }
-
-  void main() {
-    vec2 p = position.xz;
-    float t = uTime * 0.62;
-    float near = 1.0 - smoothstep(30.0, 120.0, distance(p, cameraPosition.xz));
-    vec3 disp = vec3(0.0);
-    vec3 nrm = vec3(0.0, 1.0, 0.0);
-    gerstner(vec2( 0.98,  0.20), 145.0, 0.700,        0.30,        p, t, disp, nrm);
-    gerstner(vec2(-0.34,  0.94),  79.0, 0.400,        0.30,        p, t, disp, nrm);
-    gerstner(vec2( 0.72, -0.69),  43.0, 0.220,        0.35,        p, t, disp, nrm);
-    gerstner(vec2( 0.20,  0.98),  24.0, 0.115,        0.40,        p, t, disp, nrm);
-    gerstner(vec2(-0.86,  0.51),  13.5, 0.055 * near, 0.45 * near, p, t, disp, nrm);
-    gerstner(vec2( 0.55,  0.83),  11.5, 0.028 * near, 0.45 * near, p, t, disp, nrm);
-    vNrm = normalize(nrm);
-    vRise = disp.y;
-    vec4 world = vec4(position + disp, 1.0);
-    vPos = world.xyz;
-    gl_Position = projectionMatrix * viewMatrix * world;
-  }
-`
-
-const OCEAN_FRAG = `
-  precision highp float;
-  uniform vec3 cameraPosition;
-  uniform float uTime;
-  uniform vec3 uDeep;
-  uniform vec3 uSky;
-  uniform vec3 uZenith;
-  uniform vec3 uGlint;
-  uniform vec3 uScatter;
-  uniform vec3 uLight;
-  varying vec3 vPos;
-  varying vec3 vNrm;
-  varying float vRise;
-
-  float ggx(float ndh, float rough) {
-    float a2 = rough * rough;
-    float d = ndh * ndh * (a2 - 1.0) + 1.0;
-    return a2 / (3.14159265 * d * d);
-  }
-
-  void main() {
-    float d = distance(cameraPosition, vPos);
-    vec3 V = normalize(cameraPosition - vPos);
-    vec2 q = vPos.xz;
-    float t = uTime;
-    float fine = 1.0 - smoothstep(18.0, 95.0, d);
-    float gust = 0.72 + 0.28 * sin(dot(q, vec2(0.31, 0.95)) * 0.090 + t * 0.15) * sin(dot(q, vec2(-0.87, 0.49)) * 0.130 - t * 0.11);
-    float amp = fine * gust * 0.090;
-    float warp = sin(dot(q, vec2(0.62, 0.78)) * 0.105 + t * 0.21) + sin(dot(q, vec2(-0.79, 0.61)) * 0.077 - t * 0.17);
-
-    vec2 chop = vec2(0.0);
-    chop += vec2( 0.90,  0.44) * cos(dot(q, vec2( 0.90,  0.44)) *  3.70 + warp * 1.1 + t * 1.55) * 0.70;
-    chop += vec2(-0.48,  0.88) * cos(dot(q, vec2(-0.48,  0.88)) *  5.90 - warp * 0.8 - t * 2.05);
-    chop += vec2( 0.74, -0.67) * cos(dot(q, vec2( 0.74, -0.67)) *  8.30 + warp * 1.5 + t * 2.60) * 0.80;
-    chop += vec2(-0.96, -0.28) * cos(dot(q, vec2(-0.96, -0.28)) * 13.10 - warp * 1.9 - t * 3.30) * 0.50;
-    chop += vec2( 0.31,  0.95) * cos(dot(q, vec2( 0.31,  0.95)) * 19.70 + warp * 2.4 + t * 4.10) * 0.28;
-
-    vec3 N = normalize(normalize(vNrm) + vec3(chop.x, 0.0, chop.y) * amp);
-    float ndv = max(dot(N, V), 0.0);
-    float fres = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
-    vec3 R = reflect(-V, N);
-    vec3 sky = mix(uSky, uZenith, clamp(R.y * 2.4, 0.0, 1.0));
-    vec3 col = mix(uDeep, sky, fres);
-    float rough = mix(0.062, 0.20, 1.0 - fine);
-    vec3 H = normalize(uLight + V);
-    col += uGlint * ggx(max(dot(N, H), 0.0), rough) * fres * 0.13;
-    float through = pow(max(dot(V, -uLight), 0.0), 3.0);
-    col += uScatter * through * max(vRise, 0.0) * 0.10;
-    float fog = 1.0 - exp(-pow(d * 0.0075, 2.4));
-    col = col / (1.0 + col);
-    gl_FragColor = vec4(col * (1.0 - fog), 1.0 - fog);
-  }
-`
-
-const OCEAN_FOV = 45
-const OCEAN_HORIZON = 0.36
-const OCEAN_CAMERA = [0, 12, 60]
-const OCEAN_STEPS = [140, 115]
-
-const OCEAN_COLORS = {
-  uDeep: [0.006, 0.016, 0.028],
-  uSky: [0.048, 0.092, 0.136],
-  uZenith: [0.01, 0.021, 0.038],
-  uGlint: [0.62, 0.76, 0.9],
-  uScatter: [0.04, 0.13, 0.15],
-}
-
-function oceanMesh() {
-  const [across, deep] = OCEAN_STEPS
-  const cols = across + 1
-  const points = new Float32Array(cols * (deep + 1) * 3)
-  for (let r = 0; r <= deep; r++) {
-    for (let c = 0; c <= across; c++) {
-      const i = (r * cols + c) * 3
-      points[i] = (c / across - 0.5) * 560
-      points[i + 2] = (r / deep - 0.5) * 460 - 120
-    }
-  }
-  const order = new Uint16Array(across * deep * 6)
-  for (let r = 0, k = 0; r < deep; r++) {
-    for (let c = 0; c < across; c++, k += 6) {
-      const a = r * cols + c
-      order.set([a, a + cols, a + 1, a + 1, a + cols, a + cols + 1], k)
-    }
-  }
-  return { points, order }
-}
-
-function oceanView() {
-  const pitch = -Math.atan((0.5 - OCEAN_HORIZON) * 2 * Math.tan((OCEAN_FOV * Math.PI) / 360))
-  const c = Math.cos(pitch)
-  const s = -Math.sin(pitch)
-  const [x, y, z] = OCEAN_CAMERA
-  return new Float32Array([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, -x, -(c * y - s * z), -(s * y + c * z), 1])
-}
-
-function oceanProjection(aspect, near = 0.5, far = 900) {
-  const f = 1 / Math.tan((OCEAN_FOV * Math.PI) / 360)
-  return new Float32Array([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) / (near - far), -1, 0, 0, (2 * far * near) / (near - far), 0])
-}
-
-function shader(gl, type, source) {
-  const s = gl.createShader(type)
-  gl.shaderSource(s, source)
-  gl.compileShader(s)
-  return s
-}
-
-function startOcean(canvas) {
-  const box = canvas.parentElement
-  const gl = canvas.getContext('webgl', { alpha: true, antialias: true })
-  if (!gl) return () => {}
-
-  const vert = shader(gl, gl.VERTEX_SHADER, OCEAN_VERT)
-  const frag = shader(gl, gl.FRAGMENT_SHADER, OCEAN_FRAG)
-  const program = gl.createProgram()
-  gl.attachShader(program, vert)
-  gl.attachShader(program, frag)
-  gl.linkProgram(program)
-  const { points, order } = oceanMesh()
-  const pointBuffer = gl.createBuffer()
-  const orderBuffer = gl.createBuffer()
-  const release = () => {
-    gl.deleteBuffer(pointBuffer)
-    gl.deleteBuffer(orderBuffer)
-    gl.deleteProgram(program)
-    gl.deleteShader(vert)
-    gl.deleteShader(frag)
-  }
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    release()
-    return () => {}
-  }
-  gl.useProgram(program)
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer)
-  gl.bufferData(gl.ARRAY_BUFFER, points, gl.STATIC_DRAW)
-  const position = gl.getAttribLocation(program, 'position')
-  gl.enableVertexAttribArray(position)
-  gl.vertexAttribPointer(position, 3, gl.FLOAT, false, 0, 0)
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, orderBuffer)
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, order, gl.STATIC_DRAW)
-
-  const uniform = (name) => gl.getUniformLocation(program, name)
-  gl.uniformMatrix4fv(uniform('viewMatrix'), false, oceanView())
-  gl.uniform3fv(uniform('cameraPosition'), OCEAN_CAMERA)
-  for (const [name, rgb] of Object.entries(OCEAN_COLORS)) gl.uniform3fv(uniform(name), rgb)
-  const uTime = uniform('uTime')
-  const uLight = uniform('uLight')
-  const uProjection = uniform('projectionMatrix')
-
-  gl.enable(gl.BLEND)
-  gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
-  gl.clearColor(0, 0, 0, 0)
-
-  const still = stillMotion()
-  let sun = 0
-  let sunAt = 0
-  let raf = 0
-  let seen = false
-
-  const draw = (ms) => {
-    sunAt += (sun - sunAt) * 0.06
-    const length = Math.hypot(sunAt, 0.3, 1)
-    gl.uniform3f(uLight, sunAt / length, 0.3 / length, -1 / length)
-    gl.uniform1f(uTime, still ? 0 : ms / 1000)
-    gl.clear(gl.COLOR_BUFFER_BIT)
-    gl.drawElements(gl.TRIANGLES, order.length, gl.UNSIGNED_SHORT, 0)
-  }
-  const loop = (ms) => {
-    draw(ms)
-    raf = requestAnimationFrame(loop)
-  }
-  const sync = () => {
-    cancelAnimationFrame(raf)
-    raf = !still && seen && !document.hidden ? requestAnimationFrame(loop) : 0
-  }
-  const fit = () => {
-    const { width, height } = box.getBoundingClientRect()
-    if (!width || !height) return
-    const ratio = Math.min(window.devicePixelRatio || 1, 1.75)
-    canvas.width = Math.round(width * ratio)
-    canvas.height = Math.round(height * ratio)
-    gl.viewport(0, 0, canvas.width, canvas.height)
-    gl.uniformMatrix4fv(uProjection, false, oceanProjection(width / height))
-    draw(performance.now())
-  }
-  const aim = (e) => {
-    const rect = box.getBoundingClientRect()
-    sun = ((e.clientX - rect.left) / rect.width - 0.5) * 1.6
-    if (still) {
-      sunAt = sun
-      draw(0)
-    }
-  }
-  const drop = () => {
-    sun = 0
-    if (still) {
-      sunAt = 0
-      draw(0)
-    }
-  }
-
-  const sizes = new ResizeObserver(fit)
-  const view = new IntersectionObserver(([entry]) => {
-    seen = entry.isIntersecting
-    sync()
-  })
-  sizes.observe(box)
-  view.observe(canvas)
-  box.addEventListener('pointermove', aim)
-  box.addEventListener('pointerleave', drop)
-  document.addEventListener('visibilitychange', sync)
-
-  return () => {
-    cancelAnimationFrame(raf)
-    sizes.disconnect()
-    view.disconnect()
-    box.removeEventListener('pointermove', aim)
-    box.removeEventListener('pointerleave', drop)
-    document.removeEventListener('visibilitychange', sync)
-    release()
-  }
-}
-
-export function Ocean() {
-  const ref = useRef(null)
-  useEffect(() => startOcean(ref.current), [])
+function Speaker({ muted }) {
+  const lines = muted
+    ? ['M11 5 6 9H2v6h4l5 4z', 'm22 9-6 6', 'm16 9 6 6']
+    : ['M11 5 6 9H2v6h4l5 4z', 'M15.5 8.5a5 5 0 0 1 0 7', 'M19 5a10 10 0 0 1 0 14']
   return (
-    <span className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_20%,#0b1724,#02060b_70%)]">
-      <canvas ref={ref} aria-hidden="true" className="absolute inset-0 h-full w-full" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5">
+      {lines.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  )
+}
+
+export function MusicPill({ label }) {
+  const audio = useRef(null)
+  const [playing, setPlaying] = useState(false)
+  const [volume, setVolume] = useState(60)
+  const [muted, setMuted] = useState(false)
+
+  useEffect(() => {
+    const el = audio.current
+    if (!el) return
+    el.volume = volume / 100
+    el.muted = muted
+  }, [volume, muted])
+
+  const toggle = () => {
+    const el = audio.current
+    if (el.paused) el.play().catch(() => setPlaying(false))
+    else el.pause()
+  }
+
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-full border py-[9px] pl-[18px] pr-2.5 backdrop-blur-[18px] transition-[background-color,border-color,box-shadow] duration-500 ${
+        playing
+          ? 'border-line-strong bg-ink-strong/[0.07] shadow-[0_8px_34px_var(--shadow-cast-soft),0_0_22px_var(--glow-soft)]'
+          : 'border-line bg-ink-strong/5 shadow-[0_8px_30px_var(--shadow-cast-soft)]'
+      }`}
+    >
+      <span className="whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-[0.06em] text-ink-muted">{label}</span>
+      <span
+        aria-hidden="true"
+        className={`flex h-3.5 items-end gap-[2.5px] overflow-hidden transition-[width,opacity] duration-[450ms] ${playing ? 'w-[18px] opacity-100' : 'w-0 opacity-0'}`}
+      >
+        {EQ_DELAYS.map((d) => (
+          <i key={d} className="h-1 w-[2.5px] shrink-0 animate-eq rounded-sm bg-ink-strong" style={{ animationDelay: `${d}s` }} />
+        ))}
+      </span>
+      <span
+        inert={!playing}
+        className={`flex items-center overflow-hidden transition-[max-width,opacity,translate,scale] duration-500 ${
+          playing ? 'max-w-[130px] opacity-100' : 'max-w-0 translate-x-2.5 scale-[0.92] opacity-0'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setMuted((m) => !m)}
+          aria-label={muted ? 'Unmute' : 'Mute'}
+          className="grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-full text-ink-muted outline-none transition-colors hover:bg-ink-strong/[0.08] hover:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30"
+        >
+          <Speaker muted={muted || volume === 0} />
+        </button>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={volume}
+          onChange={(e) => setVolume(Number(e.target.value))}
+          aria-label="Volume"
+          className="mr-1 ml-0.5 h-[3px] w-[68px] cursor-pointer appearance-none rounded-full outline-none [&::-moz-range-thumb]:h-[11px] [&::-moz-range-thumb]:w-[11px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-ink-strong [&::-webkit-slider-thumb]:h-[11px] [&::-webkit-slider-thumb]:w-[11px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-ink-strong [&::-webkit-slider-thumb]:transition-transform hover:[&::-webkit-slider-thumb]:scale-125"
+          style={{ background: `linear-gradient(to right, var(--color-ink-strong) ${volume}%, var(--color-line-strong) ${volume}%)` }}
+        />
+      </span>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={playing ? `Pause ${label}` : `Play ${label}`}
+        className="grid h-[30px] w-[30px] shrink-0 cursor-pointer place-items-center rounded-full bg-ink-strong text-bg outline-none transition-transform hover:scale-[1.06] focus-visible:ring-2 focus-visible:ring-ink-strong/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+      >
+        <Icon name={playing ? 'pause' : 'play'} className="h-3 w-3" strokeWidth={2.4} />
+      </button>
+      <audio ref={audio} src={TRACK} loop preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
+    </div>
+  )
+}
+
+const MARQUEE_REPEAT = 3
+
+function MarqueeRow({ items, back }) {
+  const run = Array.from({ length: MARQUEE_REPEAT }, () => items).flat()
+  const group = (
+    <span className="flex shrink-0 items-center gap-3 pr-3">
+      {run.map((item, i) => (
+        <span
+          key={`${item}-${i}`}
+          className="whitespace-nowrap rounded-full border border-line bg-surface-raised px-3.5 py-1.5 text-[13px] font-semibold text-ink-muted transition-colors hover:border-line-strong hover:text-ink-strong"
+        >
+          {item}
+        </span>
+      ))}
     </span>
+  )
+  return (
+    <div aria-hidden="true" className="flex w-max animate-marquee group-hover:[animation-play-state:paused]" style={back ? { animationDirection: 'reverse' } : undefined}>
+      {group}
+      {group}
+    </div>
+  )
+}
+
+export function Marquee({ items }) {
+  const list = useMemo(() => {
+    const split = String(items || '').split(',').map((s) => s.trim()).filter(Boolean)
+    return split.length ? split : ['React']
+  }, [items])
+  const half = Math.ceil(list.length / 2)
+  const top = list.length > 3 ? list.slice(0, half) : list
+  const bottom = list.length > 3 ? list.slice(half) : list
+  return (
+    <div className="group w-full space-y-3 overflow-hidden mask-[linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
+      <MarqueeRow items={top} />
+      <MarqueeRow items={bottom} back />
+      <p className="sr-only">{list.join(', ')}</p>
+    </div>
+  )
+}
+
+const WEEKDAYS = Array.from({ length: 7 }, (_, i) => new Date(2026, 0, 4 + i).toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2))
+const MONTH_NAME = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
+const DAY_NAME = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const keyDate = (key) => {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+const shiftKey = (key, by) => {
+  const d = keyDate(key)
+  d.setDate(d.getDate() + by)
+  return dayKey(d)
+}
+
+function weeksOf(year, month) {
+  const lead = new Date(year, month, 1).getDay()
+  const rows = Math.ceil((lead + new Date(year, month + 1, 0).getDate()) / 7)
+  return Array.from({ length: rows }, (_, r) =>
+    Array.from({ length: 7 }, (_, c) => {
+      const at = new Date(year, month, 1 - lead + r * 7 + c)
+      return { key: dayKey(at), day: at.getDate(), inside: at.getMonth() === month, at }
+    }),
+  )
+}
+
+const RANGE_DAYS = 13
+
+export function RangeCalendar() {
+  const [range, setRange] = useState(() => {
+    const from = dayKey(new Date())
+    return { from, to: shiftKey(from, RANGE_DAYS) }
+  })
+  const [face, setFace] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }))
+  const [hover, setHover] = useState(null)
+  const [cursor, setCursor] = useState(null)
+  const gridRef = useRef(null)
+  const wanted = useRef(null)
+  const weeks = useMemo(() => weeksOf(face.year, face.month), [face])
+  const today = dayKey(new Date())
+
+  const open = range.from && !range.to
+  const end = open ? hover : range.to
+  const [lo, hi] = end && end < range.from ? [end, range.from] : [range.from, end]
+  const cells = weeks.flat()
+  const roving = cells.find((c) => c.key === (cursor || range.from) && c.inside)?.key || cells.find((c) => c.inside).key
+
+  useLayoutEffect(() => {
+    if (!wanted.current) return
+    gridRef.current?.querySelector(`[data-day="${wanted.current}"]`)?.focus({ preventScroll: true })
+    wanted.current = null
+  })
+
+  const show = (key) => {
+    const d = keyDate(key)
+    setFace({ year: d.getFullYear(), month: d.getMonth() })
+  }
+  const step = (by) => setFace(({ year, month }) => ({ year: new Date(year, month + by, 1).getFullYear(), month: new Date(year, month + by, 1).getMonth() }))
+
+  const pick = (key, inside) => {
+    setRange((r) => (!r.from || r.to ? { from: key, to: null } : key < r.from ? { from: key, to: r.from } : { from: r.from, to: key }))
+    setCursor(key)
+    if (!inside) show(key)
+  }
+
+  const walk = (event) => {
+    const by = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key]
+    if (!by) return
+    event.preventDefault()
+    const next = shiftKey(roving, by)
+    wanted.current = next
+    setCursor(next)
+    if (!cells.some((c) => c.key === next && c.inside)) show(next)
+  }
+
+  const arrow = 'grid h-7 w-7 cursor-pointer place-items-center rounded-md text-ink-muted outline-none transition-colors hover:bg-ink-strong/[0.07] hover:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30'
+
+  return (
+    <div className="w-full max-w-[252px] rounded-xl border border-line bg-surface p-3 shadow-[0_10px_34px_var(--shadow-cast-soft)]">
+      <div className="mb-2 flex items-center justify-between">
+        <button type="button" aria-label="Previous month" onClick={() => step(-1)} className={arrow}>
+          <Icon name="chevronLeft" className="h-4 w-4" />
+        </button>
+        <span aria-live="polite" className="text-[13.5px] font-semibold tracking-tight text-ink-strong">
+          {MONTH_NAME.format(new Date(face.year, face.month, 1))}
+        </span>
+        <button type="button" aria-label="Next month" onClick={() => step(1)} className={arrow}>
+          <Icon name="chevronRight" className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mb-1 grid grid-cols-7">
+        {WEEKDAYS.map((name) => (
+          <span key={name} className="text-center text-[11.5px] font-medium text-ink-subtle">
+            {name}
+          </span>
+        ))}
+      </div>
+      <div ref={gridRef} role="grid" aria-label="Pick a date range" onKeyDown={walk} onPointerLeave={() => setHover(null)} className="space-y-1">
+        {weeks.map((week) => (
+          <div key={week[0].key} role="row" className="grid grid-cols-7">
+            {week.map((cell, c) => {
+              const band = lo && hi && cell.key >= lo && cell.key <= hi
+              const edge = cell.key === lo || cell.key === hi
+              return (
+                <span key={cell.key} role="gridcell" className="relative grid h-8 place-items-center">
+                  {band && (
+                    <span
+                      aria-hidden="true"
+                      className={`absolute inset-y-0 left-0 right-0 bg-blue-500/20 ${c === 0 || cell.key === lo ? 'rounded-l-full' : ''} ${
+                        c === 6 || cell.key === hi ? 'rounded-r-full' : ''
+                      }`}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    data-day={cell.key}
+                    tabIndex={cell.key === roving ? 0 : -1}
+                    aria-label={DAY_NAME.format(cell.at)}
+                    aria-pressed={edge}
+                    onClick={() => pick(cell.key, cell.inside)}
+                    onPointerEnter={() => setHover(cell.key)}
+                    onFocus={() => setHover(cell.key)}
+                    className={`relative grid h-7 w-7 cursor-pointer place-items-center rounded-full text-[12.5px] tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-400/70 ${
+                      edge
+                        ? 'bg-blue-500 font-semibold text-white shadow-[0_0_0_3px_rgba(59,130,246,0.18)]'
+                        : `hover:bg-ink-strong/10 ${cell.inside ? 'font-medium text-ink-strong' : 'text-ink-faint'} ${cell.key === today ? 'underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`
+                    }`}
+                  >
+                    {cell.day}
+                  </button>
+                </span>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const BRANDS = {
+  nvidia: {
+    name: 'NVIDIA',
+    style: 'font-black uppercase tracking-[0.04em]',
+    d: 'M8.948 8.798v-1.43a6.7 6.7 0 0 1 .424-.018c3.922-.124 6.493 3.374 6.493 3.374s-2.774 3.851-5.75 3.851c-.398 0-.787-.062-1.158-.185v-4.346c1.528.185 1.837.857 2.747 2.385l2.04-1.714s-1.492-1.952-4-1.952a6.016 6.016 0 0 0-.796.035m0-4.735v2.138l.424-.027c5.45-.185 9.01 4.47 9.01 4.47s-4.08 4.964-8.33 4.964c-.37 0-.733-.035-1.095-.097v1.325c.3.035.61.062.91.062 3.957 0 6.82-2.023 9.593-4.408.459.371 2.34 1.263 2.73 1.652-2.633 2.208-8.772 3.984-12.253 3.984-.335 0-.653-.018-.971-.053v1.864H24V4.063zm0 10.326v1.131c-3.657-.654-4.673-4.46-4.673-4.46s1.758-1.944 4.673-2.262v1.237H8.94c-1.528-.186-2.73 1.245-2.73 1.245s.68 2.412 2.739 3.11M2.456 10.9s2.164-3.197 6.5-3.533V6.201C4.153 6.59 0 10.653 0 10.653s2.35 6.802 8.948 7.42v-1.237c-4.84-.6-6.492-5.936-6.492-5.936z',
+  },
+  supabase: {
+    name: 'supabase',
+    style: 'font-semibold tracking-tight',
+    d: 'M11.9 1.036c-.015-.986-1.26-1.41-1.874-.637L.764 12.05C-.33 13.427.65 15.455 2.409 15.455h9.579l.113 7.51c.014.985 1.259 1.408 1.873.636l9.262-11.653c1.093-1.375.113-3.403-1.645-3.403h-9.642z',
+  },
+  github: { name: 'GitHub', style: 'text-[19px] font-extrabold tracking-[-0.03em]' },
+  openai: {
+    name: 'OpenAI',
+    style: 'font-medium tracking-tight',
+    d: 'M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z',
+  },
+  turso: {
+    name: 'TURSO',
+    style: 'font-black tracking-[-0.01em]',
+    d: 'm23.31.803-.563-.42-1.11 1.189-.891-1.286-.512.235.704 1.798-.326.35L18.082 0l-.574.284 2.25 4.836-2.108.741h-.05l-1.143-1.359-1.144 1.36H8.687l-1.144-1.36-1.146 1.363H6.36l-2.12-.745L6.491.284 5.919 0l-2.53 2.668-.327-.349.705-1.798-.512-.236-.89 1.287L1.253.382.69.804 2.42 3.69l-.89.939.311 2.375 2.061.787L3.9 8.817H1.947v.444l.755 1.078 1.197.433v6.971l3.057 4.55L7.657 24l1.101-1.606L9.9 24l.999-1.606L12 24l1.102-1.606L14.1 24l1.141-1.606L16.343 24l.701-1.706 3.058-4.55v-6.972l1.196-.433.756-1.078v-.444h-1.952l.003-1.03 2.054-.784.311-2.375-.89-.939zm-8.93 18.718H8.033l.793-1.615.794 1.615.793-1.083.793 1.083.794-1.083.793 1.083.794-1.083.793 1.083.793-1.615.794 1.615zm3.886-7.39-3.3 1.084-.143 3.061-2.827.627-2.826-.627-.142-3.06-3.3-1.085v-1.635l4.266 1.21-.052 4.126h4.109l-.052-4.127 4.266-1.209z',
+  },
+  clerk: {
+    name: 'clerk',
+    style: 'text-[18px] font-semibold tracking-[-0.03em]',
+    d: 'm21.47 20.829-2.881-2.881a.572.572 0 0 0-.7-.084 6.854 6.854 0 0 1-7.081 0 .576.576 0 0 0-.7.084l-2.881 2.881a.576.576 0 0 0-.103.69.57.57 0 0 0 .166.186 12 12 0 0 0 14.113 0 .58.58 0 0 0 .239-.423.576.576 0 0 0-.172-.453Zm.002-17.668-2.88 2.88a.569.569 0 0 1-.701.084A6.857 6.857 0 0 0 8.724 8.08a6.862 6.862 0 0 0-1.222 3.692 6.86 6.86 0 0 0 .978 3.764.573.573 0 0 1-.083.699l-2.881 2.88a.567.567 0 0 1-.864-.063A11.993 11.993 0 0 1 6.771 2.7a11.99 11.99 0 0 1 14.637-.405.566.566 0 0 1 .232.418.57.57 0 0 1-.168.448Zm-7.118 12.261a3.427 3.427 0 1 0 0-6.854 3.427 3.427 0 0 0 0 6.854Z',
+  },
+  claude: {
+    name: 'Claude',
+    style: 'font-serif text-[18px] tracking-[-0.01em]',
+    d: 'm4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z',
+  },
+  vercel: { name: 'Vercel', style: 'text-[19px] font-semibold tracking-[-0.04em]', d: 'm12 1.608 12 20.784H0Z' },
+}
+
+const brandOf = (name) => BRANDS[name.toLowerCase().replace(/[^a-z0-9]/g, '')]
+
+function Brand({ name }) {
+  const brand = brandOf(name)
+  return (
+    <span className={`flex items-center gap-1.5 whitespace-nowrap text-[17px] leading-none ${brand?.style || 'font-semibold tracking-tight'}`}>
+      {brand?.d && (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[1.15em] w-[1.15em] shrink-0 fill-current">
+          <path d={brand.d} />
+        </svg>
+      )}
+      {brand?.name || name}
+    </span>
+  )
+}
+
+const innerCorner = (i, count, cols) => (i + 1) % cols !== 0 && i < count - (count % cols || cols)
+
+export function LogoWall({ lead, bold, tail, names }) {
+  const list = useMemo(() => {
+    const split = String(names || '').split(',').map((s) => s.trim()).filter(Boolean)
+    return split.length ? split : ['Vercel']
+  }, [names])
+  return (
+    <div className="@container w-full">
+      <p className="mb-6 text-center text-[19px] font-semibold tracking-tight text-ink-subtle">
+        {lead && `${lead} `}
+        <span className="text-ink-strong">{bold}</span>
+        {tail && ` ${tail}`}
+      </p>
+      <ul className="grid grid-cols-2 border-l border-t border-line @xl:grid-cols-4">
+        {list.map((name, i) => (
+          <li
+            key={`${name}-${i}`}
+            className="relative grid h-[76px] place-items-center border-b border-r border-line px-2 text-ink-muted transition-colors duration-300 hover:bg-surface-hover hover:text-ink-strong"
+          >
+            <Brand name={name} />
+            <svg
+              viewBox="0 0 9 9"
+              aria-hidden="true"
+              className={`pointer-events-none absolute -bottom-[5px] -right-[5px] z-10 h-[9px] w-[9px] stroke-ink-faint ${innerCorner(i, list.length, 2) ? 'block' : 'hidden'} ${
+                innerCorner(i, list.length, 4) ? '@xl:block' : '@xl:hidden'
+              }`}
+            >
+              <path d="M4.5 0v9M0 4.5h9" strokeWidth="1" />
+            </svg>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+const FACES = [
+  { name: 'Kostis', src: '/pfp.webp' },
+  { name: 'async', src: '/async-logo.webp', mark: true },
+  { name: 'Delivo', src: '/delivo-logo.webp', mark: true },
+  { name: 'Amitista', src: '/amitista-logo.webp', mark: true },
+  { name: '7x0', src: '/7x0-logo.webp', mark: true },
+]
+
+export function AvatarStack({ more }) {
+  const extra = Math.max(0, Math.min(999, Number(more) || 0))
+  return (
+    <div role="group" aria-label={`${FACES.length}${extra ? ` people and ${extra} more` : ' people'}`} className="group flex items-center">
+      {FACES.map((face, i) => (
+        <span
+          key={face.name}
+          tabIndex={0}
+          className={`group/face relative rounded-full outline-none transition-[margin,translate] duration-300 ease-out hover:z-10 hover:-translate-y-1 focus-visible:z-10 focus-visible:-translate-y-1 ${
+            i ? '-ml-3.5 group-focus-within:-ml-1 group-hover:-ml-1' : ''
+          }`}
+        >
+          <img
+            {...imageProps(face.src, SIZES.avatar)}
+            alt={face.name}
+            width="44"
+            height="44"
+            draggable="false"
+            className={`block h-11 w-11 rounded-full ring-[3px] ring-bg select-none ${face.mark ? 'bg-[#1c1c1c] object-contain p-2' : 'object-cover'}`}
+          />
+          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-md bg-surface-inverted px-2 py-1 text-[11px] font-medium text-ink-on-inverted opacity-0 shadow-lg transition-[opacity,translate] duration-200 group-hover/face:translate-y-0 group-hover/face:opacity-100 group-focus-visible/face:translate-y-0 group-focus-visible/face:opacity-100">
+            {face.name}
+          </span>
+        </span>
+      ))}
+      {extra > 0 && (
+        <span className="relative -ml-3.5 grid h-11 min-w-11 place-items-center rounded-full bg-ink-strong px-2 text-[13px] font-semibold tabular-nums text-bg ring-[3px] ring-bg transition-[margin] duration-300 ease-out group-focus-within:-ml-1 group-hover:-ml-1">
+          +{extra}
+        </span>
+      )}
+    </div>
   )
 }

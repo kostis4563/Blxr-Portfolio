@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Inspect, CommentPin } from './figma'
 import LiveSelect from './live-select'
 import ScrambleText from './scramble-text'
-import { CometCard, ContourField, FreshFindsHero, GlowButton, Ocean } from './gallery-live'
+import { AvatarStack, CometCard, ContourField, FreshFindsHero, GlowButton, LogoWall, Marquee, MusicPill, RangeCalendar } from './gallery-live'
 import { Icon } from './icon'
 import { imageProps, SIZES } from '../lib/images'
 
@@ -108,8 +108,6 @@ export default function LivePiece({ live, title }) {
       )
     case 'html':
       return <HtmlPiece {...p} title={title} />
-    case 'ocean':
-      return <Ocean />
     case 'comet':
       return <CometCard title={p.title} sub={p.sub} />
     case 'contour':
@@ -118,6 +116,16 @@ export default function LivePiece({ live, title }) {
       return <FreshFindsHero lead={p.lead} words={p.words} />
     case 'glow':
       return <GlowButton text={p.text} />
+    case 'music':
+      return <MusicPill label={p.label} />
+    case 'marquee':
+      return <Marquee items={p.items} />
+    case 'calendar':
+      return <RangeCalendar />
+    case 'logos':
+      return <LogoWall lead={p.lead} bold={p.bold} tail={p.tail} names={p.names} />
+    case 'avatars':
+      return <AvatarStack more={p.more} />
     default:
       return null
   }

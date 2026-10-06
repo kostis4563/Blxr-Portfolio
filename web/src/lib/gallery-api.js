@@ -1,5 +1,5 @@
 import { supabase, loadSupabase } from './supabase'
-import { BUCKET, fromRow, toRow, sortItems, titleFromFile } from './gallery'
+import { BUCKET, fromRow, toRow, sortItems, titleFromFile, isSitePhoto } from './gallery'
 
 await loadSupabase()
 
@@ -14,7 +14,7 @@ export class GalleryError extends Error {
 
 export const ERROR_TEXT = {
   not_configured: 'Sign-in is not configured on this build, so there is nowhere to load the gallery from.',
-  not_set_up: 'The gallery is not set up on this project yet. Run deploy/supabase/gallery.sql in the Supabase SQL editor.',
+  not_set_up: 'The gallery is not set up on this project yet, or is missing a newer column. Run deploy/supabase/gallery.sql in the Supabase SQL editor.',
   uploads_disabled: 'The gallery bucket is missing. Run deploy/supabase/gallery.sql again.',
   forbidden: 'Only the site owner can change the gallery. If that is you, sign out and back in with two-factor.',
   invalid: 'The database refused this item. Check the fields and try again.',
@@ -31,7 +31,7 @@ function wrap(error) {
   if (error instanceof GalleryError) return error
   const msg = String(error.message || '').toLowerCase()
   let code = 'failed'
-  if (['42P01', 'PGRST205', 'PGRST202'].includes(error.code)) code = 'not_set_up'
+  if (['42P01', 'PGRST205', 'PGRST202', 'PGRST204', '42703'].includes(error.code)) code = 'not_set_up'
   else if (error.code === '42501' || error.code === 'PGRST301' || msg.includes('row-level security')) code = 'forbidden'
   else if (error.code === '23514' || error.code === '22P02' || error.code === '22007') code = 'invalid'
   else if (msg.includes('bucket not found')) code = 'uploads_disabled'
@@ -72,13 +72,21 @@ export async function saveItem(item, { isNew }) {
   return fromRow(await run(query))
 }
 
+export async function patchItem(id, patch) {
+  return fromRow(await run((sb) => sb.from('gallery_items').update(patch).eq('id', id).select('*').single()))
+}
+
+export async function reorderItems(ids) {
+  await run((sb) => sb.rpc('gallery_reorder', { ids }))
+}
+
 export async function deleteItem(item) {
   await run((sb) => sb.from('gallery_items').delete().eq('id', item.id))
   await removeImages([item.image, item.poster]).catch(() => {})
 }
 
 export async function removeImages(paths) {
-  const list = (paths || []).filter(Boolean)
+  const list = (paths || []).filter((p) => p && !isSitePhoto(p))
   if (!list.length) return
   await run((sb) => sb.storage.from(BUCKET).remove(list))
 }
@@ -125,8 +133,6 @@ const pathFor = (itemId, name, ext) => `${itemId}/${slugOf(name)}-${Math.random(
 const put = (path, body, contentType) =>
   run((sb) => sb.storage.from(BUCKET).upload(path, body, { contentType, cacheControl: '31536000', upsert: false }))
 
-// Loads the picked video locally and grabs a frame a little way in, so the
-// poster is not the black first frame most clips open on.
 async function posterOf(file) {
   const url = URL.createObjectURL(file)
   const video = document.createElement('video')

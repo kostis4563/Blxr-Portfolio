@@ -118,10 +118,6 @@ deploy_server() {
   fi
 }
 
-# The server loads every state file before it listens, so on a busy box it
-# can take longer than a fixed sleep. Poll instead, and if it never answers
-# (or only answers after systemd restarted it) print why, since the runner
-# has no other way to read the unit's journal.
 HEALTH_WAIT_S=20
 
 health_check() {

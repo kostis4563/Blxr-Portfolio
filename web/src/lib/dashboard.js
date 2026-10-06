@@ -103,6 +103,7 @@ export const ICONS = {
   cloud: ['M17.5 19a4.5 4.5 0 0 0 .4-9A7 7 0 0 0 4.3 12.5 3.5 3.5 0 0 0 5.5 19z'],
   pause: ['M7 4h3v16H7z', 'M14 4h3v16h-3z'],
   play: ['m6 4 14 8-14 8z'],
+  maximize: ['M15 3h6v6', 'M9 21H3v-6', 'M21 3l-7 7', 'M3 21l7-7'],
 }
 
 export const NAV = [

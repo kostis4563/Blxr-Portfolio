@@ -74,13 +74,6 @@ export const LIVE_TYPES = [
     },
   },
   {
-    value: 'ocean',
-    label: 'Ocean',
-    hint: 'The Noizy ocean: Gerstner waves in a three.js shader. Moving across it drags the sun.',
-    fields: [],
-    defaults: {},
-  },
-  {
     value: 'comet',
     label: 'Comet border',
     hint: 'The async hero frame, with a lit trail riding its edge.',
@@ -114,6 +107,46 @@ export const LIVE_TYPES = [
     fields: [{ key: 'text', label: 'Button text', max: 32, required: true }],
     defaults: { text: 'Scan a file' },
   },
+  {
+    value: 'music',
+    label: 'Music pill',
+    hint: 'The Wizzard player: press play and it widens to show an equaliser and volume.',
+    fields: [{ key: 'label', label: 'Label', max: 20, required: true }],
+    defaults: { label: 'Music' },
+  },
+  {
+    value: 'marquee',
+    label: 'Marquee',
+    hint: 'The Design x partners strip: two rows slide opposite ways and stop on hover.',
+    fields: [{ key: 'items', label: 'Items, comma separated', max: 300, required: true }],
+    defaults: { items: 'React, Vite, Tailwind, Supabase, Figma, WebGL, Node, Bun, Next.js, Postgres' },
+  },
+  {
+    value: 'calendar',
+    label: 'Range calendar',
+    hint: 'A date range picker: pick a start and an end, and the weeks between light up.',
+    fields: [],
+    defaults: {},
+  },
+  {
+    value: 'logos',
+    label: 'Logo wall',
+    hint: 'A partners grid. Known names (NVIDIA, Supabase, GitHub, OpenAI, Turso, Clerk, Claude, Vercel) get their mark.',
+    fields: [
+      { key: 'lead', label: 'Text before', max: 40 },
+      { key: 'bold', label: 'Bold word', max: 24, required: true },
+      { key: 'tail', label: 'Text after', max: 24 },
+      { key: 'names', label: 'Companies, comma separated', max: 200, required: true },
+    ],
+    defaults: { lead: 'Companies we', bold: 'collaborate', tail: 'with.', names: 'NVIDIA, Supabase, GitHub, OpenAI, Turso, Clerk, Claude, Vercel' },
+  },
+  {
+    value: 'avatars',
+    label: 'Avatar stack',
+    hint: 'Overlapping avatars that fan out on hover, closed by a count.',
+    fields: [{ key: 'more', label: 'Count after the faces', max: 3, number: { min: 0, max: 999 } }],
+    defaults: { more: '99' },
+  },
 ]
 export const LIVE_VALUES = LIVE_TYPES.map((t) => t.value)
 export const liveType = (type) => LIVE_TYPES.find((t) => t.value === type) || null
@@ -136,22 +169,44 @@ export const newLive = (type) => {
 
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const URL_RE = /^https?:\/\/[^\s<>"'`]+$/
-export const IMAGE_RE = /^[0-9a-f-]{36}\/[a-z0-9-]{1,60}\.(webp|mp4|webm|mov)$/
+export const IMAGE_RE = /^([0-9a-f-]{36}|\/photos)\/[a-z0-9-]{1,60}\.(webp|mp4|webm|mov)$/
+export const isSitePhoto = (path) => String(path || '').startsWith('/photos/')
 export const isVideo = (path) => /\.(mp4|webm|mov)$/.test(String(path || ''))
 
 export const GALLERY_INTRO =
   'Photos I took and interfaces I designed. Places, light, screens and the small details that made them worth keeping.'
 
 export const imageUrl = (path) =>
-  SUPABASE_URL && path ? `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}` : ''
+  isSitePhoto(path) ? path : SUPABASE_URL && path ? `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}` : ''
 
 const DAY = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 export const formatDay = (iso) => (iso ? DAY.format(new Date(`${iso}T00:00:00Z`)) : '')
 
 export const sortItems = (items) =>
   [...items].sort(
-    (a, b) => b.takenOn.localeCompare(a.takenOn) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')) || a.title.localeCompare(b.title),
+    (a, b) =>
+      (a.position || 0) - (b.position || 0) ||
+      b.takenOn.localeCompare(a.takenOn) ||
+      String(b.createdAt || '').localeCompare(String(a.createdAt || '')) ||
+      a.title.localeCompare(b.title),
   )
+
+export function moveItem(list, id, target) {
+  const from = list.findIndex((i) => i.id === id)
+  const to = list.findIndex((i) => i.id === target)
+  if (from < 0 || to < 0 || from === to) return list
+  const next = [...list]
+  next.splice(to, 0, ...next.splice(from, 1))
+  return next
+}
+
+export function mergeOrder(all, subset) {
+  const ids = new Set(subset.map((i) => i.id))
+  const queue = [...subset]
+  return all.map((i) => (ids.has(i.id) ? queue.shift() : i))
+}
+
+export const withPositions = (list) => list.map((item, n) => ({ ...item, position: n + 1 }))
 
 export const filterItems = (items, kind) => (kind && kind !== 'all' ? items.filter((i) => i.kind === kind) : items)
 
@@ -190,6 +245,8 @@ export function fromRow(row) {
     url: row.url || null,
     tags: row.tags || [],
     published: Boolean(row.published),
+    wide: Boolean(row.wide),
+    position: Number(row.position) || 0,
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null,
   }
@@ -211,6 +268,7 @@ export function toRow(item) {
     url: item.url?.trim() || null,
     tags: item.tags,
     published: item.published,
+    wide: Boolean(item.wide),
   }
 }
 
@@ -223,6 +281,7 @@ export const formFrom = (item) => ({
   url: item.url || '',
   tags: item.tags.join(', '),
   published: item.published,
+  wide: Boolean(item.wide),
 })
 
 export function problemsOf(form) {
@@ -267,6 +326,8 @@ export const draftLive = (today) => ({
   url: null,
   tags: [],
   published: true,
+  wide: false,
+  position: 0,
 })
 
 export const itemFrom = (base, form) => ({
@@ -279,4 +340,5 @@ export const itemFrom = (base, form) => ({
   url: form.url,
   tags: parseTags(form.tags),
   published: form.published,
+  wide: form.kind === 'ui' || form.live ? Boolean(form.wide) : false,
 })
