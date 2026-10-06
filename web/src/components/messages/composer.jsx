@@ -55,6 +55,40 @@ function Context({ icon, label, text, onClose }) {
   )
 }
 
+function Peek({ threadId, text }) {
+  const [sealed, setSealed] = useState('')
+
+  useEffect(() => {
+    if (!text) {
+      setSealed('')
+      return undefined
+    }
+    let live = true
+    const timer = setTimeout(() => {
+      api.sealPreview(threadId, text).then(
+        (next) => live && setSealed(next),
+        () => live && setSealed(''),
+      )
+    }, 120)
+    return () => {
+      live = false
+      clearTimeout(timer)
+    }
+  }, [threadId, text])
+
+  return (
+    <div className="border-b border-line bg-surface-raised/50 px-3 py-2 animate-rise-in">
+      <p className="mb-1 flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-ink-faint">
+        <Icon name="lock" className="h-3 w-3" />
+        What the server will receive
+      </p>
+      <p className="max-h-[72px] overflow-y-auto font-mono text-[11px] leading-snug text-ink-subtle [overflow-wrap:anywhere]">
+        {sealed || <span className="text-ink-faint">Start typing — your message is sealed with AES-256-GCM before it leaves this browser.</span>}
+      </p>
+    </div>
+  )
+}
+
 const Composer = forwardRef(function Composer(
   { threadId, them, disabled, replyTo, editing, onCancelReply, onCancelEdit, onSend, onEdit, onTyping, onEditLast, onError },
   ref,
@@ -62,6 +96,7 @@ const Composer = forwardRef(function Composer(
   const [text, setText] = useState('')
   const [files, setFiles] = useState([])
   const [sending, setSending] = useState(false)
+  const [peek, setPeek] = useState(false)
   const field = useRef(null)
   const picker = useRef(null)
   const held = useRef([])
@@ -177,6 +212,7 @@ const Composer = forwardRef(function Composer(
 
   return (
     <div className="border-t border-line bg-surface">
+      {peek && <Peek threadId={threadId} text={body} />}
       {editing && <Context icon="pencil" label="Editing" text="Escape to cancel, Enter to save." onClose={onCancelEdit} />}
       {!editing && replyTo && (
         <Context icon="reply" label={`Replying to ${replyTo.author === api.myId() ? 'yourself' : them?.name || 'them'}`} text={previewOf(replyTo)} onClose={onCancelReply} />
@@ -235,6 +271,17 @@ const Composer = forwardRef(function Composer(
           }}
           className="max-h-[160px] min-h-[32px] flex-1 resize-none bg-transparent px-2 py-1.5 text-[13px] leading-[20px] text-ink-strong outline-none placeholder:text-ink-faint disabled:cursor-not-allowed"
         />
+
+        <button
+          type="button"
+          onClick={() => setPeek((held) => !held)}
+          aria-pressed={peek}
+          aria-label={peek ? 'Hide the encrypted preview' : 'Preview it encrypted'}
+          title={peek ? 'Hide the encrypted preview' : 'See how this looks encrypted'}
+          className={`${ICON_BTN} ${peek ? 'bg-surface-hover text-ink-strong' : ''}`}
+        >
+          <Icon name="lock" className="h-4 w-4" />
+        </button>
 
         {left < 200 && <span className={`self-center font-mono text-[10.5px] tabular-nums ${left < 0 ? 'text-red-500' : 'text-ink-faint'}`}>{left}</span>}
 

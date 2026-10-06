@@ -4,7 +4,7 @@ export const LIMITS = {
   page: 60,
 }
 
-export const SEALED_PREFIX = 'e2e1.'
+export const SEALED_PREFIX = 'enc1.'
 export const isSealed = (body) => String(body || '').startsWith(SEALED_PREFIX)
 
 export const RUN_GAP = 5 * 60 * 1000

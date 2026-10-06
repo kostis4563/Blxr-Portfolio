@@ -54,7 +54,7 @@ create table if not exists public.messages (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
 
-  constraint messages_body_len       check (char_length(body) <= 4000 or (body like 'e2e1.%' and char_length(body) <= 17000)),
+  constraint messages_body_len       check (char_length(body) <= 4000 or (body like 'enc1.%' and char_length(body) <= 17000)),
   constraint messages_files_shape    check (jsonb_typeof(files) = 'array' and jsonb_array_length(files) <= 6),
   constraint messages_reactions_shape check (jsonb_typeof(reactions) = 'object'),
   constraint messages_has_content    check (deleted_at is not null or char_length(btrim(body)) > 0 or jsonb_array_length(files) > 0)
@@ -87,89 +87,51 @@ end $$;
 
 do $$
 begin
-  if not exists (select 1 from pg_constraint where conname = 'messages_body_len' and pg_get_constraintdef(oid) like '%e2e1.%') then
+  if not exists (select 1 from pg_constraint where conname = 'messages_body_len' and pg_get_constraintdef(oid) like '%enc1.%') then
     alter table public.messages drop constraint if exists messages_body_len;
     alter table public.messages
-      add constraint messages_body_len check (char_length(body) <= 4000 or (body like 'e2e1.%' and char_length(body) <= 17000));
+      add constraint messages_body_len check (char_length(body) <= 4000 or (body like 'enc1.%' and char_length(body) <= 17000)) not valid;
   end if;
 end $$;
 
-create table if not exists public.message_keys (
-  member      uuid primary key references auth.users (id) on delete cascade,
-  kid         text not null,
-  public_key  jsonb not null,
-  wrapped     text not null,
-  salt        text not null,
-  rounds      integer not null,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now(),
+drop function if exists public.messages_public_keys();
+drop table if exists public.message_keys;
 
-  constraint message_keys_kid_len     check (char_length(kid) between 8 and 64 and kid ~ '^[A-Za-z0-9_-]+$'),
-  constraint message_keys_public_shape check (
-    jsonb_typeof(public_key) = 'object'
-    and public_key ->> 'kty' = 'EC' and public_key ->> 'crv' = 'P-256'
-    and char_length(coalesce(public_key ->> 'x', '')) between 40 and 48
-    and char_length(coalesce(public_key ->> 'y', '')) between 40 and 48
-    and public_key ->> 'd' is null
-  ),
-  constraint message_keys_wrapped_len check (char_length(wrapped) between 32 and 1024),
-  constraint message_keys_salt_len    check (char_length(salt) between 16 and 64),
-  constraint message_keys_rounds      check (rounds between 100000 and 10000000)
+create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists public.thread_keys (
+  thread      uuid primary key references public.threads (id) on delete cascade,
+  secret      text not null,
+  created_at  timestamptz not null default now(),
+
+  constraint thread_keys_secret_len check (char_length(secret) = 44)
 );
 
-create or replace function public.message_keys_stamp()
+alter table public.thread_keys enable row level security;
+
+drop policy if exists "thread_keys: read own thread" on public.thread_keys;
+create policy "thread_keys: read own thread" on public.thread_keys
+  for select using (exists (
+    select 1 from public.threads t where t.id = thread and (t.member = (select auth.uid()) or (select public.is_site_owner()))
+  ));
+
+create or replace function public.thread_keys_issue()
 returns trigger
-language plpgsql as $$
+language plpgsql security definer set search_path = public, extensions as $$
 begin
-  new.member = auth.uid();
-  if tg_op = 'INSERT' then
-    new.created_at = now();
-  else
-    new.created_at = old.created_at;
-  end if;
-  new.updated_at = now();
+  insert into public.thread_keys (thread, secret)
+  values (new.id, encode(extensions.gen_random_bytes(32), 'base64'))
+  on conflict (thread) do nothing;
   return new;
 end $$;
 
-drop trigger if exists message_keys_stamp on public.message_keys;
-create trigger message_keys_stamp before insert or update on public.message_keys
-  for each row execute function public.message_keys_stamp();
+drop trigger if exists thread_keys_issue on public.threads;
+create trigger thread_keys_issue after insert on public.threads
+  for each row execute function public.thread_keys_issue();
 
-alter table public.message_keys enable row level security;
-
-drop policy if exists "message_keys: read own" on public.message_keys;
-create policy "message_keys: read own" on public.message_keys
-  for select using (member = (select auth.uid()));
-
-drop policy if exists "message_keys: add own" on public.message_keys;
-create policy "message_keys: add own" on public.message_keys
-  for insert with check (member = (select auth.uid()) and not (select public.is_guest()) and (select public.mfa_satisfied()));
-
-drop policy if exists "message_keys: replace own" on public.message_keys;
-create policy "message_keys: replace own" on public.message_keys
-  for update using (member = (select auth.uid()))
-  with check (member = (select auth.uid()) and (select public.mfa_satisfied()));
-
-drop policy if exists "message_keys: remove own" on public.message_keys;
-create policy "message_keys: remove own" on public.message_keys
-  for delete using (member = (select auth.uid()));
-
-create or replace function public.messages_public_keys()
-returns table (member uuid, thread uuid, kid text, public_key jsonb, owner boolean)
-language sql stable security definer set search_path = public as $$
-  select k.member, t.id as thread, k.kid, k.public_key, false as owner
-  from public.threads t
-  join public.message_keys k on k.member = t.member
-  where t.member = auth.uid() or public.is_site_owner()
-  union all
-  select k.member, (select t.id from public.threads t where t.member = auth.uid()) as thread, k.kid, k.public_key, true as owner
-  from auth.users u
-  join public.message_keys k on k.member = u.id
-  where lower(u.email) = 'kostisnomikos@gmail.com';
-$$;
-
-revoke all on function public.messages_public_keys() from public;
-grant execute on function public.messages_public_keys() to authenticated;
+insert into public.thread_keys (thread, secret)
+select t.id, encode(extensions.gen_random_bytes(32), 'base64') from public.threads t
+on conflict (thread) do nothing;
 
 create index if not exists messages_thread_idx on public.messages (thread_id, created_at);
 create index if not exists messages_thread_updated_idx on public.messages (thread_id, updated_at);

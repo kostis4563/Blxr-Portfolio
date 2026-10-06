@@ -28,58 +28,7 @@ function Divider({ label }) {
   )
 }
 
-const SEEN_KEYS = 'blxr:message-peer-keys'
-
-function peerKeyChanged(threadId, kid) {
-  try {
-    const seen = JSON.parse(localStorage.getItem(SEEN_KEYS) || '{}')
-    const before = seen[threadId]
-    if (before !== kid) localStorage.setItem(SEEN_KEYS, JSON.stringify({ ...seen, [threadId]: kid }))
-    return Boolean(before && before !== kid)
-  } catch {
-    return false
-  }
-}
-
-function Details({ them, secure, onClose }) {
-  const rows = [
-    ['Key exchange', secure.suite.agreement],
-    ['Key derivation', `${secure.suite.derivation}, salted per conversation`],
-    ['Message cipher', `${secure.suite.cipher}, fresh 96-bit nonce per message`],
-    ['Your key, at rest', secure.suite.wrap],
-    ['Your key id', secure.kid],
-    [them?.name ? `${them.name}’s key id` : 'Their key id', secure.peer?.kid || 'none yet'],
-  ]
-  return (
-    <Sheet size="sm" title="End-to-end encryption" subtitle="Messages and attachments are sealed in this browser before they are sent. The server only ever stores ciphertext." onClose={onClose}>
-      {secure.code ? (
-        <div className="rounded-xl border border-line bg-surface-raised/50 p-4">
-          <p className={CAPS}>Safety code</p>
-          <p className="mt-2 grid grid-cols-4 gap-x-3 gap-y-1.5 font-mono text-[14px] tabular-nums tracking-wider text-ink-strong">
-            {secure.code.map((group, index) => (
-              <span key={index}>{group}</span>
-            ))}
-          </p>
-          <p className="mt-3 text-[12px] leading-relaxed text-ink-muted">
-            {them?.name || 'The other side'} sees the same code under Encryption details. If it matches, nobody — not even the server — swapped a key in between.
-          </p>
-        </div>
-      ) : (
-        <Note tone="warn">{them?.name || 'The other side'} has not made a key yet, so there is nothing to compare. What you send stays readable to the server until they do.</Note>
-      )}
-      <dl className="mt-4 divide-y divide-line/60">
-        {rows.map(([what, how]) => (
-          <div key={what} className="flex items-baseline justify-between gap-4 py-2">
-            <dt className="shrink-0 text-[12px] text-ink-muted">{what}</dt>
-            <dd className="min-w-0 truncate text-right font-mono text-[11.5px] text-ink-strong">{how}</dd>
-          </div>
-        ))}
-      </dl>
-    </Sheet>
-  )
-}
-
-export default function Thread({ thread: given, them, owner, uid, online = false, onBack, onDeleted, onSeen, onLock }) {
+export default function Thread({ thread: given, them, owner, uid, online = false, onBack, onDeleted, onSeen }) {
   const threadId = given.id
   const [thread, setThread] = useState(given)
   const [messages, setMessages] = useState(null)
@@ -98,12 +47,7 @@ export default function Thread({ thread: given, them, owner, uid, online = false
   const [below, setBelow] = useState(0)
   const [flash, setFlash] = useState(null)
   const [landed, setLanded] = useState(0)
-  const [secure, setSecure] = useState(null)
   const [rawAll, setRawAll] = useState(false)
-  const [details, setDetails] = useState(false)
-  const [keyChanged, setKeyChanged] = useState(false)
-  const hasPeer = useRef(false)
-  hasPeer.current = Boolean(secure?.peer)
 
   const list = useRef(null)
   const composer = useRef(null)
@@ -141,24 +85,6 @@ export default function Thread({ thread: given, them, owner, uid, online = false
     }
   }, [threadId])
 
-  const checkKeys = useCallback(
-    (force = false) =>
-      api.conversation(threadId, { force }).then(
-        (next) => {
-          setSecure(next)
-          if (next.peer && peerKeyChanged(threadId, next.peer.kid)) setKeyChanged(true)
-        },
-        () => {},
-      ),
-    [threadId],
-  )
-
-  useEffect(() => {
-    setSecure(null)
-    setKeyChanged(false)
-    checkKeys()
-  }, [checkKeys])
-
   const loadMore = async () => {
     const oldest = held.current[0]
     if (!oldest || loadingMore) return
@@ -186,11 +112,10 @@ export default function Thread({ thread: given, them, owner, uid, online = false
       const [rows, stamps] = await Promise.all([since ? api.fetchChanged(threadId, since) : api.fetchMessages(threadId).then((page) => page.messages), api.fetchThread(threadId)])
       if (rows.length) merge(rows)
       setThread(stamps)
-      if (!hasPeer.current) checkKeys(true)
     } catch (failure) {
       if (failure.status === 404) onDeleted?.()
     }
-  }, [threadId, merge, onDeleted, checkKeys])
+  }, [threadId, merge, onDeleted])
 
   useEffect(() => {
     const every = liveState === 'SUBSCRIBED' ? POLL_LIVE : POLL_FALLBACK
@@ -459,63 +384,43 @@ export default function Thread({ thread: given, them, owner, uid, online = false
           <Icon name={rawAll ? 'eye' : 'lock'} className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">{rawAll ? 'View decrypted' : 'View encrypted'}</span>
         </button>
-        <Menu
-          label="Conversation"
-          trigger={({ toggle, open }) => (
-            <button type="button" onClick={toggle} aria-expanded={open} aria-label="More" className={`${BTN_BARE} h-8 w-8 px-0`}>
-              <Icon name="dots" className="h-4 w-4" />
-            </button>
-          )}
-        >
-          <MenuItem icon="shield" onClick={() => setDetails(true)}>
-            Encryption details
-          </MenuItem>
-          <MenuItem
-            icon="lock"
-            onClick={async () => {
-              await api.lockDevice()
-              onLock?.()
-            }}
+        {(them?.handle || owner) && (
+          <Menu
+            label="Conversation"
+            trigger={({ toggle, open }) => (
+              <button type="button" onClick={toggle} aria-expanded={open} aria-label="More" className={`${BTN_BARE} h-8 w-8 px-0`}>
+                <Icon name="dots" className="h-4 w-4" />
+              </button>
+            )}
           >
-            Lock on this device
-          </MenuItem>
-          {(them?.handle || owner) && <MenuLine />}
-          {them?.handle && (
-            <MenuItem icon="arrowUpRight" onClick={() => window.open(profilePath(them.handle), '_blank', 'noopener')}>
-              Open profile
-            </MenuItem>
-          )}
-          {owner && them?.email && (
-            <MenuItem icon="copy" onClick={() => navigator.clipboard?.writeText(them.email).catch(() => {})}>
-              Copy email
-            </MenuItem>
-          )}
-          {owner && (
-            <>
-              <MenuLine />
-              <MenuItem icon="trash" tone="danger" onClick={() => setClearing(true)}>
-                Clear conversation
+            {them?.handle && (
+              <MenuItem icon="arrowUpRight" onClick={() => window.open(profilePath(them.handle), '_blank', 'noopener')}>
+                Open profile
               </MenuItem>
-            </>
-          )}
-        </Menu>
+            )}
+            {owner && them?.email && (
+              <MenuItem icon="copy" onClick={() => navigator.clipboard?.writeText(them.email).catch(() => {})}>
+                Copy email
+              </MenuItem>
+            )}
+            {owner && (
+              <>
+                <MenuLine />
+                <MenuItem icon="trash" tone="danger" onClick={() => setClearing(true)}>
+                  Clear conversation
+                </MenuItem>
+              </>
+            )}
+          </Menu>
+        )}
       </div>
 
-      {secure && !secure.peer && (
-        <div className="px-3 pt-3 sm:px-4">
-          <Note tone="warn" icon="alert">
-            {them?.name || 'The other side'} has not made an encryption key yet. Until they do, what you send here is not end-to-end encrypted.
-          </Note>
-        </div>
-      )}
-      {keyChanged && (
-        <div className="px-3 pt-3 sm:px-4">
-          <Note tone="warn" icon="key" onDismiss={() => setKeyChanged(false)}>
-            {them?.name ? `${them.name}’s` : 'Their'} encryption key changed — usually a new passphrase.{' '}
-            <button type="button" onClick={() => setDetails(true)} className="cursor-pointer font-medium underline underline-offset-2">
-              Compare safety codes
-            </button>
-          </Note>
+      {rawAll && (
+        <div className="flex items-center gap-2 border-b border-line bg-surface-raised/50 px-3 py-1.5 text-[11.5px] text-ink-muted animate-rise-in sm:px-4">
+          <Icon name="shield" className="h-3.5 w-3.5 shrink-0 text-ink-subtle" />
+          <span className="min-w-0 flex-1 truncate">
+            This is what the server stores — <span className="font-mono text-ink-secondary">AES-256-GCM</span>, a fresh nonce for every message.
+          </span>
         </div>
       )}
 
@@ -659,8 +564,6 @@ export default function Thread({ thread: given, them, owner, uid, online = false
           </p>
         </Sheet>
       )}
-
-      {details && secure && <Details them={them} secure={secure} onClose={() => setDetails(false)} />}
 
       {clearing && (
         <Sheet

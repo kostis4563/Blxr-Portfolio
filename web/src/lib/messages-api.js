@@ -35,7 +35,6 @@ function lift(error, what) {
     return new MessageError(SETUP_MESSAGE, { status: 501, setup: true })
   }
   if (error.code === '23514') {
-    if (text.includes('message_keys')) return new MessageError('That key was not accepted.')
     if (text.includes('body_len')) return new MessageError(`A message has to fit in ${LIMITS.body} characters.`)
     if (text.includes('files_shape')) return new MessageError(`A message takes at most ${LIMITS.files} files.`)
     if (text.includes('files_ok')) return new MessageError('That attachment does not belong to this conversation.')
@@ -58,91 +57,23 @@ function unwrap({ data, error }, what) {
   return data
 }
 
-const KEY_COLUMNS = 'kid, public_key, wrapped, salt, rounds, updated_at'
+const keys = new Map()
 
-async function fetchMyKey() {
-  return unwrap(await client().from('message_keys').select(KEY_COLUMNS).eq('member', myId()).maybeSingle(), 'Your key could not be loaded')
-}
-
-async function saveMyKey(row) {
-  unwrap(await client().from('message_keys').upsert({ member: myId(), ...row }, { onConflict: 'member' }), 'Your key could not be saved')
-  publicKeys.at = 0
-}
-
-export async function keyStatus() {
-  if (!vault.supported()) return { state: 'unsupported' }
-  const uid = myId()
-  const [row, device] = await Promise.all([fetchMyKey(), vault.deviceIdentity(uid)])
-  if (!row) {
-    if (device) await vault.forget(uid)
-    return { state: 'missing' }
+async function threadKey(threadId) {
+  if (!keys.has(threadId)) {
+    keys.set(
+      threadId,
+      (async () => {
+        const row = unwrap(await client().from('thread_keys').select('secret').eq('thread', threadId).maybeSingle(), 'The conversation key could not be loaded')
+        if (!row?.secret) throw new MessageError('This conversation has no key yet — re-run deploy/supabase/messages.sql.', { status: 501, setup: true })
+        return vault.importKey(row.secret)
+      })().catch((failure) => {
+        keys.delete(threadId)
+        throw failure
+      }),
+    )
   }
-  if (device && device.kid === row.kid) return { state: 'ready', kid: row.kid, since: row.updated_at }
-  if (device) await vault.forget(uid)
-  return { state: 'locked', kid: row.kid, since: row.updated_at }
-}
-
-export async function createKey(passphrase) {
-  const uid = myId()
-  const { row, identity } = await vault.createIdentity(uid, passphrase)
-  await saveMyKey(row)
-  await vault.keepIdentity(uid, identity)
-  opened.clear()
-}
-
-export async function unlockKey(passphrase) {
-  const row = await fetchMyKey()
-  if (!row) throw new MessageError('There is no key on this account yet.')
-  try {
-    await vault.unlockIdentity(myId(), row, passphrase)
-  } catch (failure) {
-    throw new MessageError(failure.message)
-  }
-  opened.clear()
-}
-
-export async function lockDevice() {
-  await vault.forget(myId())
-  opened.clear()
-}
-
-const publicKeys = { at: 0, rows: [], inflight: null }
-const KEYS_FRESH = 60_000
-const KEYS_RETRY = 5_000
-
-async function loadKeys(force = false) {
-  const age = Date.now() - publicKeys.at
-  if (!force && age < KEYS_FRESH) return publicKeys.rows
-  if (force && age < KEYS_RETRY) return publicKeys.rows
-  publicKeys.inflight ??= client()
-    .rpc('messages_public_keys')
-    .then(({ data, error }) => {
-      if (error) throw lift(error, 'Encryption keys could not be loaded')
-      publicKeys.rows = data || []
-      publicKeys.at = Date.now()
-      return publicKeys.rows
-    })
-    .finally(() => {
-      publicKeys.inflight = null
-    })
-  return publicKeys.inflight
-}
-
-async function keyOf(kid) {
-  const find = (rows) => rows.find((row) => row.kid === kid)?.public_key || null
-  return find(await loadKeys()) || find(await loadKeys(true))
-}
-
-async function peerOf(threadId, force = false) {
-  const uid = myId()
-  const find = (rows) => rows.find((row) => row.thread === threadId && row.member !== uid) || null
-  return find(await loadKeys(force)) || (force ? null : find(await loadKeys(true)))
-}
-
-export async function conversation(threadId, { force = false } = {}) {
-  const [identity, peer] = await Promise.all([vault.deviceIdentity(myId()), peerOf(threadId, force)])
-  const code = identity && peer ? await vault.safetyCode(identity.publicKey, peer.public_key) : null
-  return { kid: identity?.kid || null, peer: peer ? { kid: peer.kid, owner: peer.owner } : null, code, suite: vault.SUITE }
+  return keys.get(threadId)
 }
 
 const opened = new Map()
@@ -152,14 +83,16 @@ async function openBody(threadId, body) {
   if (!opened.has(id)) {
     opened.set(
       id,
-      vault.openText(body, { threadId, identity: await vault.deviceIdentity(myId()), keyOf }).then(
-        (text) => ({ text }),
-        (failure) => ({ text: '', broken: failure.reason || 'broken', why: failure.message }),
-      ),
+      threadKey(threadId)
+        .then((key) => vault.openText(body, { threadId, key }))
+        .then(
+          (text) => ({ text }),
+          (failure) => ({ text: '', broken: failure.reason || 'missing', why: failure.message }),
+        ),
     )
   }
   const result = await opened.get(id)
-  if (result.broken === 'locked' || result.broken === 'stale') opened.delete(id)
+  if (result.broken === 'missing') opened.delete(id)
   return result
 }
 
@@ -178,11 +111,12 @@ export async function openPreview(threadId, body) {
 }
 
 async function seal(threadId, body) {
-  const identity = await vault.deviceIdentity(myId())
-  if (!identity) throw new MessageError('Unlock your key before you write — messages here are end-to-end encrypted.', { status: 423 })
-  const peer = await peerOf(threadId)
-  if (!peer || !body) return body
-  return vault.sealText(body, { threadId, identity, peer })
+  if (!body) return body
+  return vault.sealText(body, { threadId, key: await threadKey(threadId) })
+}
+
+export async function sealPreview(threadId, body) {
+  return seal(threadId, body)
 }
 
 export async function amOwner() {
@@ -309,15 +243,10 @@ export async function uploadFile(threadId, prepared) {
   const id = shortId()
   const base = `${threadId}/${id}`
   const path = `${base}.${extensionFor(prepared.type)}`
-  const identity = await vault.deviceIdentity(myId())
-  if (!identity) throw new MessageError('Unlock your key before you attach anything.', { status: 423 })
-  const peer = await peerOf(threadId)
-  let tag = null
+  const key = await threadKey(threadId)
   const put = async (target, blob, type) => {
-    if (!peer) return upload(target, blob, type)
-    const sealed = await vault.sealBytes(await blob.arrayBuffer(), { threadId, identity, peer, path: target })
-    tag = sealed.tag
-    return upload(target, new Blob([sealed.blob], { type }), type)
+    const sealed = await vault.sealBytes(await blob.arrayBuffer(), { threadId, key, path: target })
+    return upload(target, new Blob([sealed], { type }), type)
   }
   await put(path, prepared.blob, prepared.type)
   let thumb = null
@@ -325,8 +254,7 @@ export async function uploadFile(threadId, prepared) {
     thumb = `${base}-thumb.webp`
     await put(thumb, prepared.thumb, 'image/webp')
   }
-  const entry = { id, name: String(prepared.name || 'attachment').slice(0, 200), type: prepared.type, bytes: prepared.bytes, path, thumb }
-  return tag ? { ...entry, enc: tag } : entry
+  return { id, name: String(prepared.name || 'attachment').slice(0, 200), type: prepared.type, bytes: prepared.bytes, path, thumb, enc: 'aes-256-gcm' }
 }
 
 const unsealed = new Map()
@@ -335,7 +263,8 @@ async function openFile(path, tag, type) {
   const { data, error } = await client().storage.from(BUCKET).download(path)
   if (error || !data) throw new MessageError('That file could not be fetched.')
   if (!tag) return data
-  const plain = await vault.openBytes(await data.arrayBuffer(), tag, { threadId: path.split('/')[0], identity: await vault.deviceIdentity(myId()), keyOf, path })
+  const threadId = path.split('/')[0]
+  const plain = await vault.openBytes(await data.arrayBuffer(), { threadId, key: await threadKey(threadId), path })
   return new Blob([plain], type ? { type } : {})
 }
 

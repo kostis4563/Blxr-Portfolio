@@ -31,34 +31,88 @@ function Body({ text, mine }) {
   )
 }
 
+const NOISE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+const SCRAMBLE_MS = 520
+
+const calm = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+
+function Scramble({ text }) {
+  const [shown, setShown] = useState(() => (calm() ? text : ''))
+
+  useEffect(() => {
+    if (calm()) {
+      setShown(text)
+      return undefined
+    }
+    let frame = 0
+    const start = performance.now()
+    const tick = (now) => {
+      const settled = Math.floor(Math.min(1, (now - start) / SCRAMBLE_MS) * text.length)
+      let next = text.slice(0, settled)
+      for (let index = settled; index < text.length; index += 1) next += NOISE[(Math.random() * NOISE.length) | 0]
+      setShown(next)
+      if (settled < text.length) frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [text])
+
+  return shown
+}
+
+function Part({ label, value, mine, strong }) {
+  return (
+    <span className="grid grid-cols-[52px_minmax(0,1fr)] items-baseline gap-2">
+      <span className={`text-[9.5px] font-semibold uppercase tracking-wider ${mine ? 'text-ink-inverse/50' : 'text-ink-faint'}`}>{label}</span>
+      <span className={`font-mono text-[11px] leading-snug [overflow-wrap:anywhere] select-all ${strong ? '' : mine ? 'text-ink-inverse/70' : 'text-ink-subtle'}`}>
+        <Scramble text={value} />
+      </span>
+    </span>
+  )
+}
+
 function Envelope({ message, mine }) {
-  const sealed = parseSealed(message.cipher)
-  const tags = (message.files || []).filter((file) => file.enc)
-  const plainFiles = (message.files || []).length - tags.length
+  const sealed = message.cipher ? parseSealed(message.cipher) : null
+  const files = message.files || []
+  const sealedFiles = files.filter((file) => file.enc).length
+  const head = `mb-1.5 flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider ${mine ? 'text-ink-inverse/60' : 'text-ink-faint'}`
+
+  if (!sealed && !message.body && sealedFiles) {
+    return (
+      <span className={`flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider ${mine ? 'text-ink-inverse/60' : 'text-ink-faint'}`}>
+        <Icon name="lock" className="h-3 w-3" />
+        {sealedFiles === 1 ? 'Attachment' : `${sealedFiles} attachments`} stored as AES-256-GCM ciphertext
+      </span>
+    )
+  }
+
+  if (!sealed) {
+    return (
+      <span className="block min-w-0">
+        <span className={head}>
+          <Icon name="alert" className="h-3 w-3" />
+          Sent before encryption was on
+        </span>
+        {message.body && <span className="block font-mono text-[11px] leading-snug [overflow-wrap:anywhere]">{message.body}</span>}
+      </span>
+    )
+  }
+
   return (
     <span className="block min-w-0">
-      <span className={`mb-1 flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider ${mine ? 'text-ink-inverse/60' : 'text-ink-faint'}`}>
-        <Icon name={message.secure ? 'lock' : 'alert'} className="h-3 w-3" />
-        {message.secure ? 'AES-256-GCM · as stored' : 'Not encrypted · sent before encryption'}
+      <span className={head}>
+        <Icon name="lock" className="h-3 w-3" />
+        AES-256-GCM · what the server sees
       </span>
-      {sealed ? (
-        <>
-          <span className={`block font-mono text-[10.5px] ${mine ? 'text-ink-inverse/70' : 'text-ink-subtle'}`}>
-            {sealed.from} → {sealed.to}
-          </span>
-          <span className="mt-0.5 block font-mono text-[11px] leading-snug [overflow-wrap:anywhere] select-all">{sealed.payload}</span>
-        </>
-      ) : (
-        message.body && <span className="block font-mono text-[11px] leading-snug [overflow-wrap:anywhere]">{message.body}</span>
-      )}
-      {tags.length > 0 && (
-        <span className={`mt-1 block font-mono text-[10.5px] ${mine ? 'text-ink-inverse/70' : 'text-ink-subtle'}`}>
-          + {tags.length} encrypted file{tags.length === 1 ? '' : 's'}
-        </span>
-      )}
-      {plainFiles > 0 && (
-        <span className={`mt-1 block font-mono text-[10.5px] ${mine ? 'text-ink-inverse/70' : 'text-ink-subtle'}`}>
-          + {plainFiles} unencrypted file{plainFiles === 1 ? '' : 's'}
+      <span className="flex flex-col gap-1">
+        <Part label="nonce" value={sealed.nonce} mine={mine} />
+        {sealed.cipher && <Part label="cipher" value={sealed.cipher} mine={mine} strong />}
+        <Part label="tag" value={sealed.tag} mine={mine} />
+      </span>
+      {sealedFiles > 0 && (
+        <span className={`mt-1.5 flex items-center gap-1.5 text-[10.5px] ${mine ? 'text-ink-inverse/60' : 'text-ink-faint'}`}>
+          <Icon name="paperclip" className="h-3 w-3" />
+          {sealedFiles === 1 ? 'The attachment is' : `All ${sealedFiles} attachments are`} encrypted too
         </span>
       )}
     </span>
@@ -254,7 +308,7 @@ export default function Bubble({
                 {broken && (
                   <span className={`flex items-center gap-1.5 italic ${mine ? 'text-ink-inverse/70' : 'text-ink-muted'}`} title={message.why || ''}>
                     <Icon name="lock" className="h-3.5 w-3.5 shrink-0 not-italic" />
-                    {message.broken === 'tampered' ? 'Failed its integrity check — not shown' : 'Could not be decrypted on this device'}
+                    {message.broken === 'tampered' ? 'Failed its integrity check — not shown' : 'Could not be decrypted'}
                   </span>
                 )}
                 {message.edited_at && <span className={`ml-1.5 text-[10.5px] ${mine ? 'text-ink-inverse/60' : 'text-ink-faint'}`}>edited</span>}

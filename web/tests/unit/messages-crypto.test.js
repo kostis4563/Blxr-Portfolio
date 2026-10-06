@@ -1,23 +1,16 @@
 import { describe, test, expect, beforeAll } from 'vitest'
-import { createIdentity, unwrapIdentity, sealText, openText, sealBytes, openBytes, safetyCode, parseSealed, toB64, fromB64 } from '../../src/lib/messages-crypto.js'
+import { importKey, sealText, openText, sealBytes, openBytes, parseSealed, toB64, fromB64 } from '../../src/lib/messages-crypto.js'
 import { isSealed, previewOf } from '../../src/lib/messages.js'
 
 const THREAD = '6f1c2a0e-3b4d-4e5f-8a9b-0c1d2e3f4a5b'
-let alice
-let bob
-let keys
+const secret = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
+let key
+let other
 
 beforeAll(async () => {
-  alice = await createIdentity('alice', 'correct horse battery staple')
-  bob = await createIdentity('bob', 'Tr0ub4dor&3 but longer')
-  keys = new Map([
-    [alice.row.kid, alice.row.public_key],
-    [bob.row.kid, bob.row.public_key],
-  ])
-}, 30_000)
-
-const keyOf = async (kid) => keys.get(kid) || null
-const peer = (side) => ({ kid: side.row.kid, public_key: side.row.public_key })
+  key = await importKey(secret())
+  other = await importKey(secret())
+})
 
 describe('message encryption', () => {
   test('base64url round-trips', () => {
@@ -26,62 +19,46 @@ describe('message encryption', () => {
     expect(toB64(bytes)).not.toMatch(/[+/=]/)
   })
 
-  test('the stored row never holds the private key in the clear', () => {
-    expect(alice.row.public_key.d).toBeUndefined()
-    expect(alice.row.rounds).toBeGreaterThanOrEqual(600_000)
-    expect(alice.identity.privateKey.extractable).toBe(false)
+  test('takes the key the database issues, and nothing else', async () => {
+    expect(key.extractable).toBe(false)
+    await expect(importKey(btoa('too short'))).rejects.toThrow(/malformed/)
   })
 
-  test('both sides read what either sends, and the server sees only ciphertext', async () => {
+  test('round-trips, and the stored form gives nothing away', async () => {
     const text = 'meet at 9 — bring the 🔑'
-    const sealed = await sealText(text, { threadId: THREAD, identity: alice.identity, peer: peer(bob) })
+    const sealed = await sealText(text, { threadId: THREAD, key })
     expect(isSealed(sealed)).toBe(true)
     expect(sealed).not.toContain('meet')
     expect(previewOf({ body: sealed, files: [] })).toBe('Encrypted message')
-    expect(await openText(sealed, { threadId: THREAD, identity: bob.identity, keyOf })).toBe(text)
-    expect(await openText(sealed, { threadId: THREAD, identity: alice.identity, keyOf })).toBe(text)
+    expect(await openText(sealed, { threadId: THREAD, key })).toBe(text)
+  })
+
+  test('splits into nonce, ciphertext and tag for the encrypted view', async () => {
+    const parts = parseSealed(await sealText('hello', { threadId: THREAD, key }))
+    expect(fromB64(parts.nonce)).toHaveLength(12)
+    expect(fromB64(parts.cipher)).toHaveLength(5)
+    expect(fromB64(parts.tag)).toHaveLength(16)
   })
 
   test('the same text seals differently every time', async () => {
-    const ctx = { threadId: THREAD, identity: alice.identity, peer: peer(bob) }
-    expect(await sealText('hi', ctx)).not.toBe(await sealText('hi', ctx))
+    expect(await sealText('hi', { threadId: THREAD, key })).not.toBe(await sealText('hi', { threadId: THREAD, key }))
   })
 
-  test('a flipped bit, a moved message or an outsider all fail', async () => {
-    const sealed = await sealText('secret', { threadId: THREAD, identity: alice.identity, peer: peer(bob) })
-    const { from, to, payload } = parseSealed(sealed)
-    const bytes = fromB64(payload)
+  test('a flipped bit, another conversation or another key all fail', async () => {
+    const sealed = await sealText('secret', { threadId: THREAD, key })
+    const bytes = fromB64(parseSealed(sealed).payload)
     bytes[bytes.length - 1] ^= 1
-    const tampered = `e2e1.${from}.${to}.${toB64(bytes)}`
-    await expect(openText(tampered, { threadId: THREAD, identity: bob.identity, keyOf })).rejects.toMatchObject({ reason: 'tampered' })
-    await expect(openText(sealed, { threadId: 'another-thread', identity: bob.identity, keyOf })).rejects.toMatchObject({ reason: 'tampered' })
-
-    const eve = await createIdentity('eve', 'eve has her own passphrase')
-    await expect(openText(sealed, { threadId: THREAD, identity: eve.identity, keyOf })).rejects.toMatchObject({ reason: 'stale' })
-    await expect(openText(sealed, { threadId: THREAD, identity: null, keyOf })).rejects.toMatchObject({ reason: 'locked' })
-  }, 30_000)
+    await expect(openText(`enc1.${toB64(bytes)}`, { threadId: THREAD, key })).rejects.toMatchObject({ reason: 'tampered' })
+    await expect(openText(sealed, { threadId: 'another-thread', key })).rejects.toMatchObject({ reason: 'tampered' })
+    await expect(openText(sealed, { threadId: THREAD, key: other })).rejects.toMatchObject({ reason: 'tampered' })
+    await expect(openText(sealed, { threadId: THREAD, key: null })).rejects.toMatchObject({ reason: 'missing' })
+  })
 
   test('files are sealed and bound to their path', async () => {
     const bytes = new TextEncoder().encode('%PDF-1.7 pretend')
-    const ctx = { threadId: THREAD, identity: alice.identity, peer: peer(bob), path: `${THREAD}/abc.pdf` }
-    const { blob, tag } = await sealBytes(bytes, ctx)
-    const plain = await openBytes(blob, tag, { threadId: THREAD, identity: bob.identity, keyOf, path: `${THREAD}/abc.pdf` })
-    expect(new Uint8Array(plain)).toEqual(bytes)
-    await expect(openBytes(blob, tag, { threadId: THREAD, identity: bob.identity, keyOf, path: `${THREAD}/swapped.pdf` })).rejects.toMatchObject({ reason: 'tampered' })
-  })
-
-  test('the passphrase unlocks the key, and only the right one', async () => {
-    const back = await unwrapIdentity('alice', alice.row, 'correct horse battery staple')
-    expect(back.kid).toBe(alice.row.kid)
-    await expect(unwrapIdentity('alice', alice.row, 'wrong horse')).rejects.toMatchObject({ reason: 'passphrase' })
-    await expect(unwrapIdentity('mallory', alice.row, 'correct horse battery staple')).rejects.toMatchObject({ reason: 'passphrase' })
-  }, 30_000)
-
-  test('both people get the same safety code', async () => {
-    const one = await safetyCode(alice.row.public_key, bob.row.public_key)
-    const two = await safetyCode(bob.row.public_key, alice.row.public_key)
-    expect(one).toEqual(two)
-    expect(one).toHaveLength(12)
-    one.forEach((group) => expect(group).toMatch(/^\d{5}$/))
+    const path = `${THREAD}/abc.pdf`
+    const blob = await sealBytes(bytes, { threadId: THREAD, key, path })
+    expect(new Uint8Array(await openBytes(blob, { threadId: THREAD, key, path }))).toEqual(bytes)
+    await expect(openBytes(blob, { threadId: THREAD, key, path: `${THREAD}/swapped.pdf` })).rejects.toMatchObject({ reason: 'tampered' })
   })
 })
