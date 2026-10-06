@@ -3,6 +3,7 @@ import { Icon } from './components/dashboard-sidebar'
 import { BTN_QUIET, Empty, Note } from './components/boards/ui'
 import Thread from './components/messages/thread'
 import Inbox from './components/messages/inbox'
+import Vault from './components/messages/vault'
 import { InboxSkeleton, ThreadSkeleton } from './components/messages/ui'
 import { Loading } from './components/skeleton'
 import { inboxUnread, readHash } from './lib/messages'
@@ -25,7 +26,7 @@ function Heading({ title, blurb, aside, hidden }) {
   )
 }
 
-function OwnerInbox({ uid, threadId }) {
+function OwnerInbox({ uid, threadId, onLock }) {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(null)
   const pending = useRef(null)
@@ -104,6 +105,7 @@ function OwnerInbox({ uid, threadId }) {
               them={active}
               owner
               uid={uid}
+              onLock={onLock}
               onBack={() => open(null)}
               onDeleted={() => {
                 open(null)
@@ -126,7 +128,7 @@ function OwnerInbox({ uid, threadId }) {
   )
 }
 
-function MemberThread({ uid }) {
+function MemberThread({ uid, onLock }) {
   const [thread, setThread] = useState(null)
   const [owner, setOwner] = useState(null)
   const [online, setOnline] = useState(false)
@@ -157,7 +159,7 @@ function MemberThread({ uid }) {
 
   return (
     <div className={`flex flex-col ${HEIGHT}`}>
-      <Heading title="Messages" blurb={`A direct line to ${them.name}. Only the two of you can read it.`} />
+      <Heading title="Messages" blurb={`A direct line to ${them.name}, end-to-end encrypted. Only the two of you can read it.`} />
 
       {error && (
         <div className="mb-3">
@@ -170,7 +172,7 @@ function MemberThread({ uid }) {
       <div className={`${CARD} flex min-h-0 flex-1 overflow-hidden`}>
         {thread ? (
           <div className="min-w-0 flex-1">
-            <Thread key={thread.id} thread={thread} them={them} owner={false} uid={uid} online={online} onDeleted={() => setGone((held) => held + 1)} />
+            <Thread key={thread.id} thread={thread} them={them} owner={false} uid={uid} online={online} onLock={onLock} onDeleted={() => setGone((held) => held + 1)} />
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 flex-col">
@@ -235,5 +237,16 @@ export default function DashboardMessages({ hash, user }) {
 
   if (!role) return <Loading label="Opening messages" />
 
-  return role === 'owner' ? <OwnerInbox uid={user.id} threadId={thread} /> : <MemberThread uid={user.id} />
+  const shell = (content) => (
+    <div className={`flex flex-col ${HEIGHT}`}>
+      <Heading title="Messages" blurb="End-to-end encrypted. Only the two people in a conversation hold the keys." />
+      <div className={`${CARD} flex min-h-0 flex-1 overflow-hidden`}>{content}</div>
+    </div>
+  )
+
+  return (
+    <Vault shell={shell}>
+      {({ relock }) => (role === 'owner' ? <OwnerInbox uid={user.id} threadId={thread} onLock={relock} /> : <MemberThread uid={user.id} onLock={relock} />)}
+    </Vault>
+  )
 }

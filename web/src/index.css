@@ -465,37 +465,46 @@ body {
 .vol-cas {
   cursor: default;
 }
-.vol-card {
-  display: flex;
+.vol-word {
+  display: inline-flex;
+  white-space: nowrap;
+  transition: margin-right 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vol-stamp {
+  transition: color 0.3s ease;
+}
+.vol-rest {
+  display: inline-grid;
+  grid-template-columns: 0fr;
+  transition: grid-template-columns 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i) * 0.05s);
+}
+.vol-rest > span {
+  min-width: 0;
+  overflow-x: clip;
   opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateY(6px) scale(0.97);
-  transform-origin: 24px 100%;
+  transform: translateX(-0.15em);
   transition:
-    opacity 0.18s ease,
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0s linear 0.28s;
+    opacity 0.25s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i) * 0.05s);
 }
-.vol-card::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 22px;
-  width: 10px;
-  height: 10px;
-  margin-top: -5px;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-line);
-  border-bottom: 1px solid var(--color-line);
-  transform: rotate(45deg);
+.vol-cas:hover .vol-word:not(:last-of-type),
+.vol-cas[data-open] .vol-word:not(:last-of-type) {
+  margin-right: 0.25em;
 }
-.vol-cas:hover .vol-card,
-.vol-cas[data-open] .vol-card {
+.vol-cas:hover .vol-stamp,
+.vol-cas[data-open] .vol-stamp {
+  color: var(--vol-ink);
+}
+.vol-cas:hover .vol-rest,
+.vol-cas[data-open] .vol-rest {
+  grid-template-columns: 1fr;
+}
+.vol-cas:hover .vol-rest > span,
+.vol-cas[data-open] .vol-rest > span {
   opacity: 1;
-  visibility: visible;
   transform: none;
-  transition-delay: 0s;
 }
 .vol-scribble {
   left: -0.04em;
@@ -540,6 +549,12 @@ body {
 :root[data-motion='reduced'] .vol-stamp,
 :root[data-motion='reduced'] .vol-scribble { animation: none; }
 :root[data-motion='reduced'] .vol-scribble { clip-path: none; }
+@media (prefers-reduced-motion: reduce) {
+  .vol-word,
+  .vol-rest,
+  .vol-rest > span { transition: none; }
+}
+:root[data-motion='reduced'] :is(.vol-word, .vol-rest, .vol-rest > span) { transition: none; }
 
 .contact-email-wrap {
   container-type: inline-size;

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../dashboard-sidebar'
 import { Avatar } from '../account-menu'
-import { signedUrl } from '../../lib/messages-api'
+import { fileUrl } from '../../lib/messages-api'
 import { readableSize } from '../../lib/boards-files'
 import { Loading } from '../skeleton'
 
@@ -21,19 +21,32 @@ export function Face({ name, avatar, size = 32, online = false, className = '' }
   )
 }
 
-export function Picture({ path, alt = '', className = '', onLoad }) {
+export function Picture({ path, sealed = null, alt = '', className = '', onLoad }) {
   const [url, setUrl] = useState(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let live = true
     setUrl(null)
+    setFailed(false)
     if (!path) return undefined
-    signedUrl(path).then((next) => live && setUrl(next))
+    fileUrl(path, sealed).then((next) => {
+      if (!live) return
+      setUrl(next)
+      setFailed(!next)
+    })
     return () => {
       live = false
     }
-  }, [path])
+  }, [path, sealed])
 
+  if (failed && sealed) {
+    return (
+      <span className={`grid place-items-center bg-surface-raised text-ink-faint ${className}`} title="This image could not be decrypted">
+        <Icon name="lock" className="h-4 w-4" />
+      </span>
+    )
+  }
   if (!url) return <span className={`block animate-pulse bg-surface-raised ${className}`} />
   return <img src={url} alt={alt} loading="lazy" draggable={false} onLoad={onLoad} className={className} />
 }
@@ -109,7 +122,7 @@ export function Lightbox({ files, at, onStep, onClose, onDownload }) {
             <Icon name="chevronLeft" className="h-5 w-5" />
           </button>
         )}
-        <Picture key={file.path} path={file.path} alt={file.name} className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" />
+        <Picture key={file.path} path={file.path} sealed={file.enc} alt={file.name} className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" />
         {many && (
           <button
             type="button"

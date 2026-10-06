@@ -4,6 +4,9 @@ export const LIMITS = {
   page: 60,
 }
 
+export const SEALED_PREFIX = 'e2e1.'
+export const isSealed = (body) => String(body || '').startsWith(SEALED_PREFIX)
+
 export const RUN_GAP = 5 * 60 * 1000
 
 export const TYPING_EVERY = 2500
@@ -67,6 +70,7 @@ export const isImage = (file) => String(file?.type ?? '').startsWith('image/')
 export function previewOf(message) {
   if (!message) return ''
   if (message.deleted_at) return 'Unsent a message'
+  if (isSealed(message.body)) return 'Encrypted message'
   const body = String(message.body || '').replace(/\s+/g, ' ').trim()
   if (body) return body
   const files = message.files || []

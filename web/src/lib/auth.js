@@ -150,6 +150,7 @@ export function authClaimWith(provider, next = DASHBOARD_PATH) {
 export async function authSignOut() {
   const sb = supabase() ?? (await loadSupabase())
   if (!sb) return
+  await import('./messages-crypto').then(({ forget }) => forget()).catch(() => {})
   await sb.auth.signOut().catch(() => {})
 }
 

@@ -30,24 +30,19 @@ function Title() {
       style={{ animationDelay: '60ms' }}
     >
       <span aria-hidden="true" data-open={open || undefined} onClick={() => setOpen((o) => !o)} className="vol-cas relative inline-block">
-        {CAS.map(({ letter, tilt, lean }, i) => (
-          <span key={letter} className="vol-stamp" style={{ '--i': i, '--tilt': `${tilt}deg`, '--rest': `${lean}deg` }}>
-            {letter}
+        {CAS.map(({ letter, word, tilt, lean }, i) => (
+          <span key={letter} className="vol-word">
+            <span className="vol-stamp" style={{ '--i': i, '--tilt': `${tilt}deg`, '--rest': `${lean}deg` }}>
+              {letter}
+            </span>
+            <span className="vol-rest" style={{ '--i': i }}>
+              <span>{word.slice(1)}</span>
+            </span>
           </span>
         ))}
         <svg viewBox="0 0 200 26" preserveAspectRatio="none" className="vol-scribble pointer-events-none absolute overflow-visible">
           <path vectorEffect="non-scaling-stroke" d={SCRIBBLE} />
         </svg>
-        <span className="vol-card absolute bottom-[calc(100%+12px)] left-0 z-20 gap-1 whitespace-nowrap rounded-xl leading-normal border border-line bg-surface p-1 font-sans shadow-[0_18px_40px_-18px_var(--shadow-cast)]">
-          {CAS.map(({ letter, word }) => (
-            <span key={letter} className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2.5">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-surface-raised font-vergilia text-[13px] text-(--vol-ink)">
-                {letter}
-              </span>
-              <span className="text-[12.5px] font-medium text-ink-strong">{word}</span>
-            </span>
-          ))}
-        </span>
       </span>
     </h1>
   )

@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+  import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Icon } from '../dashboard-sidebar'
 import { Picture } from './ui'
 import { LIMITS, isImage, previewOf } from '../../lib/messages'
@@ -15,7 +15,7 @@ function Pending({ file, onRemove }) {
     <span className="relative inline-flex shrink-0">
       {file.entry ? (
         isImage(file.entry) ? (
-          <Picture path={file.entry.thumb || file.entry.path} alt={file.entry.name} className="h-14 w-14 rounded-lg border border-line object-cover" />
+          <Picture path={file.entry.thumb || file.entry.path} sealed={file.entry.enc} alt={file.entry.name} className="h-14 w-14 rounded-lg border border-line object-cover" />
         ) : (
           <span className="flex h-14 max-w-[180px] items-center gap-2 rounded-lg border border-line bg-surface px-2.5">
             <Icon name="file" className="h-4 w-4 shrink-0 text-ink-subtle" />

@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Icon } from '../dashboard-sidebar'
 import { Menu } from '../boards/ui'
 import { Face, Picture } from './ui'
 import { REACTIONS, clockOf, fullTime, isImage, previewOf, reactionRows } from '../../lib/messages'
+import { parseSealed } from '../../lib/messages-crypto'
 import { readableSize } from '../../lib/boards-files'
 
 const URL_RE = /(https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)])/g
@@ -29,9 +31,43 @@ function Body({ text, mine }) {
   )
 }
 
+function Envelope({ message, mine }) {
+  const sealed = parseSealed(message.cipher)
+  const tags = (message.files || []).filter((file) => file.enc)
+  const plainFiles = (message.files || []).length - tags.length
+  return (
+    <span className="block min-w-0">
+      <span className={`mb-1 flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider ${mine ? 'text-ink-inverse/60' : 'text-ink-faint'}`}>
+        <Icon name={message.secure ? 'lock' : 'alert'} className="h-3 w-3" />
+        {message.secure ? 'AES-256-GCM · as stored' : 'Not encrypted · sent before encryption'}
+      </span>
+      {sealed ? (
+        <>
+          <span className={`block font-mono text-[10.5px] ${mine ? 'text-ink-inverse/70' : 'text-ink-subtle'}`}>
+            {sealed.from} → {sealed.to}
+          </span>
+          <span className="mt-0.5 block font-mono text-[11px] leading-snug [overflow-wrap:anywhere] select-all">{sealed.payload}</span>
+        </>
+      ) : (
+        message.body && <span className="block font-mono text-[11px] leading-snug [overflow-wrap:anywhere]">{message.body}</span>
+      )}
+      {tags.length > 0 && (
+        <span className={`mt-1 block font-mono text-[10.5px] ${mine ? 'text-ink-inverse/70' : 'text-ink-subtle'}`}>
+          + {tags.length} encrypted file{tags.length === 1 ? '' : 's'}
+        </span>
+      )}
+      {plainFiles > 0 && (
+        <span className={`mt-1 block font-mono text-[10.5px] ${mine ? 'text-ink-inverse/70' : 'text-ink-subtle'}`}>
+          + {plainFiles} unencrypted file{plainFiles === 1 ? '' : 's'}
+        </span>
+      )}
+    </span>
+  )
+}
+
 const ACTION = 'grid h-7 w-7 cursor-pointer place-items-center rounded-md text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink-strong'
 
-function Actions({ mine, onReact, onReply, onEdit, onUnsend }) {
+function Actions({ mine, raw, onRaw, onReact, onReply, onEdit, onUnsend }) {
   return (
     <div className="flex items-center gap-0.5 rounded-lg border border-line bg-surface p-0.5 shadow-sm">
       <Menu
@@ -58,6 +94,16 @@ function Actions({ mine, onReact, onReply, onEdit, onUnsend }) {
           ))}
         </div>
       </Menu>
+      <button
+        type="button"
+        onClick={onRaw}
+        aria-pressed={raw}
+        aria-label={raw ? 'Show decrypted' : 'View encrypted'}
+        title={raw ? 'Show decrypted' : 'View encrypted'}
+        className={`${ACTION} ${raw ? 'bg-surface-hover text-ink-strong' : ''}`}
+      >
+        <Icon name={raw ? 'eye' : 'lock'} className="h-3.5 w-3.5" />
+      </button>
       <button type="button" onClick={onReply} aria-label="Reply" title="Reply" className={ACTION}>
         <Icon name="reply" className="h-3.5 w-3.5" />
       </button>
@@ -106,6 +152,7 @@ function Pictures({ files, mine, onOpen, onGrow }) {
         >
           <Picture
             path={file.thumb || file.path}
+            sealed={file.enc}
             alt={file.name}
             onLoad={onGrow}
             className={single ? 'block max-h-[320px] min-h-[96px] w-auto min-w-[160px] max-w-full object-contain' : 'h-full w-full object-cover'}
@@ -145,6 +192,7 @@ export default function Bubble({
   quoted,
   receipt,
   highlight,
+  rawAll = false,
   onReact,
   onReply,
   onEdit,
@@ -160,8 +208,16 @@ export default function Bubble({
   const documents = (message.files || []).filter((file) => !isImage(file))
   const reactions = reactionRows(message.reactions, uid)
   const hasBody = Boolean(message.body)
+  const broken = Boolean(message.broken)
   const pending = Boolean(message.pending)
   const failed = Boolean(message.failed)
+  const [rawOne, setRawOne] = useState(null)
+  const raw = !pending && !failed && (rawOne ?? rawAll)
+
+  useEffect(() => setRawOne(null), [rawAll])
+  useEffect(() => {
+    onGrow?.()
+  }, [raw, onGrow])
 
   const corners = mine
     ? `${first ? '' : 'rounded-tr-md'} ${last ? '' : 'rounded-br-md'}`
@@ -182,16 +238,28 @@ export default function Bubble({
         {pictures.length > 0 && <Pictures files={pictures} mine={mine} onOpen={(index) => onOpenImage(message, index)} onGrow={onGrow} />}
         {documents.length > 0 && <div className={pictures.length ? 'mt-1' : ''}><Files files={documents} onDownload={onDownload} /></div>}
 
-        {(hasBody || message.reply_to) && (
+        {(hasBody || broken || raw || message.reply_to) && (
           <div
             title={fullTime(message.created_at)}
             className={`${pictures.length || documents.length ? 'mt-1' : ''} rounded-2xl px-3 py-1.5 text-[13px] leading-relaxed ${corners} ${
               mine ? 'bg-ink-strong text-ink-inverse' : 'border border-line bg-surface-raised text-ink-strong'
-            }`}
+            } ${raw ? 'max-w-[420px]' : ''}`}
           >
-            {message.reply_to && <Quote quoted={quoted} who={quoted && quoted.author === uid ? 'You' : them?.name || 'Them'} mine={mine} onJump={onJump} />}
-            {hasBody && <Body text={message.body} mine={mine} />}
-            {message.edited_at && <span className={`ml-1.5 text-[10.5px] ${mine ? 'text-ink-inverse/60' : 'text-ink-faint'}`}>edited</span>}
+            {raw ? (
+              <Envelope message={message} mine={mine} />
+            ) : (
+              <>
+                {message.reply_to && <Quote quoted={quoted} who={quoted && quoted.author === uid ? 'You' : them?.name || 'Them'} mine={mine} onJump={onJump} />}
+                {hasBody && <Body text={message.body} mine={mine} />}
+                {broken && (
+                  <span className={`flex items-center gap-1.5 italic ${mine ? 'text-ink-inverse/70' : 'text-ink-muted'}`} title={message.why || ''}>
+                    <Icon name="lock" className="h-3.5 w-3.5 shrink-0 not-italic" />
+                    {message.broken === 'tampered' ? 'Failed its integrity check — not shown' : 'Could not be decrypted on this device'}
+                  </span>
+                )}
+                {message.edited_at && <span className={`ml-1.5 text-[10.5px] ${mine ? 'text-ink-inverse/60' : 'text-ink-faint'}`}>edited</span>}
+              </>
+            )}
           </div>
         )}
 
@@ -233,12 +301,17 @@ export default function Bubble({
         <div className="flex shrink-0 items-center gap-2 self-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 has-[[aria-expanded=true]]:opacity-100">
           <Actions
             mine={mine}
+            raw={raw}
+            onRaw={() => setRawOne(!raw)}
             onReact={(emoji) => onReact(message, emoji)}
             onReply={() => onReply(message)}
             onEdit={hasBody ? () => onEdit(message) : null}
             onUnsend={() => onUnsend(message)}
           />
-          <span className="font-mono text-[10.5px] tabular-nums text-ink-faint">{clockOf(message.created_at)}</span>
+          <span className="inline-flex items-center gap-1 font-mono text-[10.5px] tabular-nums text-ink-faint">
+            {message.secure && <Icon name="lock" className="h-2.5 w-2.5" />}
+            {clockOf(message.created_at)}
+          </span>
         </div>
       )}
     </div>
