@@ -3,17 +3,20 @@ import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import JavaScriptObfuscator from 'javascript-obfuscator'
+import blogPlugin from './blog-plugin.js'
 
 const obfuscate = process.env.OBFUSCATE === '1'
 const BUILT_AT = process.env.BUILT_AT || new Date().toISOString()
 
-const ROUTE_PAGES = ['projects', 'library', 'reviews', 'uses', 'cv', 'contact', 'login', 'dashboard', 'public-profile', 'not-found']
+const ROUTE_PAGES = ['projects', 'library', 'blog', 'reviews', 'uses', 'cv', 'contact', 'login', 'dashboard', 'public-profile', 'not-found']
 
 const pageSource = (name) => fileURLToPath(new URL(`./src/${name}-page.jsx`, import.meta.url))
 const stubPage = fileURLToPath(new URL('./src/stub-page.js', import.meta.url))
 
+const blogBodies = (ssr) => fileURLToPath(new URL(`./src/lib/blog-bodies.${ssr ? 'server' : 'client'}.js`, import.meta.url))
+
 const pageAliases = (ssr) => {
-  const map = {}
+  const map = { '#blog-bodies': blogBodies(ssr) }
   for (const name of ROUTE_PAGES) {
     map[`#ssr-page/${name}`] = ssr ? pageSource(name) : stubPage
     map[`#client-page/${name}`] = ssr ? stubPage : pageSource(name)
@@ -156,6 +159,7 @@ export default defineConfig(({ command, mode, isSsrBuild }) => ({
       : null),
   },
   plugins: [
+    blogPlugin(),
     react(),
     tailwindcss(),
     htmlPolishPlugin(),

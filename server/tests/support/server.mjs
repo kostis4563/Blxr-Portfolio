@@ -22,6 +22,7 @@ export const FULL_ENV = {
   REVIEW_SALT: 'test-salt',
   GITHUB_TOKEN: 'ghp_test',
   GITHUB_USERS: 'octo',
+  BLOG_REPO: 'octo/site',
 }
 
 export const confirmed = (id, email, extra = {}) => ({

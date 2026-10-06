@@ -1673,6 +1673,185 @@ async function isSiteOwner(req) {
 
 const ownerDenied = (owner) => ({ error: owner === 'needs_mfa' ? 'needs_mfa' : 'unauthorized' })
 
+const BLOG_REPO = /^[\w.-]+\/[\w.-]+$/.test(process.env.BLOG_REPO || '') ? process.env.BLOG_REPO : ''
+const BLOG_BRANCH = /^[\w./-]+$/.test(process.env.BLOG_BRANCH || '') ? process.env.BLOG_BRANCH : 'main'
+const BLOG_TOKEN = (process.env.BLOG_GITHUB_TOKEN || '').trim() || GH_TOKEN
+const BLOG_POSTS_DIR = 'web/src/content/blog'
+const BLOG_IMAGES_DIR = 'web/public/blog'
+const BLOG_TIMEOUT_MS = 12_000
+const BLOG_POST_MAX = 256 * 1024
+const BLOG_IMAGE_MAX = 5 * 1024 * 1024
+const BLOG_IMAGES_PER_SAVE = 10
+const BLOG_BODY_MAX = 16 * 1024 * 1024
+const BLOG_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const BLOG_IMAGE_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*\.(png|jpg|webp|gif|avif)$/
+const BLOG_IMAGE_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif' }
+const BLOG_FIELDS = new Set(['title', 'date', 'updated', 'description', 'tags', 'cover', 'draft'])
+const BLOG_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const blogBlobs = new Map()
+
+class BlogError extends Error {
+  constructor(code, status) {
+    super(code)
+    this.code = code
+    this.status = status
+  }
+}
+
+async function blogGh(pathname, { method = 'GET', body } = {}) {
+  let res
+  try {
+    res = await fetch(`${GH_API}/repos/${BLOG_REPO}/${pathname}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${BLOG_TOKEN}`,
+        accept: 'application/vnd.github+json',
+        'x-github-api-version': '2022-11-28',
+        'user-agent': 'blxr.net',
+        ...(body ? { 'content-type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(BLOG_TIMEOUT_MS),
+    })
+  } catch (err) {
+    log.warn('github', `blog: ${method} ${pathname.split('?')[0]} failed: ${err?.name === 'TimeoutError' ? 'timed out' : err?.message || 'network error'}`)
+    throw new BlogError('github_failed', 502)
+  }
+  if (res.status === 401) {
+    log.error('github', 'blog: the GitHub token was rejected (401)')
+    throw new BlogError('blog_unauthorized', 503)
+  }
+  if (res.status === 429 || (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0')) throw new BlogError('rate_limited', 429)
+  if (res.status === 403) {
+    log.warn('github', `blog: the token may not ${method === 'GET' ? 'read' : 'write'} ${BLOG_REPO} (403)`)
+    throw new BlogError('blog_forbidden', 503)
+  }
+  const data = res.status === 204 ? null : await res.json().catch(() => null)
+  return { status: res.status, data }
+}
+
+async function blogBlobText(sha) {
+  if (blogBlobs.has(sha)) return blogBlobs.get(sha)
+  const { status, data } = await blogGh(`git/blobs/${sha}`)
+  if (status !== 200 || typeof data?.content !== 'string') throw new BlogError('github_failed', 502)
+  const text = Buffer.from(data.content, 'base64').toString('utf8')
+  blogBlobs.set(sha, text)
+  if (blogBlobs.size > 500) blogBlobs.delete(blogBlobs.keys().next().value)
+  return text
+}
+
+async function blogPosts() {
+  const { status, data } = await blogGh(`contents/${BLOG_POSTS_DIR}?ref=${encodeURIComponent(BLOG_BRANCH)}`)
+  if (status === 404) return []
+  if (status !== 200 || !Array.isArray(data)) throw new BlogError('github_failed', 502)
+  const files = data.filter((f) => f?.type === 'file' && /^[a-z0-9-]+\.md$/.test(f.name) && typeof f.sha === 'string').slice(0, 300)
+  return Promise.all(files.map(async (f) => ({ slug: f.name.slice(0, -3), sha: f.sha, source: await blogBlobText(f.sha) })))
+}
+
+async function blogFileSha(filePath, ref) {
+  const { status, data } = await blogGh(`contents/${filePath}?ref=${encodeURIComponent(ref)}`)
+  if (status === 404) return null
+  if (status !== 200 || typeof data?.sha !== 'string') throw new BlogError('github_failed', 502)
+  return data.sha
+}
+
+const gitBlobSha = (buf) => crypto.createHash('sha1').update(`blob ${buf.length}\0`).update(buf).digest('hex')
+
+async function blogCommit({ message, files, guard }) {
+  for (let attempt = 0; ; attempt++) {
+    const ref = await blogGh(`git/ref/heads/${BLOG_BRANCH}`)
+    if (ref.status === 404) throw new BlogError('blog_forbidden', 503)
+    const head = ref.data?.object?.sha
+    if (ref.status !== 200 || typeof head !== 'string') throw new BlogError('github_failed', 502)
+
+    const current = await blogFileSha(guard.path, head)
+    if (guard.expect === null && current !== null) throw new BlogError('exists', 409)
+    if (guard.expect !== null && current !== guard.expect) throw new BlogError(current === null ? 'not_found' : 'conflict', current === null ? 404 : 409)
+
+    const commit = await blogGh(`git/commits/${head}`)
+    if (commit.status !== 200 || typeof commit.data?.tree?.sha !== 'string') throw new BlogError('github_failed', 502)
+
+    const tree = []
+    for (const f of files) {
+      if (f.remove) {
+        tree.push({ path: f.path, mode: '100644', type: 'blob', sha: null })
+      } else if (f.text !== undefined) {
+        tree.push({ path: f.path, mode: '100644', type: 'blob', content: f.text })
+      } else {
+        const blob = await blogGh('git/blobs', { method: 'POST', body: { content: f.base64, encoding: 'base64' } })
+        if (blob.status !== 201 || typeof blob.data?.sha !== 'string') throw new BlogError('github_failed', 502)
+        tree.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.data.sha })
+      }
+    }
+    const made = await blogGh('git/trees', { method: 'POST', body: { base_tree: commit.data.tree.sha, tree } })
+    if (made.status !== 201 || typeof made.data?.sha !== 'string') throw new BlogError('github_failed', 502)
+    const next = await blogGh('git/commits', { method: 'POST', body: { message, tree: made.data.sha, parents: [head] } })
+    if (next.status !== 201 || typeof next.data?.sha !== 'string') throw new BlogError('github_failed', 502)
+
+    const moved = await blogGh(`git/refs/heads/${BLOG_BRANCH}`, { method: 'PATCH', body: { sha: next.data.sha, force: false } })
+    if (moved.status === 200) return { sha: next.data.sha, url: `https://github.com/${BLOG_REPO}/commit/${next.data.sha}` }
+    if (moved.status === 422 && attempt === 0) continue
+    throw new BlogError(moved.status === 422 ? 'conflict' : 'github_failed', moved.status === 422 ? 409 : 502)
+  }
+}
+
+function blogPostProblems(source) {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(source)
+  if (!match) return ['frontmatter']
+  const data = {}
+  const bad = new Set()
+  for (const line of match[1].split(/\r?\n/)) {
+    if (!line.trim() || line.trim().startsWith('#')) continue
+    const kv = /^([A-Za-z][\w-]*)\s*:\s*(.*)$/.exec(line)
+    if (!kv || !BLOG_FIELDS.has(kv[1])) {
+      bad.add('frontmatter')
+      continue
+    }
+    const raw = kv[2].trim()
+    data[kv[1]] = /^(["']).*\1$/.test(raw) ? raw.slice(1, -1) : raw
+  }
+  if (!data.title || data.title === 'true' || data.title === 'false' || /^\[.*\]$/.test(data.title)) bad.add('title')
+  if (!BLOG_DATE_RE.test(data.date || '')) bad.add('date')
+  if (data.updated !== undefined && !BLOG_DATE_RE.test(data.updated)) bad.add('updated')
+  if (data.cover !== undefined && !data.cover.startsWith('/')) bad.add('cover')
+  return [...bad]
+}
+
+const blogTitleOf = (source) => {
+  const line = /^title\s*:\s*(.*)$/m.exec(source)?.[1]?.trim() || ''
+  return (/^(["']).*\1$/.test(line) ? line.slice(1, -1) : line).slice(0, 80)
+}
+
+function blogImages(list) {
+  if (list === undefined) return { files: [] }
+  if (!Array.isArray(list) || list.length > BLOG_IMAGES_PER_SAVE) return { error: 'images' }
+  const files = []
+  const names = new Set()
+  for (const img of list) {
+    const ext = BLOG_IMAGE_TYPES[img?.type]
+    if (!ext || typeof img.name !== 'string' || !BLOG_IMAGE_NAME_RE.test(img.name) || !img.name.endsWith(`.${ext}`) || names.has(img.name)) return { error: 'images' }
+    if (typeof img.data !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(img.data)) return { error: 'images' }
+    const size = Math.floor((img.data.length * 3) / 4) - (img.data.endsWith('==') ? 2 : img.data.endsWith('=') ? 1 : 0)
+    if (size > BLOG_IMAGE_MAX) return { error: 'image_too_large' }
+    names.add(img.name)
+    files.push({ path: `${BLOG_IMAGES_DIR}/${img.name}`, base64: img.data })
+  }
+  return { files }
+}
+
+async function blogDeployState(sha) {
+  const { status, data } = await blogGh(`actions/runs?head_sha=${sha}&per_page=5`).catch((err) => {
+    if (err instanceof BlogError && err.code !== 'rate_limited') return { status: 0, data: null }
+    throw err
+  })
+  if (status !== 200 || !Array.isArray(data?.workflow_runs)) return { state: 'unknown', url: null }
+  const run = data.workflow_runs.find((r) => r?.event === 'push') || data.workflow_runs[0]
+  if (!run) return { state: 'queued', url: null }
+  const url = typeof run.html_url === 'string' ? run.html_url : null
+  if (run.status !== 'completed') return { state: run.status === 'in_progress' ? 'building' : 'queued', url }
+  return { state: run.conclusion === 'success' ? 'live' : 'failed', url }
+}
+
 const EXPECTED_OFF = /^(?:[a-z]+_)?disabled$|^paused$|^warming$/
 
 function apiLevel(status, code) {
@@ -1746,6 +1925,7 @@ function systemReport() {
       mail: mailConfigured(),
       accountDelete: Boolean(SUPABASE_SECRET_KEY),
       github: Boolean(GH_TOKEN),
+      blog: Boolean(BLOG_REPO && BLOG_TOKEN),
       discord: true,
     },
     state: { dir: STATE_DIR, files, reviews: reviews.length, invites: invites.length, hitDays: Object.keys(hits).length, vitalDays: Object.keys(vitals).length, logs: logSize() },
@@ -1767,6 +1947,7 @@ function bucketsFor(req, pathname) {
     pathname === '/api/hits' ||
     (pathname === '/api/vitals' && req.method === 'GET') ||
     pathname.startsWith('/api/reviews/panel') ||
+    pathname.startsWith('/api/blog/') ||
     pathname.startsWith('/api/mail/') ||
     pathname.startsWith('/api/account/') ||
     (pathname.startsWith('/api/reviews/invites') && (authed || req.method !== 'GET')) ||
@@ -1960,6 +2141,64 @@ const server = http.createServer(async (req, res) => {
       Object.assign(record, checked.review, { editedAt: new Date().toISOString() })
       reviewsDirty = true
       return json(res, 200, { item: publicReview(record) }, NO_STORE)
+    }
+
+    const blogMatch = /^\/api\/blog\/(?:posts(?:\/([^/]+))?|(deploy))$/.exec(url.pathname)
+    if (blogMatch) {
+      if (!SITE_OWNER_EMAIL) return json(res, 404, { error: 'not_found' }, NO_STORE)
+      const owner = await isSiteOwner(req)
+      if (owner !== true) return json(res, 401, ownerDenied(owner), NO_STORE)
+      if (!BLOG_REPO || !BLOG_TOKEN) return json(res, 503, { error: 'blog_disabled' }, NO_STORE)
+      const [, slug, deploy] = blogMatch
+      try {
+        if (deploy) {
+          if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+          const sha = url.searchParams.get('sha') || ''
+          if (!/^[0-9a-f]{40}$/.test(sha)) return json(res, 400, { error: 'invalid', fields: ['sha'] }, NO_STORE)
+          return json(res, 200, await blogDeployState(sha), NO_STORE)
+        }
+
+        if (slug === undefined) {
+          if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+          return json(res, 200, { items: await blogPosts(), repo: BLOG_REPO, branch: BLOG_BRANCH }, NO_STORE)
+        }
+
+        if (!BLOG_SLUG_RE.test(slug) || slug.length > 80) return json(res, 400, { error: 'invalid', fields: ['slug'] }, NO_STORE)
+        const postPath = `${BLOG_POSTS_DIR}/${slug}.md`
+
+        if (req.method === 'DELETE') {
+          const sha = url.searchParams.get('sha') || ''
+          if (!/^[0-9a-f]{40}$/.test(sha)) return json(res, 400, { error: 'invalid', fields: ['sha'] }, NO_STORE)
+          const commit = await blogCommit({ message: `Blog: delete ${slug}`, files: [{ path: postPath, remove: true }], guard: { path: postPath, expect: sha } })
+          log.info('github', `blog: deleted ${slug}`)
+          return json(res, 200, { commit }, NO_STORE)
+        }
+
+        if (req.method !== 'PUT') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+        const body = await readJsonBody(req, BLOG_BODY_MAX)
+        if (!body || typeof body !== 'object') return json(res, 400, { error: 'invalid', fields: [] }, NO_STORE)
+        const { source, sha = null } = body
+        if (typeof source !== 'string' || !source.trim() || Buffer.byteLength(source) > BLOG_POST_MAX) return json(res, 400, { error: 'invalid', fields: ['source'] }, NO_STORE)
+        if (sha !== null && !/^[0-9a-f]{40}$/.test(sha)) return json(res, 400, { error: 'invalid', fields: ['sha'] }, NO_STORE)
+        const problems = blogPostProblems(source)
+        if (problems.length) return json(res, 400, { error: 'invalid', fields: problems }, NO_STORE)
+        const images = blogImages(body.images)
+        if (images.error) return json(res, 400, { error: images.error === 'images' ? 'invalid' : images.error, fields: ['images'] }, NO_STORE)
+
+        const title = blogTitleOf(source)
+        const commit = await blogCommit({
+          message: `Blog: ${sha ? 'update' : 'publish'} "${title}"${images.files.length ? ` (+${images.files.length} image${images.files.length === 1 ? '' : 's'})` : ''}`,
+          files: [{ path: postPath, text: source }, ...images.files],
+          guard: { path: postPath, expect: sha },
+        })
+        const next = gitBlobSha(Buffer.from(source, 'utf8'))
+        blogBlobs.set(next, source)
+        log.info('github', `blog: ${sha ? 'updated' : 'published'} ${slug}`)
+        return json(res, sha ? 200 : 201, { item: { slug, sha: next, source }, commit }, NO_STORE)
+      } catch (err) {
+        if (err instanceof BlogError) return json(res, err.status, { error: err.code }, NO_STORE)
+        throw err
+      }
     }
 
     if (url.pathname === '/api/logs/client') {

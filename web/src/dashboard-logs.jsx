@@ -232,6 +232,7 @@ function SystemView({ system, summary, now }) {
           <OnOff on={features.supabase}>Supabase session checks</OnOff>
           <OnOff on={features.owner}>Owner account (SITE_OWNER_EMAIL)</OnOff>
           <OnOff on={features.github}>Developer stats (GITHUB_TOKEN)</OnOff>
+          <OnOff on={features.blog}>Blog publishing (BLOG_REPO)</OnOff>
           <OnOff on={features.mail}>Account mail (Resend)</OnOff>
           <OnOff on={features.accountDelete}>Account deletion (SUPABASE_SECRET_KEY)</OnOff>
         </div>

@@ -110,6 +110,7 @@ web/src/
 | `/` | `index.html` |
 | `/projects` · `/projects/<id>` | `projects.html` · `projects/<id>.html` |
 | `/library` · `/library/<id>` | `library.html` · `library/<id>.html` |
+| `/blog` · `/blog/<slug>` | `blog.html` · `blog/<slug>.html` (+ `blog/rss.xml`) |
 | `/reviews` · `/now` · `/cv` | `reviews.html` · `now.html` · `cv.html` |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
 | `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |
@@ -122,6 +123,33 @@ web/src/
 - Routing lives in `lib/router.js`; valid ids come from `lib/projects.js` / `lib/library.js`.
 - `/cv` has a `Print` button that uses the browser's print / save as PDF.
 - Dashboard sections use the hash (`#settings/domains`, `#boards/<board>/<card>`). `#reviewpanel/…` and `#logs/…` exist only for the owner account (`OWNER_EMAIL` in `lib/dashboard.js`, `SITE_OWNER_EMAIL` on the server).
+
+</details>
+
+<details>
+<summary>Writing a blog post</summary>
+
+<br>
+
+Add `web/src/content/blog/<slug>.md` — the file name is the URL (`/blog/<slug>`), lowercase-with-dashes.
+
+```md
+---
+title: My first post
+date: 2026-10-06
+description: Optional — defaults to the first paragraph
+tags: [go, security]
+cover: /blog/my-first-post.webp   # optional, under web/public
+updated: 2026-10-10               # optional
+draft: true                       # optional — shows in `npm run dev` only
+---
+
+Markdown from here.
+```
+
+[`blog-plugin.js`](web/blog-plugin.js) turns it into HTML at build time: Shiki-highlighted code (` ```js title="file.mjs" `), GitHub callouts (`> [!NOTE]`), tables, task lists, captioned figures (`![alt](/blog/x.webp "caption")`), and heading anchors. A typo'd frontmatter key fails the build. Drafts never reach production bundles. [`how-to-write-a-post.md`](web/src/content/blog/how-to-write-a-post.md) is a draft cheat sheet showing all of it.
+
+**Or write in the browser:** Dashboard → Owner → Blog (owner account only). It lists the posts on `main`, edits them with a live preview, and takes pasted or dropped images (big photos are shrunk to WebP). Publish makes one commit (the post plus its images, under `web/public/blog/`) through the server's `/api/blog/*`, and that push runs the normal deploy. The panel follows the Actions run until it is live. Needs `BLOG_REPO` (in `deploy/server.env`) and a token that can write the repo: the `BLXR_BLOG_GITHUB_TOKEN` secret (fine-grained, *Contents: read and write* + *Actions: read* on this repo), falling back to `GITHUB_TOKEN`. Pull before pushing from your machine, since the dashboard commits to `main` too.
 
 </details>
 

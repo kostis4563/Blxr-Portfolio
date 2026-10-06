@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import DashboardSidebar from './components/dashboard-sidebar'
 import DashboardTopbar from './components/dashboard-topbar'
 import DashboardSettings from './dashboard-settings'
@@ -8,6 +8,7 @@ import DashboardBoards from './dashboard-boards'
 import DashboardMessages from './dashboard-messages'
 import DashboardReviewPanel from './dashboard-reviewpanel'
 import DashboardLogs from './dashboard-logs'
+const DashboardBlog = lazy(() => import('./dashboard-blog'))
 import { navigate, useRouteHash, dashboardPath, DASHBOARD_PATH } from './lib/router'
 import { Loading } from './components/skeleton'
 import { useAuth, profileOf } from './lib/supabase'
@@ -110,7 +111,8 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
     else if (item.children) navigate(dashboardPath(`${item.id}/${item.children[0].id}`), { replace: true })
   }, [item, hidden])
 
-  const inside = Boolean(top.bare) || (Boolean(top.deep) && /^[0-9a-f-]{36}$/i.test(hash.replace(/^#/, '').split('/')[1] || ''))
+  const sub = hash.replace(/^#/, '').split('/')[1] || ''
+  const inside = Boolean(top.bare) || (Boolean(top.deep) && /^[0-9a-f-]{36}$/i.test(sub)) || (top.id === 'blog' && Boolean(sub))
   const title = top.subnav ? top.label : item.label
   const blurb = top.subnav ? BLURBS[top.id] : BLURBS[item.path] || BLURBS[top.id]
 
@@ -168,6 +170,10 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
             <DashboardReviewPanel item={item} />
           ) : top.id === 'logs' ? (
             <DashboardLogs hash={hash} />
+          ) : top.id === 'blog' ? (
+            <Suspense fallback={<Loading label="Opening the blog editor" />}>
+              <DashboardBlog hash={hash} />
+            </Suspense>
           ) : null}
         </main>
       </div>

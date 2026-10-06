@@ -30,6 +30,8 @@ const {
   DASHBOARD_PATH,
   PROFILE_BASE_PATH,
   PROFILE_SHELL_FILE,
+  blogFeed,
+  BLOG_FEED_PATH,
 } = await import(pathToFileURL(ssrEntry).href)
 
 const template = await readFile(indexPath, 'utf8')
@@ -106,6 +108,7 @@ const ROUTE_SOURCES = {
   home: ['src/app.jsx', 'src/components', 'src/lib/projects.js', 'src/lib/skills.js'],
   projects: ['src/projects-page.jsx', 'src/lib/projects.js', 'src/components/project-cover.jsx'],
   library: ['src/library-page.jsx', 'src/lib/library.js'],
+  blog: ['src/blog-page.jsx', 'src/content/blog'],
   reviews: ['src/reviews-page.jsx'],
   contact: ['src/contact-page.jsx', 'src/lib/profile.js'],
 }
@@ -149,6 +152,12 @@ const sitemap = [
   '',
 ].join('\n')
 await writeFile(join(dist, 'sitemap.xml'), sitemap)
+
+const feed = blogFeed()
+const feedFile = join(dist, BLOG_FEED_PATH.replace(/^\//, ''))
+await mkdir(dirname(feedFile), { recursive: true })
+await writeFile(feedFile, feed)
+console.log(`prerender: ${(feed.match(/<item>/g) || []).length} posts -> ${BLOG_FEED_PATH.slice(1)}`)
 
 const EXECUTABLE_TYPE_RE = /^(module|(text|application)\/(javascript|ecmascript))?$/i
 

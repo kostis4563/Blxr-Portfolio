@@ -238,7 +238,7 @@ describe('logs dashboard', () => {
     const res = await srv.request('/api/logs', { headers: OWNER() })
     assert.equal(res.status, 200)
     assert.deepEqual(Object.keys(res.body).sort(), ['facets', 'items', 'matched', 'now', 'summary', 'system'])
-    assert.deepEqual(res.body.system.features, { owner: true, supabase: true, mail: true, accountDelete: true, github: true, discord: true })
+    assert.deepEqual(res.body.system.features, { owner: true, supabase: true, mail: true, accountDelete: true, github: true, blog: true, discord: true })
     for (const secret of [SECRET_KEY, FULL_ENV.RESEND_API_KEY, FULL_ENV.GITHUB_TOKEN, FULL_ENV.REVIEW_SALT]) {
       assert.ok(!res.text.includes(secret), `leaked ${secret}`)
     }

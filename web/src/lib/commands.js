@@ -1,7 +1,8 @@
-import { navigate, projectPath, libraryPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, CONTACT_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, CONTACT_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
+import { postsList } from './blog'
 import { SECTIONS, jumpToSection } from './palette'
 import { fold } from './text-match'
 import { CONTACT_EMAIL, SOCIALS } from './profile'
@@ -31,6 +32,7 @@ const SCOPE_OF_GROUP = {
   'Jump to': 'pages',
   Projects: 'projects',
   'FiveM Library': 'library',
+  Blog: 'pages',
   Actions: 'actions',
   Links: 'actions',
   Comments: 'comments',
@@ -167,6 +169,16 @@ export function buildCommands({
       keywords: 'fivem library ui script hud nui lua',
     },
     {
+      id: 'page-blog',
+      group: jump,
+      label: 'Blog',
+      hint: postsList.length ? `${postsList.length} post${postsList.length === 1 ? '' : 's'}` : 'Writing',
+      icon: 'pencil',
+      href: BLOG_PATH,
+      run: () => navigate(BLOG_PATH),
+      keywords: 'blog posts writing articles notes journal rss',
+    },
+    {
       id: 'page-reviews',
       group: jump,
       label: 'Reviews',
@@ -242,6 +254,17 @@ export function buildCommands({
         run: () => navigate(libraryPath(entry.id)),
         keywords: `fivem ${entry.tags.join(' ')} ${entry.shortDescription}`,
       })),
+
+    ...postsList.map((post) => ({
+      id: `post-${post.slug}`,
+      group: 'Blog',
+      label: post.title,
+      hint: `${post.minutes} min read`,
+      icon: 'file',
+      href: blogPath(post.slug),
+      run: () => navigate(blogPath(post.slug)),
+      keywords: `blog post ${post.tags.join(' ')} ${post.description}`,
+    })),
 
     {
       id: 'action-theme',

@@ -135,6 +135,7 @@ export const NAV = [
           { id: 'settings', label: 'Settings' },
         ],
       },
+      { id: 'blog', label: 'Blog', icon: 'pencil', deep: true },
       { id: 'logs', label: 'Logs', icon: 'logs', deep: true },
     ],
   },

@@ -11,18 +11,21 @@ import {
   HOME_PATH,
   PROJECTS_PATH,
   LIBRARY_PATH,
+  BLOG_PATH,
   REVIEWS_PATH,
   USES_PATH,
   CV_PATH,
   CONTACT_PATH,
   projectPath,
   libraryPath,
+  blogPath,
 } from './lib/router'
 import { openPalette, usePaletteOpen, isMacLike, jumpToSection, SECTIONS } from './lib/palette'
 import { suggestRoutes, splitKnownPrefix } from './lib/route-suggest'
 import { readRecent } from './lib/recent'
 import { projectsList } from './lib/projects'
 import { libraryList } from './lib/library'
+import { postsList } from './lib/blog'
 import { CONTACT_EMAIL, GITHUB_URL } from './lib/profile'
 import { SITE_NAME, SITE_URL } from './lib/seo'
 import { setTitleNow } from './lib/title-animation'
@@ -49,6 +52,8 @@ export default function NotFoundPage({ theme, onToggleTheme }) {
       ...projectsList.map((p) => ({ path: projectPath(p.id), label: p.title })),
       { path: LIBRARY_PATH, label: 'FiveM Library' },
       ...libraryList.map((entry) => ({ path: libraryPath(entry.id), label: entry.title })),
+      { path: BLOG_PATH, label: 'Blog' },
+      ...postsList.map((post) => ({ path: blogPath(post.slug), label: post.title })),
       { path: REVIEWS_PATH, label: 'Reviews' },
       { path: USES_PATH, label: 'Uses' },
       { path: CV_PATH, label: 'CV' },

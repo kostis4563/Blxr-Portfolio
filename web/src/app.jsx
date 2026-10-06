@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 're
 
 import ProjectsPageImpl from '#ssr-page/projects'
 import LibraryPageImpl from '#ssr-page/library'
+import BlogPageImpl from '#ssr-page/blog'
 import ReviewsPageImpl from '#ssr-page/reviews'
 import UsesPageImpl from '#ssr-page/uses'
 import CvPageImpl from '#ssr-page/cv'
@@ -22,7 +23,7 @@ import { trackPageVisit } from './lib/memes'
 import { useTheme } from './lib/use-theme'
 import { imageProps, SIZES } from './lib/images'
 import { SKILL_CATEGORIES, themedIconFor } from './lib/skills'
-import { useRoutePath, parseRoute, navigate, link, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
+import { useRoutePath, parseRoute, navigate, link, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
 import { Icon } from './components/icon'
 import { Loading } from './components/skeleton'
@@ -35,6 +36,7 @@ const routePage = (Static, loader) => (import.meta.env.SSR ? Static : lazy(loade
 
 const ProjectsPage = routePage(ProjectsPageImpl, () => import('#client-page/projects'))
 const LibraryPage = routePage(LibraryPageImpl, () => import('#client-page/library'))
+const BlogPage = routePage(BlogPageImpl, () => import('#client-page/blog'))
 const ReviewsPage = routePage(ReviewsPageImpl, () => import('#client-page/reviews'))
 const UsesPage = routePage(UsesPageImpl, () => import('#client-page/uses'))
 const CvPage = routePage(CvPageImpl, () => import('#client-page/cv'))
@@ -219,6 +221,17 @@ function App() {
             theme={theme}
             onToggleTheme={toggleTheme}
           />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'blog') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <BlogPage slug={route.slug} theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>
@@ -664,6 +677,7 @@ function App() {
           </p>
           <nav aria-label="Footer" className="flex items-center gap-4">
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="transition-colors duration-200 hover:text-ink-strong">GitHub</a>
+            <a {...link(BLOG_PATH)} className="transition-colors duration-200 hover:text-ink-strong">Blog</a>
             <a {...link(CV_PATH)} className="transition-colors duration-200 hover:text-ink-strong">CV</a>
             <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors duration-200 hover:text-ink-strong">Email</a>
             <span aria-hidden="true" className="h-3.5 border-l border-dashed border-line" />

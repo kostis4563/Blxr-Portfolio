@@ -2,7 +2,8 @@ import { projectsList } from './projects'
 import { libraryList, findLibraryItem } from './library'
 import { USES_UPDATED } from './uses'
 import { CV_UPDATED } from './cv'
-import { libraryPath, normalizePath, parseRoute, projectPath } from './router'
+import { postsList, findPost, BLOG_UPDATED } from './blog'
+import { blogPath, libraryPath, normalizePath, parseRoute, projectPath, BLOG_FEED_PATH } from './router'
 import { setDocumentTitle } from './title-animation'
 
 export const SITE_URL = 'https://blxr.net'
@@ -20,6 +21,9 @@ const PROJECTS_DESCRIPTION =
 
 const LIBRARY_DESCRIPTION =
   'The UIs and scripts built for FiveM servers — interfaces, HUDs and standalone resources.'
+
+const BLOG_DESCRIPTION =
+  'Writing by Blxr — notes on what I build, break and learn: backend, web tooling, security and the setup behind it.'
 
 const REVIEWS_DESCRIPTION =
   'What clients and collaborators say about working with Blxr. Worked with me? Leave a review.'
@@ -73,6 +77,25 @@ export function metaFor(pathname) {
       title: 'FiveM Library — UIs, HUDs & Scripts by Blxr',
       description: LIBRARY_DESCRIPTION,
       noindex: libraryList.every((entry) => entry.placeholder),
+    }
+  }
+
+  if (route.name === 'blog' && route.slug) {
+    const post = findPost(route.slug)
+    return {
+      ...base,
+      title: `${post.title} — Blog — ${SITE_NAME}`,
+      description: post.description,
+      noindex: post.draft,
+    }
+  }
+
+  if (route.name === 'blog') {
+    return {
+      ...base,
+      title: 'Blog — Notes & Writing by Blxr',
+      description: BLOG_DESCRIPTION,
+      noindex: postsList.every((post) => post.draft),
     }
   }
 
@@ -146,6 +169,7 @@ export function metaFor(pathname) {
 const SHORT_LABELS = {
   projects: 'Projects',
   library: 'Library',
+  blog: 'Blog',
   reviews: 'Reviews',
   uses: 'Uses',
   cv: 'CV',
@@ -169,6 +193,11 @@ export function labelFor(pathname) {
     return head ? head.slice(0, LABEL_MAX) : SHORT_LABELS.library
   }
 
+  if (route.name === 'blog' && route.slug) {
+    const title = findPost(route.slug)?.title ?? ''
+    return title ? title.slice(0, LABEL_MAX) : SHORT_LABELS.blog
+  }
+
   return SHORT_LABELS[route.name] ?? ''
 }
 
@@ -176,6 +205,11 @@ export function lastmodFor(pathname) {
   const route = parseRoute(pathname)
   if (route.name === 'uses') return USES_UPDATED
   if (route.name === 'cv') return CV_UPDATED
+  if (route.name === 'blog' && route.slug) {
+    const post = findPost(route.slug)
+    return post.updated || post.date
+  }
+  if (route.name === 'blog') return BLOG_UPDATED
   return null
 }
 
@@ -310,6 +344,50 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'blog' && route.slug) {
+    const post = findPost(route.slug)
+    const url = `${SITE_URL}${blogPath(post.slug)}`
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: post.title,
+      description: post.description,
+      url,
+      mainEntityOfPage: url,
+      image: post.cover ? `${SITE_URL}${post.cover}` : OG_IMAGE,
+      datePublished: post.date,
+      dateModified: post.updated || post.date,
+      keywords: post.tags.length ? post.tags.join(', ') : undefined,
+      wordCount: post.words,
+      inLanguage: 'en',
+      isPartOf: { '@id': `${SITE_URL}/blog#blog` },
+      author: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
+  if (route.name === 'blog') {
+    const published = postsList.filter((post) => !post.draft)
+    if (published.length === 0) return null
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Blog',
+      '@id': `${SITE_URL}/blog#blog`,
+      name: 'Blog',
+      description: BLOG_DESCRIPTION,
+      url: `${SITE_URL}/blog`,
+      inLanguage: 'en',
+      author: { '@id': `${SITE_URL}/#blxr` },
+      blogPost: published.map((post) => ({
+        '@type': 'BlogPosting',
+        headline: post.title,
+        description: post.description,
+        url: `${SITE_URL}${blogPath(post.slug)}`,
+        datePublished: post.date,
+        dateModified: post.updated || post.date,
+      })),
+    }
+  }
+
   if (route.name === 'reviews') {
     return {
       '@context': 'https://schema.org',
@@ -392,6 +470,12 @@ function crumbsFor(route) {
 
   if (route.name === 'projects') {
     items.push({ name: 'Projects', item: urlOf('/projects') })
+  } else if (route.name === 'blog') {
+    items.push({ name: 'Blog', item: urlOf('/blog') })
+    if (route.slug) {
+      const post = findPost(route.slug)
+      if (post) items.push({ name: post.title, item: urlOf(blogPath(post.slug)) })
+    }
   } else if (route.name === 'reviews') {
     items.push({ name: 'Reviews', item: urlOf('/reviews') })
   } else if (route.name === 'uses') {
@@ -437,7 +521,9 @@ export function headTags(pathname) {
   const canonical = `${SITE_URL}${path === '/' ? '/' : path}`
   const ogRoute = parseRoute(route)
   const ogItem = ogRoute.name === 'library' && ogRoute.itemId ? findLibraryItem(ogRoute.itemId) : null
-  const ogImage = ogItem?.image ? `${SITE_URL}${ogItem.image}` : OG_IMAGE
+  const ogPost = ogRoute.name === 'blog' && ogRoute.slug ? findPost(ogRoute.slug) : null
+  const ogCover = ogItem?.image || ogPost?.cover
+  const ogImage = ogCover ? `${SITE_URL}${ogCover}` : OG_IMAGE
   const jsonLd = withCrumbs(jsonLdFor(route), crumbsFor(ogRoute))
 
   const tags = [
@@ -449,7 +535,7 @@ export function headTags(pathname) {
       : '<meta name="robots" content="index, follow, max-image-preview:large" />',
     noindex ? '' : `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
 
-    `<meta property="og:type" content="${ogRoute.name === 'library' && ogRoute.itemId ? 'article' : 'website'}" />`,
+    `<meta property="og:type" content="${ogItem || ogPost ? 'article' : 'website'}" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
 
     '<meta property="og:locale" content="en_US" />',
@@ -457,18 +543,30 @@ export function headTags(pathname) {
     `<meta property="og:description" content="${escapeAttr(description)}" />`,
     `<meta property="og:url" content="${escapeAttr(canonical)}" />`,
     `<meta property="og:image" content="${escapeAttr(ogImage)}" />`,
-    ...(ogItem
-      ? [`<meta property="article:published_time" content="${ogItem.date || '2026'}" />`]
+    ...(ogItem ? [`<meta property="article:published_time" content="${ogItem.date || '2026'}" />`] : []),
+    ...(ogPost
+      ? [
+          `<meta property="article:published_time" content="${ogPost.date}" />`,
+          `<meta property="article:modified_time" content="${ogPost.updated || ogPost.date}" />`,
+          ...ogPost.tags.map((tag) => `<meta property="article:tag" content="${escapeAttr(tag)}" />`),
+        ]
+      : []),
+    ...(ogCover
+      ? []
       : [
           '<meta property="og:image:width" content="1200" />',
           '<meta property="og:image:height" content="630" />',
         ]),
-    `<meta property="og:image:alt" content="${ogItem ? escapeAttr(`${ogItem.title} preview`) : 'The blxr wordmark'}" />`,
+    `<meta property="og:image:alt" content="${ogItem ? escapeAttr(`${ogItem.title} preview`) : ogPost?.cover ? escapeAttr(`${ogPost.title} cover`) : 'The blxr wordmark'}" />`,
 
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${escapeAttr(title)}" />`,
     `<meta name="twitter:description" content="${escapeAttr(description)}" />`,
     `<meta name="twitter:image" content="${escapeAttr(ogImage)}" />`,
+
+    ogRoute.name === 'blog' && postsList.length
+      ? `<link rel="alternate" type="application/rss+xml" title="${SITE_NAME} — Blog" href="${SITE_URL}${BLOG_FEED_PATH}" />`
+      : '',
 
     ogRoute.name === 'home'
       ? '<link rel="preload" href="/api/weather" as="fetch" crossorigin="anonymous" fetchpriority="low" />'

@@ -117,7 +117,91 @@ function resend(init, s) {
   return reply(200, { id: 'email_123' })
 }
 
+const gitSha = (buf) => crypto.createHash('sha1').update(`blob ${buf.length}\0`).update(buf).digest('hex')
+const repo = { head: 'c'.repeat(40), files: new Map(), commits: new Map(), trees: new Map(), blobs: new Map(), seeded: null }
+repo.commits.set(repo.head, { tree: 't'.repeat(40), files: new Map() })
+
+function seedRepo(s) {
+  const key = JSON.stringify(s.blogFiles || {})
+  if (repo.seeded === key) return
+  repo.seeded = key
+  const files = new Map()
+  for (const [p, text] of Object.entries(s.blogFiles || {})) {
+    const buf = Buffer.from(text)
+    const sha = gitSha(buf)
+    repo.blobs.set(sha, buf)
+    files.set(p, sha)
+  }
+  repo.head = crypto.randomBytes(20).toString('hex')
+  repo.commits.set(repo.head, { tree: crypto.randomBytes(20).toString('hex'), files })
+  repo.trees.set(repo.commits.get(repo.head).tree, files)
+}
+
+function blogRepo(url, init, s) {
+  seedRepo(s)
+  const m = /^\/repos\/([^/]+\/[^/]+)\/(.+)$/.exec(url.pathname)
+  if (!m || m[1] !== 'octo/site') return reply(404, { message: 'Not Found' })
+  if (s.blogRepo === 'forbidden') return reply(403, { message: 'Resource not accessible by personal access token' }, { 'x-ratelimit-remaining': '4999' })
+  const rest = m[2]
+  const method = init.method || 'GET'
+  const body = init.body ? JSON.parse(init.body) : null
+  const filesAt = (commit) => repo.commits.get(commit)?.files || new Map()
+
+  if (rest === 'git/ref/heads/main') return reply(200, { object: { sha: repo.head } })
+  if (rest.startsWith('contents/')) {
+    const p = decodeURIComponent(rest.slice('contents/'.length))
+    const ref = url.searchParams.get('ref')
+    const files = filesAt(ref === 'main' ? repo.head : ref)
+    if (files.has(p)) return reply(200, { type: 'file', path: p, sha: files.get(p) })
+    const kids = [...files].filter(([f]) => f.startsWith(`${p}/`) && !f.slice(p.length + 1).includes('/'))
+    if (!kids.length) return reply(404, { message: 'Not Found' })
+    return reply(200, kids.map(([f, sha]) => ({ type: 'file', name: f.split('/').at(-1), path: f, sha })))
+  }
+  const blob = /^git\/blobs\/([0-9a-f]{40})$/.exec(rest)
+  if (blob) return repo.blobs.has(blob[1]) ? reply(200, { content: repo.blobs.get(blob[1]).toString('base64'), encoding: 'base64' }) : reply(404, {})
+  if (rest === 'git/blobs' && method === 'POST') {
+    const buf = Buffer.from(body.content, 'base64')
+    const sha = gitSha(buf)
+    repo.blobs.set(sha, buf)
+    return reply(201, { sha })
+  }
+  const commit = /^git\/commits\/([0-9a-f]{40})$/.exec(rest)
+  if (commit) return repo.commits.has(commit[1]) ? reply(200, { tree: { sha: repo.commits.get(commit[1]).tree } }) : reply(404, {})
+  if (rest === 'git/trees' && method === 'POST') {
+    const files = new Map(repo.trees.get(body.base_tree) || [])
+    for (const e of body.tree) {
+      if (e.sha === null) files.delete(e.path)
+      else if (e.content !== undefined) {
+        const buf = Buffer.from(e.content)
+        const sha = gitSha(buf)
+        repo.blobs.set(sha, buf)
+        files.set(e.path, sha)
+      } else files.set(e.path, e.sha)
+    }
+    const sha = crypto.randomBytes(20).toString('hex')
+    repo.trees.set(sha, files)
+    return reply(201, { sha })
+  }
+  if (rest === 'git/commits' && method === 'POST') {
+    const sha = crypto.randomBytes(20).toString('hex')
+    repo.commits.set(sha, { tree: body.tree, files: repo.trees.get(body.tree), parent: body.parents[0], message: body.message })
+    return reply(201, { sha })
+  }
+  if (rest === 'git/refs/heads/main' && method === 'PATCH') {
+    if (repo.commits.get(body.sha)?.parent !== repo.head) return reply(422, { message: 'Update is not a fast forward' })
+    repo.head = body.sha
+    return reply(200, { object: { sha: repo.head } })
+  }
+  if (rest === 'actions/runs') {
+    const sha = url.searchParams.get('head_sha')
+    const runs = s.blogRuns?.[sha] || []
+    return reply(200, { workflow_runs: runs })
+  }
+  return reply(404, { message: 'Not Found' })
+}
+
 async function github(url, init, s) {
+  if (url.pathname.startsWith('/repos/')) return blogRepo(url, init, s)
   if (s.github === 'unauthorized') return reply(401, { message: 'Bad credentials' })
   if (s.github === 'rate_limited') return reply(403, { message: 'rate limit' })
   if (url.pathname === '/user/emails') return reply(200, [{ email: 'owner@example.com', verified: true }, { email: 'unverified@example.com', verified: false }])

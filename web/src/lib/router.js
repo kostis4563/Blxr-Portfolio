@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { projectsList } from './projects'
 import { libraryList } from './library'
+import { postsList, findPost } from './blog'
 import { imageProps, SIZES } from './images'
 
 export function normalizePath(pathname) {
@@ -14,6 +15,7 @@ export function parseRoute(path) {
   if (p === '/') return { name: 'home' }
   if (p === '/projects') return { name: 'projects', projectId: null }
   if (p === '/library') return { name: 'library', itemId: null }
+  if (p === '/blog') return { name: 'blog', slug: null }
   if (p === '/reviews') return { name: 'reviews' }
   if (p === '/uses') return { name: 'uses' }
   if (p === '/cv') return { name: 'cv' }
@@ -47,6 +49,12 @@ export function parseRoute(path) {
     }
   }
 
+  const blogMatch = /^\/blog\/([^/]+)$/.exec(p)
+  if (blogMatch) {
+    const slug = decodeURIComponent(blogMatch[1])
+    if (findPost(slug)) return { name: 'blog', slug }
+  }
+
   return { name: 'notFound' }
 }
 
@@ -59,6 +67,10 @@ function heroImageFor(route) {
   }
   if (route.name === 'library' && route.itemId) {
     const src = libraryList.find((entry) => entry.id === route.itemId)?.image
+    return src ? { src, sizes: SIZES.contentColumn } : null
+  }
+  if (route.name === 'blog' && route.slug) {
+    const src = findPost(route.slug)?.cover
     return src ? { src, sizes: SIZES.contentColumn } : null
   }
   return null
@@ -86,6 +98,9 @@ export const PROJECTS_PATH = '/projects'
 export const projectPath = (id) => `${PROJECTS_PATH}#${encodeURIComponent(id)}`
 export const LIBRARY_PATH = '/library'
 export const libraryPath = (id) => `/library/${encodeURIComponent(id)}`
+export const BLOG_PATH = '/blog'
+export const blogPath = (slug) => `${BLOG_PATH}/${encodeURIComponent(slug)}`
+export const BLOG_FEED_PATH = '/blog/rss.xml'
 export const REVIEWS_PATH = '/reviews'
 export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
 export const USES_PATH = '/uses'
@@ -107,6 +122,8 @@ export const staticPaths = () => [
   PROJECTS_PATH,
   LIBRARY_PATH,
   ...libraryList.map((entry) => libraryPath(entry.id)),
+  BLOG_PATH,
+  ...postsList.map((post) => blogPath(post.slug)),
   REVIEWS_PATH,
   USES_PATH,
   CV_PATH,

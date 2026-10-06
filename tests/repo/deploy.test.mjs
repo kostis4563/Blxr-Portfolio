@@ -72,6 +72,18 @@ describe('server is deployable as a flat copy of server/src/*.mjs', () => {
     const nginxKb = Number(/client_max_body_size (\d+)k;/.exec(apiBlock)[1])
     assert.ok(nginxKb * 1024 >= Math.max(...limits))
   })
+
+  test('nginx gives the blog editor room for its body limit and its GitHub round trips', async () => {
+    const server = await read('server/src/server.mjs')
+    const constant = (name) => Function(`return ${new RegExp(`const ${name} = ([\\d_ *]+)\\n`).exec(server)[1].replace(/_/g, '')}`)()
+    const blogBlock = /location \/api\/blog\/ \{([\s\S]*?)\n {4}\}/.exec(await read('deploy/nginx/blxr.conf'))[1]
+    const nginxMb = Number(/client_max_body_size (\d+)m;/.exec(blogBlock)[1])
+    assert.ok(nginxMb * 1024 * 1024 >= constant('BLOG_BODY_MAX'))
+    const nginxRead = Number(/proxy_read_timeout (\d+)s;/.exec(blogBlock)[1]) * 1000
+    assert.ok(nginxRead > constant('BLOG_TIMEOUT_MS') * 3, 'a save makes several sequential GitHub calls')
+    assert.match(blogBlock, /proxy_set_header X-Forwarded-Proto https;/)
+    assert.match(blogBlock, /limit_req zone=blxr_api/)
+  })
 })
 
 describe('deploy.sh', () => {
