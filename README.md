@@ -112,6 +112,7 @@ web/src/
 | `/library` · `/library/<id>` | `library.html` · `library/<id>.html` |
 | `/blog` · `/blog/<slug>` | `blog.html` · `blog/<slug>.html` (+ `blog/rss.xml`) |
 | `/reviews` · `/now` · `/cv` | `reviews.html` · `now.html` · `cv.html` |
+| `/gallery` | `gallery.html` — photos and UI shots, managed from `/dashboard#gallery` (owner only) |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
 | `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |
 | *anything else* | `404.html`, HTTP 404 |
@@ -216,6 +217,7 @@ Read and written straight from the browser with the publishable key — row-leve
 | `#boards` | [`boards.sql`](deploy/supabase/boards.sql) | `boards`, `board_cards`, `board_index` view + private `boards` bucket |
 | `#messages` | [`messages.sql`](deploy/supabase/messages.sql) | `threads`, `messages`, realtime publication + private `messages` bucket |
 | `#volunteer` | [`volunteer.sql`](deploy/supabase/volunteer.sql) | `volunteer_events` (public read when published, owner writes) + public `volunteer` photo bucket |
+| `#gallery` | [`gallery.sql`](deploy/supabase/gallery.sql) | `gallery_items` — photos and UI shots for `/gallery` (public read when published, owner writes) + public `gallery` image bucket |
 
 Paste each into Supabase → SQL editor → Run (safe to re-run). Boards are private per account; the owner in `is_board_admin()` sees all. Messages give every account one private thread with the owner in `is_site_owner()`, who sees them as an inbox. Full details in [`deploy/supabase/README.md`](deploy/supabase/README.md) §9, §11, §12.
 

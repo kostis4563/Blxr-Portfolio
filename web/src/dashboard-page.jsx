@@ -12,6 +12,7 @@ import DashboardHome from './dashboard-home'
 import { CanvasLayer, Toasts } from './components/figma'
 const DashboardBlog = lazy(() => import('./dashboard-blog'))
 const DashboardVolunteer = lazy(() => import('./dashboard-volunteer'))
+const DashboardGallery = lazy(() => import('./dashboard-gallery'))
 import { navigate, useRouteHash, dashboardPath, DASHBOARD_PATH } from './lib/router'
 import { Loading } from './components/skeleton'
 import { useAuth, profileOf } from './lib/supabase'
@@ -132,7 +133,7 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
   }, [item, hidden])
 
   const sub = hash.replace(/^#/, '').split('/')[1] || ''
-  const inside = Boolean(top.bare) || (Boolean(top.deep) && /^[0-9a-f-]{36}$/i.test(sub)) || ((top.id === 'blog' || top.id === 'volunteer') && Boolean(sub))
+  const inside = Boolean(top.bare) || (Boolean(top.deep) && /^[0-9a-f-]{36}$/i.test(sub)) || ((top.id === 'blog' || top.id === 'volunteer' || top.id === 'gallery') && Boolean(sub))
   const title = top.subnav ? top.label : item.label
   const blurb = top.subnav ? BLURBS[top.id] : BLURBS[item.path] || BLURBS[top.id]
 
@@ -195,6 +196,10 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
           ) : top.id === 'blog' ? (
             <Suspense fallback={<Loading label="Opening the blog editor" />}>
               <DashboardBlog hash={hash} />
+            </Suspense>
+          ) : top.id === 'gallery' ? (
+            <Suspense fallback={<Loading label="Opening the gallery" />}>
+              <DashboardGallery hash={hash} />
             </Suspense>
           ) : top.id === 'volunteer' ? (
             <Suspense fallback={<Loading label="Opening your events" />}>

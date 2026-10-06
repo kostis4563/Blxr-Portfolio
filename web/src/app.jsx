@@ -9,6 +9,7 @@ import CvPageImpl from '#ssr-page/cv'
 import ContactPageImpl from '#ssr-page/contact'
 import PaymentPageImpl from '#ssr-page/payment'
 import VolunteerPageImpl from '#ssr-page/volunteer'
+import GalleryPageImpl from '#ssr-page/gallery'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
 import PublicProfilePageImpl from '#ssr-page/public-profile'
@@ -49,6 +50,7 @@ const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).t
 const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
 const VolunteerPage = routePage(VolunteerPageImpl, withSupabase(() => import('#client-page/volunteer')))
+const GalleryPage = routePage(GalleryPageImpl, withSupabase(() => import('#client-page/gallery')))
 const PublicProfilePage = routePage(PublicProfilePageImpl, withSupabase(() => import('#client-page/public-profile')))
 const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-found'))
 
@@ -299,6 +301,17 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <VolunteerPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'gallery') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <GalleryPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>

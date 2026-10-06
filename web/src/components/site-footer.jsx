@@ -12,6 +12,7 @@ import {
   CONTACT_PATH,
   PAYMENT_PATH,
   VOLUNTEER_PATH,
+  GALLERY_PATH,
 } from '../lib/router'
 import { GITHUB_URL, DISCORD_URL, CONTACT_EMAIL, SOCIAL_ICON_PATHS } from '../lib/profile'
 
@@ -23,6 +24,7 @@ const COLUMNS = [
       { label: 'Projects', to: PROJECTS_PATH },
       { label: 'Library', to: LIBRARY_PATH },
       { label: 'Blog', to: BLOG_PATH },
+      { label: 'Gallery', to: GALLERY_PATH },
     ],
   },
   {

@@ -42,6 +42,9 @@ const CONTACT_DESCRIPTION =
 const PAYMENT_DESCRIPTION =
   'Payment methods Blxr accepts: PayPal, Paysafecard, Revolut, Wise, SEPA bank transfer and crypto (BTC, ETH, USDT, LTC).'
 
+const GALLERY_DESCRIPTION =
+  'Gallery by Blxr: photos I took and UI designs I made, from city light to dashboards and product screens.'
+
 const VOLUNTEER_DESCRIPTION =
   'Volunteering by Blxr: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
 
@@ -153,6 +156,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'gallery') {
+    return {
+      ...base,
+      title: 'Gallery: Photos and UI Design by Blxr',
+      description: GALLERY_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'login') {
     return {
       ...base,
@@ -198,6 +209,7 @@ const SHORT_LABELS = {
   contact: 'Contact',
   payment: 'Payment',
   volunteer: 'Volunteering',
+  gallery: 'Gallery',
   login: 'Sign in',
   dashboard: 'Dashboard',
   profile: 'Profile',
@@ -484,6 +496,18 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'gallery') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'Gallery',
+      description: GALLERY_DESCRIPTION,
+      url: `${SITE_URL}/gallery`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'library') {
     if (realEntries.length === 0) return null
     return {
@@ -536,6 +560,8 @@ function crumbsFor(route) {
     items.push({ name: 'Payment', item: urlOf('/payment') })
   } else if (route.name === 'volunteer') {
     items.push({ name: 'Volunteering', item: urlOf('/volunteer') })
+  } else if (route.name === 'gallery') {
+    items.push({ name: 'Gallery', item: urlOf('/gallery') })
   } else if (route.name === 'library') {
     items.push({ name: 'FiveM Library', item: urlOf('/library') })
     if (route.itemId) {

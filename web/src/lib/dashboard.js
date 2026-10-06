@@ -139,6 +139,7 @@ export const NAV = [
         ],
       },
       { id: 'blog', label: 'Blog', icon: 'pencil', deep: true },
+      { id: 'gallery', label: 'Gallery', icon: 'image', deep: true },
       { id: 'volunteer', label: 'Volunteering', icon: 'heart', deep: true },
       { id: 'logs', label: 'Logs', icon: 'logs', deep: true },
     ],
@@ -179,6 +180,7 @@ export const BLURBS = {
   'settings/privacy': 'Your data, analytics choices and account deletion.',
   reviewpanel: 'Moderate reviews, hand out invite links and tune the form — signed in as you.',
   volunteer: 'Events you volunteered at, with photos. Saved events show up on /volunteer right away.',
+  gallery: 'Photos and UI shots. Drop images in and they show up on /gallery right away.',
   logs: 'What the server saw: failed requests, exceptions, upstreams and browser errors.',
 }
 

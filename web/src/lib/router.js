@@ -22,6 +22,7 @@ export function parseRoute(path) {
   if (p === '/contact') return { name: 'contact' }
   if (p === '/payment') return { name: 'payment' }
   if (p === '/volunteer') return { name: 'volunteer' }
+  if (p === '/gallery') return { name: 'gallery' }
   if (p === '/login') return { name: 'login' }
   if (p === '/dashboard') return { name: 'dashboard' }
   if (p === PROFILE_BASE_PATH) return { name: 'profile', handle: null }
@@ -110,6 +111,7 @@ export const CV_PATH = '/cv'
 export const CONTACT_PATH = '/contact'
 export const PAYMENT_PATH = '/payment'
 export const VOLUNTEER_PATH = '/volunteer'
+export const GALLERY_PATH = '/gallery'
 export const LOGIN_PATH = '/login'
 export const REGISTER_PATH = `${LOGIN_PATH}#register`
 export const RESET_PATH = `${LOGIN_PATH}#reset`
@@ -134,6 +136,7 @@ export const staticPaths = () => [
   CONTACT_PATH,
   PAYMENT_PATH,
   VOLUNTEER_PATH,
+  GALLERY_PATH,
 ]
 
 const listeners = new Set()

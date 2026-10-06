@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, CONTACT_PATH, PAYMENT_PATH, VOLUNTEER_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, CONTACT_PATH, PAYMENT_PATH, VOLUNTEER_PATH, GALLERY_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -237,6 +237,16 @@ export function buildCommands({
       href: VOLUNTEER_PATH,
       run: () => navigate(VOLUNTEER_PATH),
       keywords: 'volunteer volunteering charity events community cause help ngo hours',
+    },
+    {
+      id: 'page-gallery',
+      group: jump,
+      label: 'Gallery',
+      hint: 'Photos and UI',
+      icon: 'image',
+      href: GALLERY_PATH,
+      run: () => navigate(GALLERY_PATH),
+      keywords: 'gallery photos photography pictures images ui design screens shots dribbble portfolio',
     },
 
     ...SECTIONS.map((section) => ({
