@@ -9,9 +9,7 @@ const withAlpha = (color, alpha) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-// Sizes a 2D canvas to its parent and paints it every frame while it is on screen.
-// Under reduced motion it paints one still frame. The stroke colour is the canvas's
-// CSS `color`, re-read every paint so a theme switch carries through.
+
 function useCanvas(setup) {
   const ref = useRef(null)
   useEffect(() => {
@@ -371,7 +369,6 @@ export function FreshFindsHero({ lead, words }) {
   )
 }
 
-// Hover border, from 7x0.site. A conic gradient spins behind a one pixel gap.
 
 export function GlowButton({ text }) {
   const [on, setOn] = useState(false)
@@ -405,11 +402,12 @@ export function GlowButton({ text }) {
   )
 }
 
-// Ocean, from Noizy. Six Gerstner waves displace a plane in the vertex shader;
-// the fragment shader adds chop, fresnel sky and a GGX sun glint. Moving across
-// the tile drags the sun.
 
 const OCEAN_VERT = `
+  attribute vec3 position;
+  uniform mat4 projectionMatrix;
+  uniform mat4 viewMatrix;
+  uniform vec3 cameraPosition;
   uniform float uTime;
   varying vec3 vPos;
   varying vec3 vNrm;
@@ -448,13 +446,15 @@ const OCEAN_VERT = `
     gerstner(vec2( 0.55,  0.83),  11.5, 0.028 * near, 0.45 * near, p, t, disp, nrm);
     vNrm = normalize(nrm);
     vRise = disp.y;
-    vec4 world = modelMatrix * vec4(position + disp, 1.0);
+    vec4 world = vec4(position + disp, 1.0);
     vPos = world.xyz;
     gl_Position = projectionMatrix * viewMatrix * world;
   }
 `
 
 const OCEAN_FRAG = `
+  precision highp float;
+  uniform vec3 cameraPosition;
   uniform float uTime;
   uniform vec3 uDeep;
   uniform vec3 uSky;
@@ -508,42 +508,104 @@ const OCEAN_FRAG = `
 
 const OCEAN_FOV = 45
 const OCEAN_HORIZON = 0.36
+const OCEAN_CAMERA = [0, 12, 60]
+const OCEAN_STEPS = [140, 115]
 
-function startOcean(canvas, THREE) {
+const OCEAN_COLORS = {
+  uDeep: [0.006, 0.016, 0.028],
+  uSky: [0.048, 0.092, 0.136],
+  uZenith: [0.01, 0.021, 0.038],
+  uGlint: [0.62, 0.76, 0.9],
+  uScatter: [0.04, 0.13, 0.15],
+}
+
+function oceanMesh() {
+  const [across, deep] = OCEAN_STEPS
+  const cols = across + 1
+  const points = new Float32Array(cols * (deep + 1) * 3)
+  for (let r = 0; r <= deep; r++) {
+    for (let c = 0; c <= across; c++) {
+      const i = (r * cols + c) * 3
+      points[i] = (c / across - 0.5) * 560
+      points[i + 2] = (r / deep - 0.5) * 460 - 120
+    }
+  }
+  const order = new Uint16Array(across * deep * 6)
+  for (let r = 0, k = 0; r < deep; r++) {
+    for (let c = 0; c < across; c++, k += 6) {
+      const a = r * cols + c
+      order.set([a, a + cols, a + 1, a + 1, a + cols, a + cols + 1], k)
+    }
+  }
+  return { points, order }
+}
+
+function oceanView() {
+  const pitch = -Math.atan((0.5 - OCEAN_HORIZON) * 2 * Math.tan((OCEAN_FOV * Math.PI) / 360))
+  const c = Math.cos(pitch)
+  const s = -Math.sin(pitch)
+  const [x, y, z] = OCEAN_CAMERA
+  return new Float32Array([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, -x, -(c * y - s * z), -(s * y + c * z), 1])
+}
+
+function oceanProjection(aspect, near = 0.5, far = 900) {
+  const f = 1 / Math.tan((OCEAN_FOV * Math.PI) / 360)
+  return new Float32Array([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) / (near - far), -1, 0, 0, (2 * far * near) / (near - far), 0])
+}
+
+function shader(gl, type, source) {
+  const s = gl.createShader(type)
+  gl.shaderSource(s, source)
+  gl.compileShader(s)
+  return s
+}
+
+function startOcean(canvas) {
   const box = canvas.parentElement
-  let renderer
-  try {
-    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
-  } catch {
+  const gl = canvas.getContext('webgl', { alpha: true, antialias: true })
+  if (!gl) return () => {}
+
+  const vert = shader(gl, gl.VERTEX_SHADER, OCEAN_VERT)
+  const frag = shader(gl, gl.FRAGMENT_SHADER, OCEAN_FRAG)
+  const program = gl.createProgram()
+  gl.attachShader(program, vert)
+  gl.attachShader(program, frag)
+  gl.linkProgram(program)
+  const { points, order } = oceanMesh()
+  const pointBuffer = gl.createBuffer()
+  const orderBuffer = gl.createBuffer()
+  const release = () => {
+    gl.deleteBuffer(pointBuffer)
+    gl.deleteBuffer(orderBuffer)
+    gl.deleteProgram(program)
+    gl.deleteShader(vert)
+    gl.deleteShader(frag)
+  }
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    release()
     return () => {}
   }
-  renderer.setClearColor(0x000000, 0)
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75))
+  gl.useProgram(program)
 
-  const scene = new THREE.Scene()
-  const camera = new THREE.PerspectiveCamera(OCEAN_FOV, 1, 0.5, 900)
-  camera.position.set(0, 12, 60)
-  camera.rotation.x = -Math.atan((0.5 - OCEAN_HORIZON) * 2 * Math.tan(THREE.MathUtils.degToRad(OCEAN_FOV) / 2))
+  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, points, gl.STATIC_DRAW)
+  const position = gl.getAttribLocation(program, 'position')
+  gl.enableVertexAttribArray(position)
+  gl.vertexAttribPointer(position, 3, gl.FLOAT, false, 0, 0)
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, orderBuffer)
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, order, gl.STATIC_DRAW)
 
-  const geo = new THREE.PlaneGeometry(560, 460, 140, 115)
-  geo.rotateX(-Math.PI / 2)
-  geo.translate(0, 0, -120)
-  const mat = new THREE.ShaderMaterial({
-    vertexShader: OCEAN_VERT,
-    fragmentShader: OCEAN_FRAG,
-    transparent: true,
-    depthWrite: false,
-    uniforms: {
-      uTime: { value: 0 },
-      uDeep: { value: new THREE.Color(0.006, 0.016, 0.028) },
-      uSky: { value: new THREE.Color(0.048, 0.092, 0.136) },
-      uZenith: { value: new THREE.Color(0.01, 0.021, 0.038) },
-      uGlint: { value: new THREE.Color(0.62, 0.76, 0.9) },
-      uScatter: { value: new THREE.Color(0.04, 0.13, 0.15) },
-      uLight: { value: new THREE.Vector3(0, 0.3, -1).normalize() },
-    },
-  })
-  scene.add(new THREE.Mesh(geo, mat))
+  const uniform = (name) => gl.getUniformLocation(program, name)
+  gl.uniformMatrix4fv(uniform('viewMatrix'), false, oceanView())
+  gl.uniform3fv(uniform('cameraPosition'), OCEAN_CAMERA)
+  for (const [name, rgb] of Object.entries(OCEAN_COLORS)) gl.uniform3fv(uniform(name), rgb)
+  const uTime = uniform('uTime')
+  const uLight = uniform('uLight')
+  const uProjection = uniform('projectionMatrix')
+
+  gl.enable(gl.BLEND)
+  gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+  gl.clearColor(0, 0, 0, 0)
 
   const still = stillMotion()
   let sun = 0
@@ -553,9 +615,11 @@ function startOcean(canvas, THREE) {
 
   const draw = (ms) => {
     sunAt += (sun - sunAt) * 0.06
-    mat.uniforms.uLight.value.set(sunAt, 0.3, -1).normalize()
-    mat.uniforms.uTime.value = still ? 0 : ms / 1000
-    renderer.render(scene, camera)
+    const length = Math.hypot(sunAt, 0.3, 1)
+    gl.uniform3f(uLight, sunAt / length, 0.3 / length, -1 / length)
+    gl.uniform1f(uTime, still ? 0 : ms / 1000)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+    gl.drawElements(gl.TRIANGLES, order.length, gl.UNSIGNED_SHORT, 0)
   }
   const loop = (ms) => {
     draw(ms)
@@ -568,9 +632,11 @@ function startOcean(canvas, THREE) {
   const fit = () => {
     const { width, height } = box.getBoundingClientRect()
     if (!width || !height) return
-    camera.aspect = width / height
-    camera.updateProjectionMatrix()
-    renderer.setSize(width, height, false)
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.75)
+    canvas.width = Math.round(width * ratio)
+    canvas.height = Math.round(height * ratio)
+    gl.viewport(0, 0, canvas.width, canvas.height)
+    gl.uniformMatrix4fv(uProjection, false, oceanProjection(width / height))
     draw(performance.now())
   }
   const aim = (e) => {
@@ -607,28 +673,13 @@ function startOcean(canvas, THREE) {
     box.removeEventListener('pointermove', aim)
     box.removeEventListener('pointerleave', drop)
     document.removeEventListener('visibilitychange', sync)
-    geo.dispose()
-    mat.dispose()
-    renderer.dispose()
-    renderer.forceContextLoss()
+    release()
   }
 }
 
 export function Ocean() {
   const ref = useRef(null)
-  useEffect(() => {
-    let stop = () => {}
-    let cancelled = false
-    import('three')
-      .then((THREE) => {
-        if (!cancelled && ref.current) stop = startOcean(ref.current, THREE)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-      stop()
-    }
-  }, [])
+  useEffect(() => startOcean(ref.current), [])
   return (
     <span className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_20%,#0b1724,#02060b_70%)]">
       <canvas ref={ref} aria-hidden="true" className="absolute inset-0 h-full w-full" />
