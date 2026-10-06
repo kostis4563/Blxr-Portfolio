@@ -176,6 +176,8 @@ describe('Content-Security-Policy', () => {
     assert.ok(hostAllowed('connect-src', url))
     assert.ok(csp['connect-src'].includes(url.replace('https://', 'wss://')), 'realtime websocket')
     assert.ok(hostAllowed('img-src', url), 'avatars from storage')
+    assert.ok(hostAllowed('media-src', url), 'gallery videos from storage')
+    assert.ok(csp['media-src'].includes('blob:'), 'the dashboard reads a poster frame from a picked video')
   })
 
   test('allows the YouTube player the music widget embeds', () => {

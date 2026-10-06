@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import SiteFooter from './components/site-footer'
 import { CommandButton } from './components/command-button'
 import { Icon } from './components/icon'
 import { Bone } from './components/skeleton'
+import { LiveStage } from './components/live-piece'
 import { link, HOME_PATH, dashboardPath } from './lib/router'
 import { useAuth } from './lib/supabase'
 import { isSiteOwner } from './lib/dashboard'
-import { GALLERY_INTRO, KINDS, countsOf, filterItems, formatDay, imageUrl, kindLabel } from './lib/gallery'
+import { GALLERY_INTRO, KINDS, countsOf, filterItems, formatDay, imageUrl, isVideo, kindLabel } from './lib/gallery'
 import { listItems, errorText } from './lib/gallery-api'
 
 const KICKER = 'text-[11px] font-mono text-ink-subtle uppercase tracking-[0.18em]'
@@ -54,26 +55,58 @@ function WindowBar() {
 
 function Tile({ item, index, onOpen }) {
   const ui = item.kind === 'ui'
+  const video = isVideo(item.image)
+  const clip = useRef(null)
+  const preview = (on) => {
+    const el = clip.current
+    if (!el) return
+    if (on) el.play().catch(() => {})
+    else el.pause()
+  }
+
   return (
     <li className="mb-4 break-inside-avoid animate-rise-in" style={{ animationDelay: `${200 + Math.min(index, 9) * 50}ms` }}>
       <button
         type="button"
         onClick={() => onOpen(item.id)}
-        aria-label={`Open ${item.title}`}
+        onPointerEnter={video ? () => preview(true) : undefined}
+        onPointerLeave={video ? () => preview(false) : undefined}
+        aria-label={`Open ${item.title}${video ? ' (video)' : ''}`}
         className="group relative block w-full cursor-zoom-in overflow-hidden rounded-xl border border-line bg-surface-raised text-left outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/40"
       >
         {ui && <WindowBar />}
-        <span className="block overflow-hidden">
-          <img
-            src={imageUrl(item.image)}
-            alt={item.title}
-            width={item.width}
-            height={item.height}
-            loading={index < 4 ? 'eager' : 'lazy'}
-            decoding="async"
-            className={`block h-auto w-full transition-transform duration-700 ${EASE} group-hover:scale-[1.03]`}
-            style={{ aspectRatio: `${item.width} / ${item.height}` }}
-          />
+        <span className="relative block overflow-hidden">
+          {video ? (
+            <video
+              ref={clip}
+              src={imageUrl(item.image)}
+              poster={imageUrl(item.poster)}
+              width={item.width}
+              height={item.height}
+              muted
+              loop
+              playsInline
+              preload="none"
+              className={`block h-auto w-full transition-transform duration-700 ${EASE} group-hover:scale-[1.03]`}
+              style={{ aspectRatio: `${item.width} / ${item.height}` }}
+            />
+          ) : (
+            <img
+              src={imageUrl(item.image)}
+              alt={item.title}
+              width={item.width}
+              height={item.height}
+              loading={index < 4 ? 'eager' : 'lazy'}
+              decoding="async"
+              className={`block h-auto w-full transition-transform duration-700 ${EASE} group-hover:scale-[1.03]`}
+              style={{ aspectRatio: `${item.width} / ${item.height}` }}
+            />
+          )}
+          {video && (
+            <span aria-hidden="true" className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-0">
+              <Icon name="play" className="h-3.5 w-3.5" />
+            </span>
+          )}
         </span>
         <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/70 via-black/25 to-transparent px-3.5 pb-3 pt-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
           <span className="min-w-0">
@@ -86,6 +119,35 @@ function Tile({ item, index, onOpen }) {
           <span className="absolute right-2 top-2 rounded bg-amber-500/90 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-black">Hidden</span>
         )}
       </button>
+    </li>
+  )
+}
+
+function LiveTile({ item, index }) {
+  return (
+    <li className="mb-4 break-inside-avoid animate-rise-in" style={{ animationDelay: `${200 + Math.min(index, 9) * 50}ms` }}>
+      <figure className="relative overflow-hidden rounded-xl border border-line bg-surface-raised">
+        <WindowBar />
+        <LiveStage live={item.live} title={item.title} />
+        <figcaption className="flex items-start justify-between gap-3 border-t border-line px-3.5 py-3">
+          <span className="min-w-0">
+            <span className="block text-[13.5px] font-semibold text-ink-strong">{item.title}</span>
+            {item.caption && <span className="mt-0.5 block whitespace-pre-line text-[12px] leading-snug text-ink-subtle">{item.caption}</span>}
+            {item.url && (
+              <a href={item.url} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-medium text-ink-muted hover:text-ink-strong">
+                Open link <span aria-hidden="true">↗</span>
+              </a>
+            )}
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-muted">
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#0d99ff]" />
+            Live
+          </span>
+        </figcaption>
+        {!item.published && (
+          <span className="absolute right-2 top-1 rounded bg-amber-500/90 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-black">Hidden</span>
+        )}
+      </figure>
     </li>
   )
 }
@@ -119,13 +181,28 @@ function Lightbox({ items, index, onClose, onStep }) {
       onClick={onClose}
     >
       <figure key={item.id} className="flex max-h-full min-h-0 max-w-full flex-col items-center gap-4 animate-rise-in" onClick={(e) => e.stopPropagation()}>
-        <img
-          src={imageUrl(item.image)}
-          alt={item.title}
-          width={item.width}
-          height={item.height}
-          className={`max-h-[74vh] min-h-0 w-auto max-w-full rounded-lg object-contain shadow-2xl ${item.kind === 'ui' ? 'ring-1 ring-white/15' : ''}`}
-        />
+        {isVideo(item.image) ? (
+          <video
+            src={imageUrl(item.image)}
+            poster={imageUrl(item.poster)}
+            width={item.width}
+            height={item.height}
+            controls
+            autoPlay
+            loop
+            playsInline
+            aria-label={item.title}
+            className={`max-h-[74vh] min-h-0 w-auto max-w-full rounded-lg bg-black object-contain shadow-2xl ${item.kind === 'ui' ? 'ring-1 ring-white/15' : ''}`}
+          />
+        ) : (
+          <img
+            src={imageUrl(item.image)}
+            alt={item.title}
+            width={item.width}
+            height={item.height}
+            className={`max-h-[74vh] min-h-0 w-auto max-w-full rounded-lg object-contain shadow-2xl ${item.kind === 'ui' ? 'ring-1 ring-white/15' : ''}`}
+          />
+        )}
         <figcaption className="w-full max-w-[640px] text-center">
           <p className="text-[15px] font-semibold text-white">{item.title}</p>
           <p className="mt-0.5 font-mono text-[11px] tabular-nums text-white/55">
@@ -212,16 +289,17 @@ export default function GalleryPage({ theme, onToggleTheme }) {
 
   const counts = useMemo(() => countsOf(state.items), [state.items])
   const shown = useMemo(() => filterItems(state.items, filter), [state.items, filter])
-  const viewIndex = viewing ? shown.findIndex((i) => i.id === viewing) : -1
+  const pictures = useMemo(() => shown.filter((i) => !i.live), [shown])
+  const viewIndex = viewing ? pictures.findIndex((i) => i.id === viewing) : -1
 
   const open = useCallback((id) => setViewing(id), [])
   const close = useCallback(() => setViewing(null), [])
   const step = useCallback(
     (by) => setViewing((id) => {
-      const at = shown.findIndex((i) => i.id === id)
-      return at < 0 ? null : shown[(at + by + shown.length) % shown.length].id
+      const at = pictures.findIndex((i) => i.id === id)
+      return at < 0 ? null : pictures[(at + by + pictures.length) % pictures.length].id
     }),
-    [shown],
+    [pictures],
   )
 
   const addLink = owner && (
@@ -282,16 +360,16 @@ export default function GalleryPage({ theme, onToggleTheme }) {
         )}
         {state.status === 'ready' && shown.length > 0 && (
           <ul key={filter} className={`${GUTTER} columns-1 gap-4 pb-16 sm:columns-2 lg:columns-3`}>
-            {shown.map((item, i) => (
-              <Tile key={item.id} item={item} index={i} onOpen={open} />
-            ))}
+            {shown.map((item, i) =>
+              item.live ? <LiveTile key={item.id} item={item} index={i} /> : <Tile key={item.id} item={item} index={i} onOpen={open} />,
+            )}
           </ul>
         )}
 
         <SiteFooter gutter={GUTTER} className="mt-auto" />
       </main>
 
-      {viewIndex >= 0 && <Lightbox items={shown} index={viewIndex} onClose={close} onStep={step} />}
+      {viewIndex >= 0 && <Lightbox items={pictures} index={viewIndex} onClose={close} onStep={step} />}
     </div>
   )
 }

@@ -18,8 +18,8 @@ export const ERROR_TEXT = {
   uploads_disabled: 'The gallery bucket is missing. Run deploy/supabase/gallery.sql again.',
   forbidden: 'Only the site owner can change the gallery. If that is you, sign out and back in with two-factor.',
   invalid: 'The database refused this item. Check the fields and try again.',
-  bad_image: 'That file could not be read as an image.',
-  too_large: 'That image is too big, even after shrinking it.',
+  bad_image: 'That file could not be read as an image or a video. Videos need to be MP4, WebM or MOV.',
+  too_large: 'That file is too big. Images are shrunk automatically; videos can be at most 50 MB.',
   offline: 'Could not reach the server. Check your connection and try again.',
   failed: 'Something went wrong. Try again.',
 }
@@ -60,7 +60,7 @@ async function run(fn) {
 
 export async function listItems() {
   const rows = await run((sb) => sb.from('gallery_items').select('*').order('taken_on', { ascending: false }))
-  return sortItems((rows || []).map(fromRow))
+  return sortItems((rows || []).map(fromRow).filter((i) => i.image || i.live))
 }
 
 export async function saveItem(item, { isNew }) {
@@ -74,7 +74,7 @@ export async function saveItem(item, { isNew }) {
 
 export async function deleteItem(item) {
   await run((sb) => sb.from('gallery_items').delete().eq('id', item.id))
-  await removeImages([item.image]).catch(() => {})
+  await removeImages([item.image, item.poster]).catch(() => {})
 }
 
 export async function removeImages(paths) {
@@ -86,13 +86,18 @@ export async function removeImages(paths) {
 const MAX_EDGE = 2400
 const MAX_BYTES = 3 * 1024 * 1024
 
-async function toWebp(file) {
-  const bitmap = await createImageBitmap(file).catch(() => null)
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024
+const VIDEO_EXT = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' }
+
+async function toWebp(source) {
+  const bitmap = source instanceof HTMLVideoElement ? source : await createImageBitmap(source).catch(() => null)
   if (!bitmap) throw new GalleryError('bad_image')
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height))
+  const w = bitmap.videoWidth || bitmap.width
+  const h = bitmap.videoHeight || bitmap.height
+  const scale = Math.min(1, MAX_EDGE / Math.max(w, h))
   const canvas = document.createElement('canvas')
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale))
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+  canvas.width = Math.max(1, Math.round(w * scale))
+  canvas.height = Math.max(1, Math.round(h * scale))
   const ctx = canvas.getContext('2d')
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
@@ -113,13 +118,65 @@ const slugOf = (name) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 40) || 'image'
 
+export const isMediaFile = (file) => file?.type?.startsWith('image/') || Boolean(VIDEO_EXT[file?.type])
+
+const pathFor = (itemId, name, ext) => `${itemId}/${slugOf(name)}-${Math.random().toString(16).slice(2, 8)}.${ext}`
+
+const put = (path, body, contentType) =>
+  run((sb) => sb.storage.from(BUCKET).upload(path, body, { contentType, cacheControl: '31536000', upsert: false }))
+
+// Loads the picked video locally and grabs a frame a little way in, so the
+// poster is not the black first frame most clips open on.
+async function posterOf(file) {
+  const url = URL.createObjectURL(file)
+  const video = document.createElement('video')
+  video.muted = true
+  video.playsInline = true
+  video.preload = 'auto'
+  try {
+    await new Promise((resolve, reject) => {
+      video.onloadeddata = resolve
+      video.onerror = () => reject(new GalleryError('bad_image'))
+      video.src = url
+    })
+    const at = Math.min(1, (video.duration || 0) / 3)
+    if (at > 0) {
+      await new Promise((resolve) => {
+        video.onseeked = resolve
+        video.currentTime = at
+      })
+    }
+    if (!video.videoWidth) throw new GalleryError('bad_image')
+    return await toWebp(video)
+  } finally {
+    video.removeAttribute('src')
+    video.load()
+    URL.revokeObjectURL(url)
+  }
+}
+
 export async function uploadImage(itemId, file) {
+  const ext = VIDEO_EXT[file.type]
+  if (ext) {
+    if (file.size > MAX_VIDEO_BYTES) throw new GalleryError('too_large')
+    const poster = await posterOf(file)
+    const image = pathFor(itemId, file.name, ext)
+    const posterPath = pathFor(itemId, `${file.name}-poster`, 'webp')
+    await put(posterPath, poster.blob, 'image/webp')
+    try {
+      await put(image, file, file.type)
+    } catch (err) {
+      removeImages([posterPath]).catch(() => {})
+      throw err
+    }
+    return { image, poster: posterPath, width: poster.width, height: poster.height }
+  }
   if (!file.type.startsWith('image/')) throw new GalleryError('bad_image')
   if (file.size > 40 * 1024 * 1024) throw new GalleryError('too_large')
   const { blob, width, height } = await toWebp(file)
-  const path = `${itemId}/${slugOf(file.name)}-${Math.random().toString(16).slice(2, 8)}.webp`
-  await run((sb) => sb.storage.from(BUCKET).upload(path, blob, { contentType: 'image/webp', cacheControl: '31536000', upsert: false }))
-  return { image: path, width, height }
+  const image = pathFor(itemId, file.name, 'webp')
+  await put(image, blob, 'image/webp')
+  return { image, poster: null, width, height }
 }
 
 const dayOf = (ms) => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 10)
@@ -141,7 +198,7 @@ export async function addFromFile(file, kind) {
   try {
     return await saveItem(item, { isNew: true })
   } catch (err) {
-    removeImages([upload.image]).catch(() => {})
+    removeImages([upload.image, upload.poster]).catch(() => {})
     throw err
   }
 }

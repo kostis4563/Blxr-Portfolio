@@ -11,6 +11,10 @@ import {
   toRow,
   fromRow,
   IMAGE_RE,
+  isVideo,
+  LIVE_TYPES,
+  cleanLive,
+  draftLive,
 } from '../../src/lib/gallery.js'
 
 const item = (over = {}) => ({
@@ -84,8 +88,40 @@ describe('rows', () => {
     expect(fromRow({ ...toRow(item()), kind: 'gif' }).kind).toBe('photo')
   })
 
+  test('live items save as UI with no image, and drop unknown props', () => {
+    const draft = draftLive('2026-10-06')
+    const form = { ...formFrom(draft), kind: 'photo', live: { type: 'comment', props: { name: 'Ana', text: 'Ship it', time: '1h', evil: 'x' } } }
+    const row = toRow(itemFrom(draft, form))
+    expect(row).toMatchObject({ kind: 'ui', image: null, width: null, height: null, live: { type: 'comment', props: { name: 'Ana', text: 'Ship it', time: '1h' } } })
+    expect(row.live.props).not.toHaveProperty('evil')
+    expect(row).not.toHaveProperty('id')
+    expect(fromRow({ ...row, id: 'x' }).live.type).toBe('comment')
+  })
+
+  test('unknown live types are dropped', () => {
+    expect(cleanLive({ type: 'iframe', props: {} })).toBeNull()
+  })
+
+  test('every live type passes with its defaults, and flags missing required fields', () => {
+    for (const t of LIVE_TYPES) {
+      expect(problemsOf({ ...formFrom(draftLive('2026-10-06')), live: { type: t.value, props: { ...t.defaults } } })).toEqual({})
+    }
+    const problems = problemsOf({ ...formFrom(draftLive('2026-10-06')), live: { type: 'html', props: { html: ' ', css: '', height: '5000' } } })
+    expect(Object.keys(problems).sort()).toEqual(['live.height', 'live.html'])
+  })
+
   test('image paths match the bucket layout the SQL enforces', () => {
     expect(IMAGE_RE.test(item().image)).toBe(true)
     expect(IMAGE_RE.test('../etc/passwd.webp')).toBe(false)
+    expect(IMAGE_RE.test('00000000-0000-4000-8000-000000000000/clip-a1b2c3.mp4')).toBe(true)
+    expect(IMAGE_RE.test('00000000-0000-4000-8000-000000000000/clip-a1b2c3.gif')).toBe(false)
+  })
+
+  test('videos keep their poster; images never carry one', () => {
+    const clip = item({ image: '00000000-0000-4000-8000-000000000000/clip-a1b2c3.mp4', poster: '00000000-0000-4000-8000-000000000000/clip-d4e5f6.webp' })
+    expect(isVideo(clip.image)).toBe(true)
+    expect(toRow(clip).poster).toBe(clip.poster)
+    expect(fromRow(toRow(clip)).poster).toBe(clip.poster)
+    expect(toRow(item({ poster: 'stale.webp' })).poster).toBeNull()
   })
 })
