@@ -1,20 +1,20 @@
 export const USES_UPDATED = '2026-09-20'
 
 export const USES_INTRO =
-  'The desk, the machine and the software behind everything on this site. Hover anything for the details.'
+  'The desk, the machine and the software behind everything on this site.'
 
-export const DESK = [
-  {
-    id: 'monitor',
-    name: 'Alienware AW2521HF',
-    kind: 'Display',
-    specs: ['24.5" IPS', '1920 × 1080', '240 Hz'],
-  },
+  export const DESK = [
   {
     id: 'laptop',
     name: 'MacBook Air 13"',
     kind: 'The machine',
     specs: ['Apple M4', '10-core · 24 GB', 'macOS 26'],
+  },
+  {
+    id: 'monitor',
+    name: 'Alienware AW2521HF',
+    kind: 'Display',
+    specs: ['24.5" IPS', '1920 × 1080', '240 Hz'],
   },
   {
     id: 'keyboard',
