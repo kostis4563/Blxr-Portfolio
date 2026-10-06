@@ -111,6 +111,8 @@ const ROUTE_SOURCES = {
   blog: ['src/blog-page.jsx', 'src/content/blog'],
   reviews: ['src/reviews-page.jsx'],
   contact: ['src/contact-page.jsx', 'src/lib/profile.js'],
+  payment: ['src/payment-page.jsx', 'src/lib/payment.js'],
+  volunteer: ['src/volunteer-page.jsx', 'src/lib/volunteer.js'],
 }
 
 const repo = resolve(here, '..')

@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, CONTACT_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, CONTACT_PATH, PAYMENT_PATH, VOLUNTEER_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -217,6 +217,26 @@ export function buildCommands({
       href: CONTACT_PATH,
       run: () => navigate(CONTACT_PATH),
       keywords: 'contact email reach hire freelance discord github socials',
+    },
+    {
+      id: 'page-payment',
+      group: jump,
+      label: 'Payment',
+      hint: 'Pay me',
+      icon: 'wallet',
+      href: PAYMENT_PATH,
+      run: () => navigate(PAYMENT_PATH),
+      keywords: 'payment pay invoice paypal revolut wise paysafecard paysafe bank transfer iban sepa crypto bitcoin btc ethereum eth usdt tether litecoin money',
+    },
+    {
+      id: 'page-volunteer',
+      group: jump,
+      label: 'Volunteering',
+      hint: 'Events I gave time to',
+      icon: 'heart',
+      href: VOLUNTEER_PATH,
+      run: () => navigate(VOLUNTEER_PATH),
+      keywords: 'volunteer volunteering charity events community cause help ngo hours',
     },
 
     ...SECTIONS.map((section) => ({

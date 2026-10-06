@@ -486,7 +486,6 @@ export default function DashboardBoards({ hash, guest = false, onClaim }) {
         if (live.current) setLoading(false)
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [openId, tab],
   )
 

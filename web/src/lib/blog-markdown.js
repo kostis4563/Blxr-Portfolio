@@ -188,7 +188,7 @@ export function renderMarkdown(body, { highlight = plainCode } = {}) {
         const id = uniqueId(slugify(text))
         if (level <= 3) toc.push({ id, text, depth: level })
         return (
-          `<h${level} id="${id}"><a class="heading-anchor" href="#${id}" aria-hidden="true" tabindex="-1">#</a>` +
+          `<h${level} id="${id}"><a class="heading-anchor" href="#${id}" aria-hidden="true" tabindex="-1">${'#'.repeat(level)}</a>` +
           `${html}</h${level}>\n`
         )
       },

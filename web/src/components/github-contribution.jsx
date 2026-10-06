@@ -597,7 +597,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
             <p className="shrink-0">
               <span className="font-medium tabular-nums text-ink-strong">
                 <span className="sr-only">{headline.toLocaleString(locale)}</span>
-                {/* The invisible final value holds the width so the count-up doesn't jitter. */}
                 <span aria-hidden="true" className="inline-grid">
                   <span className="invisible col-start-1 row-start-1">{headline.toLocaleString(locale)}</span>
                   <span className="col-start-1 row-start-1">{shownHeadline.toLocaleString(locale)}</span>
@@ -945,7 +944,6 @@ export default function GitHubContributions({ username, since, activeSince, mini
             transform: `translate(-${hovered.align}%, -100%) translateX(${tipShift}px) translateY(${active ? 0 : 3}px)`,
           }}
         >
-          {/* Page ink tokens flip with the theme; the inverted surface doesn't, so inherit its text colour. */}
           <span className="font-semibold tabular-nums">
             {hovered.day.count === 0 ? 'No' : hovered.day.count}
           </span>{" "}

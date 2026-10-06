@@ -5,8 +5,8 @@ import { CommandButton } from './components/command-button'
 import { Icon } from './components/icon'
 import { projectsList, findProject, isVideoLink } from './lib/projects'
 import { libraryList } from './lib/library'
-import { link, navigate, projectPath, useRouteHash, HOME_PATH, LIBRARY_PATH, CONTACT_PATH, CV_PATH } from './lib/router'
-import { GITHUB_URL, CONTACT_EMAIL } from './lib/profile'
+import SiteFooter from './components/site-footer'
+import { link, navigate, projectPath, useRouteHash, HOME_PATH, LIBRARY_PATH, CONTACT_PATH } from './lib/router'
 import { imageProps, SIZES } from './lib/images'
 
 const youtubeId = (url) => /(?:v=|youtu\.be\/|embed\/)([\w-]{11})/.exec(url ?? '')?.[1] ?? null
@@ -426,7 +426,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
     }
     openOne(targetId)
     document.getElementById(targetId)?.scrollIntoView({ block: 'start' })
-  }, [targetId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [targetId])
 
   useEffect(() => {
     if (typeof IntersectionObserver === 'undefined') return
@@ -535,18 +535,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
           </ul>
         </section>
 
-        <footer className={`mt-auto flex flex-col gap-3 pt-16 pb-6 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between ${GUTTER}`}>
-          <p>
-            <span className="font-medium text-ink-strong">Blxr</span>
-            <span aria-hidden="true" className="mx-2 text-ink-faint">·</span>
-            Athens, Greece
-          </p>
-          <nav aria-label="Footer" className="flex items-center gap-4">
-            <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="transition-colors duration-200 hover:text-ink-strong">GitHub</a>
-            <a {...link(CV_PATH)} className="transition-colors duration-200 hover:text-ink-strong">CV</a>
-            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors duration-200 hover:text-ink-strong">Email</a>
-          </nav>
-        </footer>
+        <SiteFooter gutter={GUTTER} className="mt-auto" />
 
       </main>
 

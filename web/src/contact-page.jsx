@@ -5,7 +5,7 @@ import { Icon } from './components/icon'
 import { useAuth } from './lib/supabase'
 import { loginUrlFor } from './lib/auth'
 import { useAthensTemp } from './lib/weather'
-import { link, dashboardPath, HOME_PATH, REVIEWS_PATH, USES_PATH, CV_PATH } from './lib/router'
+import { link, dashboardPath, HOME_PATH, REVIEWS_PATH, USES_PATH, CV_PATH, PAYMENT_PATH } from './lib/router'
 import { CONTACT_EMAIL, SOCIALS } from './lib/profile'
 
 const MESSAGES_PATH = dashboardPath('messages')
@@ -382,6 +382,10 @@ export default function ContactPage({ theme, onToggleTheme }) {
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] font-medium text-ink-muted">
             <a {...link(REVIEWS_PATH)} className={FOOT_LINK}>
               <span>Worked with me? Leave a review</span>
+              <span aria-hidden="true" className={FOOT_ARROW}>→</span>
+            </a>
+            <a {...link(PAYMENT_PATH)} className={FOOT_LINK}>
+              <span>Payment</span>
               <span aria-hidden="true" className={FOOT_ARROW}>→</span>
             </a>
             <a {...link(USES_PATH)} className={FOOT_LINK}>

@@ -39,6 +39,12 @@ const CONTACT_DESCRIPTION =
   'How to reach Blxr: email for anything, a private thread on blxr.net, or GitHub and Discord. ' +
   'Based in Athens, Greece (EET / EEST).'
 
+const PAYMENT_DESCRIPTION =
+  'Payment methods Blxr accepts: PayPal, Paysafecard, Revolut, Wise, SEPA bank transfer and crypto (BTC, ETH, USDT, LTC).'
+
+const VOLUNTEER_DESCRIPTION =
+  'Volunteering by Blxr: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
+
 export function metaFor(pathname) {
   const path = normalizePath(pathname)
   const route = parseRoute(path)
@@ -131,6 +137,22 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'payment') {
+    return {
+      ...base,
+      title: 'Payment — How to Pay Blxr',
+      description: PAYMENT_DESCRIPTION,
+    }
+  }
+
+  if (route.name === 'volunteer') {
+    return {
+      ...base,
+      title: 'Volunteering: Events Blxr Gave Time To',
+      description: VOLUNTEER_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'login') {
     return {
       ...base,
@@ -174,6 +196,8 @@ const SHORT_LABELS = {
   uses: 'Uses',
   cv: 'CV',
   contact: 'Contact',
+  payment: 'Payment',
+  volunteer: 'Volunteering',
   login: 'Sign in',
   dashboard: 'Dashboard',
   profile: 'Profile',
@@ -436,6 +460,30 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'payment') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Payment',
+      description: PAYMENT_DESCRIPTION,
+      url: `${SITE_URL}/payment`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
+  if (route.name === 'volunteer') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Volunteering',
+      description: VOLUNTEER_DESCRIPTION,
+      url: `${SITE_URL}/volunteer`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'library') {
     if (realEntries.length === 0) return null
     return {
@@ -484,6 +532,10 @@ function crumbsFor(route) {
     items.push({ name: 'CV', item: urlOf('/cv') })
   } else if (route.name === 'contact') {
     items.push({ name: 'Contact', item: urlOf('/contact') })
+  } else if (route.name === 'payment') {
+    items.push({ name: 'Payment', item: urlOf('/payment') })
+  } else if (route.name === 'volunteer') {
+    items.push({ name: 'Volunteering', item: urlOf('/volunteer') })
   } else if (route.name === 'library') {
     items.push({ name: 'FiveM Library', item: urlOf('/library') })
     if (route.itemId) {

@@ -15,7 +15,7 @@ function setDoc({ reduced = false, href = 'https://blxr.net/library' } = {}) {
   vi.stubGlobal('navigator', {
     sendBeacon: (url, blob) => {
       let body = null
-      try { body = JSON.parse(blob?.text ?? '{}') } catch { /* not json */ }
+      try { body = JSON.parse(blob?.text ?? '{}') } catch {}
       beacons.push({ url, body })
       return true
     },

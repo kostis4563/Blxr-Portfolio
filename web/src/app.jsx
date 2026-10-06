@@ -7,6 +7,8 @@ import ReviewsPageImpl from '#ssr-page/reviews'
 import UsesPageImpl from '#ssr-page/uses'
 import CvPageImpl from '#ssr-page/cv'
 import ContactPageImpl from '#ssr-page/contact'
+import PaymentPageImpl from '#ssr-page/payment'
+import VolunteerPageImpl from '#ssr-page/volunteer'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
 import PublicProfilePageImpl from '#ssr-page/public-profile'
@@ -18,12 +20,13 @@ import StudioFact from './components/studio-fact'
 import ScrambleText from './components/scramble-text'
 import LandingMemes from './components/landing-memes'
 import LiveSelect from './components/live-select'
-import { Facepile, CommentPin, Inspect, FrameLabel, CanvasLayer, GridToggle, EditedAgo } from './components/figma'
+import { Facepile, CommentPin, Inspect, FrameLabel, CanvasLayer } from './components/figma'
+import SiteFooter from './components/site-footer'
 import { trackPageVisit } from './lib/memes'
 import { useTheme } from './lib/use-theme'
 import { imageProps, SIZES } from './lib/images'
 import { SKILL_CATEGORIES, themedIconFor } from './lib/skills'
-import { useRoutePath, parseRoute, navigate, link, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
+import { useRoutePath, parseRoute, navigate, link, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
 import { Icon } from './components/icon'
 import { Loading } from './components/skeleton'
@@ -41,9 +44,11 @@ const ReviewsPage = routePage(ReviewsPageImpl, () => import('#client-page/review
 const UsesPage = routePage(UsesPageImpl, () => import('#client-page/uses'))
 const CvPage = routePage(CvPageImpl, () => import('#client-page/cv'))
 const ContactPage = routePage(ContactPageImpl, () => import('#client-page/contact'))
+const PaymentPage = routePage(PaymentPageImpl, () => import('#client-page/payment'))
 const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
 const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
+const VolunteerPage = routePage(VolunteerPageImpl, withSupabase(() => import('#client-page/volunteer')))
 const PublicProfilePage = routePage(PublicProfilePageImpl, withSupabase(() => import('#client-page/public-profile')))
 const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-found'))
 
@@ -55,10 +60,6 @@ function CommentLayer() {
   useEffect(() => setMounted(true), [])
   return mounted ? <Suspense fallback={null}><CommentLayerImpl /></Suspense> : null
 }
-import {
-  GITHUB_URL,
-  CONTACT_EMAIL,
-} from './lib/profile'
 
 function SkillTile({ skill, featured }) {
   const Tile = skill.url ? 'a' : 'span'
@@ -276,6 +277,28 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <ContactPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'payment') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <PaymentPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'volunteer') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <VolunteerPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>
@@ -668,22 +691,7 @@ function App() {
           </div>
         </section>
 
-        <footer id="site-footer" className="w-[calc(100%+3rem)] -mx-6 mt-16 flex flex-col gap-3 border-t border-dashed border-line px-6 py-6 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            <span className="font-medium text-ink-strong">Blxr</span>
-            <span aria-hidden="true" className="mx-2 text-ink-faint">·</span>
-            Athens, Greece
-            <EditedAgo />
-          </p>
-          <nav aria-label="Footer" className="flex items-center gap-4">
-            <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="transition-colors duration-200 hover:text-ink-strong">GitHub</a>
-            <a {...link(BLOG_PATH)} className="transition-colors duration-200 hover:text-ink-strong">Blog</a>
-            <a {...link(CV_PATH)} className="transition-colors duration-200 hover:text-ink-strong">CV</a>
-            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors duration-200 hover:text-ink-strong">Email</a>
-            <span aria-hidden="true" className="h-3.5 border-l border-dashed border-line" />
-            <GridToggle className="inline-flex items-center gap-1.5 rounded-md outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30 aria-pressed:text-ink-strong" />
-          </nav>
-        </footer>
+        <SiteFooter id="site-footer" showGrid className="w-[calc(100%+3rem)] -mx-6 -mb-6 mt-16" />
 
       </main>
 

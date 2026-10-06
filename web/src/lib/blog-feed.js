@@ -13,7 +13,7 @@ const cdata = (s) => `<![CDATA[${String(s).replace(/]]>/g, ']]]]><![CDATA[>')}]]
 const absolute = (html) =>
   html
     .replace(/(\s(?:href|src))="\/(?!\/)/g, `$1="${SITE_URL}/`)
-    .replace(/<a class="heading-anchor"[^>]*>#<\/a>/g, '')
+    .replace(/<a class="heading-anchor"[^>]*>#+<\/a>/g, '')
     .replace(/<button[^>]*data-copy[^>]*>[\s\S]*?<\/button>/g, '')
 
 const rfc822 = (iso) => new Date(`${iso}T09:00:00Z`).toUTCString()

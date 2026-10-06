@@ -201,7 +201,6 @@ export default function Thread({ thread: given, them, owner, uid, online = false
       const last = messages[messages.length - 1]
       if (last && !mine(last) && !last.deleted_at) setBelow((held) => held + 1)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastId, count])
 
   const onGrow = useCallback(() => {

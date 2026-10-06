@@ -35,7 +35,6 @@ function Grid({ face, value, days, min, max, cursor, onMonth, onPick, onCursor }
 
   useEffect(() => {
     focusDay(value || max)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const walk = (event) => {

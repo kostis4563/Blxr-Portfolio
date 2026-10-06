@@ -215,6 +215,7 @@ Read and written straight from the browser with the publishable key — row-leve
 | `#profile` | [`profiles.sql`](deploy/supabase/profiles.sql) | `profiles` + public `avatars` bucket |
 | `#boards` | [`boards.sql`](deploy/supabase/boards.sql) | `boards`, `board_cards`, `board_index` view + private `boards` bucket |
 | `#messages` | [`messages.sql`](deploy/supabase/messages.sql) | `threads`, `messages`, realtime publication + private `messages` bucket |
+| `#volunteer` | [`volunteer.sql`](deploy/supabase/volunteer.sql) | `volunteer_events` (public read when published, owner writes) + public `volunteer` photo bucket |
 
 Paste each into Supabase → SQL editor → Run (safe to re-run). Boards are private per account; the owner in `is_board_admin()` sees all. Messages give every account one private thread with the owner in `is_site_owner()`, who sees them as an inbox. Full details in [`deploy/supabase/README.md`](deploy/supabase/README.md) §9, §11, §12.
 

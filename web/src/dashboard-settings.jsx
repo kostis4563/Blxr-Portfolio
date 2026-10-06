@@ -143,7 +143,6 @@ function ProfileTab({ user }) {
   const meta = user.user_metadata || {}
   const initial = useMemo(
     () => ({ name: profile.name, bio: meta.bio || '', website: meta.website || '', location: meta.location || '' }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [user.updated_at],
   )
   const [form, setForm] = useState(initial)

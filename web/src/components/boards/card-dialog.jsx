@@ -465,7 +465,6 @@ export default function CardDialog({ board, card, cards, canWrite, actions, erro
     setTitle(card.title)
     setNotes(card.notes || '')
     setWriting(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card.id])
 
   const column = board.lists.find((list) => list.id === card.list_id)
