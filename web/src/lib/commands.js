@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, CONTACT_PATH, PAYMENT_PATH, VOLUNTEER_PATH, GALLERY_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, CONTACT_PATH, PAYMENT_PATH, VOLUNTEER_PATH, GALLERY_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -207,6 +207,16 @@ export function buildCommands({
       href: CV_PATH,
       run: () => navigate(CV_PATH),
       keywords: 'cv resume résumé curriculum vitae experience education skills certifications print pdf',
+    },
+    {
+      id: 'page-security',
+      group: jump,
+      label: 'Security',
+      hint: 'Report a vulnerability',
+      icon: 'shield',
+      href: SECURITY_PATH,
+      run: () => navigate(SECURITY_PATH),
+      keywords: 'security vulnerability report disclosure responsible bug bounty pgp gpg ssh keys fingerprint safe harbour security.txt',
     },
     {
       id: 'page-contact',

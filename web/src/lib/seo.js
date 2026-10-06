@@ -2,6 +2,7 @@ import { projectsList } from './projects'
 import { libraryList, findLibraryItem } from './library'
 import { USES_UPDATED } from './uses'
 import { CV_UPDATED } from './cv'
+import { SECURITY_UPDATED } from './security'
 import { postsList, findPost, BLOG_UPDATED } from './blog'
 import { blogPath, libraryPath, normalizePath, parseRoute, projectPath, BLOG_FEED_PATH } from './router'
 import { setDocumentTitle } from './title-animation'
@@ -33,7 +34,11 @@ const USES_DESCRIPTION =
   'the editor, terminal, fonts, hosting and music.'
 
 const CV_DESCRIPTION =
-  'CV of Blxr, a full stack developer in Athens: experience, selected projects, education, skills and certifications. Printable.'
+  'CV of Blxr, a full stack developer in Athens: experience, education, skills and languages. Printable.'
+
+const SECURITY_DESCRIPTION =
+  'Report a security issue in blxr.net or a Blxr project: private email, keys, disclosure timeline, ' +
+  'scope and safe harbour.'
 
 const CONTACT_DESCRIPTION =
   'How to reach Blxr: email for anything, a private thread on blxr.net, or GitHub and Discord. ' +
@@ -132,6 +137,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'security') {
+    return {
+      ...base,
+      title: 'Security — Report a Vulnerability to Blxr',
+      description: SECURITY_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'contact') {
     return {
       ...base,
@@ -206,6 +219,7 @@ const SHORT_LABELS = {
   reviews: 'Reviews',
   uses: 'Uses',
   cv: 'CV',
+  security: 'Security',
   contact: 'Contact',
   payment: 'Payment',
   volunteer: 'Volunteering',
@@ -241,6 +255,7 @@ export function lastmodFor(pathname) {
   const route = parseRoute(pathname)
   if (route.name === 'uses') return USES_UPDATED
   if (route.name === 'cv') return CV_UPDATED
+  if (route.name === 'security') return SECURITY_UPDATED
   if (route.name === 'blog' && route.slug) {
     const post = findPost(route.slug)
     return post.updated || post.date
@@ -461,6 +476,19 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'security') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Security',
+      description: SECURITY_DESCRIPTION,
+      url: `${SITE_URL}/security`,
+      dateModified: SECURITY_UPDATED,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'contact') {
     return {
       '@context': 'https://schema.org',
@@ -554,6 +582,8 @@ function crumbsFor(route) {
     items.push({ name: 'Uses', item: urlOf('/uses') })
   } else if (route.name === 'cv') {
     items.push({ name: 'CV', item: urlOf('/cv') })
+  } else if (route.name === 'security') {
+    items.push({ name: 'Security', item: urlOf('/security') })
   } else if (route.name === 'contact') {
     items.push({ name: 'Contact', item: urlOf('/contact') })
   } else if (route.name === 'payment') {

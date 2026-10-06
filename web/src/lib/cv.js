@@ -1,20 +1,15 @@
-import { CONTACT_EMAIL, GITHUB_URL, GITHUB_USERNAME, DISCORD_URL } from './profile'
+import { CONTACT_EMAIL, GITHUB_URL, GITHUB_USERNAME } from './profile'
 
-export const CV_UPDATED = '2026-09-21'
+export const CV_UPDATED = '2026-10-06'
 
 export const CV_NAME = 'Kostis Nomikos'
-export const CV_HANDLE = GITHUB_USERNAME
 export const CV_LOCATION = 'Athens, Greece'
-export const CV_TIMEZONE = 'EET / EEST (UTC+2 / UTC+3)'
 
-export const CV_ROLE = 'Developer working across backends, the interfaces on top of them, and the servers underneath.'
-export const CV_STATUS = 'Final year of the IB Diploma, Athens.'
+export const CV_ROLE = 'Full stack developer. Final year of the IB Diploma.'
 
 export const CV_SUMMARY =
-  'Final year of the IB Diploma Programme :), building software on the side since 2023. I do the whole thing: React ' +
-  'frontends, Node and Express backends, and the Linux box it ships to. Most of my work so far has been security ' +
-  'tooling and UIs for FiveM communities, plus client sites through my own studio. I like being close to the ' +
-  'product, and I care most about whether it still works once real people are using it.'
+  'Building software since 2023: React frontends, Node and Express backends, and the Linux servers they run on. ' +
+  'Mostly security tooling and FiveM interfaces, plus client sites through my own studio.'
 
 export const CV_CONTACT = [
   { label: 'Email', value: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}`, sensitive: true },
@@ -24,68 +19,38 @@ export const CV_CONTACT = [
 
 export const CV_EXPERIENCE = [
   {
-    role: 'Founder & Lead Developer',
+    role: 'Founder',
     org: 'Amitista Studio',
     url: 'https://amitista.com',
     period: { from: '2026', present: true },
-    location: 'Greece · Remote',
-    summary:
-      'A development studio taking on client work end to end: marketing sites, dashboards and web platforms, custom tools and backends, FiveM server builds, and interface design.',
-    bullets: [
-      'Own the studio and lead every build from brief through design, build and support, with scope and price settled before work starts.',
-      'Ship React + Vite frontends with Tailwind, backed by Express APIs and nginx on self managed Linux.',
-      'The person answering a client\'s messages is the person building the project.',
-    ],
-    stack: ['React', 'Tailwind CSS', 'Express'],
+    summary: 'Client sites, dashboards and custom backends, built end to end.',
   },
   {
     role: 'Full Stack Developer',
     org: 'Async Scanner',
     url: 'https://github.com/kostis4563/async-anticheat',
     period: { from: '2025', to: '2026' },
-    location: 'Remote',
-    summary: 'A forensic tool for analysing screenshares in video games. Front end in React and Tailwind, with Python, Go, Rust and C++ across the rest of the stack.',
-    bullets: [
-      'Native Windows scanner in C++17 with a Dear ImGui interface that collects forensic evidence and submits a signed report.',
-      'Express API, React dashboard and Discord bot on SQLite that ingest reports, run them through AI analysis and return a structured verdict.',
-      'Process, memory and file system forensics matched against known cheat and injector families.',
-    ],
-    stack: ['C++17', 'Win32', 'Dear ImGui', 'Node.js', 'React', 'SQLite'],
+    summary: 'Forensic screenshare tool: a C++ Windows scanner, Express API and React dashboard.',
   },
   {
     role: 'Freelance Developer',
     org: 'Self employed',
     url: null,
     period: { from: '2023', present: true },
-    location: 'Remote',
-    summary: 'I build frontends for clients and help with the product design side too. I like working close to the product, and shipping things that still work once real people use them.',
-    bullets: [
-      'UIs, HUDs and standalone resources for FiveM servers: NUI in HTML, CSS and JavaScript, React for ox_inventory, Lua on the game side.',
-      'Product design alongside the build: wireframes in Figma, then the real thing.',
-    ],
-    stack: ['React', 'Tailwind CSS', 'JavaScript', 'Lua', 'NUI'],
+    summary: 'UIs, HUDs and resources for FiveM servers, with product design in Figma.',
   },
 ]
-
-export const CV_PROJECT_IDS = ['web-scanner', 'async',]
 
 export const CV_EDUCATION = [
   {
-    degree: 'International Baccalaureate Diploma Programme (IBDP)',
+    degree: 'IB Diploma Programme',
     org: 'Athens',
     period: { from: '2026', present: true },
-    note: 'Computer Science is the focus subject, alongside Mathematics AA, Physics, Business, English B and Greek, plus the Extended Essay, Theory of Knowledge and CAS.',
-    highlights: [
-      'Software Engineering',
-      'Computer Systems',
-      'Data Structures & Algorithms',
-      'Databases / SQLITE',
-      'Web / Software Development Concepts',
-    ],
+    note: 'Computer Science, Mathematics AA, Physics, Business, English B, Greek.',
   },
 ]
 
-export { SKILL_CATEGORIES as CV_SKILLS, TOOL_CATEGORIES as CV_TOOLS } from './skills'
+export { SKILL_CATEGORIES as CV_SKILLS } from './skills'
 
 export const CV_LANGUAGES = [
   { name: 'Greek', level: 'Native' },

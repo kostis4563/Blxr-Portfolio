@@ -26,7 +26,7 @@ returns boolean
 language sql immutable as $$
   select coalesce(array_length(tags, 1), 0) <= 6
      and not exists (select 1 from unnest(tags) t where t is null or char_length(t) not between 1 and 24);
-$$;
+$$;R
 
 
 create table if not exists public.gallery_items (

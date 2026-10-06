@@ -32,6 +32,7 @@ const {
   PROFILE_SHELL_FILE,
   blogFeed,
   BLOG_FEED_PATH,
+  securityTxt,
 } = await import(pathToFileURL(ssrEntry).href)
 
 const template = await readFile(indexPath, 'utf8')
@@ -161,6 +162,9 @@ const feedFile = join(dist, BLOG_FEED_PATH.replace(/^\//, ''))
 await mkdir(dirname(feedFile), { recursive: true })
 await writeFile(feedFile, feed)
 console.log(`prerender: ${(feed.match(/<item>/g) || []).length} posts -> ${BLOG_FEED_PATH.slice(1)}`)
+
+await writeFile(join(dist, 'security.txt'), securityTxt(SITE_URL))
+console.log('prerender: security.txt')
 
 const EXECUTABLE_TYPE_RE = /^(module|(text|application)\/(javascript|ecmascript))?$/i
 

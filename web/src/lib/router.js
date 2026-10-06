@@ -19,6 +19,7 @@ export function parseRoute(path) {
   if (p === '/reviews') return { name: 'reviews' }
   if (p === '/uses') return { name: 'uses' }
   if (p === '/cv') return { name: 'cv' }
+  if (p === '/security') return { name: 'security' }
   if (p === '/contact') return { name: 'contact' }
   if (p === '/payment') return { name: 'payment' }
   if (p === '/volunteer') return { name: 'volunteer' }
@@ -108,6 +109,7 @@ export const REVIEWS_PATH = '/reviews'
 export const WRITE_REVIEW_PATH = `${REVIEWS_PATH}#write`
 export const USES_PATH = '/uses'
 export const CV_PATH = '/cv'
+export const SECURITY_PATH = '/security'
 export const CONTACT_PATH = '/contact'
 export const PAYMENT_PATH = '/payment'
 export const VOLUNTEER_PATH = '/volunteer'
@@ -133,6 +135,7 @@ export const staticPaths = () => [
   REVIEWS_PATH,
   USES_PATH,
   CV_PATH,
+  SECURITY_PATH,
   CONTACT_PATH,
   PAYMENT_PATH,
   VOLUNTEER_PATH,

@@ -13,6 +13,7 @@ import {
   PAYMENT_PATH,
   VOLUNTEER_PATH,
   GALLERY_PATH,
+  SECURITY_PATH,
 } from '../lib/router'
 import { GITHUB_URL, DISCORD_URL, CONTACT_EMAIL, SOCIAL_ICON_PATHS } from '../lib/profile'
 
@@ -34,6 +35,7 @@ const COLUMNS = [
       { label: 'Uses', to: USES_PATH },
       { label: 'Reviews', to: REVIEWS_PATH },
       { label: 'Volunteering', to: VOLUNTEER_PATH },
+      { label: 'Security', to: SECURITY_PATH },
     ],
   },
   {

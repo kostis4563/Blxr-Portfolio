@@ -27,6 +27,7 @@ function served(url) {
   const clean = decodeURI(url.split('#')[0].split('?')[0])
   if (!clean || clean === '/') return true
   if (clean.startsWith('/api/')) return true
+  if (clean === '/.well-known/security.txt') return has('security.txt')
   if (/^\/@[a-z0-9_]{3,20}\/?$/.test(clean)) return true
   return has(clean.slice(1)) || has(`${clean.slice(1)}.html`)
 }

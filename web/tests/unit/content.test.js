@@ -67,11 +67,6 @@ describe('projects', () => {
     expect(p.tags ?? [], 'tags').toBeInstanceOf(Array)
   })
 
-  test('the CV only features projects that exist', () => {
-    const ids = new Set(projectsList.map((p) => p.id))
-    for (const id of cv.CV_PROJECT_IDS) expect(ids.has(id), id).toBe(true)
-  })
-
   test('isVideoLink recognises YouTube only', () => {
     expect(isVideoLink('https://www.youtube.com/watch?v=x')).toBe(true)
     expect(isVideoLink('https://youtu.be/x')).toBe(true)

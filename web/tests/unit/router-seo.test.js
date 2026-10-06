@@ -30,6 +30,7 @@ describe('parseRoute', () => {
     ['/reviews', 'reviews'],
     ['/uses', 'uses'],
     ['/cv', 'cv'],
+    ['/security', 'security'],
     ['/contact', 'contact'],
     ['/payment', 'payment'],
     ['/volunteer', 'volunteer'],
