@@ -465,34 +465,37 @@ body {
 .vol-cas {
   cursor: default;
 }
-.vol-gap {
-  font-size: 0;
-  transition: font-size 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.vol-rest {
-  display: inline-grid;
-  grid-template-columns: 0fr;
+.vol-card {
+  display: flex;
   opacity: 0;
-  vertical-align: bottom;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(6px) scale(0.97);
+  transform-origin: 24px 100%;
   transition:
-    grid-template-columns 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.35s ease;
-  transition-delay: calc((2 - var(--i)) * 0.04s);
+    opacity 0.18s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.28s;
 }
-.vol-rest > span {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
+.vol-card::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 22px;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  transform: rotate(45deg);
 }
-.vol-cas:hover .vol-gap,
-.vol-cas[data-open] .vol-gap {
-  font-size: inherit;
-}
-.vol-cas:hover .vol-rest,
-.vol-cas[data-open] .vol-rest {
-  grid-template-columns: 1fr;
+.vol-cas:hover .vol-card,
+.vol-cas[data-open] .vol-card {
   opacity: 1;
-  transition-delay: calc(var(--i) * 0.06s);
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
 }
 .vol-scribble {
   left: -0.04em;

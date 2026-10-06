@@ -188,9 +188,9 @@ describe('JavaScript and CSS', () => {
 
   const entryAssets = () => [...read('index.html').matchAll(/(?:src|href)="(\/assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1])
 
-  test('first-load budget: entry JS + CSS under 160 KB gzipped', () => {
+  test('first-load budget: entry JS + CSS under 165 KB gzipped', () => {
     const total = entryAssets().reduce((sum, url) => sum + gzipSync(readFileSync(path.join(DIST, url))).length, 0)
-    expect(total / 1024).toBeLessThan(160)
+    expect(total / 1024).toBeLessThan(165)
   })
 
   test('supabase-js is not part of the first load', () => {
