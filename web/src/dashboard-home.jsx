@@ -395,21 +395,20 @@ export default function DashboardHome({ user, guest }) {
               {user.avatar ? (
                 <img src={user.avatar} alt="" width="56" height="56" draggable={false} className="h-14 w-14 rounded-[16px] object-cover" />
               ) : (
-                <span className="grid h-14 w-14 place-items-center rounded-[16px] bg-surface-raised font-bagus text-[22px] text-ink-strong">
+                <span className="grid h-14 w-14 place-items-center rounded-[16px] bg-surface-raised text-[20px] font-semibold text-ink-strong">
                   {user.name.slice(0, 1).toUpperCase()}
                 </span>
               )}
             </Inspect>
             <div className="min-w-0">
-              <p className="text-[12px] font-watom text-ink-subtle">{date}</p>
-              <h1 className="mt-1 flex items-center gap-2 font-bagus text-[26px] leading-none tracking-[-0.02em] text-ink-strong sm:text-[30px]">
+              <p className="text-[12px] text-ink-subtle">{date}</p>
+              <h1 className="mt-0.5 flex items-center gap-2 text-[20px] font-semibold leading-tight tracking-tight text-ink-strong">
                 {greeting(now.getHours())}, {first}
                 <CommentPin
                   name="Kostis"
                   initial="K"
                   time="now"
                   text={guest ? 'Claim your account to keep your boards for good.' : 'Press ⌘K anywhere to jump around.'}
-                  className="-translate-y-1"
                 />
               </h1>
             </div>
@@ -480,7 +479,7 @@ export default function DashboardHome({ user, guest }) {
       </div>
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <Panel frame="Activity" title="What happened" action={<span className={CAPS}>14 days</span>}>
+        <Panel frame="Activity" title="Recent activity" action={<span className={CAPS}>14 days</span>}>
           <Activity />
         </Panel>
         <div className="flex flex-col gap-10">
