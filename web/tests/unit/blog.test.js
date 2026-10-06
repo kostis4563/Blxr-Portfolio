@@ -6,7 +6,8 @@ import { serializePost, readMeta, postSlugFor, renderMarkdown } from '../../src/
 import { postsList, findPost, adjacentPosts, postsByYear, matchesPost } from '../../src/lib/blog.js'
 import { parseRoute, blogPath, staticPaths } from '../../src/lib/router.js'
 import { metaFor, headTags, labelFor, lastmodFor } from '../../src/lib/seo.js'
-import sample from '../../src/content/blog/how-to-write-a-post.md'
+import sample from '../fixtures/blog/how-to-write-a-post.md'
+import sampleMeta from '../fixtures/blog/how-to-write-a-post.md?meta'
 
 const PUBLIC = fileURLToPath(new URL('../../public', import.meta.url))
 
@@ -43,23 +44,40 @@ describe('posts', () => {
     }
   })
 
-  test('adjacent posts, year groups and filtering', () => {
-    const [first] = postsList
-    expect(adjacentPosts(first.slug).newer).toBeNull()
+  test('adjacent posts and year groups', () => {
     expect(adjacentPosts('nope')).toEqual({ newer: null, older: null })
     expect(postsByYear(postsList).flatMap((g) => g.posts)).toEqual(postsList)
-    expect(matchesPost(first, '', null)).toBe(true)
-    expect(matchesPost(first, 'zzzz-no-match', null)).toBe(false)
-    expect(matchesPost(first, '', 'not-a-tag')).toBe(false)
+    if (postsList.length) expect(adjacentPosts(postsList[0].slug).newer).toBeNull()
+  })
+
+  test('filtering by text and tag', () => {
+    expect(matchesPost(sampleMeta, '', null)).toBe(true)
+    expect(matchesPost(sampleMeta, 'cheat sheet', null)).toBe(true)
+    expect(matchesPost(sampleMeta, 'zzzz-no-match', null)).toBe(false)
+    expect(matchesPost(sampleMeta, '', 'markdown')).toBe(true)
+    expect(matchesPost(sampleMeta, '', 'not-a-tag')).toBe(false)
+  })
+
+  test.skipIf(postsList.length === 0)('published posts get article metadata', () => {
+    const [post] = postsList
+    const path = blogPath(post.slug)
+    const head = headTags(path)
+    expect(head).toContain('<meta property="og:type" content="article" />')
+    expect(head).toContain(`<meta property="article:published_time" content="${post.date}" />`)
+    expect(head).toContain('"@type":"BlogPosting"')
+    expect(labelFor(path)).toBe(post.title.slice(0, 18))
+    expect(lastmodFor(path)).toBe(post.updated || post.date)
+    expect(metaFor(path).noindex).toBe(Boolean(post.draft))
   })
 })
 
 describe('the sample post', () => {
-  const meta = findPost('how-to-write-a-post')
+  const meta = sampleMeta
 
-  test('is a draft, visible outside production builds only', () => {
-    expect(meta.draft).toBe(true)
-    expect(metaFor(blogPath(meta.slug)).noindex).toBe(true)
+  test('reads its frontmatter as a draft with derived fields', () => {
+    expect(meta).toMatchObject({ slug: 'how-to-write-a-post', draft: true, tags: ['meta', 'markdown'] })
+    expect(meta.minutes).toBeGreaterThanOrEqual(1)
+    expect(findPost(meta.slug)).toBeFalsy()
   })
 
   test('renders highlighted code, callouts, figures and a table of contents', () => {
@@ -72,16 +90,6 @@ describe('the sample post', () => {
     expect(sample.html).toMatch(/<a href="https:\/\/github.com" target="_blank" rel="noreferrer" class="external">/)
     expect(sample.toc[0]).toEqual({ id: 'the-frontmatter', text: 'The frontmatter', depth: 2 })
     expect(sample.toc.some((item) => item.depth === 3)).toBe(true)
-  })
-
-  test('gets article metadata', () => {
-    const path = blogPath(meta.slug)
-    const head = headTags(path)
-    expect(head).toContain('<meta property="og:type" content="article" />')
-    expect(head).toContain(`<meta property="article:published_time" content="${meta.date}" />`)
-    expect(head).toContain('"@type":"BlogPosting"')
-    expect(labelFor(path)).toBe(meta.title.slice(0, 18))
-    expect(lastmodFor(path)).toBe(meta.date)
   })
 })
 

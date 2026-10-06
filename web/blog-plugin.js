@@ -4,7 +4,7 @@ import { readMeta, renderMarkdown, codeLangs } from './src/lib/blog-markdown.js'
 
 export { parseFrontmatter } from './src/lib/blog-markdown.js'
 
-const POST_RE = /[\\/]src[\\/]content[\\/]blog[\\/]([^\\/]+)\.md(\?meta)?$/
+const POST_RE = /[\\/](?:src[\\/]content|tests[\\/]fixtures)[\\/]blog[\\/]([^\\/]+)\.md(\?meta)?$/
 const THEMES = { light: 'github-light', dark: 'github-dark' }
 
 let highlighter = null
