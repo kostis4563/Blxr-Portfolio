@@ -8,13 +8,15 @@ import DashboardBoards from './dashboard-boards'
 import DashboardMessages from './dashboard-messages'
 import DashboardReviewPanel from './dashboard-reviewpanel'
 import DashboardLogs from './dashboard-logs'
+import DashboardHome from './dashboard-home'
+import { CanvasLayer, Toasts } from './components/figma'
 const DashboardBlog = lazy(() => import('./dashboard-blog'))
 const DashboardVolunteer = lazy(() => import('./dashboard-volunteer'))
 import { navigate, useRouteHash, dashboardPath, DASHBOARD_PATH } from './lib/router'
 import { Loading } from './components/skeleton'
 import { useAuth, profileOf } from './lib/supabase'
 import { loginUrlFor, mfaRequired, isGuest } from './lib/auth'
-import { itemForHash, isSiteOwner, SIDEBAR_STORAGE_KEY, BLURBS } from './lib/dashboard'
+import { itemForHash, isSiteOwner, SIDEBAR_STORAGE_KEY, BLURBS, OWNER_EMAIL } from './lib/dashboard'
 import { CLAIM_HASH, lockedForGuest } from './lib/guest'
 import { GuestBar, MembersOnly, ClaimDialog, useGuestWork } from './components/guest'
 
@@ -33,10 +35,24 @@ function isTyping(target) {
 
 const Shell = () => <Loading label="Opening the dashboard" />
 
+// Local dev only: lets `npm run dev` open the dashboard without signing in. Stripped from production builds.
+const PREVIEW_SESSION = import.meta.env.DEV
+  ? {
+      user: {
+        id: '00000000-0000-4000-8000-000000000000',
+        email: OWNER_EMAIL,
+        user_metadata: { name: 'Local preview' },
+        app_metadata: { provider: 'email' },
+        is_anonymous: false,
+      },
+    }
+  : null
+
 export default function DashboardPage({ theme, themePreference, onToggleTheme, onSetTheme }) {
   const hash = useRouteHash()
   const item = itemForHash(hash)
-  const { session } = useAuth()
+  const { session: signedIn } = useAuth()
+  const session = signedIn === null && PREVIEW_SESSION ? PREVIEW_SESSION : signedIn
   const user = profileOf(session?.user)
   const guest = isGuest(session?.user)
   const [verified, setVerified] = useState(undefined)
@@ -90,6 +106,10 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
 
   useEffect(() => {
     if (!session) return
+    if (session === PREVIEW_SESSION) {
+      setVerified(true)
+      return
+    }
     let cancelled = false
     mfaRequired().then((needed) => {
       if (cancelled) return
@@ -148,6 +168,8 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
           )}
           {locked ? (
             <MembersOnly path={item.path} onClaim={openClaim} />
+          ) : top.id === 'home' ? (
+            <DashboardHome user={user} guest={guest} />
           ) : top.id === 'settings' ? (
             <DashboardSettings
               item={item}
@@ -183,6 +205,10 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
       </div>
 
       {guest && <ClaimDialog open={claiming} onClose={closeClaim} boards={work} />}
+
+      <CanvasLayer />
+      <Toasts />
+
     </div>
   )
 }

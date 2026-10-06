@@ -1578,6 +1578,33 @@ button.fig-face {
   white-space: nowrap;
 }
 
+.fig-select {
+  --live: #0d99ff;
+
+  position: relative;
+}
+.fig-select-frame {
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  border: 1px solid var(--live);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.fig-select:hover .fig-select-frame,
+.fig-select:focus-within .fig-select-frame {
+  opacity: 1;
+}
+.fig-select[data-component]::before {
+  bottom: auto;
+  top: 8px;
+  left: auto;
+  right: 10px;
+  z-index: 3;
+  color: var(--live);
+}
+
 .fig-frame-label {
   position: absolute;
   display: inline-flex;
@@ -1610,6 +1637,11 @@ button.fig-face {
   padding: 0 24px;
   translate: -50% 0;
   pointer-events: none;
+}
+:root[data-view='dashboard'] .fig-grid {
+  inset: 0;
+  max-width: none;
+  translate: none;
 }
 .fig-grid > span {
   background: color-mix(in srgb, #0d99ff 7%, transparent);

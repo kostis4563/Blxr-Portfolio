@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
-import { link, navigate, dashboardPath } from '../lib/router'
-import { isMacLike } from '../lib/palette'
+import { link, navigate, dashboardPath, HOME_PATH } from '../lib/router'
+import { isMacLike, openPalette } from '../lib/palette'
 import { navFor, NAV_FOOTER } from '../lib/dashboard'
 import { useUnread } from '../lib/messages-unread'
 import { badgeOf } from '../lib/messages'
@@ -18,12 +18,19 @@ const FULL_W = 'w-[240px]'
 const ITEM =
   'relative z-10 flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ink-strong/30'
 const IDLE = 'text-ink-muted hover:text-ink-strong'
-const ACTIVE = 'text-ink-strong font-medium'
+const ACTIVE = 'text-ink-strong font-medium [&>svg:first-child]:text-[#0d99ff]'
 const COUNT =
   'inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-surface-hover-strong px-1.5 font-mono text-[11px] font-medium text-ink tabular-nums'
 const TAG =
   'inline-flex h-[18px] items-center rounded-md border border-line-strong px-1.5 text-[10px] font-medium uppercase tracking-wide text-ink-muted'
-const GROUP = 'mb-1 px-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint'
+const GROUP =
+  'group/label mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-0.5 font-mono text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint outline-none transition-colors hover:text-ink-muted focus-visible:ring-2 focus-visible:ring-ink-strong/30'
+
+const FrameIcon = () => (
+  <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="1.2">
+    <path d="M4 1v10M8 1v10M1 4h10M1 8h10" />
+  </svg>
+)
 const TIP =
   'pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-surface-inverted px-2 py-1 text-[12px] text-ink-on-inverted opacity-0 shadow-md transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100'
 const ICON_BTN =
@@ -176,6 +183,7 @@ export default function DashboardSidebar({
   const [mobile, setMobile] = useState(false)
   const [mac, setMac] = useState(true)
   const [openGroups, setOpenGroups] = useState(() => new Set())
+  const [folded, setFolded] = useState(() => new Set())
   const [pill, setPill] = useState(null)
   const navRef = useRef(null)
 
@@ -216,11 +224,21 @@ export default function DashboardSidebar({
     const el = nav.querySelector('[data-active]')
     if (!el) return setPill(null)
     const r = el.getBoundingClientRect()
+    if (!r.width) return setPill(null)
     const n = nav.getBoundingClientRect()
     setPill({ top: r.top - n.top + nav.scrollTop, left: r.left - n.left, width: r.width, height: r.height })
   }, [])
 
-  useLayoutEffect(measure, [measure, activePath, rail, openGroups, mobileOpen])
+  const fold = useCallback((label) => {
+    setFolded((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }, [])
+
+  useLayoutEffect(measure, [measure, activePath, rail, openGroups, folded, mobileOpen])
 
   useEffect(() => {
     const nav = navRef.current
@@ -316,17 +334,19 @@ export default function DashboardSidebar({
           ) : (
             <>
               <a
-                {...link(dashboardPath())}
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/30"
-                aria-label="Dashboard"
+                {...link(HOME_PATH)}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg outline-none transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:ring-ink-strong/30"
+                aria-label="blxr.net"
+                title="blxr.net"
               >
                 <img
                   {...imageProps('/blxr-logo.webp')}
-                  alt="blxr"
+                  alt=""
                   width="96"
                   height="96"
                   decoding="async"
-                  className="h-6 w-6 shrink-0 rounded-md object-contain select-none"
+                  draggable={false}
+                  className="h-5 w-5 shrink-0 object-contain select-none"
                 />
                 <span className="truncate text-[14px] font-semibold tracking-tight text-ink-strong">blxr</span>
               </a>
@@ -349,22 +369,59 @@ export default function DashboardSidebar({
           )}
         </div>
 
+        <div className={`shrink-0 pb-3 ${rail ? 'flex justify-center' : 'px-3'}`}>
+          {rail ? (
+            <div className="group relative">
+              <button type="button" onClick={openPalette} aria-label="Search" className={ICON_BTN}>
+                <Icon name="search" className="h-[17px] w-[17px]" />
+              </button>
+              <span role="tooltip" className={TIP}>
+                Search <span className="ml-1 text-ink-on-inverted/60">{mod}K</span>
+              </span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                onCloseMobile?.()
+                openPalette()
+              }}
+              className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg border border-line bg-bg/60 pl-2.5 pr-1.5 text-[12.5px] text-ink-subtle outline-none transition-colors hover:border-line-strong hover:text-ink focus-visible:border-line-strong"
+            >
+              <Icon name="search" className="h-3.5 w-3.5" />
+              <span className="flex-1 text-left">Search or jump to…</span>
+              <kbd className="rounded-md border border-line px-1.5 py-px font-sans text-[10.5px] text-ink-faint">{mod}K</kbd>
+            </button>
+          )}
+        </div>
+
         <nav ref={navRef} className={`relative flex-1 px-3 pt-1 ${rail ? 'overflow-visible' : 'overflow-y-auto'}`}>
           {pill && (
             <span
               aria-hidden="true"
               className="pointer-events-none absolute z-0 rounded-lg bg-surface-hover transition-[top,left,width,height] duration-200 ease-out"
               style={{ top: pill.top, left: pill.left, width: pill.width, height: pill.height }}
-            />
+            >
+              <span className="absolute -left-3 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[#0d99ff]" />
+            </span>
           )}
           {navFor(user).map((group, gi) => (
             <div key={group.label} className={gi > 0 ? (rail ? 'mt-2' : 'mt-5') : ''}>
               {rail ? (
                 gi > 0 && <div className="mx-2 mb-2 border-t border-line" aria-hidden="true" />
               ) : (
-                <p className={GROUP}>{group.label}</p>
+                <button type="button" onClick={() => fold(group.label)} aria-expanded={!folded.has(group.label)} className={GROUP}>
+                  <FrameIcon />
+                  <span className="flex-1 text-left">{group.label}</span>
+                  <Icon
+                    name="chevronDown"
+                    className={`h-3 w-3 opacity-0 transition-[opacity,transform] duration-200 group-hover/label:opacity-100 group-focus-visible/label:opacity-100 ${
+                      folded.has(group.label) ? '-rotate-90 opacity-100' : ''
+                    }`}
+                  />
+                </button>
               )}
-              <ul className="flex flex-col gap-px">
+              <ul className={`flex flex-col gap-px ${!rail && folded.has(group.label) ? 'hidden' : ''}`}>
                 {group.items.map((item) => (
                   <NavItem
                     key={item.id}
