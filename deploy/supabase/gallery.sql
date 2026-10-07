@@ -26,7 +26,7 @@ returns boolean
 language sql immutable as $$
   select coalesce(array_length(tags, 1), 0) <= 6
      and not exists (select 1 from unnest(tags) t where t is null or char_length(t) not between 1 and 24);
-$$;R
+$$;
 
 
 create table if not exists public.gallery_items (
@@ -231,5 +231,47 @@ insert into public.gallery_items (id, kind, title, caption, image, poster, width
    '/photos/road-under-the-trees-37f48fd6.webp', null, 1500, 2000, '2026-10-06'),
   ('0a11ce00-0000-4000-8000-000000000104', 'photo', 'Golden hour ride',
    'Down an empty road with the sun low over the sea.',
-   '/photos/golden-hour-ride-e17fedd6.mp4', '/photos/golden-hour-ride-poster-0afaa5a2.webp', 360, 640, '2026-10-06')
+   '/photos/golden-hour-ride-e17fedd6.mp4', '/photos/golden-hour-ride-poster-0afaa5a2.webp', 360, 640, '2026-10-06'),
+  ('0a11ce00-0000-4000-8000-000000000105', 'photo', 'Frankfurt skyline',
+   'The towers of the banking district rising over a street corner on a bright spring day.',
+   '/photos/frankfurt-skyline-70b76c9d.webp', null, 768, 1024, '2026-04-01'),
+  ('0a11ce00-0000-4000-8000-000000000106', 'photo', 'Petite France',
+   'Half-timbered houses along the canal in Strasbourg, mirrored in the water.',
+   '/photos/petite-france-canal-ee5fcde3.webp', null, 768, 1024, '2026-04-03'),
+  ('0a11ce00-0000-4000-8000-000000000107', 'photo', 'Boutique shelves',
+   'Dark wood, warm strip lights and a red tiled wall behind the counter.',
+   '/photos/boutique-shelves-31390258.webp', null, 768, 1024, '2026-09-09'),
+  ('0a11ce00-0000-4000-8000-000000000108', 'photo', 'Sunset down the road',
+   'An empty road running down to the sea, the sun caught between the poles.',
+   '/photos/sunset-down-the-road-248af795.webp', null, 768, 1024, '2026-07-08'),
+  ('0a11ce00-0000-4000-8000-000000000109', 'photo', 'European Parliament',
+   'Glass and steel under a mackerel sky in Strasbourg.',
+   '/photos/european-parliament-99188fdb.webp', null, 768, 1024, '2026-04-03'),
+  ('0a11ce00-0000-4000-8000-00000000010a', 'photo', 'Sunset over the bay',
+   'The sun setting into the gulf, the town below already in shadow.',
+   '/photos/sunset-over-the-bay-89ed04a8.webp', null, 768, 1024, '2025-08-17'),
+  ('0a11ce00-0000-4000-8000-00000000010b', 'photo', 'Gondolas at Campo Santo',
+   'A quiet canal in Venice, gondolas waiting by the steps under a grey sky.',
+   '/photos/gondolas-at-campo-santo-b79f6e1c.webp', null, 1536, 2048, '2026-01-30'),
+  ('0a11ce00-0000-4000-8000-00000000010c', 'photo', 'Night street',
+   'Streetlights flaring down an empty street, two windows still lit.',
+   '/photos/night-street-ea58d94c.webp', null, 768, 1024, '2026-04-02'),
+  ('0a11ce00-0000-4000-8000-00000000010d', 'photo', 'Stairwell of keepsakes',
+   'A bike, oars, a bouzouki and old photos of Athens hung up a stairwell.',
+   '/photos/stairwell-of-keepsakes-190b99a3.webp', null, 768, 1024, '2026-09-09'),
+  ('0a11ce00-0000-4000-8000-00000000010e', 'photo', 'Rialto Bridge',
+   'The Rialto from the water''s edge, the Grand Canal green under a clear sky.',
+   '/photos/rialto-bridge-b3a5fa73.webp', null, 1536, 2048, '2026-01-30'),
+  ('0a11ce00-0000-4000-8000-00000000010f', 'photo', 'Library atrium',
+   'Light falling through the glass roof onto stairs, shelves and red sofas.',
+   '/photos/library-atrium-05f2c080.webp', null, 768, 1024, '2026-09-19'),
+  ('0a11ce00-0000-4000-8000-000000000110', 'photo', 'Syntagma, 28 February',
+   'The crowd filling the square in front of Parliament for Tempi.',
+   '/photos/syntagma-protest-b44abd7e.webp', null, 2048, 1536, '2025-02-28'),
+  ('0a11ce00-0000-4000-8000-000000000111', 'photo', 'Mercedes-Benz Museum',
+   'Looking up the concrete atrium, the lift running up the middle.',
+   '/photos/mercedes-museum-atrium-132d58e9.webp', null, 768, 1024, '2026-04-02'),
+  ('0a11ce00-0000-4000-8000-000000000112', 'photo', 'Louis Vuitton at night',
+   'A lit white facade, an olive tree and an empty promenade after closing.',
+   '/photos/louis-vuitton-at-night-671803aa.webp', null, 768, 1024, '2026-09-01')
 on conflict (id) do nothing;

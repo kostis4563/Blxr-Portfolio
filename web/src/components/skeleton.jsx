@@ -19,6 +19,8 @@ const LOADER_SVG =
   '<rect class="loader-b" width="10" height="10" x="1" y="13" fill="currentColor" rx="1"/>' +
   '</svg>'
 
+const SHOW_DELAY_MS = 1000
+const MIN_VISIBLE_MS = 600
 const HANDOVER_MS = 40
 const FADE_MS = 700
 const GIVE_UP_MS = 15_000
@@ -26,27 +28,46 @@ const GIVE_UP_MS = 15_000
 const claims = new Map()
 const persistent = new Set()
 let curtain = null
+let shownAt = 0
+let showTimer = 0
 let hideTimer = 0
 let giveUpTimer = 0
 
+const currentLabel = () => [...claims.values()].at(-1)
+
+function mountCurtain(fresh) {
+  clearTimeout(showTimer)
+  showTimer = 0
+  curtain = document.createElement('div')
+  curtain.className = fresh ? 'loading-screen is-fresh' : 'loading-screen'
+  curtain.setAttribute('role', 'status')
+  curtain.setAttribute('aria-live', 'polite')
+  curtain.innerHTML = `<span class="sr-only"></span>${LOADER_SVG}`
+  curtain.firstChild.textContent = currentLabel()
+  document.body.append(curtain)
+  shownAt = performance.now()
+}
+
 function showCurtain() {
   clearTimeout(hideTimer)
-  if (!curtain) {
-    const adopting = document.querySelector('.loading-screen') !== null
-    curtain = document.createElement('div')
-    curtain.className = adopting ? 'loading-screen' : 'loading-screen is-fresh'
-    curtain.setAttribute('role', 'status')
-    curtain.setAttribute('aria-live', 'polite')
-    curtain.innerHTML = `<span class="sr-only"></span>${LOADER_SVG}`
-    document.body.append(curtain)
-  }
   clearTimeout(giveUpTimer)
   if (!persistent.size) giveUpTimer = setTimeout(dropCurtain, GIVE_UP_MS)
-  curtain.firstChild.textContent = [...claims.values()].at(-1)
+  if (curtain) {
+    curtain.firstChild.textContent = currentLabel()
+    return
+  }
+  if (persistent.size) return mountCurtain(true)
+  if (showTimer) return
+  const prerendered = document.querySelector('.loading-screen') !== null
+  const wait = prerendered ? SHOW_DELAY_MS - performance.now() : SHOW_DELAY_MS
+  if (wait <= 0) return mountCurtain(false)
+  showTimer = setTimeout(() => mountCurtain(true), wait)
 }
 
 function dropCurtain() {
   clearTimeout(giveUpTimer)
+  clearTimeout(showTimer)
+  showTimer = 0
   if (!curtain) return
   const leaving = curtain
   curtain = null
@@ -57,7 +78,8 @@ function dropCurtain() {
 
 function hideCurtain() {
   clearTimeout(hideTimer)
-  hideTimer = setTimeout(() => claims.size || dropCurtain(), HANDOVER_MS)
+  const linger = curtain ? shownAt + MIN_VISIBLE_MS - performance.now() : 0
+  hideTimer = setTimeout(() => claims.size || dropCurtain(), Math.max(HANDOVER_MS, linger))
 }
 
 const noSubscribe = () => () => {}
@@ -80,7 +102,7 @@ export function Loading({ label = 'Loading', persist = false }) {
 
   if (hydrated) return null
   return (
-    <div className="loading-screen" role="status" aria-live="polite">
+    <div className="loading-screen is-pending" style={persist ? undefined : { animationDelay: `${SHOW_DELAY_MS}ms` }} role="status" aria-live="polite">
       <span className="sr-only">{label}</span>
       <span className="contents" dangerouslySetInnerHTML={{ __html: LOADER_SVG }} />
     </div>

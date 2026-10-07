@@ -708,7 +708,8 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
   background: #000;
   color: #fff;
 }
-.loading-screen.is-fresh {
+.loading-screen.is-fresh,
+.loading-screen.is-pending {
   animation: loading-screen-in 0.2s ease-out both;
 }
 .loading-screen.is-leaving {
@@ -748,7 +749,7 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
   color: var(--color-ink-strong);
 }
 @keyframes loading-screen-in {
-  from { opacity: 0; }
+  from { opacity: 0; visibility: hidden; }
 }
 @keyframes loading-screen-out {
   to { opacity: 0; }
