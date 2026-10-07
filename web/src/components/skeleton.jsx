@@ -13,11 +13,18 @@ export function Spinner({ className = 'h-3.5 w-3.5' }) {
   )
 }
 
+const LOADER_SVG =
+  '<svg class="loader" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<rect class="loader-a" width="10" height="10" x="1" y="1" fill="currentColor" rx="1"/>' +
+  '<rect class="loader-b" width="10" height="10" x="1" y="13" fill="currentColor" rx="1"/>' +
+  '</svg>'
+
 const HANDOVER_MS = 40
 const FADE_MS = 700
 const GIVE_UP_MS = 15_000
 
 const claims = new Map()
+const persistent = new Set()
 let curtain = null
 let hideTimer = 0
 let giveUpTimer = 0
@@ -30,11 +37,11 @@ function showCurtain() {
     curtain.className = adopting ? 'loading-screen' : 'loading-screen is-fresh'
     curtain.setAttribute('role', 'status')
     curtain.setAttribute('aria-live', 'polite')
-    curtain.innerHTML = '<span class="sr-only"></span><span class="loader" aria-hidden="true"></span>'
+    curtain.innerHTML = `<span class="sr-only"></span>${LOADER_SVG}`
     document.body.append(curtain)
-    clearTimeout(giveUpTimer)
-    giveUpTimer = setTimeout(dropCurtain, GIVE_UP_MS)
   }
+  clearTimeout(giveUpTimer)
+  if (!persistent.size) giveUpTimer = setTimeout(dropCurtain, GIVE_UP_MS)
   curtain.firstChild.textContent = [...claims.values()].at(-1)
 }
 
@@ -55,25 +62,27 @@ function hideCurtain() {
 
 const noSubscribe = () => () => {}
 
-export function Loading({ label = 'Loading' }) {
+export function Loading({ label = 'Loading', persist = false }) {
   const id = useId()
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false)
 
   useLayoutEffect(() => {
     claims.set(id, label)
+    if (persist) persistent.add(id)
     showCurtain()
     return () => {
       claims.delete(id)
+      persistent.delete(id)
       if (claims.size) showCurtain()
       else hideCurtain()
     }
-  }, [id, label])
+  }, [id, label, persist])
 
   if (hydrated) return null
   return (
     <div className="loading-screen" role="status" aria-live="polite">
       <span className="sr-only">{label}</span>
-      <span className="loader" aria-hidden="true" />
+      <span className="contents" dangerouslySetInnerHTML={{ __html: LOADER_SVG }} />
     </div>
   )
 }

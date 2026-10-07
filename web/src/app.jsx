@@ -191,6 +191,10 @@ function App() {
     { id: 'contact', label: 'Contact', ...link(CONTACT_PATH) },
   ]
 
+  if (currentView === 'loading') {
+    return <Loading label="Loading" persist />
+  }
+
   if (currentView === 'notFound') {
     return (
       <>

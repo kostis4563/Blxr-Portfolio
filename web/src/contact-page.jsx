@@ -2,22 +2,30 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { Icon } from './components/icon'
+import { SunIcon } from './components/sun-icon'
 import { useAuth } from './lib/supabase'
 import { loginUrlFor } from './lib/auth'
 import { useAthensTemp } from './lib/weather'
 import { link, dashboardPath, HOME_PATH, REVIEWS_PATH, USES_PATH, CV_PATH, PAYMENT_PATH } from './lib/router'
-import { CONTACT_EMAIL, SOCIALS } from './lib/profile'
+import { CONTACT_EMAIL } from './lib/profile'
 
 const MESSAGES_PATH = dashboardPath('messages')
 
 const KICKER = 'text-[11px] font-mono text-ink-subtle uppercase tracking-[0.18em]'
-const GUTTER = 'px-6 sm:px-10'
-const EASE = 'ease-[cubic-bezier(0.22,1,0.36,1)]'
-
+const TEXT_LINK = 'rounded-sm text-ink-strong underline decoration-line-strong underline-offset-4 outline-none transition-colors duration-200 hover:decoration-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/50'
 const FOOT_LINK = 'group inline-flex items-center gap-1.5 transition-colors duration-200 hover:text-ink-strong'
 const FOOT_ARROW = 'inline-block transition-transform duration-200 group-hover:translate-x-0.5'
+const TIME_ICON = 'mr-1.5 inline-block h-3 w-3 align-[-1.5px]'
 
-const EMAIL_CHARS = Array.from(CONTACT_EMAIL)
+const AWAKE_FROM = 9
+const AWAKE_TO = 23
+
+const FACTS = [
+  { icon: 'clock', value: '1–2 days', label: 'Typical reply' },
+  { icon: 'inbox', value: 'All of them', label: 'Emails answered' },
+  { icon: 'globe', value: 'EN · GR', label: 'Languages' },
+  { icon: 'pin', value: 'Athens', label: 'Based in' },
+]
 
 const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
@@ -78,35 +86,37 @@ function describeGap(minutes) {
   return minutes > 0 ? `${span} behind` : `${span} ahead`
 }
 
-async function copyText(text, restoreFocusTo) {
+const pad = (n) => String(n).padStart(2, '0')
+const awake = (hour) => hour >= AWAKE_FROM && hour < AWAKE_TO
+
+function overlapHours(gap) {
+  const shift = Math.round(gap / 60)
+  return Array.from({ length: 24 }, (_, hour) => {
+    const mine = awake((((hour + shift) % 24) + 24) % 24)
+    const yours = awake(hour)
+    return { mine, yours, both: mine && yours }
+  })
+}
+
+function bestWindow(hours) {
+  let best = null
+  hours.forEach((hour, start) => {
+    if (!hour.both || hours[(start + 23) % 24].both) return
+    let length = 0
+    while (length < 24 && hours[(start + length) % 24].both) length++
+    if (!best || length > best.length) best = { start, length }
+  })
+  return best
+}
+
+async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text)
     return true
   } catch {
-    const area = document.createElement('textarea')
-    area.value = text
-    area.setAttribute('readonly', '')
-    area.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
-    document.body.appendChild(area)
-    area.select()
-    let ok = false
-    try {
-      ok = document.execCommand('copy')
-    } catch {
-    }
-    area.remove()
-    restoreFocusTo?.focus({ preventScroll: true })
-    return ok
+    return false
   }
 }
-
-function placePill(button, pill, point) {
-  if (!button || !pill || !point) return
-  const box = button.getBoundingClientRect()
-  pill.style.transform = `translate3d(${point.x - box.left}px, ${point.y - box.top}px, 0)`
-}
-
-const TIME_ICON = 'mr-1.5 inline-block h-3 w-3 align-[-1.5px]'
 
 function Time({ clock, weekday }) {
   if (!clock) {
@@ -120,11 +130,11 @@ function Time({ clock, weekday }) {
   const day = Number(clock.hour) >= 6 && Number(clock.hour) < 20
   return (
     <span className="text-ink-secondary">
-      <Icon
-        name={day ? 'sun' : 'moon'}
-        className={`${TIME_ICON} ${day ? 'text-amber-400' : 'text-ink-muted'}`}
-        strokeWidth={2}
-      />
+      {day ? (
+        <SunIcon className={`${TIME_ICON} text-amber-400`} />
+      ) : (
+        <Icon name="moon" className={`${TIME_ICON} text-ink-muted`} strokeWidth={2} />
+      )}
       <span className="sr-only">{day ? 'Daytime, ' : 'Night, '}</span>
       {clock.hour}
       <span aria-hidden="true" className="animate-caret motion-reduce:animate-none">:</span>
@@ -135,8 +145,7 @@ function Time({ clock, weekday }) {
   )
 }
 
-function LocalTime() {
-  const clocks = useClocks()
+function LocalTime({ clocks }) {
   const tempC = useAthensTemp()
   const asleep = clocks !== null && Number(clocks.athens.hour) < 7
   const otherDay = clocks !== null && clocks.athens.weekday !== clocks.local.weekday
@@ -158,174 +167,120 @@ function LocalTime() {
   )
 }
 
-function CopyStatus({ status }) {
-  if (status === 'copied') {
-    return (
-      <>
-        <Icon name="check" className="h-3 w-3 text-emerald-400" strokeWidth={2.4} />
-        <span className="text-ink-secondary">Copied to clipboard</span>
-      </>
-    )
-  }
-  if (status === 'failed') {
-    return <span className="text-ink-secondary">Couldn't copy, use the mail link below</span>
-  }
-  return (
-    <span>
-      <span className="pointer-coarse:hidden">Click</span>
-      <span className="hidden pointer-coarse:inline">Tap</span> to copy
-    </span>
-  )
+function cellColor(hour, row) {
+  if (!hour[row]) return 'bg-line'
+  return hour.both ? 'bg-emerald-400/80' : 'bg-ink-faint/50'
 }
 
-function EmailCopy() {
-  const [status, setStatus] = useState('idle')
-  const [wave, setWave] = useState(0)
-  const buttonRef = useRef(null)
-  const pillRef = useRef(null)
-  const pointer = useRef(null)
-  const timer = useRef(0)
-
-  useEffect(() => () => clearTimeout(timer.current), [])
-
-  useEffect(() => {
-    const onScroll = () => {
-      if (buttonRef.current?.matches(':hover')) placePill(buttonRef.current, pillRef.current, pointer.current)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  const follow = (event) => {
-    if (event.pointerType !== 'mouse') return
-    pointer.current = { x: event.clientX, y: event.clientY }
-    placePill(buttonRef.current, pillRef.current, pointer.current)
-  }
-
-  const copy = async () => {
-    const ok = await copyText(CONTACT_EMAIL, buttonRef.current)
-    setStatus(ok ? 'copied' : 'failed')
-    if (ok) setWave((n) => n + 1)
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => setStatus('idle'), ok ? 2000 : 4000)
-  }
+function Overlap({ clocks }) {
+  const hours = overlapHours(clocks?.gap ?? 0)
+  const best = clocks && bestWindow(hours)
+  const now = clocks ? ((Number(clocks.local.hour) * 60 + Number(clocks.local.minute)) / 1440) * 100 : null
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-baseline justify-between gap-4">
-        <p className={KICKER}>Email</p>
-        <p aria-live="polite" className="inline-flex min-w-0 items-center gap-1.5 text-right font-mono text-[11px] text-ink-subtle">
-          <CopyStatus status={status} />
+    <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className={KICKER}>When we're both awake</p>
+        <p className="font-mono text-[11.5px] tabular-nums text-ink-secondary">
+          {!clocks ? ' ' : best ? `${pad(best.start)}:00–${pad((best.start + best.length) % 24)}:00 your time` : 'Not much overlap, email anyway'}
         </p>
       </div>
 
-      <div className="contact-email-wrap">
-        <button
-          ref={buttonRef}
-          type="button"
-          onClick={copy}
-          onPointerEnter={follow}
-          onPointerMove={follow}
-          aria-label={`Copy ${CONTACT_EMAIL}`}
-          className="contact-email group relative -mx-2 inline-block max-w-[calc(100%+1rem)] rounded-xl px-2 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/50"
-        >
-          <span
-            key={wave}
-            data-wave={wave ? '' : undefined}
-            aria-hidden="true"
-            className="contact-email-text whitespace-nowrap font-semibold text-ink-strong"
-          >
-            {EMAIL_CHARS.map((char, i) => (
-              <span key={i} style={{ '--i': i }}>{char}</span>
-            ))}
-          </span>
-          <span ref={pillRef} aria-hidden="true" className="contact-pill">
-            <span className="items-center gap-1.5 whitespace-nowrap rounded-full bg-ink-strong px-3 py-1.5 text-[12px] font-medium text-ink-inverse shadow-[0_10px_24px_-12px_var(--shadow-cast)]">
-              <Icon name={status === 'copied' ? 'check' : 'copy'} className="h-3 w-3" strokeWidth={2.2} />
-              {status === 'copied' ? 'Copied' : 'Copy'}
-            </span>
-          </span>
-        </button>
+      <div className="mt-5 grid grid-cols-[2.25rem_1fr] gap-x-3" aria-hidden="true">
+        <div className="flex flex-col gap-1.5 font-mono text-[11px] text-ink-subtle">
+          <span className="flex h-7 items-center">Me</span>
+          <span className="flex h-7 items-center">You</span>
+        </div>
+        <div className="relative flex flex-col gap-1.5">
+          {['mine', 'yours'].map((row) => (
+            <div key={row} className="flex h-7 gap-[2px]">
+              {hours.map((hour, i) => (
+                <span key={i} className={`flex-1 rounded-[3px] transition-colors duration-500 ${clocks ? cellColor(hour, row) : 'bg-line'}`} />
+              ))}
+            </div>
+          ))}
+          {now !== null && (
+            <span className="absolute -bottom-1 -top-1 w-0.5 -translate-x-1/2 rounded-full bg-ink-strong" style={{ left: `${now}%` }} />
+          )}
+        </div>
+        <span />
+        <div className="mt-2 flex justify-between font-mono text-[10px] tabular-nums text-ink-faint">
+          {[0, 6, 12, 18, 24].map((hour) => (
+            <span key={hour}>{pad(hour)}</span>
+          ))}
+        </div>
       </div>
 
-      <a
-        href={`mailto:${CONTACT_EMAIL}`}
-        className="group inline-flex w-fit items-center gap-1.5 rounded-md text-[13px] text-ink-muted outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
-      >
-        <span>or open it in your mail app</span>
-        <Icon
-          name="arrowUpRight"
-          className={`h-3.5 w-3.5 text-ink-faint transition-[color,transform] duration-300 ${EASE} group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-ink-strong`}
-        />
-      </a>
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[11.5px] text-ink-subtle" aria-hidden="true">
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[2px] bg-ink-faint/50" />Awake</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[2px] bg-emerald-400/80" />Both awake</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-full bg-ink-strong" />Now</span>
+      </div>
     </div>
   )
 }
 
-function ChannelRow({ index, name, detail, mono, external, props }) {
+function CopyButton() {
+  const [status, setStatus] = useState('idle')
+  const timer = useRef(0)
+
+  useEffect(() => () => clearTimeout(timer.current), [])
+
+  const copy = async () => {
+    const ok = await copyText(CONTACT_EMAIL)
+    setStatus(ok ? 'copied' : 'failed')
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setStatus('idle'), 2000)
+  }
+
   return (
-    <li className="border-b border-dashed border-line animate-rise-in" style={{ animationDelay: `${340 + index * 60}ms` }}>
-      <a
-        {...props}
-        className={`contact-row group relative grid grid-cols-[2rem_1fr_auto] items-center gap-x-3 py-5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-strong/40 sm:grid-cols-[3rem_1fr_auto_2rem] sm:py-7 ${GUTTER}`}
-      >
-        <span aria-hidden="true" className="contact-row-fill absolute inset-0 bg-surface-raised" />
-        <span className="relative font-mono text-[11px] tabular-nums text-ink-faint transition-colors duration-300 group-hover:text-ink-muted">
-          {String(index).padStart(2, '0')}
-        </span>
-        <span className="relative min-w-0">
-          <span className={`block font-bagus text-[24px] leading-none tracking-[-0.01em] text-ink-strong transition-transform duration-500 ${EASE} group-hover:translate-x-1.5 sm:text-[32px]`}>
-            {name}
-          </span>
-          <span className={`mt-1.5 block truncate text-ink-subtle sm:hidden ${mono ? 'font-mono text-[11px]' : 'text-[12.5px]'}`}>{detail}</span>
-        </span>
-        <span className={`relative hidden text-right text-ink-subtle transition-colors duration-300 group-hover:text-ink-secondary sm:block ${mono ? 'font-mono text-[12px]' : 'text-[13px]'}`}>
-          {detail}
-        </span>
-        <span aria-hidden="true" className="relative flex justify-end text-ink-faint transition-colors duration-300 group-hover:text-ink-strong">
-          <Icon
-            name={external ? 'arrowUpRight' : 'arrowRight'}
-            className={`h-4 w-4 transition-transform duration-500 ${EASE} ${external ? 'group-hover:-translate-y-0.5 group-hover:translate-x-0.5' : 'group-hover:translate-x-1'}`}
-          />
-        </span>
-      </a>
-    </li>
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-[12px] font-medium text-ink-muted outline-none transition-colors duration-200 hover:border-line-strong hover:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/50"
+    >
+      <Icon name={status === 'copied' ? 'check' : 'copy'} className="h-3 w-3" strokeWidth={2.2} />
+      <span aria-live="polite">{status === 'copied' ? 'Copied' : status === 'failed' ? "Couldn't copy" : 'Copy'}</span>
+    </button>
   )
 }
 
-function Channels() {
-  const { session } = useAuth()
-
-  const rows = [
-    {
-      name: session ? 'Your thread' : 'Message me here',
-      detail: session ? 'Pick up where you left off' : 'A private thread, after you sign in',
-      props: link(session ? MESSAGES_PATH : loginUrlFor(MESSAGES_PATH)),
-    },
-    ...SOCIALS.filter((social) => social.url).map((social) => ({
-      name: social.name,
-      detail: social.handle,
-      mono: true,
-      external: true,
-      props: { href: social.url, target: '_blank', rel: 'noreferrer' },
-    })),
-  ]
-
+function Facts() {
   return (
-    <section aria-labelledby="contact-elsewhere">
-      <h2 id="contact-elsewhere" className={`${KICKER} ${GUTTER} pb-4 pt-14 animate-rise-in`} style={{ animationDelay: '300ms' }}>
-        Elsewhere
-      </h2>
-      <ul className="border-t border-dashed border-line">
-        {rows.map((row, i) => (
-          <ChannelRow key={row.name} index={i + 1} {...row} />
-        ))}
-      </ul>
-    </section>
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {FACTS.map((fact) => (
+        <li key={fact.label} className="rounded-lg border border-line bg-surface-raised p-4">
+          <Icon name={fact.icon} className="h-4 w-4 text-ink-subtle" />
+          <p className="mt-4 text-[17px] font-medium leading-none text-ink-strong">{fact.value}</p>
+          <p className="mt-2 text-[12px] text-ink-subtle">{fact.label}</p>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function MessageCard({ session }) {
+  return (
+    <a
+      {...link(session ? MESSAGES_PATH : loginUrlFor(MESSAGES_PATH))}
+      className="group flex items-center gap-4 rounded-lg border border-line p-4 outline-none transition-colors duration-200 hover:border-line-strong hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50"
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-surface-raised text-ink-muted transition-colors duration-200 group-hover:text-ink-strong">
+        <Icon name="message" className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-medium text-ink-strong">{session ? 'Your message thread' : 'Message me here'}</span>
+        <span className="block text-[12.5px] text-ink-subtle">{session ? 'Pick up where you left off' : 'A private thread, after you sign in'}</span>
+      </span>
+      <Icon name="arrowRight" className="h-4 w-4 text-ink-faint transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-ink-strong" />
+    </a>
   )
 }
 
 export default function ContactPage({ theme, onToggleTheme }) {
+  const { session } = useAuth()
+  const clocks = useClocks()
+
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
       <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
@@ -349,36 +304,43 @@ export default function ContactPage({ theme, onToggleTheme }) {
       </header>
 
       <main className="w-full max-w-[960px] mx-auto flex flex-col min-h-screen pt-14 border-x border-dashed border-line bg-bg">
-        <section className={`${GUTTER} pt-16 pb-14 sm:pt-24 sm:pb-20`}>
-          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4 animate-rise-in">
+        <section className="px-6 pt-16 pb-16 sm:px-10 sm:pt-24 animate-rise-in">
+          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
             <p className={KICKER}>/ contact</p>
-            <LocalTime />
+            <LocalTime clocks={clocks} />
           </div>
-          <h1
-            className="contact-title mt-8 font-bagus text-[48px] leading-[0.95] tracking-[-0.02em] text-ink-strong sm:text-[96px] animate-fade-in-up"
-            style={{ animationDelay: '60ms' }}
-          >
-            Let's <span className="hl-word">talk</span>
-          </h1>
-          <p
-            className="mt-6 max-w-[46ch] text-[15px] leading-[1.6] text-ink-muted animate-fade-in-up"
-            style={{ animationDelay: '150ms' }}
-          >
-            Email is the reliable one. It doesn't need to be long, and I reply to all of it, one-liners included.
-          </p>
+
+          <div className="max-w-[680px]">
+            <h1 className="mt-6 font-bagus text-[40px] leading-none tracking-[-0.01em] text-ink-strong sm:text-[52px]">Contact</h1>
+            <p className="mt-5 text-[15px] leading-[1.6] text-ink-muted">
+              Email is the best way to reach me. Short messages are fine, and I reply to all of them.
+            </p>
+
+            <div className="mt-10 border-t border-dashed border-line pt-8">
+              <p className={KICKER}>Email</p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+                <a href={`mailto:${CONTACT_EMAIL}`} className={`text-[20px] font-medium sm:text-[22px] ${TEXT_LINK}`}>
+                  {CONTACT_EMAIL}
+                </a>
+                <CopyButton />
+              </div>
+            </div>
+
+            <div className="mt-10 border-t border-dashed border-line pt-8">
+              <Overlap clocks={clocks} />
+            </div>
+
+            <div className="mt-10 border-t border-dashed border-line pt-8">
+              <Facts />
+            </div>
+
+            <div className="mt-10 border-t border-dashed border-line pt-8">
+              <MessageCard session={session} />
+            </div>
+          </div>
         </section>
 
-        <section
-          aria-label="Email"
-          className={`border-y border-dashed border-line py-10 sm:py-14 animate-rise-in ${GUTTER}`}
-          style={{ animationDelay: '220ms' }}
-        >
-          <EmailCopy />
-        </section>
-
-        <Channels />
-
-        <footer className={`mt-auto pb-10 pt-16 ${GUTTER}`}>
+        <footer className="mt-auto px-6 pb-10 pt-16 sm:px-10">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] font-medium text-ink-muted">
             <a {...link(REVIEWS_PATH)} className={FOOT_LINK}>
               <span>Worked with me? Leave a review</span>

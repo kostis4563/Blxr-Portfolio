@@ -186,6 +186,15 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'loading') {
+    return {
+      ...base,
+      title: `Loading — ${SITE_NAME}`,
+      description: 'Still loading.',
+      noindex: true,
+    }
+  }
+
   if (route.name === 'dashboard') {
     return {
       ...base,

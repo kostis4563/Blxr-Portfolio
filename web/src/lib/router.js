@@ -25,6 +25,7 @@ export function parseRoute(path) {
   if (p === '/volunteer') return { name: 'volunteer' }
   if (p === '/gallery') return { name: 'gallery' }
   if (p === '/login') return { name: 'login' }
+  if (p === '/loading') return { name: 'loading' }
   if (p === '/dashboard') return { name: 'dashboard' }
   if (p === PROFILE_BASE_PATH) return { name: 'profile', handle: null }
 
