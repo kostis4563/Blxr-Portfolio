@@ -156,6 +156,44 @@ export function playsOn(items, clock = Date.now()) {
   }).length
 }
 
+export function hourly(items) {
+  const counts = Array.from({ length: 24 }, () => 0)
+  for (const item of items || []) {
+    const then = Date.parse(item?.playedAt)
+    if (Number.isFinite(then)) counts[new Date(then).getHours()] += 1
+  }
+  const max = Math.max(...counts)
+  return { counts, max, peak: max ? counts.indexOf(max) : null }
+}
+
+export function artistCounts(items, limit = 8) {
+  const counts = new Map()
+  for (const item of items || []) {
+    for (const artist of item?.track?.artists || []) {
+      if (!artist?.name) continue
+      const key = artist.url || artist.name.toLowerCase()
+      const hit = counts.get(key)
+      if (hit) hit.count += 1
+      else counts.set(key, { name: artist.name, url: artist.url || null, count: 1 })
+    }
+  }
+  return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, limit)
+}
+
+export function albumsOf(items, limit = 24) {
+  const seen = new Set()
+  const out = []
+  for (const item of items || []) {
+    const track = item?.track
+    const key = track?.album?.url || track?.art
+    if (!key || !track.art || seen.has(key)) continue
+    seen.add(key)
+    out.push(track)
+    if (out.length >= limit) break
+  }
+  return out
+}
+
 function toHsl(r, g, b) {
   const [rn, gn, bn] = [r / 255, g / 255, b / 255]
   const max = Math.max(rn, gn, bn)

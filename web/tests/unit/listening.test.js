@@ -14,6 +14,9 @@ import {
   listeningStats,
   onRepeat,
   playsOn,
+  hourly,
+  albumsOf,
+  artistCounts,
   heroColor,
   fallbackColor,
 } from '../../src/lib/listening'
@@ -133,6 +136,29 @@ describe('history', () => {
     expect(stats.artists).toBe(3)
     expect(stats.minutes).toBe(12)
     expect(stats.since).toBe(items[3].playedAt)
+  })
+
+  test('hourly buckets plays by local hour and finds the peak', () => {
+    const { counts, max, peak } = hourly(items)
+    expect(counts).toHaveLength(24)
+    expect(counts[14] + counts[13] + counts[23] + counts[9]).toBe(4)
+    expect(max).toBe(1)
+    expect(peak).toBe(9)
+    expect(hourly([]).peak).toBe(null)
+  })
+
+  test('artistCounts counts every credited artist and sorts by plays', () => {
+    const counted = artistCounts(items)
+    expect(counted[0]).toEqual({ name: 'Artist a', url: null, count: 4 })
+    expect(counted.map((a) => a.name)).toEqual(['Artist a', 'Artist c', 'Other'])
+    expect(artistCounts(items, 1)).toHaveLength(1)
+  })
+
+  test('albumsOf dedupes by album and skips art-less tracks', () => {
+    const withArt = (id, album) => ({ track: { ...track(id), art: `https://i.scdn.co/${id}`, album: { url: album } } })
+    const list = [withArt('a', 'x'), withArt('b', 'x'), withArt('c', 'y'), { track: track('d') }]
+    expect(albumsOf(list).map((t) => t.id)).toEqual(['a', 'c'])
+    expect(albumsOf(list, 1)).toHaveLength(1)
   })
 
   test('playsOn counts only today', () => {
