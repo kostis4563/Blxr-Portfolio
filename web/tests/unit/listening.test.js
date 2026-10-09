@@ -13,7 +13,37 @@ import {
   groupByDay,
   listeningStats,
   onRepeat,
+  playsOn,
+  heroColor,
+  fallbackColor,
 } from '../../src/lib/listening'
+
+describe('colours', () => {
+  const parts = (hsl) => hsl.match(/hsl\((\d+) (\d+)% (\d+)%\)/).slice(1).map(Number)
+
+  test('heroColor keeps the hue but darkens enough for white text', () => {
+    const [h, s, l] = parts(heroColor([255, 230, 0]))
+    expect(h).toBe(54)
+    expect(s).toBeLessThanOrEqual(70)
+    expect(l).toBeLessThanOrEqual(36)
+  })
+
+  test('heroColor lifts a near-black cover and leaves greys grey', () => {
+    expect(parts(heroColor([5, 5, 30]))[2]).toBe(20)
+    expect(parts(heroColor([128, 128, 128]))[1]).toBe(0)
+  })
+
+  test('heroColor refuses junk', () => {
+    expect(heroColor(null)).toBe(null)
+    expect(heroColor([1, NaN, 2])).toBe(null)
+  })
+
+  test('fallbackColor is stable per seed', () => {
+    expect(fallbackColor('abc')).toBe(fallbackColor('abc'))
+    expect(fallbackColor('abc')).not.toBe(fallbackColor('abd'))
+    expect(fallbackColor('abc')).toMatch(/^hsl\(\d+ 40% 28%\)$/)
+  })
+})
 
 const track = (id, extra = {}) => ({ id, title: `Song ${id}`, artists: [{ name: `Artist ${id}` }], durationMs: 180_000, ...extra })
 const at = (y, m, d, h = 12, min = 0) => new Date(y, m - 1, d, h, min).getTime()
@@ -103,6 +133,11 @@ describe('history', () => {
     expect(stats.artists).toBe(3)
     expect(stats.minutes).toBe(12)
     expect(stats.since).toBe(items[3].playedAt)
+  })
+
+  test('playsOn counts only today', () => {
+    expect(playsOn(items, clock)).toBe(2)
+    expect(playsOn([], clock)).toBe(0)
   })
 
   test('onRepeat counts replays by track id', () => {

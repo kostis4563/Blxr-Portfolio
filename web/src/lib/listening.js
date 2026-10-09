@@ -1,5 +1,4 @@
-export const LISTENING_INTRO =
-  'What is playing on my Spotify right now, what I have played lately, and what has been on repeat. It updates on its own while the page is open.'
+export const LISTENING_INTRO = 'Live from my Spotify. It updates on its own while the page is open.'
 
 export const LISTENING_RANGES = [
   { id: 'short', label: '4 weeks' },
@@ -147,6 +146,85 @@ export function listeningStats(items) {
     minutes: Math.round(ms / 60_000),
     since: times.length ? new Date(Math.min(...times)).toISOString() : null,
   }
+}
+
+export function playsOn(items, clock = Date.now()) {
+  const today = startOfDay(clock)
+  return (items || []).filter((item) => {
+    const then = Date.parse(item?.playedAt)
+    return Number.isFinite(then) && startOfDay(then) === today
+  }).length
+}
+
+function toHsl(r, g, b) {
+  const [rn, gn, bn] = [r / 255, g / 255, b / 255]
+  const max = Math.max(rn, gn, bn)
+  const min = Math.min(rn, gn, bn)
+  const l = (max + min) / 2
+  if (max === min) return [0, 0, l]
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  const h = max === rn ? (gn - bn) / d + (gn < bn ? 6 : 0) : max === gn ? (bn - rn) / d + 2 : (rn - gn) / d + 4
+  return [h * 60, s, l]
+}
+
+export function heroColor(rgb) {
+  if (!Array.isArray(rgb) || rgb.length < 3 || !rgb.every(Number.isFinite)) return null
+  const [h, s, l] = toHsl(...rgb)
+  const sat = s < 0.12 ? s : Math.min(0.7, Math.max(0.35, s))
+  const light = Math.min(0.36, Math.max(0.2, l))
+  return `hsl(${Math.round(h)} ${Math.round(sat * 100)}% ${Math.round(light * 100)}%)`
+}
+
+export function fallbackColor(seed = '') {
+  let hash = 0
+  for (const ch of String(seed)) hash = (hash * 31 + ch.charCodeAt(0)) | 0
+  return `hsl(${Math.abs(hash) % 360} 40% 28%)`
+}
+
+const colorCache = new Map()
+
+export function coverColor(url) {
+  if (!url || typeof document === 'undefined') return Promise.resolve(null)
+  if (colorCache.has(url)) return colorCache.get(url)
+  const job = new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.decoding = 'async'
+    img.onload = () => {
+      try {
+        const size = 24
+        const canvas = document.createElement('canvas')
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })
+        ctx.drawImage(img, 0, 0, size, size)
+        const data = ctx.getImageData(0, 0, size, size).data
+        let r = 0
+        let g = 0
+        let b = 0
+        let total = 0
+        for (let i = 0; i < data.length; i += 4) {
+          const [pr, pg, pb] = [data[i], data[i + 1], data[i + 2]]
+          const max = Math.max(pr, pg, pb)
+          const min = Math.min(pr, pg, pb)
+          if (max < 24 || min > 235) continue
+          const weight = 1 + ((max - min) / 255) * 4
+          r += pr * weight
+          g += pg * weight
+          b += pb * weight
+          total += weight
+        }
+        resolve(total ? heroColor([r / total, g / total, b / total]) : null)
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+  colorCache.set(url, job)
+  return job
 }
 
 export function onRepeat(items, min = 2) {
