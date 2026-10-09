@@ -898,15 +898,15 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
 }
 
 .skill-logo {
-  opacity: 0.7;
-  filter: grayscale(1) brightness(1.35);
+  opacity: 0.82;
+  filter: grayscale(1) brightness(1.6);
   transition:
     opacity 300ms ease,
     filter 300ms ease,
     transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 :root[data-theme='light'] .skill-logo {
-  filter: grayscale(1) brightness(0.6);
+  filter: grayscale(1) brightness(0.5);
 }
 .skill-cell:focus-visible .skill-logo,
 .tool-tile:focus-visible .skill-logo,
@@ -914,7 +914,21 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
 .skills-toggle[aria-expanded='true'] .skill-logo {
   opacity: 1;
   filter: none;
-  transform: scale(1.08);
+  transform: scale(1.04);
+}
+.skill-cell .skill-name {
+  transition: opacity 260ms ease, transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (min-width: 40rem) {
+  .skill-cell .skill-name {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0.75rem;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  .skill-cell:focus-visible .skill-name { opacity: 1; transform: none; }
 }
 @media (hover: hover) {
   .skill-cell:hover .skill-logo,
@@ -922,9 +936,10 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
   .skills-toggle:hover .skill-logo {
     opacity: 1;
     filter: none;
-    transform: scale(1.08);
+    transform: scale(1.04) translateY(-2px);
   }
-  .skills-grid:has(.skill-cell:hover) .skill-cell:not(:hover) { opacity: 0.5; }
+  .skill-cell:hover .skill-name { opacity: 1; transform: none; }
+  .skills-grid:has(.skill-cell:hover) .skill-cell:not(:hover) { opacity: 0.65; }
 }
 @media (hover: none) {
   .skill-logo,
@@ -981,7 +996,8 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
   transition-delay: var(--delay, 0ms);
 }
 @media (prefers-reduced-motion: reduce) {
-  .skill-logo, .skills-all, .skills-all-item, .skills-toggle-chip, .skills-toggle-label > span, .skills-toggle-plus { transition: none; }
+  .skill-logo, .skill-cell .skill-name, .skills-all, .skills-all-item, .skills-toggle-chip, .skills-toggle-label > span, .skills-toggle-plus { transition: none; }
+  .skill-cell .skill-name { transform: none; }
   .skill-cell:hover .skill-logo, .skill-cell:focus-visible .skill-logo,
   .tool-tile:hover .skill-logo, .tool-tile:focus-visible .skill-logo,
   .skills-toggle:hover .skill-logo, .skills-toggle:focus-visible .skill-logo,

@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { Icon } from './components/dashboard-sidebar'
 import { BoardMark, Dot, Progress, CAPS } from './components/boards/ui'
 import { Bone } from './components/skeleton'
-import { CommentPin, EditedAgo, FrameLabel, GridToggle, Handles, Inspect } from './components/figma'
+import { CommentPin, EditedAgo, FrameLabel, GridToggle, Inspect } from './components/figma'
 import { dayWords, gapWords } from './lib/boards-when'
 import { ago, plural } from './lib/boards'
 import * as api from './lib/boards-api'
 import { fetchMyProfile } from './lib/profiles'
-import { useUnread } from './lib/messages-unread'
 import { useNotifications, isUnread } from './lib/notifications'
 import { openPalette, isMacLike } from './lib/palette'
 import { link, dashboardPath, navigate, profilePath } from './lib/router'
@@ -22,41 +21,6 @@ function greeting(hour) {
   if (hour < 12) return 'Good morning'
   if (hour < 18) return 'Good afternoon'
   return 'Good evening'
-}
-
-function Selectable({ children, className = '', label }) {
-  return (
-    <div className={`fig-select ${className}`} data-component={label}>
-      {children}
-      <span aria-hidden="true" className="fig-select-frame">
-        <Handles />
-      </span>
-    </div>
-  )
-}
-
-function Stat({ label, value, hint, tone = '', to, icon }) {
-  const body = (
-    <>
-      <span className="flex items-center gap-1.5 text-[11.5px] text-ink-subtle">
-        <Icon name={icon} className="h-3.5 w-3.5" />
-        {label}
-      </span>
-      <span className={`mt-2 block font-bagus text-[28px] leading-none tabular-nums ${tone || 'text-ink-strong'}`}>
-        {value ?? <Bone className="h-6 w-10" />}
-      </span>
-      <span className="mt-2 block truncate text-[11.5px] text-ink-muted">{hint}</span>
-    </>
-  )
-  return (
-    <li className="border-b border-r border-dashed border-line">
-      <Selectable label={`Stat / ${label}`} className="h-full">
-        <a {...link(dashboardPath(to))} className="block h-full px-4 py-4 outline-none transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover">
-          {body}
-        </a>
-      </Selectable>
-    </li>
-  )
 }
 
 function Panel({ frame, title, count, action, children, className = '' }) {
@@ -352,7 +316,6 @@ function Shortcuts() {
 }
 
 export default function DashboardHome({ user, guest }) {
-  const unread = useUnread()
   const [boards, setBoards] = useState(null)
   const [agenda, setAgenda] = useState(null)
   const [profile, setProfile] = useState(undefined)
@@ -438,35 +401,6 @@ export default function DashboardHome({ user, guest }) {
       </section>
 
       <Toolbar guest={guest} handle={profile?.handle} />
-
-      <section className="relative">
-        <FrameLabel className="left-0 -top-5">Stats</FrameLabel>
-        <ul className="grid grid-cols-2 border-l border-t border-dashed border-line sm:grid-cols-3 lg:grid-cols-5">
-          <Stat icon="kanban" label="Boards" to="boards" value={boards?.length} hint={boards ? `${boards.filter((b) => b.pinned).length} pinned` : ''} />
-          <Stat icon="listTodo" label="Open cards" to="boards" value={open} hint={totals ? `${totals.done} done so far` : ''} />
-          <Stat
-            icon="clock"
-            label="Due soon"
-            to="boards"
-            value={totals?.soon}
-            tone={totals?.soon ? 'text-amber-500' : ''}
-            hint="Within 48 hours"
-          />
-          <Stat
-            icon="alert"
-            label="Overdue"
-            to="boards"
-            value={totals?.overdue}
-            tone={totals?.overdue ? 'text-red-500' : ''}
-            hint={totals?.overdue ? 'Needs a look' : 'All clear'}
-          />
-          {guest ? (
-            <Stat icon="lock" label="Messages" to="messages" value="—" hint="Members only" />
-          ) : (
-            <Stat icon="message" label="Messages" to="messages" value={unread} tone={unread ? 'text-[#0d99ff]' : ''} hint={unread ? 'Unread' : 'Inbox zero'} />
-          )}
-        </ul>
-      </section>
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <Panel frame="Agenda" title="Coming up" count={agenda?.length || undefined} action={<More to="boards" />}>

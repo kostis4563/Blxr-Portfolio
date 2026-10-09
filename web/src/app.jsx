@@ -74,13 +74,13 @@ function SkillTile({ skill, featured }) {
   const tileProps = skill.url
     ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `${skill.name} — official site (opens in a new tab)` }
     : { role: 'img', 'aria-label': skill.name }
-  const size = featured ? 48 : 28
+  const size = featured ? 44 : 26
 
   return (
     <Tile
       {...tileProps}
       title={skill.name}
-      className={`skill-cell flex h-full flex-col items-center justify-center gap-2.5 outline-none transition-[background-color,opacity] duration-300 hover:bg-surface-hover/70 active:bg-surface-hover/70 focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-strong/50 motion-reduce:transition-none sm:gap-0 ${featured ? 'py-9 sm:py-20' : 'py-6 sm:py-10'}`}
+      className={`skill-cell relative flex h-full flex-col items-center justify-center gap-2.5 outline-none transition-[background-color,opacity] duration-300 hover:bg-surface-hover/50 active:bg-surface-hover/50 focus-visible:bg-surface-hover/70 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-strong/50 motion-reduce:transition-none sm:gap-0 ${featured ? 'py-9 sm:py-20' : 'py-6 sm:py-10'}`}
     >
       <img
         {...imageProps(skill.icon)}
@@ -90,9 +90,9 @@ function SkillTile({ skill, featured }) {
         height={size}
         loading="lazy"
         decoding="async"
-        className={`skill-logo object-contain ${featured ? 'h-9 w-9 sm:h-12 sm:w-12' : 'h-6 w-6 sm:h-7 sm:w-7'}`}
+        className={`skill-logo object-contain ${featured ? 'h-9 w-9 sm:h-11 sm:w-11' : 'h-6 w-6 sm:h-6.5 sm:w-6.5'}`}
       />
-      <span aria-hidden="true" className="max-w-full truncate px-1 font-mono text-[10.5px] text-ink-subtle sm:hidden">
+      <span aria-hidden="true" className="skill-name max-w-full truncate px-1 font-mono text-[10.5px] text-ink-subtle">
         {skill.name}
       </span>
     </Tile>
@@ -578,15 +578,18 @@ function App() {
           </div>
 
           <div className="mb-4 flex items-center gap-2">
-            <h3 className="text-[14px] font-medium text-ink-subtle select-none">Stack</h3>
+            <h3 className="flex items-baseline gap-2 text-[14px] font-medium text-ink-strong select-none">
+              Stack
+              <span className="font-mono text-[11px] font-normal tabular-nums text-ink-faint">{String(stackSkills.length).padStart(2, '0')}</span>
+            </h3>
             <CommentPin name="Client" initial="C" text="Can you build ours on this?" time="2m" className="-my-2 -translate-y-2.5" />
           </div>
 
           <div className="-mx-6 w-[calc(100%+3rem)] border-y border-dashed border-line">
             <div className="skills-grid overflow-hidden">
-              <ul className="-mr-px grid grid-cols-3 border-b border-dashed border-line" aria-label="Main stack">
+              <ul className="-mr-px grid grid-cols-3 border-b border-line/70" aria-label="Main stack">
                 {featuredSkills.map((skill) => (
-                  <li key={skill.name} className="border-r border-dashed border-line">
+                  <li key={skill.name} className="border-r border-line/70">
                     <SkillTile skill={skill} featured />
                   </li>
                 ))}
@@ -598,7 +601,7 @@ function App() {
                 aria-label="Also working with"
               >
                 {otherSkills.map((skill) => (
-                  <li key={skill.name} className="border-b border-r border-dashed border-line">
+                  <li key={skill.name} className="border-b border-r border-line/70">
                     <SkillTile skill={skill} />
                   </li>
                 ))}

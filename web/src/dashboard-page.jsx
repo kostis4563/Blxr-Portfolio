@@ -3,7 +3,6 @@ import DashboardSidebar from './components/dashboard-sidebar'
 import DashboardTopbar from './components/dashboard-topbar'
 import DashboardSettings from './dashboard-settings'
 import DashboardProfile from './dashboard-profile'
-import DashboardStats from './dashboard-stats'
 import DashboardBoards from './dashboard-boards'
 import DashboardMessages from './dashboard-messages'
 import DashboardReviewPanel from './dashboard-reviewpanel'
@@ -182,8 +181,6 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
             />
           ) : top.id === 'profile' ? (
             <DashboardProfile user={session.user} />
-          ) : top.id === 'stats' ? (
-            <DashboardStats />
           ) : top.id === 'boards' ? (
             <DashboardBoards hash={hash} guest={guest} onClaim={openClaim} />
           ) : top.id === 'messages' ? (

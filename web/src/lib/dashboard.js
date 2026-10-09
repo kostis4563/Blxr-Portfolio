@@ -120,7 +120,6 @@ export const NAV = [
     label: 'You',
     items: [
       { id: 'profile', label: 'Profile', icon: 'user' },
-      { id: 'stats', label: 'Stats', icon: 'chart' },
     ],
   },
   {
@@ -172,7 +171,6 @@ export const BLURBS = {
   profile: 'Build the page people see at blxr.net/@you.',
   boards: 'Columns, cards and due dates for whatever you are building.',
   messages: 'A private line between your account and the owner.',
-  stats: 'Your commits, files and lines across every repo you touch.',
   settings: 'Manage your account, security and preferences.',
   'settings/profile': 'Your account name and photo.',
   'settings/account': 'Sign-in email, connected accounts and regional preferences.',

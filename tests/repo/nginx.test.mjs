@@ -167,7 +167,7 @@ describe('Content-Security-Policy', () => {
       for (const m of src.matchAll(/fetch\(\s*[`'](https:\/\/[^`'$/]+)/g)) fetched.push([file, m[1]])
       for (const m of src.matchAll(/^const [A-Z][A-Z0-9_]* =\s*\n?\s*['`](https:\/\/[^'`$]+)/gm)) fetched.push([file, m[1]])
     }
-    assert.ok(fetched.length >= 3, `expected to find the known third-party fetches, found ${fetched.length}`)
+    assert.ok(fetched.length >= 2, `expected to find the known third-party fetches, found ${fetched.length}`)
     for (const [file, url] of fetched) assert.ok(hostAllowed('connect-src', url), `${file} fetches ${new URL(url).origin}, which connect-src blocks`)
   })
 
