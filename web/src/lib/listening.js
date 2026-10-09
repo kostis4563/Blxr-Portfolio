@@ -1,9 +1,9 @@
 export const LISTENING_INTRO = 'Live from my Spotify. It updates on its own while the page is open.'
 
 export const LISTENING_RANGES = [
-  { id: 'short', label: '4 weeks' },
-  { id: 'medium', label: '6 months' },
-  { id: 'long', label: '1 year' },
+  { id: 'short', label: '4 weeks', span: '4 weeks' },
+  { id: 'medium', label: '6 months', span: '6 months' },
+  { id: 'long', label: '1 year', span: 'year' },
 ]
 
 export const NOW_POLL_MS = 15_000
@@ -272,6 +272,44 @@ export function coverColor(url) {
   })
   colorCache.set(url, job)
   return job
+}
+
+export function topSummary(top) {
+  const tracks = (top?.tracks || []).filter(Boolean)
+  const artists = (top?.artists || []).filter(Boolean)
+
+  const genres = new Map()
+  artists.forEach((artist, index) => {
+    for (const genre of artist.genres || []) {
+      if (!genre) continue
+      const hit = genres.get(genre) || { name: genre, count: 0, score: 0 }
+      hit.count += 1
+      hit.score += artists.length - index
+      genres.set(genre, hit)
+    }
+  })
+
+  const albums = new Map()
+  for (const track of tracks) {
+    const key = track.album?.url || track.album?.name
+    if (!key) continue
+    const hit = albums.get(key)
+    if (hit) hit.count += 1
+    else albums.set(key, { name: track.album.name, url: track.album.url || null, art: track.art || track.thumb || null, artists: track.artists || [], count: 1 })
+  }
+  const album = [...albums.values()].sort((a, b) => b.count - a.count)[0]
+
+  const voices = new Set()
+  for (const track of tracks) for (const artist of track.artists || []) if (artist?.name) voices.add(artist.url || artist.name.toLowerCase())
+
+  return {
+    artist: artists[0] || null,
+    track: tracks[0] || null,
+    genres: [...genres.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 3),
+    album: album && album.count >= 2 ? album : null,
+    artistCount: voices.size,
+    trackCount: tracks.length,
+  }
 }
 
 export function onRepeat(items, min = 2) {

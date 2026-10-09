@@ -19,6 +19,7 @@ import {
   trackEnded,
   nowStatus,
   listeningStats,
+  topSummary,
   playsOn,
   albumsOf,
   coverColor,
@@ -117,10 +118,28 @@ const CSS = `
 .sp-h2{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
 .sp-all{font-size:14px;font-weight:700;color:var(--sub);white-space:nowrap;padding-bottom:2px}
 .sp-all:hover{color:var(--text);text-decoration:underline;text-underline-offset:2px}
-.sp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
-.sp-chip{height:32px;padding:0 14px;border-radius:999px;background:var(--chip);font-size:14px;font-weight:500;transition:background-color .2s,color .2s}
-.sp-chip:hover{background:var(--chip-hover)}
+.sp-hsub{margin-top:4px;font-size:14px;color:var(--sub)}
+.sp-ranged{margin-top:12px}
+.sp-rangebar{position:sticky;top:128px;z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;margin:0 -24px;padding:12px 24px;transition:background-color .2s,box-shadow .2s}
+.sp-rangebar[data-stuck='true']{background:var(--panel);box-shadow:0 1px 0 var(--line),0 8px 16px -12px var(--shadow)}
+.sp-rangebar[data-stuck='true'] .sp-hsub{display:none}
+@media(max-width:767px){.sp-rangebar{margin:0 -16px;padding:12px 16px}.sp-rangebar[data-stuck='true']>div:first-child{display:none}}
+.sp-seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--chip)}
+.sp-chip{height:36px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap;color:var(--sub);transition:background-color .2s,color .2s,transform .2s ${EASE}}
+.sp-chip:hover{color:var(--text);background:var(--chip-hover)}
+.sp-chip:active{transform:scale(.97)}
 .sp-chip[aria-pressed='true']{background:var(--text);color:var(--panel)}
+@media(max-width:479px){.sp-seg{display:flex;width:100%}.sp-chip{flex:1;padding:0 8px}}
+.sp-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:12px;margin-top:12px}
+.sp-tile{display:flex;align-items:center;gap:14px;min-width:0;min-height:96px;padding:16px;border-radius:8px;background:var(--raise);transition:background-color .2s}
+a.sp-tile:hover{background:var(--raise-2)}
+.sp-tile>img,.sp-tile>.sp-ph{width:64px;height:64px;flex-shrink:0;border-radius:4px;object-fit:cover;box-shadow:0 4px 12px var(--shadow)}
+.sp-tile[data-round]>img,.sp-tile[data-round]>.sp-ph{border-radius:50%}
+.sp-tile-k{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.sp-tile-v{display:block;margin-top:4px;font-size:18px;font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.sp-tile-s{display:block;margin-top:2px;font-size:14px;color:var(--sub)}
+.sp-tile-n{flex-shrink:0;width:64px;font-size:40px;font-weight:800;letter-spacing:-.04em;line-height:1;text-align:center;color:var(--green-text)}
+.sp-tile .sp-genres{margin-top:8px}
 .sp-grid{display:grid;grid-template-columns:repeat(var(--cols,5),minmax(0,1fr));margin:0 -12px}
 .sp-card{display:flex;flex-direction:column;gap:4px;min-width:0;padding:12px;border-radius:8px;transition:background-color .3s}
 .sp-card:hover{background:var(--hover)}
@@ -294,6 +313,21 @@ function useScrolled(offset) {
     return () => window.removeEventListener('scroll', update)
   }, [offset])
   return scrolled
+}
+
+function useStuck(top) {
+  const ref = useRef(null)
+  const [stuck, setStuck] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(([entry]) => setStuck(entry.boundingClientRect.top < top + 1 && !entry.isIntersecting), {
+      rootMargin: `-${top + 1}px 0px 0px 0px`,
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [top])
+  return [ref, stuck]
 }
 
 function useClock(every) {
@@ -636,12 +670,15 @@ function Actions({ hero }) {
   )
 }
 
-function Head({ id, title, action }) {
+function Head({ id, title, sub, action }) {
   return (
     <div className="sp-head">
-      <h2 id={id} className="sp-h2">
-        {title}
-      </h2>
+      <div style={{ minWidth: 0 }}>
+        <h2 id={id} className="sp-h2">
+          {title}
+        </h2>
+        {sub && <p className="sp-hsub">{sub}</p>}
+      </div>
       {action}
     </div>
   )
@@ -674,7 +711,7 @@ function Card({ href, img, title, sub, round }) {
   )
 }
 
-function Shelf({ id, title, items, loading, round, error, onRetry, emptyText, renderItem }) {
+function Shelf({ id, title, sub, items, loading, round, error, onRetry, emptyText, renderItem }) {
   const [ref, cols] = useColumns(CARD_MIN)
   const [all, setAll] = useState(false)
   const shown = all ? items : items.slice(0, cols)
@@ -693,6 +730,7 @@ function Shelf({ id, title, items, loading, round, error, onRetry, emptyText, re
       <Head
         id={id}
         title={title}
+        sub={sub}
         action={
           !loading &&
           items.length > cols && (
@@ -710,15 +748,99 @@ function Shelf({ id, title, items, loading, round, error, onRetry, emptyText, re
   )
 }
 
-function Chips({ value, onChange }) {
+function RangeBar({ value, onChange, span }) {
+  const [ref, stuck] = useStuck(128)
   return (
-    <div role="group" aria-label="Time range for my top artists and tracks" className="sp-chips">
-      {LISTENING_RANGES.map((range) => (
-        <button key={range.id} type="button" className="sp-chip" aria-pressed={range.id === value} onClick={() => onChange(range.id)}>
-          {range.label}
-        </button>
-      ))}
-    </div>
+    <>
+      <div ref={ref} aria-hidden="true" />
+      <div className="sp-rangebar" data-stuck={stuck}>
+        <div style={{ minWidth: 0 }}>
+          <h2 id="listening-stats" className="sp-h2">
+            My stats
+          </h2>
+          <p className="sp-hsub">What I&rsquo;ve had on most over the last {span}</p>
+        </div>
+        <div role="group" aria-label="Time range for my stats" className="sp-seg">
+          {LISTENING_RANGES.map((range) => (
+            <button key={range.id} type="button" className="sp-chip" aria-pressed={range.id === value} onClick={() => onChange(range.id)}>
+              {range.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function Tile({ href, img, round, kicker, value, sub, children }) {
+  const body = (
+    <>
+      {img !== undefined && <Img src={img} size={128} />}
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <span className="sp-tile-k">{kicker}</span>
+        {value && <span className="sp-tile-v sp-trunc">{value}</span>}
+        {sub && <span className="sp-tile-s sp-trunc">{sub}</span>}
+        {children}
+      </span>
+    </>
+  )
+  if (!href)
+    return (
+      <div className="sp-tile" data-round={round || undefined}>
+        {body}
+      </div>
+    )
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="sp-tile" data-round={round || undefined}>
+      {body}
+    </a>
+  )
+}
+
+function Stats({ top }) {
+  if (top.loading)
+    return (
+      <div className="sp-tiles" aria-hidden="true">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="sp-tile">
+            <span className="sp-skel" style={{ width: 64, height: 64, flexShrink: 0, borderRadius: i ? 4 : '50%' }} />
+            <span style={{ flex: 1 }}>
+              <span className="sp-skel" style={{ display: 'block', width: '40%', height: 10 }} />
+              <span className="sp-skel" style={{ display: 'block', width: '75%', height: 16, marginTop: 10 }} />
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  if (!top.data) return null
+  const { artist, track, genres, album, artistCount, trackCount } = topSummary(top.data)
+  if (!artist && !track) return null
+  return (
+    <section aria-labelledby="listening-stats" className="sp-tiles">
+      {artist && <Tile href={artist.url} img={artist.thumb || artist.art} round kicker="Top artist" value={artist.name} sub={artist.genres?.[0] || 'Artist'} />}
+      {track && <Tile href={track.url} img={track.thumb || track.art} kicker="Top song" value={track.title} sub={names(track)} />}
+      {genres.length > 0 && (
+        <Tile kicker="Top genres">
+          <span className="sp-genres">
+            {genres.map((genre) => (
+              <span key={genre.name}>{genre.name}</span>
+            ))}
+          </span>
+        </Tile>
+      )}
+      {album && <Tile href={album.url} img={album.art} kicker="Top album" value={album.name} sub={`${album.count} songs in my top ${trackCount}`} />}
+      {trackCount > 0 && (
+        <div className="sp-tile">
+          <span className="sp-tile-n sp-tab">{artistCount}</span>
+          <span style={{ minWidth: 0 }}>
+            <span className="sp-tile-k">Variety</span>
+            <span className="sp-tile-s">
+              {artistCount === 1 ? 'artist' : 'different artists'} across my top {trackCount} songs
+            </span>
+          </span>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -775,7 +897,7 @@ function MoreButton({ total, limit, all, setAll }) {
   )
 }
 
-function TopTracks({ top, playingId }) {
+function TopTracks({ top, playingId, sub }) {
   const [all, setAll] = useState(false)
   let body
   if (top.loading) body = <RowsSkeleton rows={SHOW_TRACKS} />
@@ -817,7 +939,7 @@ function TopTracks({ top, playingId }) {
   }
   return (
     <section className="sp-sec" aria-labelledby="listening-top">
-      <Head id="listening-top" title="Top tracks" />
+      <Head id="listening-top" title="Top tracks" sub={sub} />
       {body}
     </section>
   )
@@ -1213,7 +1335,8 @@ export default function ListeningPage({ theme, onToggleTheme }) {
   const accent = useAccent(heroTrack)
   const heroRankIndex = heroTrack?.id ? (top.data?.tracks || []).findIndex((t) => t.id === heroTrack.id) : -1
   const heroRank = heroRankIndex >= 0 ? heroRankIndex + 1 : null
-  const rangeLabel = LISTENING_RANGES.find((r) => r.id === range)?.label || ''
+  const rangeLabel = LISTENING_RANGES.find((r) => r.id === range)?.span || ''
+  const rangeSub = `Last ${rangeLabel}`
   const playingId = status === 'playing' ? now.data?.track?.id : null
   const albums = albumsOf(recent.data, 24)
   const artists = top.data?.artists || []
@@ -1258,6 +1381,26 @@ export default function ListeningPage({ theme, onToggleTheme }) {
           <div className="sp-body">
             <Actions hero={hero} />
 
+            <div className="sp-ranged">
+              <RangeBar value={range} onChange={setRange} span={rangeLabel} />
+              <Stats top={top} />
+
+              <Shelf
+                id="listening-artists"
+                title="Top artists"
+                sub={rangeSub}
+                items={artists}
+                loading={top.loading}
+                round
+                error={top.error}
+                onRetry={top.refresh}
+                emptyText="Not enough listening in this range yet."
+                renderItem={(artist, index) => <Card key={artist.id || index} href={artist.url} img={artist.art || artist.thumb} title={artist.name} sub="Artist" round />}
+              />
+
+              <TopTracks top={top} playingId={playingId} sub={rangeSub} />
+            </div>
+
             <Shelf
               id="listening-albums"
               title="Jump back in"
@@ -1271,21 +1414,6 @@ export default function ListeningPage({ theme, onToggleTheme }) {
               )}
             />
 
-            <Chips value={range} onChange={setRange} />
-
-            <Shelf
-              id="listening-artists"
-              title="Top artists"
-              items={artists}
-              loading={top.loading}
-              round
-              error={top.error}
-              onRetry={top.refresh}
-              emptyText="Not enough listening in this range yet."
-              renderItem={(artist, index) => <Card key={artist.id || index} href={artist.url} img={artist.art || artist.thumb} title={artist.name} sub="Artist" round />}
-            />
-
-            <TopTracks top={top} playingId={playingId} />
             <RecentTable recent={recent} clock={clock} />
             <Footer />
           </div>

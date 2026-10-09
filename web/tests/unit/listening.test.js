@@ -13,6 +13,7 @@ import {
   clockTime,
   groupByDay,
   listeningStats,
+  topSummary,
   onRepeat,
   playsOn,
   hourly,
@@ -178,5 +179,32 @@ describe('history', () => {
   test('onRepeat counts replays by track id', () => {
     expect(onRepeat(items).map((e) => [e.track.id, e.count])).toEqual([['a', 3]])
     expect(onRepeat(items, 4)).toEqual([])
+  })
+})
+
+describe('topSummary', () => {
+  const artist = (name, genres = []) => ({ id: name, name, url: `https://open.spotify.com/artist/${name}`, genres })
+  const song = (id, album, artists) => ({ id, title: id, art: `https://i.scdn.co/${album}`, album: { name: album, url: `https://open.spotify.com/album/${album}` }, artists })
+
+  test('picks the leaders, ranks genres by artist rank and counts distinct artists', () => {
+    const a = artist('a', ['pop', 'rap'])
+    const b = artist('b', ['rap'])
+    const c = artist('c', ['indie'])
+    const summary = topSummary({
+      artists: [a, b, c],
+      tracks: [song('1', 'x', [a]), song('2', 'x', [a, b]), song('3', 'y', [c])],
+    })
+    expect(summary.artist).toBe(a)
+    expect(summary.track.id).toBe('1')
+    expect(summary.genres.map((g) => g.name)).toEqual(['rap', 'pop', 'indie'])
+    expect(summary.album).toMatchObject({ name: 'x', count: 2 })
+    expect(summary.artistCount).toBe(3)
+    expect(summary.trackCount).toBe(3)
+  })
+
+  test('drops the album when no album repeats and copes with nothing', () => {
+    const a = artist('a')
+    expect(topSummary({ artists: [a], tracks: [song('1', 'x', [a]), song('2', 'y', [a])] }).album).toBe(null)
+    expect(topSummary(null)).toEqual({ artist: null, track: null, genres: [], album: null, artistCount: 0, trackCount: 0 })
   })
 })
