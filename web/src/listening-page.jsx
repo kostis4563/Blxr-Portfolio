@@ -38,8 +38,13 @@ const PLAY = 'M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1
 const NOTE = 'M9 18V6l11-2v12M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm11-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0z'
 const BACK = 'M15.7 4.3a1 1 0 0 1 0 1.4L9.4 12l6.3 6.3a1 1 0 0 1-1.4 1.4l-7-7a1 1 0 0 1 0-1.4l7-7a1 1 0 0 1 1.4 0z'
 const ARROW = 'M7 17 17 7M9 7h8v8'
-const GRAIN =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"
+const PAUSE = 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z'
+const PREV = 'M6 5h2v14H6zM20 5.9v12.2a.6.6 0 0 1-.93.5L9.9 12.5a.6.6 0 0 1 0-1l9.17-6.1a.6.6 0 0 1 .93.5z'
+const NEXT = 'M16 5h2v14h-2zM4 5.9v12.2a.6.6 0 0 0 .93.5l9.17-6.1a.6.6 0 0 0 0-1L4.93 5.4a.6.6 0 0 0-.93.5z'
+const SHUFFLE = 'M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5'
+const REPEAT = 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3'
+const CHECK = 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 7.7-5.5 5.5a1 1 0 0 1-1.4 0l-2.5-2.5a1 1 0 1 1 1.4-1.4l1.8 1.8 4.8-4.8a1 1 0 0 1 1.4 1.4z'
+const SPEAKER = 'M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14'
 
 const EASE = 'cubic-bezier(.16,1,.3,1)'
 
@@ -59,7 +64,6 @@ const CSS = `
 @media(min-width:768px){.sp-wrap{padding:0 32px}}
 .sp-in{animation:sp-rise .8s ${EASE} backwards;animation-delay:calc(var(--i,0) * 70ms)}
 @keyframes sp-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-@keyframes sp-fade{from{opacity:0}to{opacity:1}}
 .sp-bar{position:sticky;top:0;z-index:40;height:64px;transition:background-color .35s,box-shadow .35s}
 .sp-bar[data-solid='true']{background:color-mix(in srgb,var(--bg) 80%,transparent);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);box-shadow:0 1px 0 var(--line)}
 .sp-bar .sp-wrap{height:100%;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
@@ -73,49 +77,51 @@ const CSS = `
 .sp-tools{display:flex;align-items:center;gap:6px;justify-self:end}
 .sp-tool{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;min-width:36px;padding:0 10px;border-radius:999px;color:var(--sub);box-shadow:inset 0 0 0 1px var(--line);transition:color .2s,background-color .2s}
 .sp-tool:hover{color:var(--text);background:var(--hover)}
-.sp-hero{position:relative;isolation:isolate;overflow:hidden;border-radius:28px;color:#fafafa;background:color-mix(in srgb,var(--accent) 38%,#0b0b0d);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),0 30px 80px -40px color-mix(in srgb,var(--accent) 70%,#000);transition:box-shadow 1.2s}
-.sp-hero-bg{position:absolute;inset:-25%;z-index:-3;background-size:cover;background-position:center;filter:blur(64px) saturate(1.5);opacity:.6;animation:sp-fade 1.2s ease both}
-.sp-hero::before{content:'';position:absolute;inset:0;z-index:-2;background:radial-gradient(110% 80% at 80% 35%,rgba(11,11,13,0) 0,rgba(11,11,13,.55) 70%),linear-gradient(180deg,rgba(11,11,13,.05) 0,rgba(11,11,13,.7) 100%)}
-.sp-hero::after{content:'';position:absolute;inset:0;z-index:-1;background-image:${GRAIN};opacity:.09;mix-blend-mode:overlay;pointer-events:none}
-.sp-hero-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:28px;padding:24px}
-@media(min-width:880px){.sp-hero-grid{grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);align-items:center;gap:40px;padding:56px;min-height:500px}}
-.sp-hero-text{min-width:0;display:flex;flex-direction:column;order:2}
-@media(min-width:880px){.sp-hero-text{order:1}}
-.sp-status{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;height:30px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),inset 0 1px 0 rgba(255,255,255,.08);font-size:12.5px;font-weight:600;color:rgba(255,255,255,.85);backdrop-filter:blur(8px)}
-.sp-dot{position:relative;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.45)}
-.sp-dot[data-on='true']{background:var(--green)}
-.sp-dot[data-on='true']::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:var(--green);opacity:.4;animation:sp-ping 1.8s ${EASE} infinite}
+.sp-intro{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin:28px 0 18px}
+.sp-h1{font-size:clamp(30px,3.6vw,42px);font-weight:800;letter-spacing:-.04em;line-height:1.02;margin:8px 0 0}
+.sp-live{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--sub)}
+.sp-dot{position:relative;width:8px;height:8px;border-radius:50%;background:var(--faint)}
+.sp-dot[data-on='true']{background:#1ed760}
+.sp-dot[data-on='true']::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:#1ed760;opacity:.4;animation:sp-ping 1.8s ${EASE} infinite}
 @keyframes sp-ping{0%{transform:scale(.6);opacity:.5}100%{transform:scale(1.8);opacity:0}}
-.sp-title{font-size:clamp(40px,6.2vw,84px);font-weight:800;letter-spacing:-.05em;line-height:.98;margin:22px 0 16px;padding-bottom:.06em;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;text-wrap:balance}
-.sp-title-sm{font-size:clamp(30px,4.2vw,52px)}
-.sp-by{font-size:17px;font-weight:600;color:#fff}
-.sp-album{font-size:14px;color:rgba(255,255,255,.6);margin-top:4px}
-.sp-progress{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin-top:32px;font-size:11.5px;color:rgba(255,255,255,.6)}
-.sp-track{position:relative;height:4px;border-radius:4px;background:rgba(255,255,255,.16);overflow:hidden}
-.sp-fill{position:absolute;inset:0;transform-origin:left;border-radius:4px;background:#fff;transition:transform 1s linear,background-color .2s}
-.sp-progress:hover .sp-fill{background:var(--green)}
-.sp-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:24px}
-.sp-play{width:60px;height:60px;border-radius:50%;background:var(--green);color:#0b0b0d;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 12px 30px -10px color-mix(in srgb,var(--green) 70%,#000),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .35s ${EASE}}
-.sp-play:hover{transform:scale(1.07)}
-.sp-play:active{transform:scale(.96)}
-.sp-play[aria-disabled='true']{opacity:.45;pointer-events:none}
-.sp-glass{display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 18px 0 14px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),inset 0 1px 0 rgba(255,255,255,.1);font-size:13.5px;font-weight:600;color:#fff;transition:background-color .2s,transform .2s}
-.sp-glass:hover{background:rgba(255,255,255,.14)}
-.sp-glass:active{transform:scale(.97)}
-.sp-stage{position:relative;order:1;justify-self:start;width:min(70vw,300px);margin-right:22%}
-@media(min-width:880px){.sp-stage{order:2;justify-self:center;width:min(28vw,340px);margin-right:18%}}
-.sp-disc{position:absolute;inset:3%;border-radius:50%;transform:translateX(18%);transition:transform 1.1s ${EASE};box-shadow:0 20px 50px -20px rgba(0,0,0,.8)}
-.sp-stage[data-playing='true'] .sp-disc{transform:translateX(42%)}
-.sp-vinyl{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.08) 0 1%,transparent 1.2%),radial-gradient(circle,transparent 0 30%,rgba(255,255,255,.04) 30.5% 31%,transparent 31.5%),repeating-radial-gradient(circle,#101012 0 2px,#18181b 2px 3px),#121214;animation:sp-spin 3.2s linear infinite;animation-play-state:paused}
-.sp-vinyl::after{content:'';position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 30deg,transparent 0 40deg,rgba(255,255,255,.07) 60deg,transparent 80deg 220deg,rgba(255,255,255,.05) 240deg,transparent 260deg)}
-.sp-stage[data-playing='true'] .sp-vinyl{animation-play-state:running}
-.sp-label{position:absolute;inset:34%;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 0 3px #0f0f11}
-.sp-label::after{content:'';position:absolute;inset:44%;border-radius:50%;background:#0e0e10}
-@keyframes sp-spin{to{transform:rotate(360deg)}}
-.sp-cover{position:relative;display:block;width:100%;aspect-ratio:1;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.06);box-shadow:0 30px 60px -20px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.08);animation:sp-float 7s ease-in-out infinite;color:rgba(255,255,255,.5)}
-.sp-cover img{width:100%;height:100%;object-fit:cover;display:block}
-.sp-cover .sp-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-@keyframes sp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.sp-player{--green:#1ed760;position:relative;isolation:isolate;overflow:hidden;border-radius:18px;background:#121214;color:#fafafa;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),0 28px 70px -36px color-mix(in srgb,var(--accent) 85%,#000);transition:box-shadow 1.2s}
+.sp-player::before{content:'';position:absolute;inset:0;z-index:-1;background:radial-gradient(55% 160% at 0% 50%,color-mix(in srgb,var(--accent) 60%,transparent),transparent 72%);transition:opacity .6s}
+.sp-player .sp-e{background:rgba(255,255,255,.14);color:rgba(255,255,255,.8);box-shadow:none}
+.sp-pgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;padding:16px}
+@media(min-width:900px){.sp-pgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr);align-items:center;gap:28px;padding:18px 24px}}
+.sp-np{display:flex;align-items:center;gap:16px;min-width:0}
+.sp-np-art{display:flex;align-items:center;justify-content:center;width:72px;height:72px;flex-shrink:0;border-radius:8px;object-fit:cover;background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);box-shadow:0 10px 26px -10px rgba(0,0,0,.8);transition:transform .4s ${EASE}}
+.sp-np a:hover .sp-np-art{transform:scale(1.04)}
+@media(min-width:900px){.sp-np-art{width:84px;height:84px}}
+.sp-np-title{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;letter-spacing:-.01em;color:#fff}
+.sp-np-sub{font-size:13px;color:rgba(255,255,255,.62);margin-top:4px}
+.sp-liked{display:inline-flex;color:#1ed760;flex-shrink:0}
+.sp-center{display:flex;flex-direction:column;gap:10px;min-width:0}
+.sp-ctrls{display:flex;align-items:center;justify-content:center;gap:24px}
+.sp-ctrl{display:inline-flex;color:rgba(255,255,255,.38)}
+.sp-pbtn{width:42px;height:42px;border-radius:50%;background:#fff;color:#121214;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .25s ${EASE}}
+.sp-pbtn:hover{transform:scale(1.07)}
+.sp-pbtn:active{transform:scale(.95)}
+.sp-pbtn[aria-disabled='true']{opacity:.4;pointer-events:none}
+.sp-prog{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:10px;font-size:11px;color:rgba(255,255,255,.6)}
+.sp-prog>span:first-child{text-align:right}
+.sp-ptrack{position:relative;height:4px;border-radius:4px;background:rgba(255,255,255,.18)}
+.sp-pfill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:#fff;transition:width 1s linear,background-color .2s}
+.sp-pfill::after{content:'';position:absolute;right:-6px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.5);opacity:0;transition:opacity .2s}
+.sp-prog:hover .sp-pfill{background:#1ed760}
+.sp-prog:hover .sp-pfill::after{opacity:1}
+.sp-right{display:none}
+@media(min-width:900px){.sp-right{display:flex;align-items:center;justify-content:flex-end;gap:18px}}
+.sp-viz{display:flex;align-items:center;gap:3px;height:34px}
+.sp-viz i{width:3px;height:100%;border-radius:3px;background:#1ed760;transform:scaleY(.1);opacity:.35;transition:opacity .4s}
+.sp-viz[data-on='true'] i{opacity:1;animation:sp-viz var(--d) ease-in-out infinite alternate;animation-delay:var(--dl)}
+@keyframes sp-viz{from{transform:scaleY(.12)}to{transform:scaleY(var(--h))}}
+.sp-open{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;color:rgba(255,255,255,.75);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);transition:color .2s,background-color .2s,transform .2s}
+.sp-open:hover{color:#1ed760;background:rgba(255,255,255,.06)}
+.sp-open:active{transform:scale(.95)}
+.sp-strip{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-height:32px;padding:6px 24px;background:#1ed760;color:#0b2915;font-size:12.5px;font-weight:700;transition:background-color .4s,color .4s}
+.sp-strip[data-on='false']{background:rgba(255,255,255,.06);color:rgba(255,255,255,.62)}
+.sp-strip a:hover{text-decoration:underline;text-underline-offset:3px}
 .sp-rail{position:relative;overflow:hidden;margin-top:20px;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
 .sp-rail-track{display:flex;gap:10px;width:max-content;animation:sp-marquee var(--dur,80s) linear infinite}
 .sp-rail:hover .sp-rail-track{animation-play-state:paused}
@@ -392,125 +398,149 @@ function heroState(now, recent, clock) {
   if (status === 'podcast') return { kind: 'message', title: 'Listening to a podcast', body: 'Podcast episodes stay private.' }
   if (status === 'idle' && !last) return { kind: 'message', title: 'Quiet right now', body: recent.loading ? 'Looking up the last song.' : 'Nothing played lately.' }
   if (status === 'idle') return { kind: 'track', status, track: last.track, label: `Last played ${relativeTime(last.playedAt, clock)}` }
-  return { kind: 'track', status, track: now.data.track, label: status === 'playing' ? 'Now playing on Spotify' : 'Paused' }
+  return { kind: 'track', status, track: now.data.track, label: status === 'playing' ? 'Listening on Spotify' : 'Paused on Spotify' }
 }
 
-function Stage({ track, playing }) {
+function Visualizer({ on }) {
   return (
-    <div className="sp-stage" data-playing={playing}>
-      <div className="sp-disc" aria-hidden="true">
-        <div className="sp-vinyl">
-          {track?.art && <div className="sp-label" style={{ backgroundImage: `url("${track.thumb || track.art}")` }} />}
-        </div>
-      </div>
-      {track?.url ? (
-        <a href={track.url} target="_blank" rel="noreferrer" tabIndex={-1} aria-hidden="true" className="sp-cover">
-          <Img src={track.art} size={300} />
-        </a>
-      ) : (
-        <div className="sp-cover">
-          <Img src={track?.art} size={300} />
-        </div>
-      )}
-    </div>
+    <span className="sp-viz" data-on={on} aria-hidden="true">
+      {Array.from({ length: 26 }, (_, i) => (
+        <i
+          key={i}
+          style={{
+            '--h': (0.3 + ((i * 37) % 70) / 100).toFixed(2),
+            '--d': `${(0.42 + ((i * 53) % 45) / 100).toFixed(2)}s`,
+            '--dl': `-${(((i * 29) % 100) / 100).toFixed(2)}s`,
+          }}
+        />
+      ))}
+    </span>
   )
 }
 
-function Progress({ now, clock }) {
-  const at = progressAt(now, clock)
-  const duration = now?.track?.durationMs
-  if (at === null || !duration) return null
-  const ratio = Math.min(1, Math.max(0, at / duration))
+function PlayerProgress({ hero, now, clock }) {
+  const track = hero.kind === 'track' ? hero.track : null
+  const duration = track?.durationMs
+  const at = track && hero.status !== 'idle' ? progressAt(now.data, clock) : null
+  const ratio = at !== null && duration ? Math.min(1, Math.max(0, at / duration)) : 0
   return (
-    <div className="sp-progress sp-mono">
-      <span>{formatDuration(at)}</span>
+    <div className="sp-prog sp-mono">
+      <span>{at !== null ? formatDuration(at) : '-:--'}</span>
       <div
-        className="sp-track"
+        className="sp-ptrack"
         role="progressbar"
         aria-label="Track progress"
         aria-valuemin={0}
-        aria-valuemax={Math.round(duration / 1000)}
-        aria-valuenow={Math.round(at / 1000)}
-        aria-valuetext={`${formatDuration(at)} of ${formatDuration(duration)}`}
+        aria-valuemax={duration ? Math.round(duration / 1000) : 0}
+        aria-valuenow={at !== null ? Math.round(at / 1000) : 0}
+        aria-valuetext={at !== null && duration ? `${formatDuration(at)} of ${formatDuration(duration)}` : 'Not playing'}
       >
-        <div className="sp-fill" style={{ transform: `scaleX(${ratio})` }} />
+        <div className="sp-pfill" style={{ width: `${ratio * 100}%` }} />
       </div>
-      <span>{formatDuration(duration)}</span>
+      <span>{duration ? formatDuration(duration) : '-:--'}</span>
     </div>
   )
 }
 
-function Hero({ hero, now, clock }) {
+function Player({ hero, now, clock, rank }) {
   const track = hero.kind === 'track' ? hero.track : null
   const playing = hero.status === 'playing'
-  const bg = track?.art
+  const strip =
+    hero.kind === 'loading' ? 'Connecting to Spotify' : hero.kind === 'message' ? hero.title : playing ? 'Listening on Spotify' : hero.label
 
-  let text
+  let left
   if (hero.kind === 'loading') {
-    text = (
-      <div className="sp-hero-text" aria-hidden="true">
-        <div className="sp-skel" style={{ width: 170, height: 30, borderRadius: 999, background: 'rgba(255,255,255,.1)' }} />
-        <div className="sp-skel" style={{ width: '82%', height: 72, margin: '22px 0 16px', background: 'rgba(255,255,255,.1)' }} />
-        <div className="sp-skel" style={{ width: 200, height: 16, background: 'rgba(255,255,255,.1)' }} />
+    left = (
+      <div className="sp-np" aria-hidden="true">
+        <div className="sp-np-art sp-skel" style={{ background: 'rgba(255,255,255,.08)' }} />
+        <div style={{ flex: 1 }}>
+          <div className="sp-skel" style={{ width: '70%', height: 14, background: 'rgba(255,255,255,.1)' }} />
+          <div className="sp-skel" style={{ width: '45%', height: 11, marginTop: 10, background: 'rgba(255,255,255,.1)' }} />
+        </div>
       </div>
     )
   } else if (hero.kind === 'message') {
-    text = (
-      <div className="sp-hero-text">
-        <span className="sp-status">
-          <span className="sp-dot" />
-          Spotify
+    left = (
+      <div className="sp-np">
+        <span className="sp-np-art" aria-hidden="true">
+          <SpotifyMark size={30} />
         </span>
-        <h2 className="sp-title sp-title-sm">{hero.title}</h2>
-        <p className="sp-album">{hero.body}</p>
+        <div style={{ minWidth: 0 }}>
+          <p className="sp-np-title">{hero.title}</p>
+          <p className="sp-np-sub">{hero.body}</p>
+        </div>
       </div>
     )
   } else {
-    text = (
-      <div className="sp-hero-text" aria-live="polite">
-        <span className="sp-status">
-          <span className="sp-dot" data-on={playing} />
-          {hero.label}
-        </span>
-        <h2 className="sp-title" title={track.title}>
-          <Out href={track.url}>{track.title}</Out>
-        </h2>
-        <p className="sp-by">
-          <Explicit track={track} />
-          <Artists track={track} />
-        </p>
-        {track.album?.name && (
-          <p className="sp-album">
-            <Out href={track.album.url}>{track.album.name}</Out>
-            {track.durationMs ? ` · ${formatDuration(track.durationMs)}` : ''}
+    left = (
+      <div className="sp-np">
+        <a href={track.url || undefined} target="_blank" rel="noreferrer" tabIndex={-1} aria-hidden="true">
+          <Img src={track.art || track.thumb} className="sp-np-art" size={160} />
+        </a>
+        <div style={{ minWidth: 0 }}>
+          <p className="sp-np-title">
+            <Out href={track.url} className="sp-u sp-trunc">
+              {track.title}
+            </Out>
+            {rank && (
+              <span className="sp-liked" title={`No. ${rank} in my top tracks`}>
+                <Glyph d={CHECK} size={18} />
+                <span className="sp-sr">No. {rank} in my top tracks</span>
+              </span>
+            )}
           </p>
-        )}
-        {hero.status !== 'idle' && <Progress now={now.data} clock={clock} />}
-        <div className="sp-actions">
-          <a href={track.url || undefined} target="_blank" rel="noreferrer" className="sp-play" aria-label={`Play ${track.title} on Spotify`} aria-disabled={!track.url}>
-            <Glyph d={PLAY} size={26} />
-          </a>
-          <a href={track.url || 'https://open.spotify.com'} target="_blank" rel="noreferrer" className="sp-glass">
-            <SpotifyMark size={18} />
-            Open in Spotify
-          </a>
+          <p className="sp-np-sub sp-trunc">
+            <Explicit track={track} />
+            <Artists track={track} />
+          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <section className="sp-hero sp-in" aria-label="Now playing">
-      {bg && <div key={bg} className="sp-hero-bg" style={{ backgroundImage: `url("${bg}")` }} />}
-      <div className="sp-hero-grid">
-        {text}
-        {hero.kind === 'loading' ? (
-          <div className="sp-stage">
-            <div className="sp-cover sp-skel" style={{ background: 'rgba(255,255,255,.08)', animation: 'sp-pulse 1.6s ease-in-out infinite' }} />
+    <section className="sp-player sp-in" style={{ '--i': 1 }} aria-label="Now playing">
+      <div className="sp-pgrid" aria-live="polite">
+        {left}
+        <div className="sp-center">
+          <div className="sp-ctrls">
+            <span className="sp-ctrl" aria-hidden="true">
+              <Glyph d={SHUFFLE} size={18} stroke />
+            </span>
+            <span className="sp-ctrl" aria-hidden="true">
+              <Glyph d={PREV} size={18} />
+            </span>
+            <a
+              href={track?.url || undefined}
+              target="_blank"
+              rel="noreferrer"
+              className="sp-pbtn"
+              aria-label={track ? `Open ${track.title} in Spotify` : 'Open Spotify'}
+              aria-disabled={!track?.url}
+            >
+              <Glyph d={playing ? PAUSE : PLAY} size={20} />
+            </a>
+            <span className="sp-ctrl" aria-hidden="true">
+              <Glyph d={NEXT} size={18} />
+            </span>
+            <span className="sp-ctrl" aria-hidden="true">
+              <Glyph d={REPEAT} size={18} stroke />
+            </span>
           </div>
-        ) : (
-          <Stage track={track} playing={playing} />
-        )}
+          <PlayerProgress hero={hero} now={now} clock={clock} />
+        </div>
+        <div className="sp-right">
+          <Visualizer on={playing} />
+          <a href={track?.url || 'https://open.spotify.com'} target="_blank" rel="noreferrer" className="sp-open" aria-label="Open in Spotify" title="Open in Spotify">
+            <SpotifyMark size={18} />
+          </a>
+        </div>
+      </div>
+      <div className="sp-strip" data-on={playing}>
+        <Glyph d={SPEAKER} size={15} stroke />
+        <a href={track?.url || 'https://open.spotify.com'} target="_blank" rel="noreferrer">
+          {strip}
+        </a>
       </div>
     </section>
   )
@@ -890,6 +920,8 @@ export default function ListeningPage({ theme, onToggleTheme }) {
   const hero = heroState(now, recent, clock)
   const heroTrack = hero.kind === 'track' ? hero.track : null
   const accent = useAccent(heroTrack)
+  const heroRankIndex = heroTrack?.id ? (top.data?.tracks || []).findIndex((t) => t.id === heroTrack.id) : -1
+  const heroRank = heroRankIndex >= 0 ? heroRankIndex + 1 : null
   const rangeLabel = LISTENING_RANGES.find((r) => r.id === range)?.label || ''
 
   const trackId = now.data?.track?.id
@@ -930,8 +962,17 @@ export default function ListeningPage({ theme, onToggleTheme }) {
       </header>
 
       <main className="sp-wrap" style={{ paddingTop: 8 }}>
-        <h1 className="sp-sr">Listening: what Blxr is playing on Spotify</h1>
-        <Hero hero={hero} now={now} clock={clock} />
+        <div className="sp-intro sp-in">
+          <div>
+            <p className="sp-eyebrow">Blxr on Spotify</p>
+            <h1 className="sp-h1">What I&rsquo;m listening to</h1>
+          </div>
+          <span className="sp-live">
+            <span className="sp-dot" data-on={status === 'playing'} />
+            {status === 'playing' ? 'Live right now' : `Checks every ${NOW_POLL_MS / 1000} seconds`}
+          </span>
+        </div>
+        <Player hero={hero} now={now} clock={clock} rank={heroRank} />
         <Rail recent={recent} />
 
         <section aria-labelledby="listening-lately" className="sp-sec">
