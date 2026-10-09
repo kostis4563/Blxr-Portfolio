@@ -4,6 +4,7 @@ import {
   TRACK_END_GRACE_MS,
   artistLine,
   formatDuration,
+  hoursAndMinutes,
   sampleNow,
   progressAt,
   trackEnded,
@@ -65,6 +66,14 @@ describe('formatting', () => {
     expect(formatDuration(3_725_000)).toBe('1:02:05')
     expect(formatDuration(-1)).toBe('0:00')
     expect(formatDuration(NaN)).toBe('0:00')
+  })
+
+  test('hoursAndMinutes', () => {
+    expect(hoursAndMinutes(0)).toBe('0 min')
+    expect(hoursAndMinutes(45)).toBe('45 min')
+    expect(hoursAndMinutes(60)).toBe('1 hr')
+    expect(hoursAndMinutes(182)).toBe('3 hr 2 min')
+    expect(hoursAndMinutes(NaN)).toBe('0 min')
   })
 
   test('clockTime is local HH:MM', () => {

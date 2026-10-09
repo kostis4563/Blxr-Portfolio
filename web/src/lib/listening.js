@@ -64,6 +64,15 @@ export function formatDuration(ms) {
   return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
 }
 
+export function hoursAndMinutes(minutes) {
+  if (!Number.isFinite(minutes) || minutes <= 0) return '0 min'
+  const total = Math.round(minutes)
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  if (!h) return `${m} min`
+  return m ? `${h} hr ${m} min` : `${h} hr`
+}
+
 export function sampleNow(data, receivedAt = Date.now()) {
   if (!data || typeof data !== 'object') return null
   const age = Number.isFinite(data.at) ? Math.min(Math.max(0, receivedAt - data.at), MAX_SAMPLE_AGE_MS) : 0
