@@ -306,6 +306,68 @@ function discord(url, s) {
   return url.hostname === 'japi.rest' ? reply(200, { data: user }) : reply(200, user)
 }
 
+const spotifyTrack = (n) => ({
+  type: 'track',
+  id: `track${String(n).padStart(17, '0')}`,
+  name: `Song ${n}`,
+  duration_ms: 200_000,
+  explicit: n === 2,
+  artists: [{ id: `artist${String(n).padStart(16, '0')}`, name: `Artist ${n}` }, { id: 'not-an-id', name: 'Feature' }],
+  album: {
+    id: `album${String(n).padStart(17, '0')}`,
+    name: `Album ${n}`,
+    images: [
+      { url: `https://i.scdn.co/image/${n}-640`, width: 640, height: 640 },
+      { url: `https://i.scdn.co/image/${n}-300`, width: 300, height: 300 },
+      { url: `https://i.scdn.co/image/${n}-64`, width: 64, height: 64 },
+      { url: 'https://evil.example/x.png', width: 300, height: 300 },
+    ],
+  },
+})
+
+function spotifyAccounts(init, s) {
+  if (s.spotifyToken === 'revoked') return reply(400, { error: 'invalid_grant', error_description: 'Refresh token revoked' })
+  if (s.spotifyToken === 'fail') return reply(500, {})
+  const auth = new Headers(init.headers).get('authorization') || ''
+  const [id, secret] = Buffer.from(auth.replace(/^Basic /, ''), 'base64').toString('utf8').split(':')
+  if (id !== process.env.SPOTIFY_CLIENT_ID || secret !== process.env.SPOTIFY_CLIENT_SECRET) return reply(400, { error: 'invalid_client' })
+  const body = new URLSearchParams(init.body)
+  if (body.get('grant_type') !== 'refresh_token' || !body.get('refresh_token')) return reply(400, { error: 'invalid_request' })
+  return reply(200, { access_token: `access-${Date.now()}`, token_type: 'Bearer', expires_in: 3600, ...(s.spotifyRotate ? { refresh_token: s.spotifyRotate } : {}) })
+}
+
+function spotifyApi(url, init, s) {
+  if (!/^Bearer access-/.test(new Headers(init.headers).get('authorization') || '')) return reply(401, { error: { status: 401 } })
+  if (s.spotify === 'fail') return reply(500, {})
+  if (s.spotify === 'rate_limited') return reply(429, {}, { 'retry-after': '30' })
+  if (s.spotify === 'forbidden') return reply(403, { error: { status: 403, message: 'Insufficient client scope' } })
+  if (url.pathname === '/v1/me/player/currently-playing') {
+    if (s.spotifyNow === 'idle') return reply(204)
+    if (s.spotifyNow === 'episode') return reply(200, { is_playing: true, currently_playing_type: 'episode', progress_ms: 1000, item: null })
+    return reply(200, { is_playing: s.spotifyNow !== 'paused', currently_playing_type: 'track', progress_ms: 999_999, item: spotifyTrack(1) })
+  }
+  if (url.pathname === '/v1/me/player/recently-played') {
+    return reply(200, {
+      items: [
+        { track: spotifyTrack(1), played_at: '2026-10-09T10:00:00.000Z' },
+        { track: spotifyTrack(2), played_at: '2026-10-09T09:55:00Z' },
+        { track: null, played_at: '2026-10-09T09:50:00Z' },
+        { track: spotifyTrack(3), played_at: 'yesterday' },
+      ],
+    })
+  }
+  if (url.pathname === '/v1/me/top/tracks') return reply(200, { items: [spotifyTrack(4), { type: 'episode' }, spotifyTrack(5)] })
+  if (url.pathname === '/v1/me/top/artists') {
+    return reply(200, {
+      items: [
+        { id: 'artist0000000000000001', name: 'Top Artist', genres: ['indie', 'rock', 'pop', 'jazz'], images: [{ url: 'https://i.scdn.co/image/a-320', width: 320 }, { url: 'https://i.scdn.co/image/a-160', width: 160 }] },
+        { id: 'bad', name: 'No Pics', images: [] },
+      ],
+    })
+  }
+  return reply(404, { error: { status: 404 } })
+}
+
 globalThis.fetch = async function fakeFetch(input, init = {}) {
   const url = new URL(typeof input === 'string' ? input : input.url)
   const s = scenario()
@@ -331,5 +393,7 @@ globalThis.fetch = async function fakeFetch(input, init = {}) {
   if (host === 'api.github.com') return github(url, init, s)
   if (host === 'github-contributions-api.jogruber.de') return contributionsMirror(url, s)
   if (host === 'discord.com' || host === 'japi.rest') return discord(url, s)
+  if (host === 'accounts.spotify.com') return spotifyAccounts(init, s)
+  if (host === 'api.spotify.com') return spotifyApi(url, init, s)
   throw networkDown(url.href)
 }

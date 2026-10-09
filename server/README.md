@@ -344,6 +344,38 @@ bucket. Consumed by `web/src/lib/weather.js`, which falls back to Open-Meteo
 directly when this route isn't there (`npm run dev` forwards `/api` to
 production) — hence `api.open-meteo.com` in the CSP's `connect-src`.
 
+### `GET /api/spotify/now` · `/api/spotify/recent` · `/api/spotify/top?range=short|medium|long`
+The owner's Spotify listening, for `/listening`. Needs `SPOTIFY_CLIENT_ID`,
+`SPOTIFY_CLIENT_SECRET` and `SPOTIFY_REFRESH_TOKEN` (scopes
+`user-read-currently-playing user-read-recently-played user-top-read`; get the
+token once with `node scripts/spotify-token.mjs`). Without them every route
+answers `503 spotify_disabled`; a refresh token Spotify refuses
+(`invalid_grant` / `invalid_client`) logs an error and switches the routes to
+the same `503` until the process restarts with a new one. The access token is
+refreshed in the process and never leaves it. If Spotify hands back a new
+refresh token it is kept in `spotify-token.json` in the state directory
+(`0600`, tied to the env token, so replacing `SPOTIFY_REFRESH_TOKEN` wins).
+Spotify refresh tokens live 180 days, so expect to re-run the script about
+twice a year — the refusal shows up in Dashboard → Logs.
+
+```json
+{ "playing": true, "kind": "track", "progressMs": 81234, "at": 1760000000000,
+  "track": { "id": "...", "title": "...", "artists": [{ "name": "...", "url": "https://open.spotify.com/artist/..." }],
+             "album": { "name": "...", "url": "..." }, "art": "https://i.scdn.co/...", "thumb": "...",
+             "url": "https://open.spotify.com/track/...", "durationMs": 215000, "explicit": false } }
+```
+
+`now`: `kind` is `track`, `episode` (no details), `ad` or `null` when nothing
+is playing; cached 10 s. `recent`: `{ items: [{ track, playedAt }], at }`, the
+last 50 plays, cached a minute. `top`: `{ range, tracks, artists, at }` (20
+each; artists carry `genres`), `short` ≈ 4 weeks, `medium` ≈ 6 months, `long`
+≈ 1 year, cached 6 hours. `recent` and `top` serve the old copy while they
+refresh. Links are rebuilt from Spotify ids and art is kept only from
+`i.scdn.co` / `image-cdn-*.spotifycdn.com` (all in the CSP's `img-src`).
+Errors: `400 bad_range`, `429 rate_limited`, `502 spotify_forbidden` (token
+missing a scope) or `spotify_failed`. Counts in the `upstream` bucket.
+Consumed by `web/src/lib/listening.js`.
+
 ### `GET /api/ip`
 The caller's own address as nginx saw it (the last `X-Forwarded-For` hop), plus
 Cloudflare's `CF-IPCountry` guess when it sent a real one (`XX` and Tor's `T1`

@@ -7,6 +7,8 @@ import ReviewsPageImpl from '#ssr-page/reviews'
 import UsesPageImpl from '#ssr-page/uses'
 import CvPageImpl from '#ssr-page/cv'
 import SecurityPageImpl from '#ssr-page/security'
+import IbPageImpl from '#ssr-page/ib'
+import ListeningPageImpl from '#ssr-page/listening'
 import ContactPageImpl from '#ssr-page/contact'
 import PaymentPageImpl from '#ssr-page/payment'
 import VolunteerPageImpl from '#ssr-page/volunteer'
@@ -46,6 +48,8 @@ const ReviewsPage = routePage(ReviewsPageImpl, () => import('#client-page/review
 const UsesPage = routePage(UsesPageImpl, () => import('#client-page/uses'))
 const CvPage = routePage(CvPageImpl, () => import('#client-page/cv'))
 const SecurityPage = routePage(SecurityPageImpl, () => import('#client-page/security'))
+const IbPage = routePage(IbPageImpl, () => import('#client-page/ib'))
+const ListeningPage = routePage(ListeningPageImpl, () => import('#client-page/listening'))
 const ContactPage = routePage(ContactPageImpl, () => import('#client-page/contact'))
 const PaymentPage = routePage(PaymentPageImpl, () => import('#client-page/payment'))
 const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
@@ -285,6 +289,28 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <SecurityPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'ib') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <IbPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'listening') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <ListeningPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>

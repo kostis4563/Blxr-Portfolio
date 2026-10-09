@@ -111,6 +111,8 @@ const ROUTE_SOURCES = {
   library: ['src/library-page.jsx', 'src/lib/library.js'],
   blog: ['src/blog-page.jsx', 'src/content/blog'],
   reviews: ['src/reviews-page.jsx'],
+  ib: ['src/ib-page.jsx', 'src/lib/ib.js', 'src/components/ib/ui.jsx', 'src/components/ib/diploma.jsx'],
+  listening: ['src/listening-page.jsx', 'src/lib/listening.js'],
   contact: ['src/contact-page.jsx', 'src/lib/profile.js'],
   payment: ['src/payment-page.jsx', 'src/lib/payment.js'],
   volunteer: ['src/volunteer-page.jsx', 'src/lib/volunteer.js'],

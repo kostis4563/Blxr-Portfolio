@@ -185,6 +185,13 @@ describe('Content-Security-Policy', () => {
     assert.ok(hostAllowed('frame-src', 'https://www.youtube.com/embed/x'))
     assert.ok(hostAllowed('img-src', 'https://i.ytimg.com/vi/x/mqdefault.jpg'), 'server-provided thumbnails')
   })
+
+  test('allows every album-art host the Spotify proxy lets through', async () => {
+    const server = await read('server/src/server.mjs')
+    const hosts = [...(/SPOTIFY_ART_HOSTS = new Set\(\[([^\]]+)\]\)/.exec(server)?.[1] || '').matchAll(/'([^']+)'/g)].map((m) => m[1])
+    assert.ok(hosts.length >= 1)
+    for (const host of hosts) assert.ok(hostAllowed('img-src', `https://${host}/image/x`), `${host} album art`)
+  })
 })
 
 describe('Cloudflare real-IP', () => {

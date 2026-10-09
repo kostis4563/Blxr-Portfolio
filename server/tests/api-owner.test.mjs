@@ -238,8 +238,8 @@ describe('logs dashboard', () => {
     const res = await srv.request('/api/logs', { headers: OWNER() })
     assert.equal(res.status, 200)
     assert.deepEqual(Object.keys(res.body).sort(), ['facets', 'items', 'matched', 'now', 'summary', 'system'])
-    assert.deepEqual(res.body.system.features, { owner: true, supabase: true, mail: true, accountDelete: true, github: true, blog: true, discord: true })
-    for (const secret of [SECRET_KEY, FULL_ENV.RESEND_API_KEY, FULL_ENV.GITHUB_TOKEN, FULL_ENV.REVIEW_SALT]) {
+    assert.deepEqual(res.body.system.features, { owner: true, supabase: true, mail: true, accountDelete: true, github: true, blog: true, discord: true, spotify: true })
+    for (const secret of [SECRET_KEY, FULL_ENV.RESEND_API_KEY, FULL_ENV.GITHUB_TOKEN, FULL_ENV.REVIEW_SALT, FULL_ENV.SPOTIFY_CLIENT_SECRET, FULL_ENV.SPOTIFY_REFRESH_TOKEN]) {
       assert.ok(!res.text.includes(secret), `leaked ${secret}`)
     }
   })
@@ -339,6 +339,7 @@ describe('features switch off cleanly when unconfigured', () => {
     assert.deepEqual((await bare.request('/api/mail/password-changed', { method: 'POST', headers: as('member') })).body, { error: 'mail_disabled' })
     assert.deepEqual((await bare.request('/api/account/delete', { method: 'POST', headers: as('member') })).body, { error: 'delete_disabled' })
     assert.deepEqual((await bare.request('/api/github/stats')).body, { error: 'stats_disabled' })
+    assert.deepEqual((await bare.request('/api/spotify/now')).body, { error: 'spotify_disabled' })
   })
 
   test('warns at startup when REVIEW_SALT is missing', () => {

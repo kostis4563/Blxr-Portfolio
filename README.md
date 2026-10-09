@@ -113,6 +113,7 @@ web/src/
 | `/blog` · `/blog/<slug>` | `blog.html` · `blog/<slug>.html` (+ `blog/rss.xml`) |
 | `/reviews` · `/now` · `/cv` | `reviews.html` · `now.html` · `cv.html` |
 | `/gallery` | `gallery.html` — photos and UI shots, managed from `/dashboard#gallery` (owner only) |
+| `/listening` | `listening.html` — Spotify now playing, last 50 plays and top tracks/artists via `/api/spotify/*` |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
 | `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |
 | *anything else* | `404.html`, HTTP 404 |

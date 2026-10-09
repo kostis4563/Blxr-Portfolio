@@ -199,6 +199,157 @@ describe('weather', () => {
   })
 })
 
+describe('spotify', () => {
+  let sp
+  before(async () => {
+    sp = await startServer()
+  })
+  after(() => sp?.cleanup())
+
+  test('now playing: trimmed track shape, progress capped at the duration, art only from Spotify hosts', async () => {
+    const res = await sp.request('/api/spotify/now')
+    assert.equal(res.status, 200)
+    assert.equal(res.headers.get('cache-control'), 'public, max-age=10')
+    const { playing, kind, track, progressMs, at } = res.body
+    assert.equal(playing, true)
+    assert.equal(kind, 'track')
+    assert.equal(progressMs, 200_000)
+    assert.ok(Number.isFinite(at))
+    assert.deepEqual(track, {
+      id: 'track00000000000000001',
+      title: 'Song 1',
+      artists: [
+        { name: 'Artist 1', url: 'https://open.spotify.com/artist/artist0000000000000001' },
+        { name: 'Feature', url: null },
+      ],
+      album: { name: 'Album 1', url: 'https://open.spotify.com/album/album00000000000000001' },
+      art: 'https://i.scdn.co/image/1-300',
+      thumb: 'https://i.scdn.co/image/1-64',
+      url: 'https://open.spotify.com/track/track00000000000000001',
+      durationMs: 200_000,
+      explicit: false,
+    })
+  })
+
+  test('the access token is fetched once with the client credentials and reused', async () => {
+    await sp.request('/api/spotify/recent')
+    await sp.request('/api/spotify/top')
+    const tokens = await sp.calls('accounts.spotify.com')
+    assert.equal(tokens.length, 1)
+    assert.equal(tokens[0].method, 'POST')
+    assert.equal(new URLSearchParams(tokens[0].body).get('refresh_token'), 'spotify-refresh-test-only')
+  })
+
+  test('recently played drops rows without a track or a real timestamp', async () => {
+    const res = await sp.request('/api/spotify/recent')
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.body.items.map((i) => [i.track.title, i.playedAt]), [
+      ['Song 1', '2026-10-09T10:00:00.000Z'],
+      ['Song 2', '2026-10-09T09:55:00.000Z'],
+    ])
+    assert.equal(res.body.items[1].track.explicit, true)
+  })
+
+  test('top: tracks and artists per range, cached server-side, bad range refused', async () => {
+    const res = await sp.request('/api/spotify/top?range=medium')
+    assert.equal(res.status, 200)
+    assert.equal(res.body.range, 'medium')
+    assert.deepEqual(res.body.tracks.map((t) => t.title), ['Song 4', 'Song 5'])
+    assert.deepEqual(res.body.artists[0], {
+      id: 'artist0000000000000001',
+      name: 'Top Artist',
+      art: 'https://i.scdn.co/image/a-320',
+      thumb: 'https://i.scdn.co/image/a-160',
+      url: 'https://open.spotify.com/artist/artist0000000000000001',
+      genres: ['indie', 'rock', 'pop'],
+    })
+    assert.deepEqual(res.body.artists[1], { id: null, name: 'No Pics', art: null, thumb: null, url: null, genres: [] })
+    const [call] = await sp.calls('top/tracks?time_range=medium_term')
+    assert.ok(call)
+    await sp.clearCalls()
+    await sp.request('/api/spotify/top?range=medium')
+    assert.equal((await sp.calls('api.spotify.com')).length, 0)
+    assert.deepEqual((await sp.request('/api/spotify/top?range=forever')).body, { error: 'bad_range' })
+  })
+
+  for (const [mode, expected] of [
+    ['idle', { playing: false, kind: null, track: null, progressMs: null }],
+    ['paused', { playing: false, kind: 'track', title: 'Song 1' }],
+    ['episode', { playing: true, kind: 'episode', track: null, progressMs: null }],
+  ]) {
+    test(`now playing when ${mode}`, async () => {
+      const other = await startServer({ scenario: { spotifyNow: mode } })
+      try {
+        const { status, body } = await other.request('/api/spotify/now')
+        assert.equal(status, 200)
+        const { at, track, ...rest } = body
+        assert.ok(Number.isFinite(at))
+        if ('title' in expected) {
+          const { title, ...head } = expected
+          assert.equal(track.title, title)
+          assert.deepEqual({ playing: rest.playing, kind: rest.kind }, head)
+        } else {
+          assert.deepEqual({ ...rest, track }, expected)
+        }
+      } finally {
+        await other.cleanup()
+      }
+    })
+  }
+
+  test('a revoked refresh token switches the feature off with a named reason and an error log', async () => {
+    const revoked = await startServer({ scenario: { spotifyToken: 'revoked' } })
+    try {
+      assert.deepEqual((await revoked.request('/api/spotify/now')).body, { error: 'spotify_disabled' })
+      await revoked.clearCalls()
+      assert.equal((await revoked.request('/api/spotify/recent')).status, 503)
+      assert.equal((await revoked.calls('spotify.com')).length, 0, 'does not keep hammering Spotify')
+    } finally {
+      await revoked.cleanup()
+    }
+  })
+
+  test('a rotated refresh token survives a restart, and is dropped when the env token changes', async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), 'blxr-spotify-'))
+    const sentRefresh = async (s) => new URLSearchParams((await s.calls('accounts.spotify.com'))[0].body).get('refresh_token')
+
+    const first = await startServer({ stateDir, scenario: { spotifyRotate: 'rotated-token' } })
+    await first.request('/api/spotify/now')
+    assert.equal(await sentRefresh(first), FULL_ENV.SPOTIFY_REFRESH_TOKEN)
+    await first.cleanup({ keepState: true })
+
+    const second = await startServer({ stateDir })
+    await second.request('/api/spotify/now')
+    assert.equal(await sentRefresh(second), 'rotated-token')
+    await second.cleanup({ keepState: true })
+
+    const replaced = await startServer({ stateDir, env: { ...FULL_ENV, SPOTIFY_REFRESH_TOKEN: 'brand-new-token' } })
+    try {
+      await replaced.request('/api/spotify/now')
+      assert.equal(await sentRefresh(replaced), 'brand-new-token')
+    } finally {
+      await replaced.cleanup()
+    }
+  })
+
+  test('upstream trouble maps to 429 / 502 without crashing', async () => {
+    const bad = await startServer({ scenario: { spotify: 'rate_limited' } })
+    try {
+      assert.equal((await bad.request('/api/spotify/now')).status, 429)
+      await bad.scenario({ spotify: 'forbidden' })
+      assert.deepEqual((await bad.request('/api/spotify/recent')).body, { error: 'spotify_forbidden' })
+      await bad.scenario({ spotify: 'fail' })
+      assert.deepEqual((await bad.request('/api/spotify/top')).body, { error: 'spotify_failed' })
+    } finally {
+      await bad.cleanup()
+    }
+  })
+
+  test('writes are refused', async () => {
+    assert.equal((await sp.request('/api/spotify/now', { method: 'POST', body: {} })).status, 405)
+  })
+})
+
 describe('github contributions', () => {
   const get = (q) => srv.request(`/api/github/contributions?${q}`)
 

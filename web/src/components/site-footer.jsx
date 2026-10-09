@@ -14,6 +14,8 @@ import {
   VOLUNTEER_PATH,
   GALLERY_PATH,
   SECURITY_PATH,
+  IB_PATH,
+  LISTENING_PATH,
 } from '../lib/router'
 import { GITHUB_URL, DISCORD_URL, CONTACT_EMAIL, SOCIAL_ICON_PATHS } from '../lib/profile'
 
@@ -26,6 +28,8 @@ const COLUMNS = [
       { label: 'Library', to: LIBRARY_PATH },
       { label: 'Blog', to: BLOG_PATH },
       { label: 'Gallery', to: GALLERY_PATH },
+      { label: 'IB grades', to: IB_PATH },
+      { label: 'Listening', to: LISTENING_PATH },
     ],
   },
   {

@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, CONTACT_PATH, PAYMENT_PATH, VOLUNTEER_PATH, GALLERY_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, PAYMENT_PATH, VOLUNTEER_PATH, GALLERY_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -217,6 +217,27 @@ export function buildCommands({
       href: SECURITY_PATH,
       run: () => navigate(SECURITY_PATH),
       keywords: 'security vulnerability report disclosure responsible bug bounty pgp gpg ssh keys fingerprint safe harbour security.txt',
+    },
+    {
+      id: 'page-ib',
+      group: jump,
+      label: 'IB grades',
+      hint: 'Turn a paper mark into a 1–7',
+      icon: 'chart',
+      href: IB_PATH,
+      run: () => navigate(IB_PATH),
+      keywords:
+        'ib international baccalaureate grade calculator boundaries paper 1 2 3 ia criteria mark score seven 7 hl sl exam diploma points 45 tok ee extended essay theory of knowledge university offer predicted',
+    },
+    {
+      id: 'page-listening',
+      group: jump,
+      label: 'Listening',
+      hint: 'What is on my Spotify right now',
+      icon: 'music',
+      href: LISTENING_PATH,
+      run: () => navigate(LISTENING_PATH),
+      keywords: 'spotify music now playing song recently played history top tracks artists',
     },
     {
       id: 'page-contact',

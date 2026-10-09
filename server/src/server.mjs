@@ -924,7 +924,233 @@ function refreshWeather() {
   return weatherInflight
 }
 
-const GH_API = (process.env.GITHUB_API || 'https://api.github.com').replace(/\/$/, '')
+const SPOTIFY_CLIENT_ID = (process.env.SPOTIFY_CLIENT_ID || '').trim()
+const SPOTIFY_CLIENT_SECRET = (process.env.SPOTIFY_CLIENT_SECRET || '').trim()
+const SPOTIFY_ON = Boolean(SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET && (process.env.SPOTIFY_REFRESH_TOKEN || '').trim())
+const SPOTIFY_ACCOUNTS = 'https://accounts.spotify.com/api/token'
+const SPOTIFY_API = 'https://api.spotify.com/v1'
+const SPOTIFY_NOW_TTL_MS = 10_000
+const SPOTIFY_RECENT_TTL_MS = 60_000
+const SPOTIFY_TOP_TTL_MS = 6 * 60 * 60_000
+const SPOTIFY_RECENT_LIMIT = 50
+const SPOTIFY_TOP_LIMIT = 20
+const SPOTIFY_RANGES = { short: 'short_term', medium: 'medium_term', long: 'long_term' }
+const SPOTIFY_ID_RE = /^[A-Za-z0-9]{22}$/
+const SPOTIFY_ART_HOSTS = new Set(['i.scdn.co', 'image-cdn-ak.spotifycdn.com', 'image-cdn-fa.spotifycdn.com'])
+
+class SpotifyError extends Error {
+  constructor(code, status) {
+    super(code)
+    this.code = code
+    this.status = status
+  }
+}
+
+const SPOTIFY_TOKEN_FILE = path.join(STATE_DIR, 'spotify-token.json')
+const SPOTIFY_ENV_REFRESH = (process.env.SPOTIFY_REFRESH_TOKEN || '').trim()
+const spotifyEnvHash = crypto.createHash('sha256').update(SPOTIFY_ENV_REFRESH).digest('hex')
+let spotifyRefreshToken = SPOTIFY_ENV_REFRESH
+try {
+  const saved = JSON.parse(fs.readFileSync(SPOTIFY_TOKEN_FILE, 'utf8'))
+  if (saved?.from === spotifyEnvHash && typeof saved.refresh === 'string' && saved.refresh) spotifyRefreshToken = saved.refresh
+} catch {
+}
+function saveSpotifyRefresh(refresh) {
+  try {
+    fs.writeFileSync(SPOTIFY_TOKEN_FILE, JSON.stringify({ from: spotifyEnvHash, refresh }), { mode: 0o600 })
+  } catch (err) {
+    log.warn('upstream', 'could not save the rotated Spotify refresh token', { detail: err?.message })
+  }
+}
+let spotifyToken = null
+let spotifyTokenInflight = null
+let spotifyRevoked = false
+const spotifyCache = new Map()
+const spotifyInflight = new Map()
+
+function spotifyAccessToken() {
+  if (spotifyRevoked) return Promise.reject(new SpotifyError('spotify_disabled', 503))
+  if (spotifyToken && Date.now() < spotifyToken.until) return Promise.resolve(spotifyToken.value)
+  spotifyTokenInflight ??= withTimeout(async (signal) => {
+    const res = await fetch(SPOTIFY_ACCOUNTS, {
+      method: 'POST',
+      headers: {
+        authorization: `Basic ${Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
+        'content-type': 'application/x-www-form-urlencoded',
+        accept: 'application/json',
+      },
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: spotifyRefreshToken }).toString(),
+      signal,
+    })
+    const body = await res.json().catch(() => null)
+    if (res.status === 400 || res.status === 401) {
+      if (['invalid_grant', 'invalid_client'].includes(body?.error)) {
+        spotifyRevoked = true
+        log.error('upstream', `Spotify refused the ${body.error === 'invalid_client' ? 'client id/secret' : 'refresh token (they expire after 180 days)'} — /listening is off until SPOTIFY_* is replaced; run node scripts/spotify-token.mjs`)
+        throw new SpotifyError('spotify_disabled', 503)
+      }
+    }
+    if (!res.ok) throw new Error(`spotify token ${res.status}`)
+    if (typeof body?.access_token !== 'string') throw new Error('spotify token: no access_token')
+    if (typeof body.refresh_token === 'string' && body.refresh_token && body.refresh_token !== spotifyRefreshToken) {
+      spotifyRefreshToken = body.refresh_token
+      saveSpotifyRefresh(spotifyRefreshToken)
+    }
+    const ttl = Math.max(60, Number(body.expires_in) || 3600)
+    spotifyToken = { value: body.access_token, until: Date.now() + (ttl - 60) * 1000 }
+    return spotifyToken.value
+  }).finally(() => {
+    spotifyTokenInflight = null
+  })
+  return spotifyTokenInflight
+}
+
+async function spotifyGet(pathname, retried = false) {
+  const token = await spotifyAccessToken()
+  return withTimeout(async (signal) => {
+    const res = await fetch(`${SPOTIFY_API}${pathname}`, { headers: { authorization: `Bearer ${token}`, accept: 'application/json' }, signal })
+    if (res.status === 401 && !retried) {
+      spotifyToken = null
+      return spotifyGet(pathname, true)
+    }
+    if (res.status === 204) return null
+    if (res.status === 429) {
+      log.warn('upstream', `rate limited by Spotify on ${pathname.split('?')[0]}`, { detail: res.headers.get('retry-after') ? `retry-after ${res.headers.get('retry-after')}s` : undefined })
+      throw new SpotifyError('rate_limited', 429)
+    }
+    if (res.status === 403) {
+      log.error('upstream', `Spotify answered 403 on ${pathname.split('?')[0]} — the refresh token is missing a scope`)
+      throw new SpotifyError('spotify_forbidden', 502)
+    }
+    if (!res.ok) throw new Error(`spotify ${pathname.split('?')[0]} ${res.status}`)
+    const text = await res.text()
+    return text ? JSON.parse(text) : null
+  })
+}
+
+const spotifyText = (value, max = 200) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const spotifyId = (value) => (SPOTIFY_ID_RE.test(String(value || '')) ? String(value) : null)
+const spotifyLink = (kind, id) => (id ? `https://open.spotify.com/${kind}/${id}` : null)
+
+function spotifyImages(images) {
+  const list = (Array.isArray(images) ? images : [])
+    .filter((img) => {
+      try {
+        const u = new URL(img?.url)
+        return u.protocol === 'https:' && SPOTIFY_ART_HOSTS.has(u.hostname)
+      } catch {
+        return false
+      }
+    })
+    .map((img) => ({ url: img.url, width: Number(img.width) || 300 }))
+    .sort((a, b) => a.width - b.width)
+  if (!list.length) return { art: null, thumb: null }
+  return {
+    art: (list.find((img) => img.width >= 300) || list.at(-1)).url,
+    thumb: (list.find((img) => img.width >= 64) || list.at(-1)).url,
+  }
+}
+
+function spotifyArtistRef(artist) {
+  const id = spotifyId(artist?.id)
+  return { name: spotifyText(artist?.name, 120) || 'Unknown artist', url: spotifyLink('artist', id) }
+}
+
+function spotifyTrack(track) {
+  if (!track || typeof track !== 'object' || track.type !== 'track') return null
+  const id = spotifyId(track.id)
+  const albumId = spotifyId(track.album?.id)
+  const duration = Number(track.duration_ms)
+  return {
+    id,
+    title: spotifyText(track.name) || 'Untitled',
+    artists: (Array.isArray(track.artists) ? track.artists : []).slice(0, 6).map(spotifyArtistRef),
+    album: { name: spotifyText(track.album?.name), url: spotifyLink('album', albumId) },
+    ...spotifyImages(track.album?.images),
+    url: spotifyLink('track', id),
+    durationMs: Number.isFinite(duration) && duration > 0 ? Math.round(duration) : null,
+    explicit: Boolean(track.explicit),
+  }
+}
+
+function spotifyArtist(artist) {
+  if (!artist || typeof artist !== 'object') return null
+  const id = spotifyId(artist.id)
+  return {
+    id,
+    name: spotifyText(artist.name, 120) || 'Unknown artist',
+    ...spotifyImages(artist.images),
+    url: spotifyLink('artist', id),
+    genres: (Array.isArray(artist.genres) ? artist.genres : []).map((g) => spotifyText(g, 40)).filter(Boolean).slice(0, 3),
+  }
+}
+
+async function fetchSpotifyNow() {
+  const data = await spotifyGet('/me/player/currently-playing')
+  const at = Date.now()
+  if (!data) return { playing: false, kind: null, track: null, progressMs: null, at }
+  const kind = ['track', 'episode', 'ad'].includes(data.currently_playing_type) ? data.currently_playing_type : 'unknown'
+  const track = spotifyTrack(data.item)
+  const progress = Number(data.progress_ms)
+  return {
+    playing: Boolean(data.is_playing),
+    kind,
+    track,
+    progressMs: track && Number.isFinite(progress) && progress >= 0 ? Math.min(Math.round(progress), track.durationMs ?? Infinity) : null,
+    at,
+  }
+}
+
+async function fetchSpotifyRecent() {
+  const data = await spotifyGet(`/me/player/recently-played?limit=${SPOTIFY_RECENT_LIMIT}`)
+  const items = (Array.isArray(data?.items) ? data.items : [])
+    .map((item) => ({ track: spotifyTrack(item?.track), playedAt: Date.parse(item?.played_at) }))
+    .filter((item) => item.track && Number.isFinite(item.playedAt))
+    .map((item) => ({ ...item, playedAt: new Date(item.playedAt).toISOString() }))
+  return { items, at: Date.now() }
+}
+
+async function fetchSpotifyTop(range) {
+  const term = SPOTIFY_RANGES[range]
+  const [tracks, artists] = await Promise.all([
+    spotifyGet(`/me/top/tracks?time_range=${term}&limit=${SPOTIFY_TOP_LIMIT}`),
+    spotifyGet(`/me/top/artists?time_range=${term}&limit=${SPOTIFY_TOP_LIMIT}`),
+  ])
+  return {
+    range,
+    tracks: (Array.isArray(tracks?.items) ? tracks.items : []).map(spotifyTrack).filter(Boolean),
+    artists: (Array.isArray(artists?.items) ? artists.items : []).map(spotifyArtist).filter(Boolean),
+    at: Date.now(),
+  }
+}
+
+function refreshSpotify(key, load) {
+  let job = spotifyInflight.get(key)
+  if (!job) {
+    job = load()
+      .then((data) => {
+        spotifyCache.set(key, { at: Date.now(), data })
+        return data
+      })
+      .finally(() => spotifyInflight.delete(key))
+    spotifyInflight.set(key, job)
+  }
+  return job
+}
+
+async function readSpotify(key, ttl, load, { stale = true } = {}) {
+  const hit = spotifyCache.get(key)
+  if (hit && Date.now() - hit.at < ttl) return hit.data
+  if (hit && stale) {
+    refreshSpotify(key, load).catch((err) => {
+      if (!(err instanceof SpotifyError)) log.warn('upstream', `spotify ${key} refresh failed`, { detail: err?.message })
+    })
+    return hit.data
+  }
+  return refreshSpotify(key, load)
+}
+
+const GH_API =(process.env.GITHUB_API || 'https://api.github.com').replace(/\/$/, '')
 const GH_STATS_TTL_MS = 60 * 60 * 1000
 const GH_STATS_REFRESH_MIN_MS = 2 * 60 * 1000
 const GH_STATS_CACHE_MAX = 100
@@ -1887,6 +2113,9 @@ const WEATHER_CACHE = { 'cache-control': 'public, max-age=300, stale-while-reval
 const WEATHER_STALE = { 'cache-control': 'public, max-age=60, stale-while-revalidate=3600' }
 const CHART_CACHE = { 'cache-control': 'public, max-age=300, stale-while-revalidate=3600' }
 const CONTRIBUTIONS_CACHE = { 'cache-control': 'public, max-age=600, stale-while-revalidate=86400' }
+const SPOTIFY_NOW_CACHE = { 'cache-control': 'public, max-age=10' }
+const SPOTIFY_RECENT_CACHE = { 'cache-control': 'public, max-age=60, stale-while-revalidate=300' }
+const SPOTIFY_TOP_CACHE = { 'cache-control': 'public, max-age=3600, stale-while-revalidate=86400' }
 
 const CLIENT_LOG_WINDOW_MS = 10 * 60_000
 const CLIENT_LOG_MAX = 40
@@ -1927,9 +2156,10 @@ function systemReport() {
       github: Boolean(GH_TOKEN),
       blog: Boolean(BLOG_REPO && BLOG_TOKEN),
       discord: true,
+      spotify: SPOTIFY_ON && !spotifyRevoked,
     },
     state: { dir: STATE_DIR, files, reviews: reviews.length, invites: invites.length, hitDays: Object.keys(hits).length, vitalDays: Object.keys(vitals).length, logs: logSize() },
-    caches: { search: cache.size, top: topCache.size, contributions: ghCache.size, stats: ghStatsCache.size, discord: discordCache.size, sessions: userCache.size, rateLimits: rateLimitSize() },
+    caches: { search: cache.size, top: topCache.size, contributions: ghCache.size, stats: ghStatsCache.size, discord: discordCache.size, spotify: spotifyCache.size, sessions: userCache.size, rateLimits: rateLimitSize() },
     guard: { origins: [...ALLOWED_ORIGINS] },
     mirrors: [...PIPED, ...INVIDIOUS].map((base) => ({ base, kind: PIPED.includes(base) ? 'piped' : 'invidious', down: !mirrorUp(base), until: mirrorUp(base) ? null : new Date(mirrorDownUntil.get(base)).toISOString() })),
     reviews: { paused: settings.paused, approval: settings.approval, blockedTerms: settings.blockedTerms.length, pending: reviews.filter((r) => r.pending).length },
@@ -1956,7 +2186,7 @@ function bucketsFor(req, pathname) {
   ) {
     out.push('auth')
   }
-  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname === '/api/discord/user' || pathname === '/api/weather') out.push('upstream')
+  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname.startsWith('/api/spotify/') || pathname === '/api/discord/user' || pathname === '/api/weather') out.push('upstream')
   if ((pathname === '/api/reviews' && req.method === 'POST') || (/^\/api\/reviews\/[a-z0-9]{8}$/.test(pathname) && req.method === 'PATCH')) out.push('write')
   if (pathname === '/api/hit' || pathname === '/api/logs/client' || (pathname === '/api/vitals' && req.method === 'POST')) out.push('beacon')
   out.push('all')
@@ -2485,6 +2715,23 @@ const server = http.createServer(async (req, res) => {
       const stale = weatherCache && Date.now() - weatherCache.at >= WEATHER_TTL_MS
       if (stale) log.info('upstream', 'serving stale athens weather while the upstream recovers')
       return json(res, 200, weatherCache.data, stale ? WEATHER_STALE : WEATHER_CACHE)
+    }
+
+    if (url.pathname === '/api/spotify/now' || url.pathname === '/api/spotify/recent' || url.pathname === '/api/spotify/top') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      if (!SPOTIFY_ON) return json(res, 503, { error: 'spotify_disabled' }, NO_STORE)
+      const kind = url.pathname.slice('/api/spotify/'.length)
+      const range = (url.searchParams.get('range') || 'short').toLowerCase()
+      if (kind === 'top' && !Object.hasOwn(SPOTIFY_RANGES, range)) return json(res, 400, { error: 'bad_range' }, NO_STORE)
+      try {
+        if (kind === 'now') return json(res, 200, await readSpotify('now', SPOTIFY_NOW_TTL_MS, fetchSpotifyNow, { stale: false }), SPOTIFY_NOW_CACHE)
+        if (kind === 'recent') return json(res, 200, await readSpotify('recent', SPOTIFY_RECENT_TTL_MS, fetchSpotifyRecent), SPOTIFY_RECENT_CACHE)
+        return json(res, 200, await readSpotify(`top:${range}`, SPOTIFY_TOP_TTL_MS, () => fetchSpotifyTop(range)), SPOTIFY_TOP_CACHE)
+      } catch (err) {
+        if (err instanceof SpotifyError) return json(res, err.status, { error: err.code }, NO_STORE)
+        log.warn('upstream', `spotify ${kind} lookup failed`, { detail: err?.message })
+        return json(res, 502, { error: 'spotify_failed' }, NO_STORE)
+      }
     }
 
     if (url.pathname === '/api/github/contributions') {

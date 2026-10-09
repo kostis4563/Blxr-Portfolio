@@ -23,6 +23,9 @@ export const FULL_ENV = {
   GITHUB_TOKEN: 'ghp_test',
   GITHUB_USERS: 'octo',
   BLOG_REPO: 'octo/site',
+  SPOTIFY_CLIENT_ID: 'spotify-client',
+  SPOTIFY_CLIENT_SECRET: 'spotify-secret-test-only',
+  SPOTIFY_REFRESH_TOKEN: 'spotify-refresh-test-only',
 }
 
 export const confirmed = (id, email, extra = {}) => ({

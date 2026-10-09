@@ -40,6 +40,12 @@ const SECURITY_DESCRIPTION =
   'Report a security issue in blxr.net or a Blxr project: private email, keys, disclosure timeline, ' +
   'scope and safe harbour.'
 
+const IB_DESCRIPTION =
+  'IB grade calculator: turn paper and IA marks into a 1–7 grade, add up your diploma points out of 45 with TOK ' +
+  'and EE, and check them against your offers.'
+
+const LISTENING_DESCRIPTION = 'What Blxr is playing on Spotify right now, the last 50 songs, and the top tracks and artists lately.'
+
 const CONTACT_DESCRIPTION =
   'How to reach Blxr: email for anything, a private thread on blxr.net, or GitHub and Discord. ' +
   'Based in Athens, Greece (EET / EEST).'
@@ -145,6 +151,22 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'ib') {
+    return {
+      ...base,
+      title: 'IB Grade Calculator — Grades, Diploma Points and Offers',
+      description: IB_DESCRIPTION,
+    }
+  }
+
+  if (route.name === 'listening') {
+    return {
+      ...base,
+      title: 'Listening — Blxr on Spotify',
+      description: LISTENING_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'contact') {
     return {
       ...base,
@@ -229,6 +251,8 @@ const SHORT_LABELS = {
   uses: 'Uses',
   cv: 'CV',
   security: 'Security',
+  ib: 'IB grades',
+  listening: 'Listening',
   contact: 'Contact',
   payment: 'Payment',
   volunteer: 'Volunteering',
@@ -498,6 +522,32 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'ib') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'IB Grade Calculator',
+      description: IB_DESCRIPTION,
+      url: `${SITE_URL}/ib`,
+      applicationCategory: 'EducationalApplication',
+      operatingSystem: 'Any',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+      author: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
+  if (route.name === 'listening') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Listening',
+      description: LISTENING_DESCRIPTION,
+      url: `${SITE_URL}/listening`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'contact') {
     return {
       '@context': 'https://schema.org',
@@ -593,6 +643,10 @@ function crumbsFor(route) {
     items.push({ name: 'CV', item: urlOf('/cv') })
   } else if (route.name === 'security') {
     items.push({ name: 'Security', item: urlOf('/security') })
+  } else if (route.name === 'ib') {
+    items.push({ name: 'IB grades', item: urlOf('/ib') })
+  } else if (route.name === 'listening') {
+    items.push({ name: 'Listening', item: urlOf('/listening') })
   } else if (route.name === 'contact') {
     items.push({ name: 'Contact', item: urlOf('/contact') })
   } else if (route.name === 'payment') {
@@ -687,6 +741,10 @@ export function headTags(pathname) {
 
     ogRoute.name === 'home'
       ? '<link rel="preload" href="/api/weather" as="fetch" crossorigin="anonymous" fetchpriority="low" />'
+      : '',
+
+    ogRoute.name === 'listening'
+      ? '<link rel="preload" href="/api/spotify/now" as="fetch" crossorigin="anonymous" />\n    <link rel="preload" href="/api/spotify/recent" as="fetch" crossorigin="anonymous" />'
       : '',
 
     jsonLd
