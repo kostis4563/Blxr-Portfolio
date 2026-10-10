@@ -100,7 +100,7 @@ for (const image of await publicImages()) {
 
 for (const image of await publicImages()) {
   if (manifest[image.url] || VARIANT_SUFFIX.test(image.name)) continue
-  if (!/\.(webp|png|jpe?g|svg|gif|avif|mp4)$/.test(image.name)) continue
+  if (!/\.(webp|png|jpe?g|svg|gif|avif|mp4|webm)$/.test(image.name)) continue
   const source = await readFile(join(pub, image.dir, image.name))
   manifest[image.url] = {
     v: createHash('sha256').update(source).digest('hex').slice(0, 8),

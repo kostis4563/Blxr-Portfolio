@@ -14,8 +14,13 @@ grant execute on function public.mfa_satisfied() to authenticated;
 
 create or replace function public.is_board_admin()
 returns boolean
-language sql stable as $$
-  select coalesce(auth.jwt() ->> 'email', '') = 'kostisnomikos@gmail.com'
+language sql stable security definer set search_path = public as $$
+  select exists (
+           select 1 from auth.users
+           where id = auth.uid()
+             and lower(email) = 'kostisnomikos@gmail.com'
+             and email_confirmed_at is not null
+         )
      and public.mfa_satisfied();
 $$;
 
@@ -241,6 +246,9 @@ create index if not exists board_cards_agenda_idx on public.board_cards (due)
 create or replace function public.boards_touch()
 returns trigger language plpgsql as $$
 begin
+  new.id = old.id;
+  new.created_at = old.created_at;
+  new.seq = greatest(new.seq, old.seq);
   new.rev = coalesce(old.rev, 0) + 1;
   if new.pinned is distinct from old.pinned
      and to_jsonb(new) - 'pinned' - 'rev' - 'updated_at'
@@ -274,6 +282,12 @@ begin
     new.seq = next_seq;
     new.owner = board_owner;
   else
+    if new.board_id is distinct from old.board_id
+       and not exists (select 1 from public.boards where id = new.board_id and owner = old.owner) then
+      raise exception 'that board is not yours';
+    end if;
+    new.id = old.id;
+    new.created_at = old.created_at;
     new.updated_at = now();
     new.owner = old.owner;
     new.seq = old.seq;

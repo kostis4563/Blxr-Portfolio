@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, GALLERY_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, GALLERY_PATH, TERMINAL_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -288,6 +288,16 @@ export function buildCommands({
       href: GALLERY_PATH,
       run: () => navigate(GALLERY_PATH),
       keywords: 'gallery photos photography pictures images ui design screens shots dribbble portfolio',
+    },
+    {
+      id: 'page-terminal',
+      group: jump,
+      label: 'Terminal',
+      hint: 'The site as a shell',
+      icon: 'terminal',
+      href: TERMINAL_PATH,
+      run: () => navigate(TERMINAL_PATH),
+      keywords: 'terminal shell cli command line bash zsh console prompt type commands hacker',
     },
 
     ...SECTIONS.map((section) => ({

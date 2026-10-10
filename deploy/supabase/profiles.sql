@@ -164,6 +164,8 @@ drop index if exists public.profiles_visibility_idx;
 create or replace function public.profiles_touch()
 returns trigger language plpgsql as $$
 begin
+  new.id = old.id;
+  new.created_at = old.created_at;
   new.updated_at = now();
   return new;
 end $$;

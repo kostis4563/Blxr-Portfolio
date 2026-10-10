@@ -109,9 +109,24 @@ describe('hostile or damaged state', () => {
     try {
       assert.equal((await srv.request('/api/music/health')).status, 200)
       assert.deepEqual((await srv.request('/api/reviews')).body, { items: [], total: 0 })
+      const kept = (await readdir(stateDir)).filter((f) => f.startsWith('reviews.json.corrupt-'))
+      assert.equal(kept.length, 1, 'the unreadable file is set aside, not written over')
     } finally {
       await srv.cleanup()
     }
+  })
+
+  test('saves replace state files whole and leave no temp files behind', async () => {
+    const stateDir = await newStateDir()
+    const srv = await startServer({ stateDir })
+    await srv.request('/api/reviews', { method: 'POST', body: valid({ name: 'Atomic' }) })
+    const { code } = await srv.stop('SIGTERM')
+    assert.equal(code, 0)
+    const files = await readdir(stateDir)
+    assert.deepEqual(files.filter((f) => f.endsWith('.tmp')), [])
+    const saved = await readState(stateDir, 'reviews.json')
+    assert.equal(saved[0].name, 'Atomic')
+    await srv.cleanup()
   })
 
   test('malformed review and invite records are discarded on load', async () => {

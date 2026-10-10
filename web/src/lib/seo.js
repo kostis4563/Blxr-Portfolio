@@ -59,6 +59,9 @@ const LINKS_DESCRIPTION =
 const GALLERY_DESCRIPTION =
   'Gallery by Blxr: photos I took and UI designs I made, from city light to dashboards and product screens.'
 
+const TERMINAL_DESCRIPTION =
+  'blxr.net as a shell: type help, about, projects or contact, cd between pages, and find the commands that are not in help.'
+
 const VOLUNTEER_DESCRIPTION =
   'Volunteering by Blxr: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
 
@@ -210,6 +213,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'terminal') {
+    return {
+      ...base,
+      title: 'Terminal — blxr.net from the Command Line',
+      description: TERMINAL_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'login') {
     return {
       ...base,
@@ -269,6 +280,7 @@ const SHORT_LABELS = {
   links: 'Links',
   volunteer: 'Volunteering',
   gallery: 'Gallery',
+  terminal: 'Terminal',
   login: 'Sign in',
   dashboard: 'Dashboard',
   profile: 'Profile',
@@ -618,6 +630,18 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'terminal') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Terminal',
+      description: TERMINAL_DESCRIPTION,
+      url: `${SITE_URL}/terminal`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'library') {
     if (realEntries.length === 0) return null
     return {
@@ -680,6 +704,8 @@ function crumbsFor(route) {
     items.push({ name: 'Volunteering', item: urlOf('/volunteer') })
   } else if (route.name === 'gallery') {
     items.push({ name: 'Gallery', item: urlOf('/gallery') })
+  } else if (route.name === 'terminal') {
+    items.push({ name: 'Terminal', item: urlOf('/terminal') })
   } else if (route.name === 'library') {
     items.push({ name: 'FiveM Library', item: urlOf('/library') })
     if (route.itemId) {

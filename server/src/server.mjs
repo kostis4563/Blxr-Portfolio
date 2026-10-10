@@ -4,6 +4,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
 import { mailConfigured, sendMail, passwordChangedMail, describeClient } from './mail.mjs'
+import { readState, writeState } from './state.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
 import { rateLimit, rateLimitSize, originAllowed, ALLOWED_ORIGINS, bearerOf, jwtLooksUsable, isAal2, hasVerifiedFactor, fingerprint, safeEqual, isHttps, isJsonBody, API_HEADERS } from './guard.mjs'
 
@@ -172,16 +173,12 @@ const SNAPSHOT_INTERVAL_MS = 18 * 60 * 60 * 1000
 const MAX_HISTORY_MS = 8 * 24 * 60 * 60 * 1000
 
 let chartHistory = []
-try {
-  const parsed = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'))
+{
+  const parsed = readState(HISTORY_FILE)
   if (Array.isArray(parsed)) chartHistory = parsed
-} catch {
 }
 function saveHistory() {
-  try {
-    fs.writeFileSync(HISTORY_FILE, JSON.stringify(chartHistory))
-  } catch {
-  }
+  writeState(HISTORY_FILE, chartHistory)
 }
 
 const rankKey = (name, artist) => `${name}|${artist}`.toLowerCase().replace(/\s+/g, ' ').trim()
@@ -297,11 +294,9 @@ const HIT_PATH_RE = /^\/[A-Za-z0-9/_-]{0,48}$/
 let hits = {}
 let hitsDirty = false
 
-try {
-  hits = JSON.parse(fs.readFileSync(HITS_FILE, 'utf8'))
-} catch {
-
-  hits = {}
+{
+  const parsed = readState(HITS_FILE)
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) hits = parsed
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -312,10 +307,7 @@ function saveHits() {
 
   const cutoff = new Date(Date.now() - HITS_RETENTION_DAYS * 86_400_000).toISOString().slice(0, 10)
   for (const day of Object.keys(hits)) if (day < cutoff) delete hits[day]
-  try {
-    fs.writeFileSync(HITS_FILE, JSON.stringify(hits))
-  } catch {
-  }
+  if (!writeState(HITS_FILE, hits)) hitsDirty = true
 }
 setInterval(saveHits, HITS_SAVE_DEBOUNCE_MS).unref()
 
@@ -375,10 +367,9 @@ const VITALS_MAX = { LCP: 120_000, INP: 120_000, CLS: 25, FCP: 120_000, TTFB: 12
 let vitals = {}
 let vitalsDirty = false
 
-try {
-  vitals = JSON.parse(fs.readFileSync(VITALS_FILE, 'utf8'))
-} catch {
-  vitals = {}
+{
+  const parsed = readState(VITALS_FILE)
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) vitals = parsed
 }
 
 function saveVitals() {
@@ -386,10 +377,7 @@ function saveVitals() {
   vitalsDirty = false
   const cutoff = new Date(Date.now() - VITALS_RETENTION_DAYS * 86_400_000).toISOString().slice(0, 10)
   for (const day of Object.keys(vitals)) if (day < cutoff) delete vitals[day]
-  try {
-    fs.writeFileSync(VITALS_FILE, JSON.stringify(vitals))
-  } catch {
-  }
+  if (!writeState(VITALS_FILE, vitals)) vitalsDirty = true
 }
 setInterval(saveVitals, HITS_SAVE_DEBOUNCE_MS).unref()
 
@@ -494,10 +482,9 @@ const foldTerm = (s) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLo
 const SETTINGS_DEFAULT = { paused: false, approval: false, blockedTerms: [] }
 let settings = { ...SETTINGS_DEFAULT }
 let settingsDirty = false
-try {
-  const parsed = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'))
+{
+  const parsed = readState(SETTINGS_FILE)
   if (parsed && typeof parsed === 'object') settings = normalizeSettings(parsed)
-} catch {
 }
 function normalizeSettings(input) {
   return {
@@ -511,10 +498,7 @@ function normalizeSettings(input) {
 function saveSettings() {
   if (!settingsDirty) return
   settingsDirty = false
-  try {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings))
-  } catch {
-  }
+  if (!writeState(SETTINGS_FILE, settings)) settingsDirty = true
 }
 setInterval(saveSettings, HITS_SAVE_DEBOUNCE_MS).unref()
 
@@ -535,11 +519,9 @@ const isReviewRecord = (r) =>
   typeof r.at === 'string' &&
   !Number.isNaN(Date.parse(r.at))
 
-try {
-  const parsed = JSON.parse(fs.readFileSync(REVIEWS_FILE, 'utf8'))
+{
+  const parsed = readState(REVIEWS_FILE)
   if (Array.isArray(parsed)) reviews = parsed.filter(isReviewRecord)
-} catch {
-  reviews = []
 }
 {
   const kept = reviews.filter((r) => !REMOVED_REVIEWS.has(r.id))
@@ -561,10 +543,7 @@ function saveReviews() {
     if (Date.parse(r.at) >= cutoff) continue
     for (const key of SUBMITTER_KEYS) delete r[key]
   }
-  try {
-    fs.writeFileSync(REVIEWS_FILE, JSON.stringify(reviews))
-  } catch {
-  }
+  if (!writeState(REVIEWS_FILE, reviews)) reviewsDirty = true
 }
 setInterval(saveReviews, HITS_SAVE_DEBOUNCE_MS).unref()
 
@@ -660,20 +639,15 @@ const isInviteRecord = (i) =>
   typeof i.createdAt === 'string' &&
   typeof i.expiresAt === 'string'
 
-try {
-  const parsed = JSON.parse(fs.readFileSync(INVITES_FILE, 'utf8'))
+{
+  const parsed = readState(INVITES_FILE)
   if (Array.isArray(parsed)) invites = parsed.filter(isInviteRecord)
-} catch {
-  invites = []
 }
 
 function saveInvites() {
   if (!invitesDirty) return
   invitesDirty = false
-  try {
-    fs.writeFileSync(INVITES_FILE, JSON.stringify(invites))
-  } catch {
-  }
+  if (!writeState(INVITES_FILE, invites)) invitesDirty = true
 }
 setInterval(saveInvites, HITS_SAVE_DEBOUNCE_MS).unref()
 
@@ -950,17 +924,12 @@ const SPOTIFY_TOKEN_FILE = path.join(STATE_DIR, 'spotify-token.json')
 const SPOTIFY_ENV_REFRESH = (process.env.SPOTIFY_REFRESH_TOKEN || '').trim()
 const spotifyEnvHash = crypto.createHash('sha256').update(SPOTIFY_ENV_REFRESH).digest('hex')
 let spotifyRefreshToken = SPOTIFY_ENV_REFRESH
-try {
-  const saved = JSON.parse(fs.readFileSync(SPOTIFY_TOKEN_FILE, 'utf8'))
+{
+  const saved = readState(SPOTIFY_TOKEN_FILE)
   if (saved?.from === spotifyEnvHash && typeof saved.refresh === 'string' && saved.refresh) spotifyRefreshToken = saved.refresh
-} catch {
 }
 function saveSpotifyRefresh(refresh) {
-  try {
-    fs.writeFileSync(SPOTIFY_TOKEN_FILE, JSON.stringify({ from: spotifyEnvHash, refresh }), { mode: 0o600 })
-  } catch (err) {
-    log.warn('upstream', 'could not save the rotated Spotify refresh token', { detail: err?.message })
-  }
+  if (!writeState(SPOTIFY_TOKEN_FILE, { from: spotifyEnvHash, refresh })) log.warn('upstream', 'could not save the rotated Spotify refresh token')
 }
 let spotifyToken = null
 let spotifyTokenInflight = null
@@ -1170,16 +1139,12 @@ const ghStatsCache = new Map()
 const ghStatsInflight = new Map()
 let ghOwner = null
 
-try {
-  const saved = JSON.parse(fs.readFileSync(GH_STATS_FILE, 'utf8'))
+{
+  const saved = readState(GH_STATS_FILE)
   if (typeof saved?.key === 'string' && Number.isFinite(saved.at) && saved.data?.user?.login) ghStatsCache.set(saved.key, { at: saved.at, data: saved.data })
-} catch {
 }
 function saveGithubStats(key, entry) {
-  try {
-    fs.writeFileSync(GH_STATS_FILE, JSON.stringify({ key, ...entry }), { mode: 0o600 })
-  } catch {
-  }
+  writeState(GH_STATS_FILE, { key, ...entry })
 }
 
 const GH_STATS_USER_QUERY = `query($login: String!, $from: DateTime!, $to: DateTime!) {

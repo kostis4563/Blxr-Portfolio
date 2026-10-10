@@ -149,6 +149,52 @@ describe('report-errors: only our own failures reach the log', () => {
     installErrorReporting()
     expect(listeners.error.length).toBe(before)
   })
+
+  const thrown = (message, stack) => Object.assign(new TypeError(message), { stack: `TypeError: ${message}\n${stack}` })
+
+  test('a rejection thrown by a browser extension is dropped', async () => {
+    setDoc()
+    const { installErrorReporting } = await import('../../src/lib/report-errors.js')
+    installErrorReporting()
+
+    fireRejection({ reason: thrown("Cannot read properties of undefined (reading 'M_ID')", '    at e.init (chrome-extension://abcdef/content.js:1:2345)'), preventDefault: () => {} })
+    fireRejection({ reason: thrown('injected', '    at <anonymous>:1:88\n    at <anonymous>:3:1'), preventDefault: () => {} })
+    fireRejection({ reason: thrown('vendor', '    at x (https://cdn.example.com/widget.js:1:2)'), preventDefault: () => {} })
+    expect(messages()).toEqual([])
+  })
+
+  test('a rejection from our own bundle is still reported', async () => {
+    setDoc()
+    const { installErrorReporting } = await import('../../src/lib/report-errors.js')
+    installErrorReporting()
+
+    fireRejection({ reason: thrown('ours', '    at Array.map (<anonymous>)\n    at load (https://blxr.net/assets/index-abc.js:1:2)'), preventDefault: () => {} })
+    expect(messages()).toEqual(['TypeError: ours'])
+  })
+
+  test('an uncaught error from a foreign script or an opaque cross-origin one is dropped', async () => {
+    setDoc()
+    const { installErrorReporting } = await import('../../src/lib/report-errors.js')
+    installErrorReporting()
+
+    fireError({ target: globalThis.window, error: new Error('x'), message: 'x', filename: 'chrome-extension://abc/inject.js', lineno: 1, colno: 1 })
+    fireError({ target: globalThis.window, error: null, message: 'Script error.', filename: '' })
+    expect(messages()).toEqual([])
+  })
+
+  test('a stale chunk is left to chunk-recovery, and only reported if the fresh load still misses it', async () => {
+    setDoc()
+    const { installErrorReporting } = await import('../../src/lib/report-errors.js')
+    const { installChunkRecovery } = await import('../../src/lib/chunk-recovery.js')
+    installErrorReporting()
+    installChunkRecovery()
+
+    fireError(resource('link', 'https://blxr.net/assets/contact-page-X7v73EIS.js'))
+    expect(messages()).toEqual([])
+
+    fireError(resource('link', 'https://blxr.net/assets/contact-page-Y8w84FJT.js'))
+    expect(messages()).toEqual(['link https://blxr.net/assets/contact-page-Y8w84FJT.js'])
+  })
 })
 
 describe('chunk-recovery: a deploy cannot leave a tab on a dead chunk', () => {

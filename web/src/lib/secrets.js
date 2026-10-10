@@ -76,6 +76,7 @@ const LIST = [
       ['any 404', "you're wasted on arrival. double-click the 404 for the Game of Life"],
       ['reviews', 'leaving one is a mission passed'],
       ['messages', 'so is your first message in a dashboard thread'],
+      ['/terminal', 'the whole site as a shell. type secrets in there too'],
     ],
   ],
 ]

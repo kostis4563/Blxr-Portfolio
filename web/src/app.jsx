@@ -14,6 +14,7 @@ import PaymentPageImpl from '#ssr-page/payment'
 import LinksPageImpl from '#ssr-page/links'
 import VolunteerPageImpl from '#ssr-page/volunteer'
 import GalleryPageImpl from '#ssr-page/gallery'
+import TerminalPageImpl from '#ssr-page/terminal'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
 import PublicProfilePageImpl from '#ssr-page/public-profile'
@@ -27,6 +28,9 @@ import LandingMemes from './components/landing-memes'
 import LiveSelect from './components/live-select'
 import { Facepile, CommentPin, Inspect, FrameLabel, CanvasLayer } from './components/figma'
 import SiteFooter from './components/site-footer'
+import StripeBand from './components/stripe-band'
+import BottomBlur from './components/bottom-blur'
+import { CommandButton } from './components/command-button'
 import { trackPageVisit } from './lib/memes'
 import { useTheme } from './lib/use-theme'
 import { imageProps, SIZES } from './lib/images'
@@ -54,6 +58,7 @@ const ListeningPage = routePage(ListeningPageImpl, () => import('#client-page/li
 const ContactPage = routePage(ContactPageImpl, () => import('#client-page/contact'))
 const PaymentPage = routePage(PaymentPageImpl, () => import('#client-page/payment'))
 const LinksPage = routePage(LinksPageImpl, () => import('#client-page/links'))
+const TerminalPage = routePage(TerminalPageImpl, () => import('#client-page/terminal'))
 const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
 const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
@@ -352,6 +357,17 @@ function App() {
     )
   }
 
+  if (currentView === 'terminal') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <TerminalPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
   if (currentView === 'volunteer') {
     return (
       <>
@@ -409,7 +425,7 @@ function App() {
 
       <header
         id="main-header"
-        className="w-full max-w-[960px] bg-bg backdrop-blur-none md:bg-bg/90 md:backdrop-blur-md text-ink h-[60px] fixed top-0 left-1/2 -translate-x-1/2 z-50 border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
+        className="w-full max-w-[960px] bg-bg backdrop-blur-none md:bg-bg/90 md:backdrop-blur-md text-ink h-[60px] fixed top-0 left-1/2 -translate-x-1/2 z-50 frame-bleed-b border-b border-l border-dashed border-r border-line transition-[border-color] duration-200"
       >
         <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-3">
           {}
@@ -447,6 +463,10 @@ function App() {
                 </a>
               ))}
             </div>
+
+            <span aria-hidden="true" className={`${navDivider} hidden md:block`} />
+
+            <CommandButton className="hidden md:inline-flex h-9 items-center gap-2 rounded-md px-2 outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30" />
 
             <span aria-hidden="true" className={`${navDivider} hidden md:block`} />
 
@@ -546,11 +566,16 @@ function App() {
               {...link(CV_PATH)}
               className="group inline-flex items-center gap-1.5 text-[13px] text-ink-muted outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong"
             >
-              <span>or read the CV</span>
+              <span>
+                or read{' '}
+                <span className="underline decoration-line-strong decoration-wavy decoration-1 underline-offset-[5px] transition-[text-decoration-color] duration-200 group-hover:decoration-ink-muted group-focus-visible:decoration-ink-muted">the CV</span>
+              </span>
               <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5">→</span>
             </a>
           </div>
         </section>
+
+        <StripeBand className="-mx-6 w-[calc(100%+3rem)]" />
 
         <section id="skills" className="relative scroll-mt-8 w-[calc(100%+3rem)] -mx-6 px-6 pt-12 text-left">
           <FrameLabel className="left-6 top-4">About</FrameLabel>
@@ -763,9 +788,11 @@ function App() {
           </div>
         </section>
 
-        <SiteFooter id="site-footer" showGrid className="w-[calc(100%+3rem)] -mx-6 -mb-6 mt-16" />
+        <SiteFooter id="site-footer" showGrid stripe className="w-[calc(100%+3rem)] -mx-6 -mb-6 mt-16" />
 
       </main>
+
+      <BottomBlur />
 
       <CanvasLayer />
 

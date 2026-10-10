@@ -1,5 +1,5 @@
-import fs from 'node:fs'
 import path from 'node:path'
+import { readState, writeState } from './state.mjs'
 
 export const LEVELS = ['error', 'warn', 'info']
 export const SOURCES = ['server', 'api', 'client', 'upstream', 'github', 'auth', 'reviews', 'mail']
@@ -20,22 +20,15 @@ const isEntry = (e) =>
 
 export function openLog(stateDir) {
   file = path.join(stateDir, 'logs.json')
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'))
-    if (Array.isArray(parsed?.entries)) entries = parsed.entries.filter(isEntry).slice(-MAX_ENTRIES)
-    nextId = Math.max(Number(parsed?.nextId) || 1, ...entries.map((e) => e.id + 1))
-  } catch {
-    entries = []
-  }
+  const parsed = readState(file)
+  entries = Array.isArray(parsed?.entries) ? parsed.entries.filter(isEntry).slice(-MAX_ENTRIES) : []
+  nextId = Math.max(Number(parsed?.nextId) || 1, ...entries.map((e) => e.id + 1))
 }
 
 export function saveLog() {
   if (!dirty || !file) return
   dirty = false
-  try {
-    fs.writeFileSync(file, JSON.stringify({ nextId, entries }))
-  } catch {
-  }
+  if (!writeState(file, { nextId, entries })) dirty = true
 }
 
 const dedupeKey = (e) => [e.level, e.source, e.message, e.path || '', e.method || '', e.status || '', e.code || ''].join('\u001f')

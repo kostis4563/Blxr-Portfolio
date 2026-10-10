@@ -1,3 +1,5 @@
+import { willRecover } from './chunk-recovery'
+
 const ENDPOINT = '/api/logs/client'
 const MAX_PER_PAGE = 6
 const STACK_MAX = 3000
@@ -43,6 +45,17 @@ const sameOrigin = (url) => {
 
 const isOurs = (url) => Boolean(url) && sameOrigin(url)
 
+const FRAME = /^\s+at\s|^[^\s@]*@\S+:\d+:\d+$/
+const EXTENSION = /(chrome|moz|safari|safari-web|ms-browser)-extension:\/\//
+
+const isForeign = (stack) => {
+  if (typeof stack !== 'string' || !stack) return false
+  if (EXTENSION.test(stack)) return true
+  const frames = stack.split('\n').filter((line) => FRAME.test(line))
+  if (!frames.length || frames.some((line) => line.includes(window.location.origin))) return false
+  return frames.some((line) => /https?:\/\//.test(line)) || frames.every((line) => line.includes('<anonymous>'))
+}
+
 export function installErrorReporting() {
   if (typeof window === 'undefined' || window.__blxrErrorsInstalled) return
   window.__blxrErrorsInstalled = true
@@ -53,11 +66,14 @@ export function installErrorReporting() {
       const url = target.src || target.href
       if (!url) return
       if (!isOurs(String(url))) return
+      if (willRecover(String(url))) return
       post({ kind: 'resource', message: `${target.tagName.toLowerCase()} ${String(url).slice(0, 300)}` })
       return
     }
+    if (event.filename && !isOurs(event.filename)) return
+    if (!event.error && !event.filename && /^Script error\.?$/.test(event.message || '')) return
     const { message, stack } = event.error ? describe(event.error) : { message: event.message }
-    if (isStaleChunk(message)) return
+    if (isStaleChunk(message) || isForeign(stack)) return
     post({ kind: 'error', message, stack, detail: event.filename ? `${event.filename.split('/').pop()}:${event.lineno}:${event.colno}` : undefined })
   }, true)
 
@@ -65,7 +81,7 @@ export function installErrorReporting() {
     const reason = event.reason
     if (reason?.name === 'AbortError') return
     const described = describe(reason)
-    if (isStaleChunk(described.message)) return
+    if (isStaleChunk(described.message) || isForeign(described.stack)) return
     post({ kind: 'rejection', ...described })
   })
 }

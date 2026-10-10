@@ -94,6 +94,7 @@ export const IMAGES = {
   '/library/vehicle-interaction-menu.webp': { v: 'd2d5e560', ext: '.webp', widths: [480, 768, 1200] },
   '/og.png': { v: '7cdc12d5', ext: '.png', widths: [] },
   '/parkour.mp4': { v: 'aacd5769', ext: '.mp4', widths: [] },
+  '/parkour.webm': { v: '81c306f5', ext: '.webm', widths: [] },
   '/parkour.webp': { v: '14ef65a4', ext: '.webp', widths: [] },
   '/pfp.webp': { v: 'ab22cc42', ext: '.webp', widths: [128, 192] },
   '/web-scanner.webp': { v: 'f48442ea', ext: '.webp', widths: [480, 768, 1200] },

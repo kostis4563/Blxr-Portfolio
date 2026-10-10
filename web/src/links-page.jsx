@@ -14,9 +14,15 @@ function Row({ item }) {
         {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
         className={`group flex items-baseline justify-between gap-6 border-b border-dashed border-line py-3.5 ${FOCUS}`}
       >
-        <span className="text-[15px] text-ink-strong">{item.label}</span>
-        <span className="font-mono text-[12.5px] text-ink-subtle transition-colors duration-200 group-hover:text-ink-strong">
+        <span className="text-[15px] text-ink-strong transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1 group-focus-visible:translate-x-1">{item.label}</span>
+        <span className="flex items-baseline gap-1.5 font-mono text-[12.5px] text-ink-subtle transition-colors duration-200 group-hover:text-ink-strong">
           {item.detail}
+          <span
+            aria-hidden="true"
+            className="inline-block w-3 -translate-x-1 opacity-0 transition-[opacity,transform] duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
+          >
+            {external ? '↗' : '→'}
+          </span>
         </span>
       </a>
     </li>
@@ -26,7 +32,7 @@ function Row({ item }) {
 export default function LinksPage({ theme, onToggleTheme }) {
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
-      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
+      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 frame-bleed-b border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
         <div className="w-full flex items-center justify-between">
           <a
             {...link(HOME_PATH)}

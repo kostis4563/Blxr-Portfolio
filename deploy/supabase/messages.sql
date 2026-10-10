@@ -13,8 +13,13 @@ grant execute on function public.mfa_satisfied() to authenticated;
 
 create or replace function public.is_site_owner()
 returns boolean
-language sql stable as $$
-  select coalesce(auth.jwt() ->> 'email', '') = 'kostisnomikos@gmail.com'
+language sql stable security definer set search_path = public as $$
+  select exists (
+           select 1 from auth.users
+           where id = auth.uid()
+             and lower(email) = 'kostisnomikos@gmail.com'
+             and email_confirmed_at is not null
+         )
      and public.mfa_satisfied();
 $$;
 
@@ -142,8 +147,12 @@ create or replace function public.threads_stamp()
 returns trigger
 language plpgsql as $$
 begin
+  new.id = old.id;
   new.member = old.member;
   new.created_at = old.created_at;
+  if new.updated_at is distinct from old.updated_at then
+    new.updated_at = now();
+  end if;
   if public.is_site_owner() then
     new.member_seen_at = old.member_seen_at;
   else
@@ -228,6 +237,16 @@ begin
       raise exception 'malformed reaction';
     end if;
   end loop;
+
+  if tg_op = 'UPDATE' and new.deleted_at is null and exists (
+    select 1
+    from (select jsonb_object_keys(old.reactions) union select jsonb_object_keys(new.reactions)) k (emoji)
+    where array(select w from jsonb_array_elements_text(coalesce(old.reactions -> k.emoji, '[]'::jsonb)) w where w <> auth.uid()::text order by w)
+       is distinct from
+          array(select w from jsonb_array_elements_text(coalesce(new.reactions -> k.emoji, '[]'::jsonb)) w where w <> auth.uid()::text order by w)
+  ) then
+    raise exception 'you can only change your own reactions';
+  end if;
 
   return new;
 end $$;
@@ -469,6 +488,11 @@ create policy "messages: add own thread files" on storage.objects
   for insert with check (bucket_id = 'messages' and exists (
     select 1 from public.threads t
     where t.id::text = (storage.foldername(name))[1] and (t.member = (select auth.uid()) or (select public.is_site_owner()))
+  ) and not exists (
+    select 1 from public.messages m, jsonb_array_elements(m.files) f
+    where m.thread_id::text = (storage.foldername(name))[1]
+      and m.author <> (select auth.uid())
+      and name in (f ->> 'path', f ->> 'thumb')
   ));
 
 drop policy if exists "messages: remove own thread files" on storage.objects;

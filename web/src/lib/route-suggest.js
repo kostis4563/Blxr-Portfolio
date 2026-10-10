@@ -2,7 +2,7 @@ import { fold } from './text-match.js'
 
 const MAX_LEN = 96
 
-function editDistance(a, b) {
+export function editDistance(a, b) {
   if (a === b) return 0
   if (!a.length) return b.length
   if (!b.length) return a.length

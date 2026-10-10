@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import SiteFooter from './components/site-footer'
+import BottomBlur from './components/bottom-blur'
 import { CommandButton } from './components/command-button'
 import { Icon } from './components/icon'
 import { Bone } from './components/skeleton'
@@ -364,7 +365,7 @@ export default function GalleryPage({ theme, onToggleTheme }) {
 
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-clip antialiased font-sans animate-view-in">
-      <header className="w-full max-w-[1120px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
+      <header className="w-full max-w-[1120px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 frame-bleed-b border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
         <div className="w-full flex items-center justify-between">
           <a
             {...link(HOME_PATH)}
@@ -433,8 +434,10 @@ export default function GalleryPage({ theme, onToggleTheme }) {
           </div>
         )}
 
-        <SiteFooter gutter={GUTTER} className="mt-auto" />
+        <SiteFooter gutter={GUTTER} stripe className="mt-auto" />
       </main>
+
+      <BottomBlur />
 
       {viewIndex >= 0 && <Lightbox items={ordered} index={viewIndex} onClose={close} onStep={step} />}
     </div>

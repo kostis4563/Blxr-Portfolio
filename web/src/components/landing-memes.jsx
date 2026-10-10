@@ -3,6 +3,7 @@ import { ACHIEVEMENTS, achievement, funEnabled, onDesktop, onFunChange, reducedM
 import { imageUrl } from '../lib/images'
 
 const CLIP = imageUrl('/parkour.mp4')
+const CLIP_WEBM = imageUrl('/parkour.webm')
 const POSTER = imageUrl('/parkour.webp')
 
 const SKIM_SCREENS_PER_SECOND = 2.5
@@ -299,10 +300,7 @@ function Memes() {
 
   const fail = () => {
     broken.current = true
-    if (video.current) {
-      video.current.removeAttribute('src')
-      video.current.load()
-    }
+    video.current?.pause()
     setCalled(false)
     setSplit(false)
     setLeaving(null)
@@ -373,7 +371,6 @@ function Memes() {
       <div className="parkour-screen" inert>
         <video
           ref={video}
-          src={CLIP}
           poster={POSTER}
           preload="none"
           muted
@@ -382,7 +379,10 @@ function Memes() {
           disablePictureInPicture
           onTimeUpdate={onTimeUpdate}
           onError={fail}
-        />
+        >
+          <source src={CLIP} type="video/mp4" />
+          <source src={CLIP_WEBM} type="video/webm" onError={fail} />
+        </video>
         <div className="parkour-progress">
           <div ref={progress} />
         </div>

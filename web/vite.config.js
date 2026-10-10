@@ -8,7 +8,7 @@ import blogPlugin from './blog-plugin.js'
 const obfuscate = process.env.OBFUSCATE === '1'
 const BUILT_AT = process.env.BUILT_AT || new Date().toISOString()
 
-const ROUTE_PAGES = ['projects', 'library', 'blog', 'reviews', 'uses', 'cv', 'security', 'ib', 'listening', 'contact', 'payment', 'links','volunteer', 'gallery', 'login', 'dashboard', 'public-profile', 'not-found']
+const ROUTE_PAGES = ['projects', 'library', 'blog', 'reviews', 'uses', 'cv', 'security', 'ib', 'listening', 'contact', 'payment', 'links','volunteer', 'gallery', 'terminal', 'login', 'dashboard', 'public-profile', 'not-found']
 
 const pageSource = (name) => fileURLToPath(new URL(`./src/${name}-page.jsx`, import.meta.url))
 const stubPage = fileURLToPath(new URL('./src/stub-page.js', import.meta.url))

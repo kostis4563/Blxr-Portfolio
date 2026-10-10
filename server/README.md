@@ -4,11 +4,12 @@ Backend behind `/api/` on blxr.net. Fans search out across public mirrors,
 caches results, gives the frontend one stable shape.
 
 Zero npm dependencies — `node:http`, `node:fs`, `node:path`, `node:crypto` only.
-Five files: `server.mjs` (everything), `guard.mjs` (rate limits, the
+Six files: `server.mjs` (everything), `guard.mjs` (rate limits, the
 same-origin rule and bearer-token checks, see [Security](#security)),
 `moderation.mjs` (the review blocklist, see [Reviews](#reviews)), `mail.mjs`
-(the one email the app sends itself, see [Account mail](#account-mail)) and
-`log.mjs` (the event log behind Dashboard → Logs, see [Log](#log)).
+(the one email the app sends itself, see [Account mail](#account-mail)),
+`log.mjs` (the event log behind Dashboard → Logs, see [Log](#log)) and
+`state.mjs` (crash-safe reads and writes of the state files, see [State](#state)).
 
 ## Running it
 
@@ -74,7 +75,17 @@ Everything in `guard.mjs`, applied before any route runs:
   `mfa_satisfied()` in `deploy/supabase/*.sql`. The owner routes also
   require the account's e-mail to be confirmed, so flipping "Confirm email"
   off in Supabase could never let a fresh sign-up with the owner's address
-  through.
+  through. Postgres applies the same rule: `is_site_owner()` and
+  `is_board_admin()` read the address and `email_confirmed_at` from
+  `auth.users` instead of trusting the token's `email` claim.
+- **No overwriting other people's rows.** The triggers in
+  `deploy/supabase/*.sql` pin `id`, `created_at`, `owner`/`author` and
+  similar columns on every update, so they can't be changed. A card can only move to a
+  board with the same owner. A message's reactions can only gain or lose
+  the caller's own id. A file in the `messages` bucket that another
+  person's message points at can't be uploaded again under the same name,
+  so deleting an attachment and putting a different file in its place is
+  refused.
 - **Secrets compared in constant time.** The review cookie and device
   tokens are matched with `crypto.timingSafeEqual`; the cookie carries
   `HttpOnly; SameSite=Strict; Secure` (the last one whenever nginx says the
@@ -535,7 +546,15 @@ View counts in `hits.json`, Core Web Vitals histograms in `vitals.json`,
 reviews in `reviews.json`, invite links in `review-invites.json`, the event
 log in `logs.json`. All flushed every 30s and on `SIGTERM`/`SIGINT`;
 hits and vitals pruned to the last 90 days per write, reviews kept
-indefinitely. Corrupt/missing file starts from zero.
+indefinitely.
+
+Every write goes through `writeState()` in `state.mjs`: the JSON goes to a
+`.tmp` file next to the target, is fsynced, then renamed over it, so a crash
+or full disk mid-write leaves the previous file intact instead of a
+truncated one. Files are created `0600`. A failed write leaves the data
+marked dirty, so the next flush tries again. A missing file starts from zero.
+A file that won't parse is renamed to `<name>.corrupt-<ms>` and the server
+starts from zero, so the next flush can never write over the only copy.
 
 All saved from one `saveAll()` in the signal handler (the first listener to
 call `process.exit()` ends the process, so a second handler for the same

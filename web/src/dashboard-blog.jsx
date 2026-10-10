@@ -11,6 +11,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 const DRAFT_KEY = (slug) => `blxr:blog:draft:${slug || 'new'}`
 const POLL_MS = 8000
 const POLL_FOR_MS = 20 * 60_000
+const COVER_PATH = /^\/\S+\.(webp|png|jpe?g|gif|avif|svg)$/i
 
 function readStored(key) {
   try {
@@ -614,7 +615,7 @@ function Preview({ form, body, images }) {
     for (const img of images) out = out.split(`src="${img.path}"`).join(`src="${img.previewUrl}"`)
     return out
   }, [deferredBody, images])
-  const cover = form.cover && (images.find((img) => img.path === form.cover)?.previewUrl || form.cover)
+  const cover = form.cover && (images.find((img) => img.path === form.cover)?.previewUrl || (COVER_PATH.test(form.cover) ? form.cover : ''))
   const tags = form.tags.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
 
   return (

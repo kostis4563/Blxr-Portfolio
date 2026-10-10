@@ -5,6 +5,8 @@ import { CommandButton } from './components/command-button'
 import { projectsList, findProject, isVideoLink } from './lib/projects'
 import { libraryList } from './lib/library'
 import SiteFooter from './components/site-footer'
+import StripeBand from './components/stripe-band'
+import BottomBlur from './components/bottom-blur'
 import { link, useRouteHash, HOME_PATH, LIBRARY_PATH, CONTACT_PATH } from './lib/router'
 import { imageProps, SIZES } from './lib/images'
 
@@ -188,6 +190,12 @@ function ProjectRow({ project, isOpen, isPlaying, onToggle, onWatch }) {
           className="project-thumb relative aspect-video cursor-pointer self-start overflow-hidden rounded-md bg-surface-raised"
         >
           <Cover project={project} sizes={SIZES.projectThumb} />
+          <div className="project-thumb-tint pointer-events-none absolute inset-0" />
+          <span className="project-thumb-badge pointer-events-none absolute right-1.5 bottom-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-black shadow-[0_4px_12px_-4px_rgb(0_0_0/0.5)] sm:right-2 sm:bottom-2 sm:h-7 sm:w-7">
+            <svg viewBox="0 0 16 16" className="h-3 w-3 sm:h-3.5 sm:w-3.5">
+              <path d={isOpen ? 'M4 8h8' : 'M4 8h8M8 4v8'} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </span>
           <div className="pointer-events-none absolute inset-0 rounded-md ring-1 ring-inset ring-[var(--hairline)]" />
         </div>
 
@@ -299,7 +307,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-clip antialiased font-sans animate-view-in">
 
-      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
+      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 frame-bleed-b border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
         <div className="w-full flex items-center justify-between">
           <a
             {...link(HOME_PATH, onBack)}
@@ -321,7 +329,7 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
 
       <main className="w-full max-w-[960px] mx-auto flex flex-col min-h-screen pt-14 border-x border-dashed border-line bg-bg">
 
-        <section className={`pt-16 pb-12 sm:pt-24 sm:pb-16 animate-rise-in ${GUTTER}`}>
+        <section className={`border-b border-dashed border-line pt-16 pb-12 sm:pt-24 sm:pb-16 animate-rise-in ${GUTTER}`}>
           <div className="flex items-baseline justify-between gap-6">
             <p className={KICKER}>/ projects</p>
             <p className="font-mono text-[11px] tabular-nums text-ink-subtle">{projectsList.length} projects</p>
@@ -332,7 +340,9 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
           </p>
         </section>
 
-        <div className="border-t border-dashed border-line animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <StripeBand />
+
+        <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           {projectsList.map((project) => (
             <ProjectRow
               key={project.id}
@@ -353,9 +363,11 @@ export default function ProjectsPage({ onBack, theme, onToggleTheme }) {
           </ul>
         </section>
 
-        <SiteFooter gutter={GUTTER} className="mt-auto" />
+        <SiteFooter gutter={GUTTER} stripe className="mt-auto" />
 
       </main>
+
+      <BottomBlur />
 
     </div>
   )

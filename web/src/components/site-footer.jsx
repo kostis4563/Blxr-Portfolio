@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Icon } from './icon'
 import { GridToggle } from './figma'
+import StripeBand from './stripe-band'
 import {
   link,
   HOME_PATH,
@@ -17,6 +19,7 @@ import {
   SECURITY_PATH,
   IB_PATH,
   LISTENING_PATH,
+  TERMINAL_PATH,
 } from '../lib/router'
 import { GITHUB_URL, DISCORD_URL, CONTACT_EMAIL, SOCIAL_ICON_PATHS } from '../lib/profile'
 
@@ -31,6 +34,7 @@ const COLUMNS = [
       { label: 'Gallery', to: GALLERY_PATH },
       { label: 'IB grades', to: IB_PATH },
       { label: 'Listening', to: LISTENING_PATH },
+      { label: 'Terminal', to: TERMINAL_PATH },
     ],
   },
   {
@@ -64,11 +68,38 @@ const QUIET =
 
 const ICON_BUTTON = `flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface-hover ${QUIET}`
 
-export default function SiteFooter({ id, className = '', gutter = 'px-6', showGrid = false }) {
+const athensClock = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Athens',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+function LocalTime() {
+  const [time, setTime] = useState(null)
+
+  useEffect(() => {
+    const tick = () => setTime(athensClock.format(new Date()))
+    tick()
+    const timer = setInterval(tick, 15000)
+    return () => clearInterval(timer)
+  }, [])
+
+  if (!time) return null
+
+  return (
+    <span className="inline-flex items-center gap-1.5" title="My local time in Athens">
+      <span aria-hidden="true" className="live-dot relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
+      <time className="font-mono text-[11.5px] tabular-nums text-ink-muted">{time}</time>
+    </span>
+  )
+}
+
+export default function SiteFooter({ id, className = '', gutter = 'px-6', showGrid = false, stripe = false }) {
   const year = new Date().getFullYear()
 
   return (
     <footer id={id} className={`border-t border-dashed border-line text-[12.5px] text-ink-muted ${className}`}>
+      {stripe && <StripeBand />}
       <div className={`flex flex-col gap-10 py-12 md:flex-row md:justify-between ${gutter}`}>
         <div className="flex max-w-60 flex-col items-start gap-3">
           <a {...link(HOME_PATH)} aria-label="Blxr home" className={`font-bagus text-[22px] leading-none text-ink-strong ${QUIET}`}>
@@ -96,7 +127,10 @@ export default function SiteFooter({ id, className = '', gutter = 'px-6', showGr
       </div>
 
       <div className={`flex items-center justify-between gap-4 border-t border-dashed border-line py-4 ${gutter}`}>
-        <p className="text-[12px] text-ink-subtle">© {year} Blxr · Athens, Greece</p>
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-ink-subtle">
+          <span>© {year} Blxr · Athens, Greece</span>
+          <LocalTime />
+        </p>
 
         <ul className="-mr-2 flex items-center gap-0.5">
           {SOCIALS.map(({ label, href, path }) => (

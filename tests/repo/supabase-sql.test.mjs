@@ -78,4 +78,42 @@ describe('storage', () => {
       }
     }
   })
+
+  test('a message attachment cannot be uploaded again under a path someone else sent', () => {
+    const policy = files['messages.sql'].match(/create policy "messages: add own thread files"[\s\S]*?;/)[0]
+    assert.match(policy, /not exists \([\s\S]*m\.author <> \(select auth\.uid\(\)\)/)
+  })
+})
+
+const bodyOf = (sql, name) => functionsIn(sql).find((fn) => fn.name === name)?.text || ''
+
+describe('no overwriting', () => {
+  test('owner checks read auth.users, not the token email claim', () => {
+    for (const [file, sql] of all) {
+      for (const name of ['public.is_site_owner', 'public.is_board_admin']) {
+        const text = bodyOf(sql, name)
+        if (!text) continue
+        assert.doesNotMatch(text, /auth\.jwt\(\)\s*->>\s*'email'/, `${file}: ${name} trusts the email claim`)
+        assert.match(text, /email_confirmed_at is not null/, `${file}: ${name} accepts an unconfirmed address`)
+      }
+    }
+  })
+
+  test('update triggers pin identity columns', () => {
+    const pins = {
+      'profiles.sql': ['public.profiles_touch', ['id', 'created_at']],
+      'boards.sql': ['public.boards_touch', ['id', 'created_at']],
+      'messages.sql': ['public.threads_stamp', ['id', 'member', 'created_at']],
+    }
+    for (const [file, [fn, cols]] of Object.entries(pins)) {
+      const text = bodyOf(files[file], fn)
+      for (const col of cols) assert.match(text, new RegExp(`new\\.${col} = old\\.${col};`), `${file}: ${fn} lets ${col} change`)
+    }
+    const stamp = bodyOf(files['boards.sql'], 'public.board_cards_stamp')
+    for (const col of ['id', 'owner', 'seq', 'created_at']) assert.match(stamp, new RegExp(`new\\.${col} = old\\.${col};`))
+    assert.match(stamp, /new\.board_id is distinct from old\.board_id[\s\S]*owner = old\.owner/, 'a card can be moved onto a stranger\'s board')
+    const message = bodyOf(files['messages.sql'], 'public.messages_stamp')
+    for (const col of ['thread_id', 'author', 'from_owner', 'created_at']) assert.match(message, new RegExp(`new\\.${col} = old\\.${col};`))
+    assert.match(message, /you can only change your own reactions/)
+  })
 })

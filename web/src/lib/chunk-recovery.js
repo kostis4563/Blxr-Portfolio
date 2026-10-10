@@ -20,6 +20,10 @@ const attempted = () => {
   }
 }
 
+const ASSET = /\/assets\/|\.m?js(\?|$)|\.css(\?|$)/
+
+export const willRecover = (url) => typeof window !== 'undefined' && Boolean(window.__blxrChunkRecovery) && ASSET.test(url) && !attempted()
+
 const remember = () => {
   try {
     sessionStorage.setItem(STALE_MARK, window.location.pathname)
@@ -62,7 +66,7 @@ export function installChunkRecovery() {
     const target = event.target
     if (!target || target === window || !target.tagName) return
     const url = target.src || target.href || ''
-    if (!url || !/\/assets\/|\.m?js(\?|$)|\.css(\?|$)/.test(url)) return
+    if (!url || !ASSET.test(url)) return
     if (!isStaleChunkError(event.message)) recover()
   }, true)
 }
