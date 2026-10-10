@@ -115,6 +115,7 @@ const ROUTE_SOURCES = {
   listening: ['src/listening-page.jsx', 'src/lib/listening.js'],
   contact: ['src/contact-page.jsx', 'src/lib/profile.js'],
   payment: ['src/payment-page.jsx', 'src/lib/payment.js'],
+  links: ['src/links-page.jsx', 'src/lib/links.js', 'src/lib/profile.js'],
   volunteer: ['src/volunteer-page.jsx', 'src/lib/volunteer.js'],
   gallery: ['src/gallery-page.jsx', 'src/lib/gallery.js'],
 }

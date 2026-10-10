@@ -11,6 +11,7 @@ import {
   REVIEWS_PATH,
   CONTACT_PATH,
   PAYMENT_PATH,
+  LINKS_PATH,
   VOLUNTEER_PATH,
   GALLERY_PATH,
   SECURITY_PATH,
@@ -47,6 +48,7 @@ const COLUMNS = [
     links: [
       { label: 'Contact', to: CONTACT_PATH },
       { label: 'Payment', to: PAYMENT_PATH },
+      { label: 'Links', to: LINKS_PATH },
       { label: 'Email', href: `mailto:${CONTACT_EMAIL}` },
     ],
   },

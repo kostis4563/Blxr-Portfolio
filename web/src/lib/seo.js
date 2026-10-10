@@ -53,6 +53,9 @@ const CONTACT_DESCRIPTION =
 const PAYMENT_DESCRIPTION =
   'Payment methods Blxr accepts: PayPal, Paysafecard, Revolut, Wise, SEPA bank transfer and crypto (BTC, ETH, USDT, LTC).'
 
+const LINKS_DESCRIPTION =
+  'Every Blxr link on one page: GitHub, Discord, email, Amitista Studio and the best of blxr.net.'
+
 const GALLERY_DESCRIPTION =
   'Gallery by Blxr: photos I took and UI designs I made, from city light to dashboards and product screens.'
 
@@ -183,6 +186,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'links') {
+    return {
+      ...base,
+      title: 'Links — Everywhere to Find Blxr',
+      description: LINKS_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'volunteer') {
     return {
       ...base,
@@ -255,6 +266,7 @@ const SHORT_LABELS = {
   listening: 'Listening',
   contact: 'Contact',
   payment: 'Payment',
+  links: 'Links',
   volunteer: 'Volunteering',
   gallery: 'Gallery',
   login: 'Sign in',
@@ -571,6 +583,17 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'links') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: 'Links',
+      description: LINKS_DESCRIPTION,
+      url: `${SITE_URL}/links`,
+      mainEntity: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'volunteer') {
     return {
       '@context': 'https://schema.org',
@@ -651,6 +674,8 @@ function crumbsFor(route) {
     items.push({ name: 'Contact', item: urlOf('/contact') })
   } else if (route.name === 'payment') {
     items.push({ name: 'Payment', item: urlOf('/payment') })
+  } else if (route.name === 'links') {
+    items.push({ name: 'Links', item: urlOf('/links') })
   } else if (route.name === 'volunteer') {
     items.push({ name: 'Volunteering', item: urlOf('/volunteer') })
   } else if (route.name === 'gallery') {

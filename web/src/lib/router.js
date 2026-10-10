@@ -24,6 +24,7 @@ export function parseRoute(path) {
   if (p === '/listening') return { name: 'listening' }
   if (p === '/contact') return { name: 'contact' }
   if (p === '/payment') return { name: 'payment' }
+  if (p === '/links') return { name: 'links' }
   if (p === '/volunteer') return { name: 'volunteer' }
   if (p === '/gallery') return { name: 'gallery' }
   if (p === '/login') return { name: 'login' }
@@ -70,7 +71,7 @@ const warmed = new Set()
 function heroImageFor(route) {
   if (route.name === 'projects') {
     const src = projectsList[0]?.image
-    return src ? { src, sizes: SIZES.archivePreview } : null
+    return src ? { src, sizes: SIZES.projectThumb } : null
   }
   if (route.name === 'library' && route.itemId) {
     const src = libraryList.find((entry) => entry.id === route.itemId)?.image
@@ -117,6 +118,7 @@ export const IB_PATH = '/ib'
 export const LISTENING_PATH = '/listening'
 export const CONTACT_PATH = '/contact'
 export const PAYMENT_PATH = '/payment'
+export const LINKS_PATH = '/links'
 export const VOLUNTEER_PATH = '/volunteer'
 export const GALLERY_PATH = '/gallery'
 export const LOGIN_PATH = '/login'
@@ -145,6 +147,7 @@ export const staticPaths = () => [
   LISTENING_PATH,
   CONTACT_PATH,
   PAYMENT_PATH,
+  LINKS_PATH,
   VOLUNTEER_PATH,
   GALLERY_PATH,
 ]

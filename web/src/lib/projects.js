@@ -155,37 +155,6 @@ export const projectsList = [
   },
 
   {
-    id: 'web-scanner',
-    title: 'Web Scanner',
-    badge: 'Open Source',
-    date: '2026',
-    category: 'Security Tooling',
-
-    url: null,
-    github: 'https://github.com/kostis4563/web-scanner',
-    image: '/web-scanner.webp',
-    imageAlt: 'Web Scanner app icon',
-
-    accent: '#3b82f6',
-    shortDescription: 'A native macOS app that scans a website for security weaknesses and exposed secrets, and explains how to fix what it finds.',
-    fullDescription: 'A native macOS app written in Swift and SwiftUI that scans a website for security weaknesses, exposed secrets and hidden content, and explains what each finding means and how to fix it. All networking runs client side through URLSession and every analysis happens locally on the machine, so nothing gets uploaded. The active probes use benign markers rather than working payloads and never send a state changing request, and the tool is intended for domains you own or have written permission to test.',
-    metrics: [
-      { label: 'Secret Patterns', value: '65+' },
-      { label: 'Scan Modes', value: '3' },
-      { label: 'License', value: 'MIT' }
-    ],
-    features: [
-      'Deep secret scan across 65+ credential patterns in HTML, JS, CSS, config files and source maps',
-      'Exposed file hunt for .env, .git/config, backups and SQL dumps, including blocked files recovered through side doors',
-      'Wordlist driven content discovery with recursion, extension fuzzing and open directory detection',
-      'Safe active probes for open redirect, reflected XSS, CRLF and host header injection, using benign markers only',
-      'Subdomain enumeration with dangling service takeover fingerprints',
-      'Findings rated Critical to Info and exportable as Markdown or JSON'
-    ],
-    tags: ['Swift', 'SwiftUI', 'macOS', 'URLSession']
-  },
-
-  {
     id: 'padoofood',
     title: 'PadooFood',
 

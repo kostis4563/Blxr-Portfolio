@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, PAYMENT_PATH, VOLUNTEER_PATH, GALLERY_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, GALLERY_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -258,6 +258,16 @@ export function buildCommands({
       href: PAYMENT_PATH,
       run: () => navigate(PAYMENT_PATH),
       keywords: 'payment pay invoice paypal revolut wise paysafecard paysafe bank transfer iban sepa crypto bitcoin btc ethereum eth usdt tether litecoin money',
+    },
+    {
+      id: 'page-links',
+      group: jump,
+      label: 'Links',
+      hint: 'Everywhere I am',
+      icon: 'link',
+      href: LINKS_PATH,
+      run: () => navigate(LINKS_PATH),
+      keywords: 'links link in bio linktree socials github discord email studio amitista share',
     },
     {
       id: 'page-volunteer',

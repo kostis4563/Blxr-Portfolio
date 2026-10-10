@@ -33,10 +33,9 @@ export function imageUrl(src, width) {
 
 export const SIZES = {
     contentColumn: '(min-width: 768px) 720px, calc(100vw - 48px)',
-    archiveCover: '(min-width: 960px) 878px, (min-width: 640px) calc(100vw - 82px), calc(100vw - 50px)',
-    archivePreview: '(min-width: 1024px) 320px, (min-width: 768px) 288px, calc(100vw - 50px)',
-    archiveGallery: '(min-width: 960px) 361px, (min-width: 640px) calc(50vw - 119px), calc(100vw - 50px)',
-    archiveGalleryWide: '(min-width: 960px) 734px, (min-width: 640px) calc(100vw - 226px), calc(100vw - 50px)',
+    projectThumb: '(min-width: 640px) 200px, 88px',
+    projectMedia: '(min-width: 960px) 656px, (min-width: 640px) calc(100vw - 306px), calc(100vw - 50px)',
+    projectGallery: '(min-width: 960px) 322px, (min-width: 640px) calc(50vw - 159px), calc(100vw - 50px)',
     mark: '24px',
     avatar: '64px',
 }

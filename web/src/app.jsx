@@ -11,6 +11,7 @@ import IbPageImpl from '#ssr-page/ib'
 import ListeningPageImpl from '#ssr-page/listening'
 import ContactPageImpl from '#ssr-page/contact'
 import PaymentPageImpl from '#ssr-page/payment'
+import LinksPageImpl from '#ssr-page/links'
 import VolunteerPageImpl from '#ssr-page/volunteer'
 import GalleryPageImpl from '#ssr-page/gallery'
 import LoginPageImpl from '#ssr-page/login'
@@ -52,6 +53,7 @@ const IbPage = routePage(IbPageImpl, () => import('#client-page/ib'))
 const ListeningPage = routePage(ListeningPageImpl, () => import('#client-page/listening'))
 const ContactPage = routePage(ContactPageImpl, () => import('#client-page/contact'))
 const PaymentPage = routePage(PaymentPageImpl, () => import('#client-page/payment'))
+const LinksPage = routePage(LinksPageImpl, () => import('#client-page/links'))
 const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
 const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
@@ -333,6 +335,17 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <PaymentPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'links') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <LinksPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>
