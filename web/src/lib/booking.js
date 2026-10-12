@@ -89,6 +89,8 @@ export const formatMonth = (month) => formatter('en-GB', { timeZone: 'UTC', mont
 
 export const formatDay = (key) => formatter('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }).format(noon(key))
 
+export const formatWeekday = (key) => formatter('en-GB', { timeZone: 'UTC', weekday: 'short' }).format(noon(key))
+
 export const formatTime = (ms, timeZone, twelveHour = false) =>
   formatter('en-GB', { timeZone, hour: twelveHour ? 'numeric' : '2-digit', minute: '2-digit', hourCycle: twelveHour ? 'h12' : 'h23' }).format(new Date(ms))
 

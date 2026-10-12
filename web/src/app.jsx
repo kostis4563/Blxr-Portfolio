@@ -479,7 +479,7 @@ function App() {
 
             <span aria-hidden="true" className={`${navDivider} hidden md:block`} />
 
-            <CommandButton className="hidden md:inline-flex h-9 items-center gap-2 rounded-md px-2 outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30" />
+            <CommandButton variant="pill" className="mx-1.5 hidden md:inline-flex" />
 
             <span aria-hidden="true" className={`${navDivider} hidden md:block`} />
 

@@ -89,10 +89,7 @@ function LocalTime() {
   if (!time) return null
 
   return (
-    <span className="inline-flex items-center gap-1.5" title="My local time in Athens">
-      <span aria-hidden="true" className="live-dot relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
-      <time className="font-mono text-[11.5px] tabular-nums text-ink-muted">{time}</time>
-    </span>
+    <time title="My local time in Athens" className="font-mono text-[11.5px] tabular-nums text-ink-muted">{time}</time>
   )
 }
 
