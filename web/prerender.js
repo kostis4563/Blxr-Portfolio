@@ -114,6 +114,7 @@ const ROUTE_SOURCES = {
   ib: ['src/ib-page.jsx', 'src/lib/ib.js', 'src/components/ib/ui.jsx', 'src/components/ib/diploma.jsx'],
   listening: ['src/listening-page.jsx', 'src/lib/listening.js'],
   contact: ['src/contact-page.jsx', 'src/lib/profile.js'],
+  book: ['src/book-page.jsx', 'src/lib/booking.js'],
   payment: ['src/payment-page.jsx', 'src/lib/payment.js'],
   links: ['src/links-page.jsx', 'src/lib/links.js', 'src/lib/profile.js'],
   volunteer: ['src/volunteer-page.jsx', 'src/lib/volunteer.js'],

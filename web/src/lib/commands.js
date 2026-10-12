@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, GALLERY_PATH, TERMINAL_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, GALLERY_PATH, TERMINAL_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -248,6 +248,16 @@ export function buildCommands({
       href: CONTACT_PATH,
       run: () => navigate(CONTACT_PATH),
       keywords: 'contact email reach hire freelance discord github socials',
+    },
+    {
+      id: 'page-book',
+      group: jump,
+      label: 'Book a call',
+      hint: 'Pick a free time on my calendar',
+      icon: 'calendar',
+      href: BOOK_PATH,
+      run: () => navigate(BOOK_PATH),
+      keywords: 'book call meeting schedule calendar facetime video chat appointment availability free time slot talk consult intro',
     },
     {
       id: 'page-payment',

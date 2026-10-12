@@ -368,6 +368,113 @@ function spotifyApi(url, init, s) {
   return reply(404, { error: { status: 404 } })
 }
 
+const ICLOUD_USER = 'owner@icloud.test'
+const ICLOUD_PASSWORD = 'abcd-efgh-ijkl-mnop'
+const ICLOUD_PRINCIPAL = '/1234567/principal/'
+const ICLOUD_HOME = '/1234567/calendars/'
+const ICLOUD_PARTITION = 'p01-caldav.icloud.test'
+const ICLOUD_DEFAULT = { calendars: [{ id: 'home', name: 'Calendar', events: {} }] }
+
+const xmlEscape = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const multistatus = (responses) => `<?xml version="1.0" encoding="UTF-8"?>\n<multistatus xmlns="DAV:">${responses.join('')}</multistatus>`
+const davOk = (href, props) => `<response><href>${href}</href><propstat><prop>${props}</prop><status>HTTP/1.1 200 OK</status></propstat></response>`
+const davReply = (body) => reply(207, body, { 'content-type': 'application/xml; charset=utf-8' })
+const plain = (status) => reply(status, '', { 'content-type': 'text/plain' })
+const etagOf = (data) => `"${crypto.createHash('sha1').update(data).digest('hex').slice(0, 12)}"`
+const ctagOf = (cal) => `FT=-@RU=${crypto.createHash('sha1').update(JSON.stringify(Object.entries(cal.events).sort())).digest('hex').slice(0, 16)}`
+const eventHref = (cal, file) => `${ICLOUD_HOME}${cal.id}/${encodeURIComponent(file)}`
+
+const ICLOUD_SAVED = path.join(DIR, 'icloud-saved.jsonl')
+
+function icloudCalendars(s) {
+  const calendars = (s.icloud || ICLOUD_DEFAULT).calendars.map((c) => ({ ...c, events: { ...(c.events || {}) } }))
+  let saved = ''
+  try {
+    saved = fs.readFileSync(ICLOUD_SAVED, 'utf8')
+  } catch {
+  }
+  for (const line of saved.split('\n').filter(Boolean)) {
+    const { calendar, file, body } = JSON.parse(line)
+    const cal = calendars.find((c) => c.id === calendar)
+    if (cal) cal.events[file] = body
+  }
+  return calendars
+}
+
+function icloud(url, init, s) {
+  const method = (init.method || 'GET').toUpperCase()
+  if (s.icloudMode === 'down') return plain(503)
+  const auth = new Headers(init.headers).get('authorization')
+  if (s.icloudMode === 'revoked' || auth !== `Basic ${Buffer.from(`${ICLOUD_USER}:${ICLOUD_PASSWORD}`).toString('base64')}`) return plain(401)
+
+  if (url.hostname === 'caldav.icloud.test') {
+    if (method === 'PROPFIND' && url.pathname === '/') {
+      return davReply(multistatus([davOk('/', `<current-user-principal><href>${ICLOUD_PRINCIPAL}</href></current-user-principal>`)]))
+    }
+    if (method === 'PROPFIND' && url.pathname === ICLOUD_PRINCIPAL) {
+      return davReply(
+        multistatus([
+          davOk(ICLOUD_PRINCIPAL, `<calendar-home-set xmlns="urn:ietf:params:xml:ns:caldav"><href xmlns="DAV:">https://${ICLOUD_PARTITION}:443${ICLOUD_HOME}</href></calendar-home-set>`),
+        ]),
+      )
+    }
+    return plain(404)
+  }
+
+  const calendars = icloudCalendars(s)
+  if (method === 'PROPFIND' && url.pathname === ICLOUD_HOME) {
+    return davReply(
+      multistatus([
+        davOk(ICLOUD_HOME, '<resourcetype><collection/></resourcetype>'),
+        `<response><href>${ICLOUD_HOME}inbox/</href><propstat><prop><getctag xmlns="http://calendarserver.org/ns/"/><displayname/></prop><status>HTTP/1.1 404 Not Found</status></propstat><propstat><prop><resourcetype><collection/><schedule-inbox xmlns="urn:ietf:params:xml:ns:caldav"/></resourcetype></prop><status>HTTP/1.1 200 OK</status></propstat></response>`,
+        ...calendars.map((cal) =>
+          davOk(
+            `${ICLOUD_HOME}${cal.id}/`,
+            `<resourcetype><collection/><calendar xmlns="urn:ietf:params:xml:ns:caldav"/></resourcetype><displayname>${xmlEscape(cal.name)}</displayname>` +
+              `<getctag xmlns="http://calendarserver.org/ns/">${ctagOf(cal)}</getctag>` +
+              `<C:supported-calendar-component-set xmlns:C="urn:ietf:params:xml:ns:caldav"><C:comp name="${cal.todo ? 'VTODO' : 'VEVENT'}"/></C:supported-calendar-component-set>`,
+          ),
+        ),
+      ]),
+    )
+  }
+
+  const m = /^\/1234567\/calendars\/([^/]+)\/([^/]+)?$/.exec(url.pathname)
+  const cal = m && calendars.find((c) => c.id === m[1])
+  if (!cal) return plain(404)
+  if (method === 'PROPFIND' && !m[2]) {
+    return davReply(
+      multistatus([
+        davOk(`${ICLOUD_HOME}${cal.id}/`, '<resourcetype><collection/></resourcetype>'),
+        ...Object.entries(cal.events).map(([file, data]) => davOk(eventHref(cal, file), `<getetag>${etagOf(data)}</getetag>`)),
+      ]),
+    )
+  }
+  if (method === 'REPORT' && !m[2]) {
+    const wanted = [...String(init.body).matchAll(/<d:href>([^<]+)<\/d:href>/g)].map((h) => decodeURIComponent(h[1]).split('/').pop())
+    return davReply(
+      multistatus(
+        wanted.map((file) =>
+          cal.events[file] === undefined
+            ? `<response><href>${eventHref(cal, file)}</href><status>HTTP/1.1 404 Not Found</status></response>`
+            : davOk(
+                eventHref(cal, file),
+                `<getetag>${etagOf(cal.events[file])}</getetag><C:calendar-data xmlns:C="urn:ietf:params:xml:ns:caldav">${
+                  s.icloudCdata ? `<![CDATA[${cal.events[file]}]]>` : xmlEscape(cal.events[file])
+                }</C:calendar-data>`,
+              ),
+        ),
+      ),
+    )
+  }
+  if (method === 'PUT' && m[2]) {
+    if (s.icloudPut === 'fail') return plain(500)
+    fs.appendFileSync(ICLOUD_SAVED, `${JSON.stringify({ calendar: cal.id, file: decodeURIComponent(m[2]), body: String(init.body) })}\n`)
+    return plain(201)
+  }
+  return plain(405)
+}
+
 globalThis.fetch = async function fakeFetch(input, init = {}) {
   const url = new URL(typeof input === 'string' ? input : input.url)
   const s = scenario()
@@ -395,5 +502,6 @@ globalThis.fetch = async function fakeFetch(input, init = {}) {
   if (host === 'discord.com' || host === 'japi.rest') return discord(url, s)
   if (host === 'accounts.spotify.com') return spotifyAccounts(init, s)
   if (host === 'api.spotify.com') return spotifyApi(url, init, s)
+  if (host === 'caldav.icloud.test' || host === ICLOUD_PARTITION) return icloud(url, init, s)
   throw networkDown(url.href)
 }

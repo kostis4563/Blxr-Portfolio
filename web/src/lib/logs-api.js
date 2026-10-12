@@ -3,7 +3,7 @@ import { currentSession } from './supabase'
 const ENDPOINT = '/api/logs'
 
 export const LEVELS = ['error', 'warn', 'info']
-export const SOURCES = ['server', 'api', 'client', 'upstream', 'github', 'auth', 'reviews', 'mail']
+export const SOURCES = ['server', 'api', 'client', 'upstream', 'github', 'auth', 'reviews', 'mail', 'calls']
 
 export const SOURCE_LABEL = {
   server: 'Server',
@@ -14,6 +14,7 @@ export const SOURCE_LABEL = {
   auth: 'Auth',
   reviews: 'Reviews',
   mail: 'Mail',
+  calls: 'Calls',
 }
 
 export const RANGES = [

@@ -3,8 +3,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
-import { mailConfigured, sendMail, passwordChangedMail, describeClient } from './mail.mjs'
+import { mailConfigured, sendMail, passwordChangedMail, bookingMail, describeClient } from './mail.mjs'
 import { readState, writeState } from './state.mjs'
+import { parseHours, isTimeZone, openSlots, pickCalendar } from './booking.mjs'
+import { busyFrom, timeOf, eventIcs } from './ical.mjs'
+import { CalDavClient, CalendarMirror, CalDavError } from './icloud.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
 import { rateLimit, rateLimitSize, originAllowed, ALLOWED_ORIGINS, bearerOf, jwtLooksUsable, isAal2, hasVerifiedFactor, fingerprint, safeEqual, isHttps, isJsonBody, API_HEADERS } from './guard.mjs'
 
@@ -1119,6 +1122,292 @@ async function readSpotify(key, ttl, load, { stale = true } = {}) {
   return refreshSpotify(key, load)
 }
 
+const envInt = (name, fallback, min, max) => {
+  const raw = (process.env[name] || '').trim()
+  const n = raw ? Number(raw) : NaN
+  return Number.isInteger(n) && n >= min && n <= max ? n : fallback
+}
+
+const ICLOUD_EMAIL = (process.env.ICLOUD_EMAIL || '').trim()
+const ICLOUD_APP_PASSWORD = (process.env.ICLOUD_APP_PASSWORD || '').replace(/\s+/g, '')
+const ICLOUD_CALDAV_URL = (process.env.ICLOUD_CALDAV_URL || '').trim() || 'https://caldav.icloud.com'
+const BOOKING_ON = Boolean(ICLOUD_EMAIL && ICLOUD_APP_PASSWORD)
+const BOOKING_SITE = (process.env.SITE_URL || 'https://blxr.net').replace(/\/$/, '')
+const BOOKING_DEFAULT_HOURS = 'mon-fri 10:00-18:00'
+const BOOKING_CALENDAR = (process.env.BOOKING_CALENDAR || '').trim()
+const BOOKING_BUSY_CALENDARS = String(process.env.BOOKING_BUSY_CALENDARS || '').split(',').map((name) => name.trim().toLowerCase()).filter(Boolean)
+const BOOKING_VIDEO_URL = (() => {
+  try {
+    const url = new URL((process.env.BOOKING_VIDEO_URL || '').trim())
+    return url.protocol === 'https:' ? url.href : ''
+  } catch {
+    return ''
+  }
+})()
+const BOOKING_VIDEO_LABEL = (() => {
+  const host = BOOKING_VIDEO_URL ? new URL(BOOKING_VIDEO_URL).hostname : ''
+  if (host === 'facetime.apple.com') return 'FaceTime'
+  if (host === 'meet.google.com') return 'Google Meet'
+  if (host === 'zoom.us' || host.endsWith('.zoom.us')) return 'Zoom'
+  if (host === 'teams.microsoft.com' || host === 'teams.live.com') return 'Microsoft Teams'
+  if (host === 'whereby.com') return 'Whereby'
+  return 'Video call'
+})()
+const BOOKING_UID_DOMAIN = 'book.blxr.net'
+const BOOKING_BUDGET_MS = 10_000
+const BOOKING_WARM_MS = 5 * 60_000
+const BOOKING_AUTH_COOLDOWN_MS = 30 * 60_000
+const BOOKING_TIMEZONE = isTimeZone((process.env.BOOKING_TIMEZONE || '').trim()) ? process.env.BOOKING_TIMEZONE.trim() : 'Europe/Athens'
+const BOOKING_WINDOWS = parseHours(process.env.BOOKING_HOURS) || parseHours(BOOKING_DEFAULT_HOURS)
+const BOOKING_MINUTES = envInt('BOOKING_MINUTES', 30, 10, 240)
+const BOOKING_STEP = Math.min(BOOKING_MINUTES, 30)
+const BOOKING_NOTICE_HOURS = envInt('BOOKING_NOTICE_HOURS', 12, 0, 24 * 14)
+const BOOKING_DAYS = envInt('BOOKING_DAYS', 21, 1, 60)
+const BOOKING_MAX_PER_DAY = envInt('BOOKING_MAX_PER_DAY', 4, 0, 48)
+const BOOKING_TTL_MS = 60_000
+const BOOKING_STALE_MS = 10 * 60_000
+const BOOKING_LIMITS = { ip: 3, email: 2 }
+const BOOKING_LIMIT_WINDOW_MS = 24 * 60 * 60_000
+const BOOKING_FIELDS = { name: [2, 80], note: [0, 1000] }
+const BOOKING_EMAIL_RE = /^[^\s@<>()[\],;:"]+@[^\s@<>()[\],;:"]+\.[a-z0-9-]{2,}$/i
+
+if ((process.env.BOOKING_HOURS || '').trim() && !parseHours(process.env.BOOKING_HOURS)) {
+  log.warn('calls', `BOOKING_HOURS "${process.env.BOOKING_HOURS.trim().slice(0, 80)}" did not parse — using ${BOOKING_DEFAULT_HOURS}`)
+}
+
+class CalendarError extends Error {
+  constructor(code, status) {
+    super(code)
+    this.code = code
+    this.status = status
+  }
+}
+
+const calendarMirror = BOOKING_ON ? new CalendarMirror(new CalDavClient({ root: ICLOUD_CALDAV_URL, email: ICLOUD_EMAIL, password: ICLOUD_APP_PASSWORD })) : null
+let calendarOffUntil = 0
+let bookingTargetName = null
+
+const calendarOff = () => Date.now() < calendarOffUntil
+
+function refusedByICloud(err) {
+  if (!(err instanceof CalDavError) || err.code !== 'auth') return err
+  calendarOffUntil = Date.now() + BOOKING_AUTH_COOLDOWN_MS
+  log.error('calls', `iCloud refused ICLOUD_EMAIL / ICLOUD_APP_PASSWORD — /book is off for ${BOOKING_AUTH_COOLDOWN_MS / 60_000} min, then tries again; if it keeps happening, make a new app-specific password (account.apple.com → Sign-In and Security)`)
+  return new CalendarError('booking_disabled', 503)
+}
+
+async function syncCalendars() {
+  if (calendarOff()) throw new CalendarError('booking_disabled', 503)
+  try {
+    return await calendarMirror.sync()
+  } catch (err) {
+    throw refusedByICloud(err)
+  }
+}
+
+function pickTarget(calendars) {
+  const target = pickCalendar(calendars, BOOKING_CALENDAR)
+  if (!target) {
+    log.error('calls', `no iCloud calendar is called "${BOOKING_CALENDAR}" — found ${calendars.map((c) => `"${c.name}"`).join(', ') || 'none'}; fix BOOKING_CALENDAR`)
+    throw new CalendarError('calendar_failed', 502)
+  }
+  return target
+}
+
+let bookingCache = null
+let bookingInflight = null
+
+async function fetchAvailability() {
+  const at = Date.now()
+  const calendars = await syncCalendars()
+  if (!calendars.length) {
+    log.error('calls', 'the iCloud account has no event calendars')
+    throw new CalendarError('calendar_failed', 502)
+  }
+  const target = pickTarget(calendars)
+  if (bookingTargetName !== target.name) {
+    bookingTargetName = target.name
+    log.info('calls', `bookings go to the iCloud calendar "${target.name}"`)
+  }
+  const watched = BOOKING_BUSY_CALENDARS.length ? calendars.filter((c) => c === target || BOOKING_BUSY_CALENDARS.includes(c.name.toLowerCase())) : calendars
+  const events = watched.flatMap((c) => c.events)
+  const busy = busyFrom(events, { from: at, to: at + (BOOKING_DAYS + 1) * 86_400_000, timeZone: BOOKING_TIMEZONE })
+  const booked = events
+    .filter((e) => !e.cancelled && !e.recurrenceId && e.uid?.endsWith(`@${BOOKING_UID_DOMAIN}`))
+    .map((e) => timeOf(e.start, BOOKING_TIMEZONE))
+  return { at, busy, booked, target: target.url }
+}
+
+function keepAvailability(data) {
+  if (!bookingCache || data.at >= bookingCache.at) bookingCache = data
+  return data
+}
+
+function refreshAvailability() {
+  bookingInflight ??= fetchAvailability()
+    .then(keepAvailability)
+    .finally(() => {
+      bookingInflight = null
+    })
+  return bookingInflight
+}
+
+async function readAvailability() {
+  const hit = bookingCache
+  if (hit && Date.now() - hit.at < BOOKING_TTL_MS) return hit
+  const job = refreshAvailability()
+  if (hit && Date.now() - hit.at < BOOKING_STALE_MS) {
+    job.catch((err) => {
+      if (!(err instanceof CalendarError)) log.warn('calls', 'iCloud refresh failed; still serving the last copy', { detail: err?.message })
+    })
+    return hit
+  }
+  let timer
+  const budget = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(null), BOOKING_BUDGET_MS)
+  })
+  try {
+    const data = await Promise.race([job, budget])
+    if (data) return data
+    job.catch(() => {})
+    throw new CalendarError('warming', 503)
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+const bookingSlots = (data, now = Date.now()) =>
+  openSlots({
+    now,
+    windows: BOOKING_WINDOWS,
+    timeZone: BOOKING_TIMEZONE,
+    minutes: BOOKING_MINUTES,
+    step: BOOKING_STEP,
+    notice: BOOKING_NOTICE_HOURS * 60,
+    days: BOOKING_DAYS,
+    busy: data.busy,
+    booked: data.booked,
+    maxPerDay: BOOKING_MAX_PER_DAY,
+  })
+
+function validateBooking(body) {
+  const name = cleanLine(body?.name)
+  const email = cleanLine(body?.email)
+  const note = cleanBlock(body?.note)
+  const start = typeof body?.start === 'string' ? Date.parse(body.start) : NaN
+  const fields = []
+  if (!withinLimits(name, BOOKING_FIELDS.name) || !/\p{L}/u.test(name) || REVIEW_LINK_RE.test(name)) fields.push('name')
+  if (email.length > 254 || !BOOKING_EMAIL_RE.test(email)) fields.push('email')
+  if (!withinLimits(note, BOOKING_FIELDS.note)) fields.push('note')
+  if (!Number.isFinite(start)) fields.push('start')
+  if (fields.length) return { error: 'invalid', fields }
+  return { booking: { name, email, note, start, timeZone: isTimeZone(body?.timeZone) ? body.timeZone : null } }
+}
+
+const bookingHits = new Map()
+
+function bookingRetryAfter(keys, now) {
+  let wait = 0
+  for (const [key, max] of keys) {
+    const recent = (bookingHits.get(key) || []).filter((at) => now - at < BOOKING_LIMIT_WINDOW_MS)
+    if (recent.length >= max) wait = Math.max(wait, Math.ceil((recent[0] + BOOKING_LIMIT_WINDOW_MS - now) / 1000))
+  }
+  return wait
+}
+
+function noteBooking(keys, now) {
+  for (const [key] of keys) bookingHits.set(key, [...(bookingHits.get(key) || []).filter((at) => now - at < BOOKING_LIMIT_WINDOW_MS), now])
+  if (bookingHits.size > 2000) {
+    for (const [key, list] of bookingHits) if (list.every((at) => now - at >= BOOKING_LIMIT_WINDOW_MS)) bookingHits.delete(key)
+  }
+}
+
+let bookingQueue = Promise.resolve()
+function oneAtATime(run) {
+  const job = bookingQueue.then(run, run)
+  bookingQueue = job.catch(() => {})
+  return job
+}
+
+const bookingShape = (start) => ({
+  start: new Date(start).toISOString(),
+  end: new Date(start + BOOKING_MINUTES * 60_000).toISOString(),
+  minutes: BOOKING_MINUTES,
+  video: BOOKING_VIDEO_URL || null,
+})
+
+async function saveToCalendar(calendarUrl, uid, ics) {
+  try {
+    await calendarMirror.client.put(calendarUrl, uid, ics)
+  } catch (err) {
+    throw refusedByICloud(err)
+  }
+}
+
+async function bookCall({ name, email, note, start, timeZone }) {
+  const fresh = keepAvailability(await fetchAvailability())
+  if (!bookingSlots(fresh).includes(start)) throw new CalendarError('slot_taken', 409)
+  const end = start + BOOKING_MINUTES * 60_000
+  const uid = `${crypto.randomUUID()}@${BOOKING_UID_DOMAIN}`
+  const stamp = Date.now()
+  const video = BOOKING_VIDEO_URL || null
+  const ownerEmail = SITE_OWNER_EMAIL || ICLOUD_EMAIL
+
+  await saveToCalendar(fresh.target, uid, eventIcs({
+    uid,
+    stamp,
+    start,
+    end,
+    summary: `Call with ${name}`,
+    description: [
+      ...(note ? [note, ''] : []),
+      `${name} <${email}>`,
+      ...(timeZone && timeZone !== BOOKING_TIMEZONE ? [`Their time zone: ${timeZone}`] : []),
+      `Booked on ${BOOKING_SITE}/book`,
+    ].join('\n'),
+    location: video,
+    url: video,
+    alarmMinutes: 10,
+  }))
+  bookingCache = { ...fresh, at: Date.now(), busy: [...fresh.busy, [start, end]], booked: [...fresh.booked, start] }
+
+  const guestCopy = {
+    uid,
+    stamp,
+    start,
+    end,
+    summary: 'Call with blxr',
+    description: video ? `Join: ${video}` : 'The video link follows by email.',
+    location: video,
+    url: video,
+    alarmMinutes: 10,
+  }
+  let emailed = false
+  if (mailConfigured()) {
+    const invite = eventIcs({ ...guestCopy, method: 'REQUEST', organizer: { name: 'blxr', email: ownerEmail }, attendee: { name, email } })
+    try {
+      await withTimeout((signal) =>
+        sendMail(
+          {
+            to: email,
+            replyTo: ownerEmail,
+            ...bookingMail({ name, start, end, timeZone: timeZone || BOOKING_TIMEZONE, video, videoLabel: BOOKING_VIDEO_LABEL }),
+            attachments: [{ filename: 'invite.ics', content: Buffer.from(invite).toString('base64'), content_type: 'text/calendar; charset=utf-8; method=REQUEST' }],
+          },
+          { signal },
+        ),
+      )
+      emailed = true
+    } catch (err) {
+      log.warn('mail', 'the booking invite email was not sent; the call is still in the calendar', { detail: err?.message })
+    }
+  }
+  return { ...bookingShape(start), emailed, ics: eventIcs({ ...guestCopy, method: 'PUBLISH' }) }
+}
+
+const bookingWhen = (ms) =>
+  new Date(ms).toLocaleString('en-GB', { timeZone: BOOKING_TIMEZONE, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+
 const GH_API =(process.env.GITHUB_API || 'https://api.github.com').replace(/\/$/, '')
 const GH_STATS_TTL_MS = 60 * 60 * 1000
 const GH_STATS_REFRESH_MIN_MS = 2 * 60 * 1000
@@ -2122,6 +2411,7 @@ function systemReport() {
       blog: Boolean(BLOG_REPO && BLOG_TOKEN),
       discord: true,
       spotify: SPOTIFY_ON && !spotifyRevoked,
+      booking: BOOKING_ON && !calendarOff(),
     },
     state: { dir: STATE_DIR, files, reviews: reviews.length, invites: invites.length, hitDays: Object.keys(hits).length, vitalDays: Object.keys(vitals).length, logs: logSize() },
     caches: { search: cache.size, top: topCache.size, contributions: ghCache.size, stats: ghStatsCache.size, discord: discordCache.size, spotify: spotifyCache.size, sessions: userCache.size, rateLimits: rateLimitSize() },
@@ -2151,8 +2441,8 @@ function bucketsFor(req, pathname) {
   ) {
     out.push('auth')
   }
-  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname.startsWith('/api/spotify/') || pathname === '/api/discord/user' || pathname === '/api/weather') out.push('upstream')
-  if ((pathname === '/api/reviews' && req.method === 'POST') || (/^\/api\/reviews\/[a-z0-9]{8}$/.test(pathname) && req.method === 'PATCH')) out.push('write')
+  if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname.startsWith('/api/spotify/') || pathname === '/api/discord/user' || pathname === '/api/weather' || pathname === '/api/book') out.push('upstream')
+  if ((pathname === '/api/reviews' && req.method === 'POST') || (/^\/api\/reviews\/[a-z0-9]{8}$/.test(pathname) && req.method === 'PATCH') || (pathname === '/api/book' && req.method === 'POST')) out.push('write')
   if (pathname === '/api/hit' || pathname === '/api/logs/client' || (pathname === '/api/vitals' && req.method === 'POST')) out.push('beacon')
   out.push('all')
   return out
@@ -2336,6 +2626,47 @@ const server = http.createServer(async (req, res) => {
       Object.assign(record, checked.review, { editedAt: new Date().toISOString() })
       reviewsDirty = true
       return json(res, 200, { item: publicReview(record) }, NO_STORE)
+    }
+
+    if (url.pathname === '/api/book') {
+      if (req.method !== 'GET' && req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      if (!BOOKING_ON) return json(res, 503, { error: 'booking_disabled' }, NO_STORE)
+      try {
+        if (req.method === 'GET') {
+          const data = await readAvailability()
+          return json(res, 200, {
+            timeZone: BOOKING_TIMEZONE,
+            minutes: BOOKING_MINUTES,
+            days: BOOKING_DAYS,
+            video: BOOKING_VIDEO_LABEL,
+            slots: bookingSlots(data).map((at) => new Date(at).toISOString()),
+          }, NO_STORE)
+        }
+
+        const body = await readJsonBody(req, 4096)
+        if (!body || typeof body !== 'object') return json(res, 400, { error: 'invalid', fields: [] }, NO_STORE)
+        const checked = validateBooking(body)
+        if (checked.error) return json(res, 400, checked, NO_STORE)
+        const { booking } = checked
+        if (typeof body.website === 'string' && body.website.trim()) return json(res, 201, { booking: bookingShape(booking.start) }, NO_STORE)
+
+        const keys = [
+          [hashToken('book-ip', address), BOOKING_LIMITS.ip],
+          [hashToken('book-email', booking.email.toLowerCase()), BOOKING_LIMITS.email],
+        ]
+        const wait = bookingRetryAfter(keys, Date.now())
+        if (wait) return json(res, 429, { error: 'rate_limited', retryAfter: wait }, { ...NO_STORE, 'retry-after': String(wait) })
+        if (!bookingSlots(await readAvailability()).includes(booking.start)) return json(res, 409, { error: 'slot_taken' }, NO_STORE)
+
+        const made = await oneAtATime(() => bookCall(booking))
+        noteBooking(keys, Date.now())
+        log.info('calls', `call booked for ${bookingWhen(booking.start)} — ${booking.name}`)
+        return json(res, 201, { booking: made }, NO_STORE)
+      } catch (err) {
+        if (err instanceof CalendarError) return json(res, err.status, { error: err.code }, err.code === 'warming' ? { ...NO_STORE, 'retry-after': '5' } : NO_STORE)
+        log.warn('calls', req.method === 'GET' ? 'availability lookup failed' : 'booking failed', { detail: err?.message })
+        return json(res, 502, { error: 'calendar_failed' }, NO_STORE)
+      }
     }
 
     const blogMatch = /^\/api\/blog\/(?:posts(?:\/([^/]+))?|(deploy))$/.exec(url.pathname)
@@ -2771,3 +3102,12 @@ if (GH_TOKEN) {
 
 sweepInvites()
 setInterval(sweepInvites, INVITE_SWEEP_MS).unref()
+
+if (BOOKING_ON) {
+  const warmBooking = () =>
+    refreshAvailability().catch((err) => {
+      if (!(err instanceof CalendarError)) log.warn('calls', 'iCloud warm-up failed', { detail: err?.message })
+    })
+  warmBooking()
+  setInterval(warmBooking, BOOKING_WARM_MS).unref()
+}

@@ -38,6 +38,9 @@ jobs:
           SPOTIFY_CLIENT_ID_VALUE: ${{ secrets.BLXR_SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET_VALUE: ${{ secrets.BLXR_SPOTIFY_CLIENT_SECRET }}
           SPOTIFY_REFRESH_TOKEN_VALUE: ${{ secrets.BLXR_SPOTIFY_REFRESH_TOKEN }}
+          ICLOUD_EMAIL_VALUE: ${{ secrets.BLXR_ICLOUD_EMAIL }}
+          ICLOUD_APP_PASSWORD_VALUE: ${{ secrets.BLXR_ICLOUD_APP_PASSWORD }}
+          BOOKING_VIDEO_URL_VALUE: ${{ secrets.BLXR_BOOKING_VIDEO_URL }}
         run: |
           printf 'GITHUB_TOKEN=%s\n' "$GITHUB_TOKEN_VALUE" > "$GITHUB_WORKSPACE/deploy/.env-overrides"
           printf 'DISCORD_BOT_TOKEN=%s\n' "$DISCORD_BOT_TOKEN_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
@@ -45,6 +48,9 @@ jobs:
           printf 'SPOTIFY_CLIENT_ID=%s\n' "$SPOTIFY_CLIENT_ID_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
           printf 'SPOTIFY_CLIENT_SECRET=%s\n' "$SPOTIFY_CLIENT_SECRET_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
           printf 'SPOTIFY_REFRESH_TOKEN=%s\n' "$SPOTIFY_REFRESH_TOKEN_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
+          printf 'ICLOUD_EMAIL=%s\n' "$ICLOUD_EMAIL_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
+          printf 'ICLOUD_APP_PASSWORD=%s\n' "$ICLOUD_APP_PASSWORD_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
+          printf 'BOOKING_VIDEO_URL=%s\n' "$BOOKING_VIDEO_URL_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
 
       - run: sudo bash "$GITHUB_WORKSPACE/deploy/deploy.sh"
 

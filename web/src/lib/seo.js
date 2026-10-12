@@ -50,6 +50,10 @@ const CONTACT_DESCRIPTION =
   'How to reach Blxr: email for anything, a private thread on blxr.net, or GitHub and Discord. ' +
   'Based in Athens, Greece (EET / EEST).'
 
+const BOOK_DESCRIPTION =
+  'Book a video call with Blxr. Pick a free time straight from my calendar, shown in your own time zone, ' +
+  'and get a calendar invite by email right away.'
+
 const PAYMENT_DESCRIPTION =
   'Payment methods Blxr accepts: PayPal, Paysafecard, Revolut, Wise, SEPA bank transfer and crypto (BTC, ETH, USDT, LTC).'
 
@@ -181,6 +185,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'book') {
+    return {
+      ...base,
+      title: 'Book a Call — Pick a Time With Blxr',
+      description: BOOK_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'payment') {
     return {
       ...base,
@@ -276,6 +288,7 @@ const SHORT_LABELS = {
   ib: 'IB grades',
   listening: 'Listening',
   contact: 'Contact',
+  book: 'Book a call',
   payment: 'Payment',
   links: 'Links',
   volunteer: 'Volunteering',
@@ -583,6 +596,19 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'book') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Book a call',
+      description: BOOK_DESCRIPTION,
+      url: `${SITE_URL}/book`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+      potentialAction: { '@type': 'ScheduleAction', target: `${SITE_URL}/book` },
+    }
+  }
+
   if (route.name === 'payment') {
     return {
       '@context': 'https://schema.org',
@@ -696,6 +722,8 @@ function crumbsFor(route) {
     items.push({ name: 'Listening', item: urlOf('/listening') })
   } else if (route.name === 'contact') {
     items.push({ name: 'Contact', item: urlOf('/contact') })
+  } else if (route.name === 'book') {
+    items.push({ name: 'Book a call', item: urlOf('/book') })
   } else if (route.name === 'payment') {
     items.push({ name: 'Payment', item: urlOf('/payment') })
   } else if (route.name === 'links') {

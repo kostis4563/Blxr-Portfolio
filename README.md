@@ -57,6 +57,7 @@ web/src/
 ├── reviews-page.jsx   /reviews — public review form and list
 ├── now-page.jsx       /now — what I'm doing at the moment, content in lib/now.js
 ├── cv-page.jsx        /cv — printable CV, content in lib/cv.js
+├── book-page.jsx      /book — pick a free time on my iCloud calendar and book a video call
 ├── login-page.jsx     /login — sign in / register / reset, backed by Supabase Auth
 ├── dashboard-page.jsx /dashboard — signed-in dashboard (components/dashboard-sidebar.jsx + dashboard-topbar.jsx)
 ├── dashboard-boards.jsx  /dashboard#boards — kanban boards (components/boards/)
@@ -78,6 +79,7 @@ web/src/
     ├── discord.js       Dashboard → Profile → Import from Discord (user ID lookup via /api/discord/user)
     ├── now.js           /now content + last-updated stamp
     ├── cv.js            /cv content + last-updated stamp
+    ├── booking.js       /book: slots by day in the visitor's zone, month grid, formatting, form checks
     ├── palette.js       command palette state
     ├── commands.js      command palette entries
     ├── text-match.js    accent-insensitive folding
@@ -114,6 +116,7 @@ web/src/
 | `/reviews` · `/now` · `/cv` | `reviews.html` · `now.html` · `cv.html` |
 | `/gallery` | `gallery.html` — photos and UI shots, managed from `/dashboard#gallery` (owner only) |
 | `/listening` | `listening.html` — Spotify now playing, last 50 plays and top tracks/artists via `/api/spotify/*` |
+| `/book` | `book.html` — free times from my iCloud calendar via `/api/book`; a booking lands in iCloud (so on every Apple device) and the guest gets an emailed `.ics` invite |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
 | `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |
 | *anything else* | `404.html`, HTTP 404 |

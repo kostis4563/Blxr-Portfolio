@@ -10,6 +10,7 @@ import SecurityPageImpl from '#ssr-page/security'
 import IbPageImpl from '#ssr-page/ib'
 import ListeningPageImpl from '#ssr-page/listening'
 import ContactPageImpl from '#ssr-page/contact'
+import BookPageImpl from '#ssr-page/book'
 import PaymentPageImpl from '#ssr-page/payment'
 import LinksPageImpl from '#ssr-page/links'
 import VolunteerPageImpl from '#ssr-page/volunteer'
@@ -56,6 +57,7 @@ const SecurityPage = routePage(SecurityPageImpl, () => import('#client-page/secu
 const IbPage = routePage(IbPageImpl, () => import('#client-page/ib'))
 const ListeningPage = routePage(ListeningPageImpl, () => import('#client-page/listening'))
 const ContactPage = routePage(ContactPageImpl, () => import('#client-page/contact'))
+const BookPage = routePage(BookPageImpl, () => import('#client-page/book'))
 const PaymentPage = routePage(PaymentPageImpl, () => import('#client-page/payment'))
 const LinksPage = routePage(LinksPageImpl, () => import('#client-page/links'))
 const TerminalPage = routePage(TerminalPageImpl, () => import('#client-page/terminal'))
@@ -329,6 +331,17 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <ContactPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'book') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <BookPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>

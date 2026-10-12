@@ -3,7 +3,7 @@ import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { useAuth } from './lib/supabase'
 import { loginUrlFor } from './lib/auth'
-import { link, dashboardPath, HOME_PATH, REVIEWS_PATH, USES_PATH, CV_PATH, PAYMENT_PATH } from './lib/router'
+import { link, dashboardPath, HOME_PATH, REVIEWS_PATH, USES_PATH, CV_PATH, PAYMENT_PATH, BOOK_PATH } from './lib/router'
 import { CONTACT_EMAIL, SOCIALS } from './lib/profile'
 
 const MESSAGES_PATH = dashboardPath('messages')
@@ -117,6 +117,7 @@ export default function ContactPage({ theme, onToggleTheme }) {
           <div className="mt-20 grid gap-y-4 sm:grid-cols-[180px_1fr]">
             <p className={`${KICKER} sm:pt-5`}>Elsewhere</p>
             <ul className="border-t border-dashed border-line">
+              <Row {...link(BOOK_PATH)} name="Book a call" detail="pick a time" arrow="→" />
               <Row
                 {...link(session ? MESSAGES_PATH : loginUrlFor(MESSAGES_PATH))}
                 name="Message on the site"

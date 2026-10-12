@@ -28,6 +28,12 @@ export const FULL_ENV = {
   SPOTIFY_REFRESH_TOKEN: 'spotify-refresh-test-only',
 }
 
+export const ICLOUD_ENV = {
+  ICLOUD_EMAIL: 'owner@icloud.test',
+  ICLOUD_APP_PASSWORD: 'abcd-efgh-ijkl-mnop',
+  ICLOUD_CALDAV_URL: 'https://caldav.icloud.test',
+}
+
 export const confirmed = (id, email, extra = {}) => ({
   id,
   email,

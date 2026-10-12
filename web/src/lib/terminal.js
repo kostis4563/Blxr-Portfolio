@@ -11,6 +11,7 @@ import {
   IB_PATH,
   LISTENING_PATH,
   CONTACT_PATH,
+  BOOK_PATH,
   PAYMENT_PATH,
   LINKS_PATH,
   VOLUNTEER_PATH,
@@ -74,6 +75,7 @@ export const PAGES = [
   { name: 'volunteer', to: VOLUNTEER_PATH, desc: 'events I gave time to' },
   { name: 'ib', to: IB_PATH, desc: 'IB grade calculator' },
   { name: 'contact', to: CONTACT_PATH, desc: 'how to reach me' },
+  { name: 'book', to: BOOK_PATH, desc: 'book a call on my calendar' },
   { name: 'links', to: LINKS_PATH, desc: 'every link on one page' },
   { name: 'payment', to: PAYMENT_PATH, desc: 'how to pay' },
   { name: 'security', to: SECURITY_PATH, desc: 'report a vulnerability' },
@@ -91,6 +93,8 @@ const PAGE_ALIASES = {
   spotify: 'listening',
   photos: 'gallery',
   pay: 'payment',
+  call: 'book',
+  meet: 'book',
 }
 
 const cleanPath = (name) =>

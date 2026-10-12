@@ -134,3 +134,57 @@ export async function panelSaveSettings(settings, { signal, bearer } = {}) {
   const data = await reviewRequest('/panel/settings', { method: 'PUT', body: settings, signal, bearer })
   return data?.settings ?? null
 }
+
+const BOOK = '/api/book'
+
+export class BookingError extends Error {
+  constructor(code, { fields = [], retryAfter = 0, status = 0 } = {}) {
+    super(code)
+    this.code = code
+    this.fields = fields
+    this.retryAfter = retryAfter
+    this.status = status
+  }
+}
+
+async function bookingRequest({ method = 'GET', body, signal } = {}) {
+  let res
+  try {
+    res = await fetch(BOOK, {
+      method,
+      headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal,
+    })
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err
+    throw new BookingError('offline')
+  }
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    throw new BookingError(data?.error || 'failed', {
+      fields: Array.isArray(data?.fields) ? data.fields : [],
+      retryAfter: Number(res.headers.get('retry-after')) || Number(data?.retryAfter) || 0,
+      status: res.status,
+    })
+  }
+  return data
+}
+
+export async function fetchBookingSlots({ signal } = {}) {
+  const data = await bookingRequest({ signal })
+  return {
+    timeZone: typeof data?.timeZone === 'string' ? data.timeZone : 'UTC',
+    minutes: Number(data?.minutes) || 30,
+    days: Number(data?.days) || 0,
+    video: typeof data?.video === 'string' && data.video ? data.video : 'Video call',
+    slots: Array.isArray(data?.slots) ? data.slots.filter((s) => typeof s === 'string') : [],
+  }
+}
+
+export async function bookCall(details, { signal } = {}) {
+  const data = await bookingRequest({ method: 'POST', body: details, signal })
+  return data?.booking ?? null
+}

@@ -74,11 +74,50 @@ export function passwordChangedMail({ email, client, at = new Date() }) {
   }
 }
 
-export async function sendMail({ to, subject, text, html }, { signal } = {}) {
+export function bookingMail({ name, start, end, timeZone, video, videoLabel = 'Video call' }) {
+  const day = new Date(start).toLocaleString('en-GB', { timeZone, weekday: 'long', day: 'numeric', month: 'long' })
+  const time = (ms) => new Date(ms).toLocaleString('en-GB', { timeZone, hour: '2-digit', minute: '2-digit' })
+  const when = `${day}, ${time(start)}–${time(end)}`
+  const zone = timeZone.replace(/_/g, ' ')
+  const join = video ? `Join on ${videoLabel}: ${video}` : 'I’ll email you the video link before we talk.'
+  return {
+    subject: `Call booked: ${day}, ${time(start)}`,
+    text: [
+      `Hi ${name},`,
+      '',
+      `You’re booked for ${when} (${zone}).`,
+      join,
+      '',
+      'The calendar invite is attached — open it to add the call to your calendar.',
+      'Need to move it? Just reply to this email.',
+    ].join('\n'),
+    html: layout({
+      preheader: `${when} (${zone})`,
+      eyebrow: 'Call booked',
+      title: `See you ${escapeHtml(day)}`,
+      intro: `Hi ${escapeHtml(name)}, you&#39;re booked for <span style="color:#ffffff;">${escapeHtml(when)}</span> (${escapeHtml(zone)}).<br><br>${
+        video
+          ? `<a href="${escapeHtml(video)}" style="color:#ffffff;text-decoration:underline;">Join on ${escapeHtml(videoLabel)}</a>`
+          : 'I&#39;ll email you the video link before we talk.'
+      }`,
+      footer: 'The calendar invite is attached — open it to add the call to your calendar.<br>Need to move it? Just reply to this email.',
+    }),
+  }
+}
+
+export async function sendMail({ to, subject, text, html, replyTo, attachments }, { signal } = {}) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, text, html }),
+    body: JSON.stringify({
+      from: MAIL_FROM,
+      to: [to],
+      subject,
+      text,
+      html,
+      ...(replyTo ? { reply_to: replyTo } : {}),
+      ...(attachments?.length ? { attachments } : {}),
+    }),
     signal,
   })
   if (!res.ok) throw new Error(`resend ${res.status}`)

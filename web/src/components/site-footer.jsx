@@ -12,6 +12,7 @@ import {
   USES_PATH,
   REVIEWS_PATH,
   CONTACT_PATH,
+  BOOK_PATH,
   PAYMENT_PATH,
   LINKS_PATH,
   VOLUNTEER_PATH,
@@ -51,6 +52,7 @@ const COLUMNS = [
     title: 'Work with me',
     links: [
       { label: 'Contact', to: CONTACT_PATH },
+      { label: 'Book a call', to: BOOK_PATH },
       { label: 'Payment', to: PAYMENT_PATH },
       { label: 'Links', to: LINKS_PATH },
       { label: 'Email', href: `mailto:${CONTACT_EMAIL}` },

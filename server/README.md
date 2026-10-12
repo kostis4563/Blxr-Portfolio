@@ -4,11 +4,15 @@ Backend behind `/api/` on blxr.net. Fans search out across public mirrors,
 caches results, gives the frontend one stable shape.
 
 Zero npm dependencies — `node:http`, `node:fs`, `node:path`, `node:crypto` only.
-Six files: `server.mjs` (everything), `guard.mjs` (rate limits, the
+Nine files: `server.mjs` (everything), `guard.mjs` (rate limits, the
 same-origin rule and bearer-token checks, see [Security](#security)),
 `moderation.mjs` (the review blocklist, see [Reviews](#reviews)), `mail.mjs`
-(the one email the app sends itself, see [Account mail](#account-mail)),
-`log.mjs` (the event log behind Dashboard → Logs, see [Log](#log)) and
+(the emails the app sends itself, see [Account mail](#account-mail)),
+`log.mjs` (the event log behind Dashboard → Logs, see [Log](#log)),
+`booking.mjs` (working hours, time zones and free slots), `ical.mjs`
+(reading and writing iCalendar, repeating events included) and `icloud.mjs`
+(the CalDAV client and calendar copy) for `/book`, see
+[Booking](#get-apibook--post-apibook), and
 `state.mjs` (crash-safe reads and writes of the state files, see [State](#state)).
 
 ## Running it
@@ -57,8 +61,8 @@ Everything in `guard.mjs`, applied before any route runs:
   bearer token (`/api/logs`, the panel, invites, `/api/mail/*`,
   `/api/account/*`, `/api/discord/user`,
   `/api/github/stats` with a token); `upstream` 90 for `/api/music/*`,
-  `/api/github/*`, `/api/discord/user` and `/api/weather`; `write` 12 for review
-  posts and edits;
+  `/api/github/*`, `/api/discord/user`, `/api/weather` and `/api/book`; `write` 12
+  for review posts and edits and call bookings;
   `beacon` 60 for hits, vitals and browser error reports; reads of
   `/api/hits` and `/api/vitals` count as `auth`. Over the limit
   answers `429 rate_limited` with `Retry-After`. nginx has a coarser
@@ -386,6 +390,96 @@ refresh. Links are rebuilt from Spotify ids and art is kept only from
 Errors: `400 bad_range`, `429 rate_limited`, `502 spotify_forbidden` (token
 missing a scope) or `spotify_failed`. Counts in the `upstream` bucket.
 Consumed by `web/src/lib/listening.js`.
+
+### `GET /api/book` · `POST /api/book`
+Free times on the owner's iCloud calendar and booking one, for `/book`. Talks
+CalDAV to `caldav.icloud.com` with `ICLOUD_EMAIL` (the Apple Account email) and
+`ICLOUD_APP_PASSWORD` (account.apple.com → Sign-In and Security →
+App-Specific Passwords). Check both with `node scripts/icloud-check.mjs`
+before deploying — it lists the calendars it can see, which one bookings go
+to and the first free times. Without them both verbs answer
+`503 booking_disabled`; a password iCloud refuses (`401`, e.g. revoked or the
+Apple Account password changed) logs an error under **Calls** and answers the
+same `503` for 30 minutes before trying iCloud again. The app-specific
+password can read the whole iCloud account (mail and contacts too), so it only
+lives in the `BLXR_ICLOUD_APP_PASSWORD` secret and `/etc/blxr-search.env`;
+revoke it at account.apple.com to cut access at once. `ICLOUD_CALDAV_URL`
+points it at another CalDAV server (Fastmail, Nextcloud — tests use a fake).
+
+Settings, all optional, in `/etc/blxr-search.env` or `deploy/server.env`:
+
+| Variable | Default | |
+| :-- | :-- | :-- |
+| `BOOKING_HOURS` | `mon-fri 10:00-18:00` | when calls can happen; comma-separated windows such as `mon-thu 10:00-13:00, mon-thu 15:00-19:00, fri 10:00-14:00` (a bad value logs a warning and falls back) |
+| `BOOKING_TIMEZONE` | `Europe/Athens` | the zone `BOOKING_HOURS` is in, and the one floating and all-day events are read in |
+| `BOOKING_MINUTES` | `30` | call length; slots start every 30 min (or every call length, if shorter) |
+| `BOOKING_NOTICE_HOURS` | `12` | nothing bookable sooner than this |
+| `BOOKING_DAYS` | `21` | how far ahead, today included |
+| `BOOKING_MAX_PER_DAY` | `4` | bookings per day before the day closes; `0` = no cap |
+| `BOOKING_CALENDAR` | first of Calls, Calendar, Home, Personal, Work | calendar name (any case) bookings are saved to; an unknown name is a `502` |
+| `BOOKING_BUSY_CALENDARS` | every event calendar | comma-separated names whose events block time (the booking calendar always does) |
+| `BOOKING_VIDEO_URL` | — | an `https` link put in every booking and invite, e.g. a FaceTime link (FaceTime → Create Link); the page says FaceTime, Google Meet, Zoom, Teams or Whereby from the host, else "Video call". Lives in the `BLXR_BOOKING_VIDEO_URL` secret so it stays out of the repo |
+
+`GET` answers the open slots as UTC instants; the page groups them by day in
+the visitor's own zone:
+
+```json
+{ "timeZone": "Europe/Athens", "minutes": 30, "days": 21, "video": "FaceTime",
+  "slots": ["2026-10-13T07:00:00.000Z", "2026-10-13T07:30:00.000Z"] }
+```
+
+iCloud has no usable free/busy query and its date search misses repeating
+events, so the server keeps its own copy of every event calendar
+(`icloud.mjs`): one `PROPFIND` on the calendar home lists the calendars with
+their `getctag`, and only a calendar whose ctag moved is re-listed by `getetag`
+and has its new or changed events fetched with `calendar-multiget` (100 per
+request, 4 at a time). The copy lives in memory — a restart re-reads
+everything — and is refreshed at startup, every 5 minutes, and before each
+booking. Busy time is worked out locally (`ical.mjs`): one-off, all-day and
+repeating events (`RRULE` daily/weekly/monthly/yearly with `INTERVAL`, `COUNT`,
+`UNTIL`, `BYDAY` incl. "2nd Tuesday"/"last Friday", `BYMONTHDAY`, `BYMONTH`,
+`BYSETPOS`, `WKST`), `EXDATE`, `RDATE` and moved or cancelled single
+occurrences (`RECURRENCE-ID`), in the event's own `TZID`. Events marked Free
+(`TRANSP:TRANSPARENT`), cancelled or zero-length don't block; Reminders lists
+are skipped. A slot is open when it sits inside `BOOKING_HOURS`, after the
+notice period, overlaps none of that, and its day is under
+`BOOKING_MAX_PER_DAY` (counted from events whose UID ends in
+`@book.blxr.net`, which only this route writes). Answers are cached a minute;
+an older copy (up to 10 min) is served at once while it refreshes. With no
+copy at all a request waits up to 10 s for iCloud, then answers
+`503 warming` with `Retry-After: 5` (the page retries on its own).
+
+`POST` takes `{ start, name, email, note?, timeZone?, website }`
+(`name` 2–80 with a letter and no links, `email` ≤ 254, `note` ≤ 1000,
+`timeZone` IANA and only written into the event, `website` the honeypot). A
+`start` that isn't open in the cached copy is a `409 slot_taken` straight away,
+without asking iCloud. Otherwise bookings run one at a time; each re-syncs
+iCloud and re-computes the slots before writing, so two people racing for a
+time get one `201` and one `409`. The note only ever goes into the owner's
+copy — the guest's email and invite carry no text the guest typed except their
+name — so the form can't be used to mail arbitrary text to a stranger. The event is `PUT` into the booking
+calendar as `<uuid>@book.blxr.net.ics` — "Call with <name>", their email and
+note in the notes, a 10-minute alert, no attendees (so iCloud sends nothing
+itself) — and shows up on every device signed in to that Apple Account. If
+mail is set up, the guest is emailed from `MAIL_FROM` with `invite.ics`
+attached (`METHOD:REQUEST`, organizer `SITE_OWNER_EMAIL`, reply-to the same),
+which Apple Mail, Gmail and Outlook show as an invitation:
+
+```json
+{ "booking": { "start": "2026-10-13T07:00:00.000Z", "end": "2026-10-13T07:30:00.000Z",
+               "minutes": 30, "video": "https://facetime.apple.com/join#…",
+               "emailed": true, "ics": "BEGIN:VCALENDAR…" } }
+```
+
+`ics` is the same event as `METHOD:PUBLISH` for the page's *Add to calendar*
+button. A failed email is logged under **Mail** and answers `emailed: false`;
+the booking stands. A filled honeypot gets the same `201` without touching the
+calendar. Errors: `400 invalid` with `fields`, `409 slot_taken`,
+`429 rate_limited` (three bookings per address and two per email address in
+24 h, kept in memory, on top of the `write` bucket), `502 calendar_failed`,
+`503 booking_disabled` or `warming`. Every booking is logged under **Calls**
+with its time and the guest's name. Consumed by `web/src/lib/api.js`
+(`fetchBookingSlots`, `bookCall`).
 
 ### `GET /api/ip`
 The caller's own address as nginx saw it (the last `X-Forwarded-For` hop), plus

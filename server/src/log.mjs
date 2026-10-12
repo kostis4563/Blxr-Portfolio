@@ -2,7 +2,7 @@ import path from 'node:path'
 import { readState, writeState } from './state.mjs'
 
 export const LEVELS = ['error', 'warn', 'info']
-export const SOURCES = ['server', 'api', 'client', 'upstream', 'github', 'auth', 'reviews', 'mail']
+export const SOURCES = ['server', 'api', 'client', 'upstream', 'github', 'auth', 'reviews', 'mail', 'calls']
 
 const MAX_ENTRIES = 3000
 const DEDUPE_MS = 60_000
