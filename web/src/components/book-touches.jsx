@@ -4,6 +4,7 @@ import { ICONS } from '../lib/dashboard'
 import { imageProps, SIZES } from '../lib/images'
 import { CONTACT_EMAIL } from '../lib/profile'
 import { ALERTS, EVENT_TITLE, dateKey, formatDay, formatTime, formatWeekday, formatZone, shortDay, fullShortDay } from '../lib/booking'
+import '../book.css'
 
 const HANDSET = ICONS.phoneCall[0]
 const COLLAPSE_MS = 8000
