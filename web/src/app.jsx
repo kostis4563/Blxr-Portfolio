@@ -29,7 +29,6 @@ import ScrambleText from './components/scramble-text'
 import LiveSelect from './components/live-select'
 import BookCallButton from './components/book-call-button'
 import { Facepile, CommentPin, Inspect, FrameLabel, CanvasLayer } from './components/figma'
-import CanvasView from './components/canvas-view'
 import SiteFooter from './components/site-footer'
 import StripeBand from './components/stripe-band'
 import BottomBlur from './components/bottom-blur'
@@ -38,7 +37,7 @@ import { trackPageVisit } from './lib/memes'
 import { useTheme } from './lib/use-theme'
 import { imageProps, SIZES } from './lib/images'
 import { SKILL_CATEGORIES, themedIconFor } from './lib/skills'
-import { useRoutePath, parseRoute, navigate, link, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
+import { useRoutePath, parseRoute, navigate, link, HOME_PATH, PROJECTS_PATH, CV_PATH, CONTACT_PATH } from './lib/router'
 import { jumpToSection } from './lib/palette'
 import { Icon } from './components/icon'
 import { Loading } from './components/skeleton'
@@ -86,6 +85,13 @@ function LandingMemes() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   return mounted ? <Suspense fallback={null}><LandingMemesImpl /></Suspense> : null
+}
+
+const CanvasViewImpl = lazy(() => import('./components/canvas-view'))
+function CanvasView() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted ? <Suspense fallback={null}><CanvasViewImpl /></Suspense> : null
 }
 
 function SkillTile({ skill, featured }) {
