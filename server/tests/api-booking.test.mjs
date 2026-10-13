@@ -291,6 +291,157 @@ describe('booking: settings', () => {
   })
 })
 
+describe('booking: the owner schedule', () => {
+  let srv
+  const OWNER = () => bearer({ sub: 'owner' })
+  const booked = midnight(1) + 10 * HOUR
+  const keyOf = (ms) => iso(ms).slice(0, 10)
+  const pick = (s) => ({ rev: s.rev, hours: s.hours, blocks: s.blocks, paused: s.paused })
+  const schedule = (headers = OWNER()) => srv.request('/api/book/schedule', { headers })
+  const save = (body, headers = OWNER()) => srv.request('/api/book/schedule', { method: 'PUT', headers, body })
+
+  before(async () => {
+    srv = await startServer({
+      env: { ...OPEN, BOOKING_HOURS: 'sun-sat 09:00-17:00' },
+      scenario: {
+        icloud: {
+          calendars: [
+            {
+              id: 'home',
+              name: 'Calendar',
+              events: {
+                'call.ics': vcal(
+                  vevent(
+                    'abc@book.blxr.net',
+                    booked,
+                    booked + HOUR / 2,
+                    'SUMMARY:Call with Maria Papadaki',
+                    'DESCRIPTION:Studio site\\, redesign\\n\\nMaria Papadaki <maria@example.com>\\nTheir time zone: Europe/London\\nBooked on https://blxr.test/book',
+                    'LOCATION:https://facetime.apple.com/join',
+                  ),
+                ),
+                'dentist.ics': vcal(vevent('dentist', midnight(2) + 13 * HOUR, midnight(2) + 14 * HOUR, 'SUMMARY:Dentist')),
+              },
+            },
+          ],
+        },
+      },
+    })
+  })
+  after(() => srv?.cleanup())
+
+  test('only the owner may read or change it', async () => {
+    assert.deepEqual((await srv.request('/api/book/schedule')).body, { error: 'unauthorized' })
+    assert.equal((await schedule(bearer({ sub: 'member' }))).status, 401)
+    assert.equal((await save({ rev: 0, hours: [], blocks: [] }, bearer({ sub: 'member' }))).status, 401)
+    assert.equal((await srv.request('/api/book/schedule', { method: 'DELETE', headers: OWNER() })).status, 405)
+  })
+
+  test('shows the hours, each booked call with its details, and the rest of the busy time', async () => {
+    const { status, body } = await schedule()
+    assert.equal(status, 200)
+    assert.equal(body.custom, false)
+    assert.equal(body.rev, 0)
+    assert.equal(body.hours.length, 7)
+    assert.deepEqual(body.hours[0], { day: 0, start: 540, end: 1020 })
+    assert.deepEqual(body.calls, [
+      {
+        uid: 'abc@book.blxr.net',
+        start: iso(booked),
+        end: iso(booked + HOUR / 2),
+        name: 'Maria Papadaki',
+        email: 'maria@example.com',
+        note: 'Studio site, redesign',
+        timeZone: 'Europe/London',
+        video: 'https://facetime.apple.com/join',
+      },
+    ])
+    assert.ok(body.busy.some(([a, b]) => a === iso(midnight(2) + 13 * HOUR) && b === iso(midnight(2) + 14 * HOUR)))
+    assert.ok(!body.busy.some(([a]) => a === iso(booked)), 'the call is listed once, as a call')
+    assert.deepEqual(body.slots, (await srv.request('/api/book')).body.slots)
+    assert.equal(body.calendar, 'Calendar')
+    assert.equal(body.calendarError, null)
+  })
+
+  test('new hours and a repeating block change what /book offers', async () => {
+    const current = (await schedule()).body
+    const res = await save({
+      rev: current.rev,
+      hours: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, start: 600, end: 720 })),
+      blocks: [{ date: keyOf(midnight(2)), start: 600, end: 660, repeat: 'daily', until: null, label: 'Gym' }],
+      paused: false,
+    })
+    assert.equal(res.status, 200)
+    assert.equal(res.body.rev, current.rev + 1)
+    assert.equal(res.body.custom, true)
+    assert.match(res.body.blocks[0].id, /^[0-9a-f]{12}$/)
+    assert.equal(res.body.blocks[0].label, 'Gym')
+
+    const list = (await srv.request('/api/book')).body.slots
+    assert.deepEqual(res.body.slots, list)
+    for (const s of list) assert.ok([10, 11].includes(new Date(s).getUTCHours()), s)
+    assert.ok(!list.includes(iso(booked)), 'the booked call still holds its time')
+    assert.ok(list.includes(iso(midnight(1) + 11 * HOUR)), 'the block starts the day after')
+    assert.ok(!list.includes(iso(midnight(2) + 10 * HOUR)) && !list.includes(iso(midnight(2) + 10.5 * HOUR)), 'blocked by the repeat')
+    assert.ok(list.includes(iso(midnight(2) + 11 * HOUR)))
+  })
+
+  test('pausing closes /book until it is reopened, while the owner still sees what would be open', async () => {
+    const current = (await schedule()).body
+    assert.equal((await save({ ...pick(current), paused: true })).status, 200)
+    const closed = await srv.request('/api/book')
+    assert.equal(closed.status, 503)
+    assert.deepEqual(closed.body, { error: 'booking_paused' })
+    assert.equal((await book(srv, guest(current.slots[0]))).status, 503)
+    const paused = (await schedule()).body
+    assert.equal(paused.paused, true)
+    assert.deepEqual(paused.slots, current.slots)
+    assert.equal((await save({ ...pick(paused), paused: false })).status, 200)
+    assert.equal((await srv.request('/api/book')).status, 200)
+  })
+
+  test('a stale save is a 409 that carries the current schedule; a broken one is a 400 that changes nothing', async () => {
+    const current = (await schedule()).body
+    const stale = await save({ ...pick(current), rev: current.rev - 1 })
+    assert.equal(stale.status, 409)
+    assert.equal(stale.body.error, 'conflict')
+    assert.equal(stale.body.schedule.rev, current.rev)
+    const bad = await save({ ...pick(current), hours: [{ day: 9, start: 0, end: 60 }] })
+    assert.equal(bad.status, 400)
+    assert.deepEqual(bad.body, { error: 'invalid', fields: ['hours'] })
+    assert.equal((await schedule()).body.rev, current.rev)
+  })
+})
+
+test('booking: the schedule is kept on disk, works without iCloud, and outlives a restart', async () => {
+  const OWNER = () => bearer({ sub: 'owner' })
+  const env = { ...OPEN, ICLOUD_APP_PASSWORD: '' }
+  const first = await startServer({ env })
+  const day = iso(midnight(5)).slice(0, 10)
+  try {
+    const { body } = await first.request('/api/book/schedule', { headers: OWNER() })
+    assert.equal(body.calendarError, 'booking_disabled')
+    assert.deepEqual([body.calls, body.slots], [[], []])
+    const res = await first.request('/api/book/schedule', {
+      method: 'PUT',
+      headers: OWNER(),
+      body: { rev: body.rev, hours: body.hours, blocks: [{ date: day, start: null, end: null, repeat: 'none', label: 'Holiday' }], paused: false },
+    })
+    assert.equal(res.status, 200)
+  } finally {
+    await first.cleanup({ keepState: true })
+  }
+  const second = await startServer({ env, stateDir: first.stateDir })
+  try {
+    const { body } = await second.request('/api/book/schedule', { headers: OWNER() })
+    assert.equal(body.rev, 1)
+    assert.equal(body.custom, true)
+    assert.deepEqual(body.blocks.map((b) => [b.date, b.start, b.end, b.label]), [[day, null, null, 'Holiday']])
+  } finally {
+    await second.cleanup()
+  }
+})
+
 describe('booking: failures', () => {
   test('off without iCloud credentials', async () => {
     const srv = await startServer({ env: { ...OPEN, ICLOUD_APP_PASSWORD: '' } })

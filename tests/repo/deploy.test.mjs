@@ -135,13 +135,15 @@ describe('log levels match what actually went wrong', () => {
     assert.match(src, /level: apiLevel\(status, body\?\.error\),/)
   })
 
-  test('every *_disabled 503 the server can emit is covered by that rule', async () => {
+  test('every *_disabled and *_paused 503 the server can emit is covered by that rule', async () => {
     const src = await server()
     const codes = [...src.matchAll(/return json\(res, 503, \{ error: '([a-z_]+)'/g)].map((m) => m[1])
     assert.ok(codes.length >= 4, `expected several 503 codes, found ${codes.join(', ')}`)
+    const rule = new RegExp(/const EXPECTED_OFF = \/(.+)\/\n/.exec(src)[1])
     for (const code of codes) {
+      assert.ok(rule.test(code), `${code} is a 503 the log level rule does not know about`)
       assert.ok(
-        code === 'warming' || code.endsWith('_disabled') || code === 'paused',
+        code === 'warming' || code.endsWith('_disabled') || code === 'paused' || code.endsWith('_paused'),
         `${code} is a deliberate "unavailable" response and must not be logged as an error`,
       )
     }

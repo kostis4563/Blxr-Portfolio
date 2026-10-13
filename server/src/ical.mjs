@@ -107,7 +107,15 @@ function toEvent(props) {
     recurrenceId: recurrence ? parseTime(recurrence.value, recurrence.params) : null,
     transparent: (one('TRANSP')?.value || '').trim().toUpperCase() === 'TRANSPARENT',
     cancelled: (one('STATUS')?.value || '').trim().toUpperCase() === 'CANCELLED',
+    summary: unescapeText(one('SUMMARY')?.value),
+    description: unescapeText(one('DESCRIPTION')?.value),
+    location: unescapeText(one('LOCATION')?.value),
   }
+}
+
+function unescapeText(value) {
+  if (!value) return ''
+  return value.replace(/\\([\\;,nN])/g, (_, ch) => (ch === 'n' || ch === 'N' ? '\n' : ch)).trim()
 }
 
 export function parseEvents(text) {

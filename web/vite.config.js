@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import JavaScriptObfuscator from 'javascript-obfuscator'
 import blogPlugin from './blog-plugin.js'
+import bookingDemo from './booking-demo.js'
 
 const obfuscate = process.env.OBFUSCATE === '1'
 const BUILT_AT = process.env.BUILT_AT || new Date().toISOString()
@@ -130,6 +131,8 @@ const apiProxy = (mode) => {
   return set === undefined ? PROD_API : set
 }
 
+const bookingDemoOn = (mode) => (process.env.VITE_BOOKING_DEMO ?? loadEnv(mode, process.cwd(), 'VITE_').VITE_BOOKING_DEMO) !== '0'
+
 const CLIENT_ENTRY = fileURLToPath(new URL('./src/main.jsx', import.meta.url))
 
 let entryPath = null
@@ -160,6 +163,7 @@ export default defineConfig(({ command, mode, isSsrBuild }) => ({
   },
   plugins: [
     blogPlugin(),
+    ...(bookingDemoOn(mode) ? [bookingDemo()] : []),
     react(),
     tailwindcss(),
     htmlPolishPlugin(),

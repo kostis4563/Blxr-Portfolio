@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
-import { CommandButton } from './components/command-button'
 import { Icon } from './components/icon'
 import { Bone, Spinner } from './components/skeleton'
-import { link, HOME_PATH, CONTACT_PATH, REVIEWS_PATH, PAYMENT_PATH } from './lib/router'
+import { BookIsland, DoneMark, HostClock, NoteStack } from './components/book-touches'
+import { link, HOME_PATH } from './lib/router'
 import { CONTACT_EMAIL } from './lib/profile'
 import { imageProps, SIZES } from './lib/images'
 import { fetchBookingSlots, bookCall } from './lib/api'
+import { reducedMotion } from './lib/memes'
 import {
   BOOKING_LIMITS,
   WEEKDAYS,
@@ -24,26 +25,39 @@ import {
   formatTime,
   formatZone,
   bookingProblems,
+  emailTypo,
+  daysUntil,
+  fullShortDay,
+  whenWord,
+  dayPhrase,
+  EVENT_TITLE,
+  calendarIcs,
+  icsUid,
+  icsFileName,
+  googleCalendarUrl,
+  outlookCalendarUrl,
 } from './lib/booking'
 
-const KICKER = 'text-[11px] font-mono text-ink-subtle uppercase tracking-[0.18em]'
-const FOCUS = 'outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/50'
-const FOOT_LINK = 'group inline-flex items-center gap-1.5 transition-colors duration-200 hover:text-ink-strong'
-const FOOT_ARROW = 'inline-block transition-transform duration-200 group-hover:translate-x-0.5'
-const CARD =
-  'grid overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_1px_2px_var(--shadow-cast-soft),0_24px_48px_-28px_var(--shadow-cast)] md:grid-cols-[minmax(0,1fr)_216px] lg:grid-cols-[256px_minmax(0,1fr)_216px]'
+const FOCUS = 'outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
+const SHADOW = 'shadow-[0_1px_2px_var(--shadow-cast-soft),0_16px_48px_-16px_var(--shadow-cast)]'
+const CARD = `grid w-full overflow-hidden rounded-2xl border border-line bg-surface ${SHADOW} md:grid-cols-[minmax(0,1fr)_240px] lg:grid-cols-[280px_minmax(0,1fr)_248px]`
+const DONE_CARD = `w-full overflow-hidden rounded-2xl border border-line bg-surface ${SHADOW}`
 const PANEL = 'min-w-0 p-5 sm:p-6'
-const PRIMARY =
-  'group inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-ink-strong px-4 text-[13.5px] font-semibold text-ink-inverse outline-none transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ink-strong/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
-const SECONDARY =
-  'inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-[13.5px] font-medium text-ink-secondary outline-none transition-[color,border-color,background-color,transform] duration-150 hover:border-line-strong hover:bg-surface-raised hover:text-ink-strong active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ink-strong/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
-const NAV_BUTTON = `flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-muted transition-[color,border-color,background-color] duration-150 hover:border-line-strong hover:bg-surface-raised hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-ink-muted ${FOCUS}`
-const TIME_BUTTON =
-  'flex h-10 w-full cursor-pointer items-center justify-center rounded-lg border border-line bg-surface text-[13.5px] font-medium tabular-nums text-ink-strong outline-none transition-[border-color,background-color,transform] duration-150 hover:border-ink-subtle hover:bg-surface-raised active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-strong/50'
+const BASE =
+  'inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg text-[14px] font-medium outline-none transition-[background-color,border-color,color,opacity,transform] duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ink-strong/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:pointer-events-none disabled:opacity-50'
+const INVERT = 'bg-ink-strong text-ink-inverse hover:opacity-90'
+const PRIMARY = `${BASE} h-10 px-4 ${INVERT}`
+const OUTLINE = `${BASE} h-10 px-4 border border-line-strong bg-surface text-ink-strong hover:bg-surface-hover`
+const GHOST = `${BASE} h-10 px-3.5 text-ink-muted hover:bg-surface-hover hover:text-ink-strong`
+const NEXT = `${BASE} h-11 ${INVERT}`
+const ICON_BUTTON = `flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-surface-hover hover:text-ink-strong disabled:pointer-events-none disabled:opacity-30 ${FOCUS}`
+const SLOT =
+  'flex h-11 w-full cursor-pointer items-center justify-center rounded-lg border border-line-strong bg-surface text-[14px] font-medium tabular-nums text-ink-strong outline-none transition-[border-color,transform] duration-150 hover:border-ink-strong focus-visible:border-ink-strong focus-visible:ring-1 focus-visible:ring-ink-strong active:scale-[0.98]'
+const TEXT_LINK = `rounded-sm font-medium text-ink-strong underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink-strong ${FOCUS}`
 
 const inputClass = (invalid) =>
-  `w-full rounded-lg border bg-surface-raised px-3 text-[14px] text-ink-strong placeholder:text-ink-faint outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:bg-surface focus:ring-4 ${
-    invalid ? 'border-red-500/60 focus:border-red-500/80 focus:ring-red-500/10' : 'border-line hover:border-line-strong focus:border-ink-subtle focus:ring-ink-strong/[0.07]'
+  `w-full rounded-lg border bg-surface px-3 text-[14px] text-ink-strong placeholder:text-ink-faint outline-none transition-[border-color,box-shadow] duration-150 focus:ring-[3px] ${
+    invalid ? 'border-red-500/70 focus:ring-red-500/15' : 'border-line-strong hover:border-ink-faint focus:border-ink-strong focus:ring-ink-strong/10'
   }`
 
 const EMPTY_DRAFT = { name: '', email: '', note: '', website: '' }
@@ -51,6 +65,7 @@ const EMPTY_DRAFT = { name: '', email: '', note: '', website: '' }
 const SEND_ERRORS = {
   rate_limited: 'You’ve booked a few calls already today. Email me if you need another one.',
   booking_disabled: 'Booking just went offline. Email me instead and we’ll find a time.',
+  booking_paused: 'Booking just closed for now. Email me instead and we’ll find a time.',
   offline: 'You look offline. Check your connection and try again.',
 }
 
@@ -60,35 +75,43 @@ const SERVER_FIELD_ERRORS = {
   note: `Keep it under ${BOOKING_LIMITS.note.max} characters.`,
 }
 
+const MOD_KEY = typeof navigator !== 'undefined' && !/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? 'Ctrl' : '⌘'
+const DEFAULT_APP = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent) ? 'google' : 'apple'
+
 const minutesLabel = (minutes) => (minutes % 60 === 0 ? `${minutes / 60} h` : `${minutes} min`)
 
-function EmailLink() {
+function MailLink({ children = 'Email me' }) {
   return (
-    <a href={`mailto:${CONTACT_EMAIL}`} className={`rounded-sm font-medium text-ink-strong underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink-strong ${FOCUS}`}>
-      {CONTACT_EMAIL}
+    <a href={`mailto:${CONTACT_EMAIL}`} className={TEXT_LINK}>
+      {children}
     </a>
   )
 }
 
-function Field({ id, label, hint, counter, error, children }) {
+function Field({ id, label, optional, counter, help, error, children }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <label htmlFor={id} className="text-[13px] font-medium text-ink-secondary">
+        <label htmlFor={id} className="text-[13px] font-medium text-ink-strong">
           {label}
         </label>
         {counter ? (
-          <span className={`font-mono text-[11px] tabular-nums ${counter.over ? 'text-red-500' : 'text-ink-faint'}`}>{counter.text}</span>
+          <span className={`text-[12px] tabular-nums ${counter.over ? 'text-red-500' : 'text-ink-subtle'}`}>{counter.text}</span>
         ) : (
-          hint && <span className="text-[12px] text-ink-faint">{hint}</span>
+          optional && <span className="text-[12px] text-ink-subtle">Optional</span>
         )}
       </div>
       {children}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="flex items-center gap-1.5 text-[12.5px] text-red-500">
-          <Icon name="alert" className="h-3.5 w-3.5" />
+      {error ? (
+        <p id={`${id}-error`} role="alert" className="text-[12.5px] text-red-500">
           {error}
         </p>
+      ) : (
+        help && (
+          <p id={`${id}-help`} className="text-[12.5px] text-ink-subtle">
+            {help}
+          </p>
+        )
       )}
     </div>
   )
@@ -97,16 +120,10 @@ function Field({ id, label, hint, counter, error, children }) {
 function ZonePicker({ zone, onChange }) {
   const zones = useMemo(() => timeZoneList(zone), [zone])
   return (
-    <span className="relative flex h-9 w-full items-center gap-2 md:max-w-xs lg:max-w-none rounded-lg border border-line bg-surface-raised px-3 text-[13px] text-ink-secondary transition-colors duration-150 focus-within:border-line-strong focus-within:ring-2 focus-within:ring-ink-strong/20 hover:border-line-strong hover:text-ink-strong">
-      <Icon name="globe" className="h-4 w-4 text-ink-subtle" />
-      <span className="min-w-0 flex-1 truncate">{formatZone(zone)}</span>
-      <Icon name="chevronsUpDown" className="h-3.5 w-3.5 text-ink-subtle" />
-      <select
-        aria-label="Time zone"
-        value={zone}
-        onChange={(e) => onChange(e.target.value)}
-        className="absolute inset-0 w-full cursor-pointer opacity-0"
-      >
+    <span className="relative inline-flex max-w-full items-center gap-1 rounded-md transition-colors duration-150 focus-within:ring-2 focus-within:ring-ink-strong/30 hover:text-ink-strong">
+      <span className="truncate">{formatZone(zone)}</span>
+      <Icon name="chevronDown" className="h-3.5 w-3.5 text-ink-subtle" />
+      <select aria-label="Time zone" value={zone} onChange={(e) => onChange(e.target.value)} className="absolute inset-0 w-full cursor-pointer opacity-0">
         {zones.map((z) => (
           <option key={z} value={z}>
             {z.replace(/_/g, ' ')}
@@ -119,8 +136,8 @@ function ZonePicker({ zone, onChange }) {
 
 function Meta({ icon, children }) {
   return (
-    <li className="flex items-start gap-2.5">
-      <Icon name={icon} className="mt-px h-4 w-4 text-ink-subtle" />
+    <li className="flex items-start gap-3">
+      <Icon name={icon} className="mt-0.5 h-4 w-4 text-ink-subtle" />
       <div className="min-w-0">{children}</div>
     </li>
   )
@@ -131,59 +148,52 @@ function Host({ load, zone, onZone, slot, twelve }) {
   const differentClock = Boolean(slot && ready && formatTime(slot, zone) !== formatTime(slot, load.timeZone))
 
   return (
-    <aside aria-label="About this call" className={`${PANEL} flex flex-col gap-6 border-b border-line md:col-span-2 lg:col-span-1 lg:border-b-0 lg:border-e`}>
-      <div className="flex items-center gap-3">
-        <img
-          {...imageProps('/pfp.webp', SIZES.avatar)}
-          alt=""
-          width="40"
-          height="40"
-          draggable="false"
-          className="h-10 w-10 shrink-0 select-none rounded-[11px] object-cover"
-        />
-        <div className="min-w-0">
-          <p className="text-[13.5px] font-semibold leading-tight text-ink-strong">Blxr</p>
-          <p className="mt-0.5 text-[12px] leading-tight text-ink-subtle">Athens, Greece</p>
-        </div>
-      </div>
-
+    <aside aria-label="Call details" className={`${PANEL} flex flex-col gap-5 border-b border-line md:col-span-2 lg:col-span-1 lg:border-b-0 lg:border-e`}>
+      <img
+        {...imageProps('/pfp.webp', SIZES.avatar)}
+        alt=""
+        width="36"
+        height="36"
+        draggable="false"
+        className="h-9 w-9 select-none rounded-full object-cover"
+      />
       <div>
-        <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-ink-strong">Book a call</h1>
-        <p className="mt-2.5 max-w-[60ch] text-pretty text-[13.5px] leading-[1.6] text-ink-muted">
-          A project, a question, or just to say hi. The times come straight from my calendar, so anything you can pick is actually free.
+        <p className="text-[14px] font-medium text-ink-muted">Blxr</p>
+        <h1 className="mt-1 text-[22px] font-semibold leading-snug tracking-[-0.02em] text-ink-strong">Book a call</h1>
+        <p className="mt-3 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-ink-muted">
+          A short video call to talk through a project, an idea or a question. Times are synced live with my calendar.
         </p>
       </div>
 
       {ready ? (
-        <div className="flex flex-col gap-4">
-          <ul className="flex flex-col gap-3 text-[13px] text-ink-secondary">
-            {slot && (
-              <Meta icon="calendar">
-                <p className="font-medium text-ink-strong">{formatDay(dateKey(slot, zone))}</p>
-                <p className="mt-0.5 tabular-nums">
-                  {formatTime(slot, zone, twelve)} – {formatTime(slot + load.minutes * 60_000, zone, twelve)}
-                </p>
-              </Meta>
-            )}
-            <Meta icon="clock">{minutesLabel(load.minutes)}</Meta>
-            <Meta icon="monitor">{load.video}</Meta>
-            {slot && <Meta icon="globe">{formatZone(zone, slot)}</Meta>}
-          </ul>
-          {!slot && <ZonePicker zone={zone} onChange={onZone} />}
-          {differentClock && (
-            <p className="text-[12px] leading-relaxed text-ink-subtle">
-              That’s {formatTime(slot, load.timeZone, twelve)} for me in {formatZone(load.timeZone, slot).split(' (')[0]}.
-            </p>
+        <ul className="flex flex-col gap-3.5 text-[14px] font-medium text-ink-secondary">
+          {slot && (
+            <Meta icon="calendar">
+              <p className="text-ink-strong">{formatDay(dateKey(slot, zone))}</p>
+              <p className="mt-0.5 tabular-nums">
+                {formatTime(slot, zone, twelve)} – {formatTime(slot + load.minutes * 60_000, zone, twelve)}
+              </p>
+            </Meta>
           )}
-        </div>
+          <Meta icon="clock">{minutesLabel(load.minutes)}</Meta>
+          <Meta icon="globe">{slot ? formatZone(zone, slot) : <ZonePicker zone={zone} onChange={onZone} />}</Meta>
+        </ul>
       ) : (
         load.state !== 'error' && (
-          <div aria-hidden="true" className="flex flex-col gap-3">
+          <div aria-hidden="true" className="flex flex-col gap-4">
             <Bone className="h-4 w-20" />
-            <Bone className="h-4 w-28" />
-            <Bone className="mt-1 h-9 w-full rounded-lg" />
+            <Bone className="h-4 w-24" />
+            <Bone className="h-4 w-36" />
           </div>
         )
+      )}
+
+      {ready && !slot && <HostClock zone={load.timeZone} twelve={twelve} />}
+
+      {differentClock && (
+        <p className="text-[12.5px] leading-relaxed text-ink-subtle">
+          That’s {formatTime(slot, load.timeZone, twelve)} for me in {formatZone(load.timeZone, slot).split(' (')[0]}.
+        </p>
       )}
     </aside>
   )
@@ -195,22 +205,22 @@ function Calendar({ month, onMonth, firstMonth, lastMonth, days, selected, today
 
   return (
     <div className={`${PANEL} animate-view-in`}>
-      <div className="mb-5 flex h-8 items-center justify-between gap-3">
-        <h2 aria-live="polite" className="text-[14px] font-semibold text-ink-strong">
+      <div className="mb-4 flex h-8 items-center justify-between gap-3">
+        <h2 aria-live="polite" className="text-[15px] font-semibold text-ink-strong">
           {label.slice(0, cut)} <span className="font-normal text-ink-subtle">{label.slice(cut + 1)}</span>
         </h2>
-        <div className="flex items-center gap-1.5">
-          <button type="button" aria-label="Previous month" disabled={month <= firstMonth} onClick={() => onMonth(shiftMonth(month, -1))} className={NAV_BUTTON}>
+        <div className="-me-1.5 flex items-center gap-0.5">
+          <button type="button" aria-label="Previous month" disabled={month <= firstMonth} onClick={() => onMonth(shiftMonth(month, -1))} className={ICON_BUTTON}>
             <Icon name="chevronLeft" className="h-4 w-4" />
           </button>
-          <button type="button" aria-label="Next month" disabled={month >= lastMonth} onClick={() => onMonth(shiftMonth(month, 1))} className={NAV_BUTTON}>
+          <button type="button" aria-label="Next month" disabled={month >= lastMonth} onClick={() => onMonth(shiftMonth(month, 1))} className={ICON_BUTTON}>
             <Icon name="chevronRight" className="h-4 w-4" />
           </button>
         </div>
       </div>
-      <div role="group" aria-label={label} className="grid grid-cols-7 gap-1 text-center">
+      <div role="group" aria-label={label} className="grid grid-cols-7 gap-1.5">
         {WEEKDAYS.map((name) => (
-          <span key={name} aria-hidden="true" className="pb-2 text-[11.5px] font-medium text-ink-subtle">
+          <span key={name} aria-hidden="true" className="pb-1.5 text-center text-[11px] font-medium uppercase tracking-[0.06em] text-ink-subtle">
             {name}
           </span>
         ))}
@@ -226,16 +236,16 @@ function Calendar({ month, onMonth, firstMonth, lastMonth, days, selected, today
               aria-pressed={active}
               aria-label={`${formatDay(key)}${count ? `, ${count} ${count === 1 ? 'time' : 'times'} free` : ', nothing free'}`}
               onClick={() => onSelect(key)}
-              className={`relative flex h-10 items-center justify-center rounded-lg text-[13.5px] tabular-nums transition-[background-color,color,transform] duration-150 sm:h-12 ${FOCUS} ${
+              className={`relative flex h-11 items-center justify-center rounded-lg text-[14px] font-medium tabular-nums transition-[background-color,color,box-shadow,transform] duration-150 sm:h-12 ${FOCUS} ${
                 active
-                  ? 'bg-ink-strong font-semibold text-ink-inverse'
+                  ? 'bg-ink-strong text-ink-inverse'
                   : count
-                    ? 'cursor-pointer bg-surface-hover/80 font-semibold text-ink-strong hover:bg-surface-hover-strong active:scale-95'
+                    ? 'cursor-pointer bg-surface-hover-strong/60 text-ink-strong hover:shadow-[inset_0_0_0_1.5px_var(--color-ink-strong)] active:scale-95'
                     : 'cursor-default text-ink-faint'
               }`}
             >
               {Number(key.slice(8))}
-              {key === today && <span aria-hidden="true" className={`absolute bottom-1.5 h-1 w-1 rounded-full ${active ? 'bg-ink-inverse' : 'bg-ink-muted'}`} />}
+              {key === today && <span aria-hidden="true" className={`absolute bottom-1.5 h-1 w-1 rounded-full ${active ? 'bg-ink-inverse' : 'bg-ink-strong'}`} />}
             </button>
           )
         })}
@@ -256,7 +266,7 @@ function HourToggle({ twelve, onChange }) {
           type="button"
           aria-pressed={twelve === value}
           onClick={() => onChange(value)}
-          className={`h-6 cursor-pointer rounded-md px-2 text-[11.5px] font-medium tabular-nums transition-colors duration-150 ${FOCUS} ${
+          className={`h-6 cursor-pointer rounded-md px-2 text-[12px] font-medium tabular-nums transition-colors duration-150 ${FOCUS} ${
             twelve === value ? 'bg-surface-hover-strong text-ink-strong' : 'text-ink-subtle hover:text-ink-strong'
           }`}
         >
@@ -268,10 +278,17 @@ function HourToggle({ twelve, onChange }) {
 }
 
 function Times({ day, times, zone, twelve, onTwelve, onPick }) {
+  const [chosen, setChosen] = useState(null)
+  const nextRef = useRef(null)
+
+  useEffect(() => {
+    if (chosen) nextRef.current?.focus({ preventScroll: true })
+  }, [chosen])
+
   return (
     <div className={`${PANEL} flex animate-view-in flex-col border-t border-line md:border-t-0 md:border-s`}>
-      <div className="mb-5 flex h-8 items-center justify-between gap-3">
-        <h2 className="text-[14px] font-semibold text-ink-strong">
+      <div className="mb-4 flex h-8 items-center justify-between gap-3">
+        <h2 className="text-[15px] font-semibold text-ink-strong">
           <span aria-hidden="true">
             {formatWeekday(day)} <span className="font-normal tabular-nums text-ink-subtle">{Number(day.slice(8))}</span>
           </span>
@@ -280,17 +297,26 @@ function Times({ day, times, zone, twelve, onTwelve, onPick }) {
         <HourToggle twelve={twelve} onChange={onTwelve} />
       </div>
       <div className="relative md:min-h-0 md:flex-1">
-        <ul
-          key={day}
-          className="grid grid-cols-3 gap-2 animate-rise-in scrollbar-thin sm:grid-cols-4 md:absolute md:inset-0 md:grid-cols-1 md:content-start md:overflow-y-auto md:pb-8 md:mask-[linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]"
-        >
-          {times.map((ms) => (
-            <li key={ms}>
-              <button type="button" onClick={() => onPick(ms)} className={TIME_BUTTON}>
-                {formatTime(ms, zone, twelve)}
-              </button>
-            </li>
-          ))}
+        <ul className="grid grid-cols-2 gap-2 scrollbar-thin sm:grid-cols-3 md:absolute md:inset-0 md:-mx-1 md:grid-cols-1 md:content-start md:overflow-y-auto md:px-1 md:pb-8 md:pt-px md:mask-[linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
+          {times.map((ms) => {
+            const label = formatTime(ms, zone, twelve)
+            return (
+              <li key={ms}>
+                {chosen === ms ? (
+                  <div className="grid h-11 grid-cols-2 gap-1.5 animate-view-in">
+                    <span className="flex items-center justify-center rounded-lg bg-surface-hover-strong text-[14px] font-medium tabular-nums text-ink-strong">{label}</span>
+                    <button ref={nextRef} type="button" aria-label={`Continue with ${label}`} onClick={() => onPick(ms)} className={NEXT}>
+                      Next
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setChosen(ms)} className={SLOT}>
+                    {label}
+                  </button>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </div>
     </div>
@@ -301,26 +327,26 @@ function PickerSkeleton() {
   return (
     <>
       <div aria-busy="true" aria-label="Loading free times" className={PANEL}>
-        <div className="mb-5 flex h-8 items-center justify-between">
+        <div className="mb-4 flex h-8 items-center justify-between">
           <Bone className="h-4 w-28" />
-          <Bone className="h-8 w-[70px] rounded-lg" />
+          <Bone className="h-6 w-14" />
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5">
           {Array.from({ length: 7 }, (_, i) => (
-            <Bone key={`w-${i}`} className="mx-auto mb-2 h-3 w-6" />
+            <Bone key={`w-${i}`} className="mx-auto mb-1.5 h-3 w-6" />
           ))}
           {Array.from({ length: 35 }, (_, i) => (
-            <Bone key={i} className="h-10 rounded-lg sm:h-12" />
+            <Bone key={i} className="h-11 rounded-lg sm:h-12" />
           ))}
         </div>
       </div>
       <div aria-hidden="true" className={`${PANEL} flex flex-col gap-2 border-t border-line md:border-t-0 md:border-s`}>
-        <div className="mb-3 flex h-8 items-center justify-between">
+        <div className="mb-2 flex h-8 items-center justify-between">
           <Bone className="h-4 w-14" />
-          <Bone className="h-7 w-[78px] rounded-lg" />
+          <Bone className="h-7 w-[76px] rounded-lg" />
         </div>
         {Array.from({ length: 6 }, (_, i) => (
-          <Bone key={i} className="h-10 rounded-lg" />
+          <Bone key={i} className="h-11 rounded-lg" />
         ))}
       </div>
     </>
@@ -329,18 +355,18 @@ function PickerSkeleton() {
 
 function Message({ icon, title, children, action }) {
   return (
-    <div className="flex min-h-[340px] flex-col items-center justify-center px-6 py-14 text-center animate-view-in md:col-span-2">
-      <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface-raised text-ink-muted">
+    <div className="flex min-h-[360px] flex-col items-center justify-center px-6 py-14 text-center animate-view-in md:col-span-2">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-hover-strong/60 text-ink-muted">
         <Icon name={icon} className="h-5 w-5" />
       </span>
       <p className="mt-5 text-[15px] font-semibold text-ink-strong">{title}</p>
-      <p className="mt-1.5 max-w-[42ch] text-pretty text-[13.5px] leading-relaxed text-ink-muted">{children}</p>
+      <p className="mt-1.5 max-w-[40ch] text-pretty text-[14px] leading-relaxed text-ink-muted">{children}</p>
       {action && <div className="mt-6">{action}</div>}
     </div>
   )
 }
 
-function DetailsForm({ slot, zone, onBooked, onTaken, onBack, headingRef }) {
+function DetailsForm({ slot, zone, onBooked, onTaken, onBack, onSending, headingRef }) {
   const [draft, setDraft] = useState(EMPTY_DRAFT)
   const [touched, setTouched] = useState({})
   const [showAll, setShowAll] = useState(false)
@@ -359,6 +385,12 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, headingRef }) {
   }
   const touch = (field) => () => setTouched((t) => ({ ...t, [field]: true }))
   const noteLength = draft.note.trim().length
+  const typo = !fieldError('email') && emailTypo(draft.email)
+
+  useEffect(() => {
+    onSending(sending)
+  }, [sending, onSending])
+  useEffect(() => () => onSending(false), [onSending])
 
   const onSubmit = async (event) => {
     event.preventDefault()
@@ -380,7 +412,7 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, headingRef }) {
         timeZone: zone,
         website: draft.website,
       })
-      onBooked({ ...booking, email: draft.email.trim() })
+      onBooked({ ...booking, name: draft.name.trim(), email: draft.email.trim(), note: draft.note.trim() })
     } catch (err) {
       setSending(false)
       if (err?.code === 'slot_taken' || err?.fields?.includes('start')) return onTaken()
@@ -394,15 +426,21 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, headingRef }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className={`${PANEL} relative flex animate-view-in flex-col md:col-span-2`}>
-      <div>
-        <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-24 text-[17px] font-semibold tracking-[-0.01em] text-ink-strong outline-none">
-          Your details
-        </h2>
-        <p className="mt-1 text-[13px] text-ink-muted">The calendar invite goes to your email. It’s only used for that.</p>
-      </div>
+    <form
+      onSubmit={onSubmit}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' || !(e.metaKey || e.ctrlKey)) return
+        e.preventDefault()
+        e.currentTarget.requestSubmit()
+      }}
+      noValidate
+      className={`${PANEL} relative flex animate-view-in flex-col md:col-span-2`}
+    >
+      <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-24 text-[15px] font-semibold text-ink-strong outline-none">
+        Your details
+      </h2>
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field id="book-name" label="Name" error={fieldError('name')}>
           <input
             id="book-name"
@@ -418,7 +456,24 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, headingRef }) {
             className={`${inputClass(fieldError('name'))} h-10`}
           />
         </Field>
-        <Field id="book-email" label="Email" error={fieldError('email')}>
+        <Field
+          id="book-email"
+          label="Email"
+          help={
+            typo ? (
+              <>
+                Did you mean{' '}
+                <button type="button" onClick={() => setDraft((d) => ({ ...d, email: typo }))} className={`cursor-pointer ${TEXT_LINK}`}>
+                  {typo}
+                </button>
+                ?
+              </>
+            ) : (
+              'The calendar invite goes here.'
+            )
+          }
+          error={fieldError('email')}
+        >
           <input
             id="book-email"
             ref={refs.email}
@@ -431,17 +486,17 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, headingRef }) {
             onBlur={touch('email')}
             placeholder="you@company.com"
             aria-invalid={Boolean(fieldError('email')) || undefined}
-            aria-describedby={fieldError('email') ? 'book-email-error' : undefined}
+            aria-describedby={fieldError('email') ? 'book-email-error' : 'book-email-help'}
             className={`${inputClass(fieldError('email'))} h-10`}
           />
         </Field>
       </div>
 
-      <div className="mt-5">
+      <div className="mt-4">
         <Field
           id="book-note"
-          label="What’s it about?"
-          hint="Optional"
+          label="What would you like to talk about?"
+          optional
           counter={noteLength > BOOKING_LIMITS.note.max * 0.8 ? { text: `${noteLength}/${BOOKING_LIMITS.note.max}`, over: noteLength > BOOKING_LIMITS.note.max } : null}
           error={fieldError('note')}
         >
@@ -452,10 +507,10 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, headingRef }) {
             value={draft.note}
             onChange={set('note')}
             onBlur={touch('note')}
-            placeholder="A project, a question, a link to look at first…"
+            placeholder="Share anything that will help me prepare."
             aria-invalid={Boolean(fieldError('note')) || undefined}
             aria-describedby={fieldError('note') ? 'book-note-error' : undefined}
-            className={`${inputClass(fieldError('note'))} min-h-[112px] resize-y py-2.5 leading-relaxed`}
+            className={`${inputClass(fieldError('note'))} min-h-28 resize-y py-2.5 leading-relaxed`}
           />
         </Field>
       </div>
@@ -468,42 +523,35 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, headingRef }) {
       </div>
 
       {error && (
-        <p role="alert" className="mt-5 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/[0.06] px-3.5 py-3 text-[13px] text-red-500">
+        <p role="alert" className="mt-5 flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/6 px-3.5 py-3 text-[13px] text-red-500">
           <Icon name="alert" className="mt-px h-4 w-4" />
           {error}
         </p>
       )}
 
-      <div className="mt-auto pt-8">
-        <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <button type="button" onClick={onBack} disabled={sending} className={SECONDARY}>
-            <Icon name="arrowLeft" className="h-4 w-4" />
-            Back
-          </button>
-          <button type="submit" disabled={sending} className={PRIMARY}>
-            {sending ? (
-              <>
-                <Spinner className="h-4 w-4" />
-                Booking…
-              </>
-            ) : (
-              <>
-                Confirm booking
-                <Icon name="arrowRight" className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5" />
-              </>
-            )}
-          </button>
-        </div>
+      <div className="mt-auto flex items-center justify-end gap-2 pt-8">
+        <button type="button" onClick={onBack} disabled={sending} className={GHOST}>
+          Back
+        </button>
+        <button type="submit" disabled={sending} className={PRIMARY}>
+          {sending && <Spinner className="h-4 w-4" />}
+          {sending ? 'Booking…' : 'Confirm booking'}
+          {!sending && (
+            <kbd aria-hidden="true" className="book-kbd">
+              {MOD_KEY}↵
+            </kbd>
+          )}
+        </button>
       </div>
     </form>
   )
 }
 
-function saveIcs(ics) {
+function saveIcs(ics, name) {
   const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }))
   const a = document.createElement('a')
   a.href = url
-  a.download = 'call-with-blxr.ics'
+  a.download = name
   document.body.append(a)
   a.click()
   a.remove()
@@ -512,90 +560,69 @@ function saveIcs(ics) {
 
 function Detail({ label, children }) {
   return (
-    <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-4 px-4 py-3.5 sm:grid-cols-[88px_minmax(0,1fr)] sm:px-5">
-      <dt className="text-ink-subtle">{label}</dt>
-      <dd className="min-w-0 break-words text-ink-strong">{children}</dd>
+    <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-4">
+      <dt className="font-medium text-ink-strong">{label}</dt>
+      <dd className="min-w-0 wrap-break-word text-ink-secondary">{children}</dd>
     </div>
   )
 }
 
-function Booked({ booking, video, zone, twelve, headingRef }) {
+function Booked({ booking, zone, twelve, onAdd, headingRef }) {
   const start = Date.parse(booking.start)
   const end = Date.parse(booking.end)
   const minutes = Math.round((end - start) / 60_000)
 
   return (
-    <div className="col-span-full flex flex-col items-center px-5 py-12 text-center animate-rise-in sm:px-10 sm:py-16">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/25">
-        <Icon name="check" className="h-5 w-5" strokeWidth={2.2} />
-      </span>
-      <h1 ref={headingRef} tabIndex={-1} className="mt-5 scroll-mt-24 text-[26px] font-semibold tracking-[-0.02em] text-ink-strong outline-none">
-        You’re booked
+    <div className="flex flex-col items-center px-6 py-10 text-center animate-rise-in sm:px-10 sm:py-12">
+      <DoneMark ms={start} zone={zone} />
+      <h1 ref={headingRef} tabIndex={-1} className="mt-6 scroll-mt-24 text-[22px] font-semibold tracking-[-0.02em] text-ink-strong outline-none">
+        This call is scheduled
       </h1>
-      <p className="mt-2 max-w-[48ch] text-pretty text-[14px] leading-relaxed text-ink-muted">
+      <p className="mt-2 max-w-[44ch] text-pretty text-[14px] leading-relaxed text-ink-muted">
         {booking.emailed ? (
           <>
             A calendar invite is on its way to <span className="font-medium text-ink-strong">{booking.email}</span>.
           </>
         ) : (
-          'Add it to your calendar below so it doesn’t slip.'
+          'Add it to your calendar so it doesn’t slip.'
         )}
       </p>
 
-      <dl className="mt-8 w-full max-w-[480px] divide-y divide-line rounded-xl border border-line bg-surface-raised/50 text-start text-[13.5px]">
+      <dl className="mt-8 grid w-full gap-5 border-y border-line py-6 text-start text-[14px]">
         <Detail label="What">{minutesLabel(minutes)} call with Blxr</Detail>
         <Detail label="When">
-          <p>{formatDay(dateKey(start, zone))}</p>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {formatDay(dateKey(start, zone))}
+            <span className="rounded-full bg-surface-hover-strong/70 px-2 py-0.5 text-[12px] font-medium leading-none text-ink-muted">{whenWord(start, zone)}</span>
+          </p>
           <p className="mt-0.5 tabular-nums text-ink-muted">
             {formatTime(start, zone, twelve)} – {formatTime(end, zone, twelve)} · {formatZone(zone, start)}
           </p>
         </Detail>
-        <Detail label="Where">
-          {booking.video ? (
-            <a
-              href={booking.video}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`inline-flex items-center gap-1 rounded-sm underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink-strong ${FOCUS}`}
-            >
-              {video}
-              <Icon name="arrowUpRight" className="h-3.5 w-3.5" />
-            </a>
-          ) : (
-            <>
-              <p>{video}</p>
-              <p className="mt-0.5 text-ink-muted">I’ll email you the link before we talk.</p>
-            </>
-          )}
-        </Detail>
         <Detail label="Who">
           <p>
-            Blxr <span className="text-ink-subtle">· host</span>
+            Blxr <span className="text-ink-subtle">· Host</span>
           </p>
+          <p className="mt-0.5">{booking.name}</p>
           <p className="mt-0.5 text-ink-muted">{booking.email}</p>
         </Detail>
       </dl>
 
-      <div className="mt-8 flex flex-wrap justify-center gap-3">
+      <div className="mt-6 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
         {booking.video && (
           <a href={booking.video} target="_blank" rel="noopener noreferrer" className={PRIMARY}>
-            Join on {video}
-            <Icon name="arrowUpRight" className="h-4 w-4 transition-transform duration-150 group-hover:-translate-y-px group-hover:translate-x-px" />
+            Join the call
+            <Icon name="arrowUpRight" className="h-4 w-4" />
           </a>
         )}
-        {booking.ics && (
-          <button type="button" onClick={() => saveIcs(booking.ics)} className={booking.video ? SECONDARY : PRIMARY}>
-            <Icon name="calendar" className="h-4 w-4" />
-            Add to calendar
-          </button>
-        )}
-        <a {...link(HOME_PATH)} className={SECONDARY}>
-          Back to home
-        </a>
+        <button type="button" onClick={(e) => onAdd(e.currentTarget)} aria-haspopup="dialog" className={booking.video ? OUTLINE : PRIMARY}>
+          <Icon name="calendar" className="h-4 w-4" />
+          Add to calendar
+        </button>
       </div>
 
-      <p className="mt-6 text-[12.5px] text-ink-subtle">
-        Something came up? Email me at <EmailLink />.
+      <p className="mt-6 text-[13px] text-ink-subtle">
+        Need to make a change? <MailLink />
       </p>
     </div>
   )
@@ -612,7 +639,33 @@ export default function BookPage({ theme, onToggleTheme }) {
   const [step, setStep] = useState('pick')
   const [notice, setNotice] = useState(null)
   const [booking, setBooking] = useState(null)
+  const [sending, setSending] = useState(false)
+  const [flash, setFlash] = useState(false)
   const headingRef = useRef(null)
+  const flashTimer = useRef(0)
+  const [notes, setNotes] = useState([])
+  const noteTimers = useRef([])
+  const [sheet, setSheet] = useState(false)
+  const [added, setAdded] = useState(null)
+  const [event, setEvent] = useState(null)
+  const addedTimer = useRef(0)
+  const opener = useRef(null)
+
+  useEffect(
+    () => () => {
+      clearTimeout(flashTimer.current)
+      clearTimeout(addedTimer.current)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    const timers = noteTimers.current
+    return () => timers.forEach(clearTimeout)
+  }, [])
+
+  const notify = useCallback((note) => setNotes((list) => [...list.filter((n) => n.id !== note.id), note]), [])
+  const dismiss = useCallback((id) => setNotes((list) => list.filter((n) => n.id !== id)), [])
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -650,6 +703,8 @@ export default function BookPage({ theme, onToggleTheme }) {
   const today = zone ? dateKey(Date.now(), zone) : null
   const ready = load.state === 'ready' && zone
   const choosing = step === 'details' && slot
+  const done = step === 'done' && booking
+  const closed = load.code === 'booking_disabled' || load.code === 'booking_paused'
 
   const changeMonth = (next) => {
     setMonth(next)
@@ -668,19 +723,109 @@ export default function BookPage({ theme, onToggleTheme }) {
     setStep('pick')
     setNotice('Someone just took that time. Pick another one.')
     setReload((n) => n + 1)
+    setFlash(true)
+    clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlash(false), 3200)
+  }
+
+  const soonest = keys.length ? days.get(keys[0])[0] : null
+  const takeSoonest = () => {
+    setDay(keys[0])
+    setMonth(null)
+    pick(soonest)
+  }
+
+  let island = 'pick'
+  if (done) island = sheet ? 'add' : added ? 'added' : 'done'
+  else if (load.state === 'error') island = closed ? 'paused' : 'offline'
+  else if (!ready) island = 'loading'
+  else if (flash) island = 'taken'
+  else if (!keys.length) island = 'full'
+  else if (choosing) island = sending ? 'sending' : 'details'
+
+  const restoreFocus = () =>
+    requestAnimationFrame(() => {
+      const was = opener.current
+      const el = was?.isConnected ? was : (was?.id && document.getElementById(was.id)) || headingRef.current
+      el?.focus({ preventScroll: true })
+    })
+
+  const openSheet = (from = null) => {
+    opener.current = from
+    setNotes((list) => list.map((n) => (n.id === 'event' ? { ...n, gone: true } : n)))
+    clearTimeout(addedTimer.current)
+    setAdded(null)
+    setSheet(true)
+    if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
+  }
+
+  const closeSheet = () => {
+    setSheet(false)
+    restoreFocus()
+  }
+
+  const addToCalendar = (prefs) => {
+    const start = Date.parse(booking.start)
+    const end = Date.parse(booking.end)
+    const title = prefs.title.trim() || EVENT_TITLE
+    const info = {
+      start,
+      end,
+      title,
+      notes: [prefs.notes.trim(), booking.video ? `Join: ${booking.video}` : 'The video link follows by email.'].filter(Boolean).join('\n\n'),
+      location: booking.video || '',
+    }
+    if (prefs.app === 'apple') {
+      const file = icsFileName(title)
+      saveIcs(calendarIcs({ ...info, uid: icsUid(booking.ics) || `${start}@blxr.net`, alert: prefs.alert }), file)
+      notify({ id: 'saved', icon: 'calendar', ms: start, zone, title: 'Invite downloaded', body: `Open ${file} to add it to your calendar.`, ttl: 6000 })
+    } else {
+      window.open(prefs.app === 'google' ? googleCalendarUrl(info) : outlookCalendarUrl(info), '_blank', 'noopener,noreferrer')
+    }
+    setEvent(prefs)
+    setSheet(false)
+    setAdded(prefs.app)
+    clearTimeout(addedTimer.current)
+    addedTimer.current = setTimeout(() => setAdded(null), 2600)
+    restoreFocus()
   }
 
   const booked = (made) => {
     setBooking(made)
     setStep('done')
+    setEvent({ title: EVENT_TITLE, notes: made.note || '', alert: 10, app: DEFAULT_APP })
+    const start = Date.parse(made.start)
+    const end = Date.parse(made.end)
+    const first = made.name.split(/\s+/)[0]
+    const at = (ms) => formatTime(ms, zone, twelve).replace(' ', ' ')
+    const later = (ms, note) => noteTimers.current.push(setTimeout(() => notify(note), ms))
+    later(700, {
+      id: 'message',
+      icon: 'message',
+      title: 'Blxr',
+      body: `Thanks ${first}, talk ${dayPhrase(start, zone)} at ${at(start)}.`,
+      action: { label: 'Reply', href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Our call ${dayPhrase(start, zone)}`)}` },
+      ttl: 9000,
+    })
+    const day = daysUntil(start, zone)
+    later(1600, {
+      id: 'event',
+      icon: 'calendar',
+      ms: start,
+      zone,
+      title: EVENT_TITLE,
+      body: `${day <= 1 ? whenWord(start, zone) : fullShortDay(start, zone)}, ${at(start)} – ${at(end)}`,
+      action: { label: 'Add', onClick: () => openSheet() },
+      ttl: 11000,
+    })
   }
 
   let panels
   if (load.state === 'error') {
     panels =
-      load.code === 'booking_disabled' ? (
+      closed ? (
         <Message icon="calendar" title="Booking isn’t open right now">
-          Email me at <EmailLink /> and we’ll find a time that works.
+          <MailLink /> and we’ll find a time that works.
         </Message>
       ) : (
         <Message
@@ -689,7 +834,7 @@ export default function BookPage({ theme, onToggleTheme }) {
           action={
             <button
               type="button"
-              className={SECONDARY}
+              className={OUTLINE}
               onClick={() => {
                 setLoad({ state: 'loading' })
                 setReload((n) => n + 1)
@@ -700,7 +845,7 @@ export default function BookPage({ theme, onToggleTheme }) {
             </button>
           }
         >
-          Something went wrong on the way to my calendar. Try again, or email me at <EmailLink />.
+          Something went wrong on the way to my calendar. Try again, or <MailLink>email me</MailLink>.
         </Message>
       )
   } else if (!ready) {
@@ -708,11 +853,13 @@ export default function BookPage({ theme, onToggleTheme }) {
   } else if (!keys.length) {
     panels = (
       <Message icon="calendar" title={`Nothing free in the next ${load.days || 'few'} days`}>
-        My calendar’s full for now. Email me at <EmailLink /> and we’ll find a time.
+        My calendar is full for now. <MailLink /> and we’ll find a time.
       </Message>
     )
   } else if (choosing) {
-    panels = <DetailsForm slot={slot} zone={zone} onBooked={booked} onTaken={taken} onBack={() => setStep('pick')} headingRef={headingRef} />
+    panels = (
+      <DetailsForm slot={slot} zone={zone} onBooked={booked} onTaken={taken} onBack={() => setStep('pick')} onSending={setSending} headingRef={headingRef} />
+    )
   } else {
     panels = (
       <>
@@ -726,74 +873,68 @@ export default function BookPage({ theme, onToggleTheme }) {
           today={today}
           onSelect={setDay}
         />
-        <Times day={activeDay} times={days.get(activeDay) || []} zone={zone} twelve={twelve} onTwelve={setTwelve} onPick={pick} />
+        <Times key={activeDay} day={activeDay} times={days.get(activeDay) || []} zone={zone} twelve={twelve} onTwelve={setTwelve} onPick={pick} />
       </>
     )
   }
 
   return (
-    <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
-      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
-        <div className="w-full flex items-center justify-between">
-          <a
-            {...link(HOME_PATH)}
-            className="group inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
-          >
-            <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:-translate-x-0.5">←</span>
-            <span>Back to Home</span>
-          </a>
-          <div className="flex items-center gap-4">
-            <CommandButton className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-strong transition-colors duration-200" />
-            <ThemeToggle theme={theme} onToggle={onToggleTheme} className="text-ink-muted hover:text-ink-strong transition-colors duration-200" />
-          </div>
-        </div>
+    <div className="book-ui flex min-h-dvh flex-col bg-bg text-ink antialiased selection:bg-selection selection:text-ink-strong animate-view-in">
+      <header className="relative mx-auto flex h-16 w-full max-w-[1048px] items-center justify-between px-4 sm:px-6">
+        <a
+          {...link(HOME_PATH)}
+          className={`group -ms-2 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13.5px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink-strong ${FOCUS}`}
+        >
+          <Icon name="arrowLeft" className="h-4 w-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
+          Back
+        </a>
+        <BookIsland
+          mode={island}
+          slot={done ? Date.parse(booking.start) : slot}
+          end={done ? Date.parse(booking.end) : null}
+          soonest={soonest}
+          zone={zone}
+          twelve={twelve}
+          onSoonest={takeSoonest}
+          video={done ? booking.video : null}
+          onAdd={done ? openSheet : null}
+          event={event}
+          added={added}
+          modKey={MOD_KEY}
+          onClose={closeSheet}
+          onConfirm={addToCalendar}
+        />
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} className={`-me-2 ${ICON_BUTTON}`} />
       </header>
 
-      <main className="w-full max-w-[960px] mx-auto flex flex-col min-h-screen pt-14 border-x border-dashed border-line bg-bg">
-        <section aria-label="Book a call" className="px-4 pt-10 pb-4 sm:px-10 sm:pt-16 animate-rise-in">
-          <p className={`${KICKER} mb-6`}>/ book</p>
+      <NoteStack notes={notes} onDismiss={dismiss} />
 
+      <main className="flex flex-1 justify-center px-4 pb-12 pt-2 sm:items-center sm:px-6 sm:pb-16">
+        <div className={`w-full animate-rise-in ${done ? 'max-w-[520px]' : 'max-w-[1000px]'}`}>
           {notice && (
-            <p role="status" className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3.5 py-3 text-[13px] text-amber-500">
+            <p role="status" className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/6 px-3.5 py-3 text-[13px] text-amber-500">
               <Icon name="info" className="h-4 w-4" />
               {notice}
             </p>
           )}
 
-          <div className={CARD}>
-            {step === 'done' && booking ? (
-              <Booked booking={booking} video={load.video} zone={zone} twelve={twelve} headingRef={headingRef} />
-            ) : (
-              <>
-                <Host load={load} zone={zone} onZone={setZone} slot={choosing ? slot : null} twelve={twelve} />
-                {panels}
-              </>
-            )}
-          </div>
+          {done ? (
+            <div className={DONE_CARD}>
+              <Booked booking={booking} zone={zone} twelve={twelve} onAdd={openSheet} headingRef={headingRef} />
+            </div>
+          ) : (
+            <div className={CARD}>
+              <Host load={load} zone={zone} onZone={setZone} slot={choosing ? slot : null} twelve={twelve} />
+              {panels}
+            </div>
+          )}
 
-          {step === 'pick' && ready && keys.length > 0 && (
-            <p className="mt-5 text-center text-[12.5px] text-ink-subtle">
-              No time that works? Email me at <EmailLink /> and we’ll find one.
+          {!done && load.state !== 'error' && (
+            <p className="mt-5 text-center text-[13px] text-ink-subtle">
+              Can’t find a time that works? <MailLink />
             </p>
           )}
-        </section>
-
-        <footer className="mt-auto px-6 pb-10 pt-16 sm:px-10">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] font-medium text-ink-muted">
-            <a {...link(CONTACT_PATH)} className={FOOT_LINK}>
-              <span>Rather email? Contact</span>
-              <span aria-hidden="true" className={FOOT_ARROW}>→</span>
-            </a>
-            <a {...link(REVIEWS_PATH)} className={FOOT_LINK}>
-              <span>Reviews</span>
-              <span aria-hidden="true" className={FOOT_ARROW}>→</span>
-            </a>
-            <a {...link(PAYMENT_PATH)} className={FOOT_LINK}>
-              <span>Payment</span>
-              <span aria-hidden="true" className={FOOT_ARROW}>→</span>
-            </a>
-          </div>
-        </footer>
+        </div>
       </main>
     </div>
   )

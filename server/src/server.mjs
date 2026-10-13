@@ -5,7 +5,7 @@ import crypto from 'node:crypto'
 import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
 import { mailConfigured, sendMail, passwordChangedMail, bookingMail, describeClient } from './mail.mjs'
 import { readState, writeState } from './state.mjs'
-import { parseHours, isTimeZone, openSlots, pickCalendar } from './booking.mjs'
+import { parseHours, isTimeZone, openSlots, pickCalendar, cleanSchedule, blockRanges, dayKey as zoneDayKey } from './booking.mjs'
 import { busyFrom, timeOf, eventIcs } from './ical.mjs'
 import { CalDavClient, CalendarMirror, CalDavError } from './icloud.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
@@ -1171,8 +1171,50 @@ const BOOKING_LIMIT_WINDOW_MS = 24 * 60 * 60_000
 const BOOKING_FIELDS = { name: [2, 80], note: [0, 1000] }
 const BOOKING_EMAIL_RE = /^[^\s@<>()[\],;:"]+@[^\s@<>()[\],;:"]+\.[a-z0-9-]{2,}$/i
 
+const BOOKING_SCHEDULE_FILE = path.join(STATE_DIR, 'booking-schedule.json')
+const BOOKING_HISTORY_MS = 30 * 86_400_000
+
 if ((process.env.BOOKING_HOURS || '').trim() && !parseHours(process.env.BOOKING_HOURS)) {
   log.warn('calls', `BOOKING_HOURS "${process.env.BOOKING_HOURS.trim().slice(0, 80)}" did not parse — using ${BOOKING_DEFAULT_HOURS}`)
+}
+
+const blockId = () => crypto.randomBytes(6).toString('hex')
+
+function loadSchedule() {
+  const fallback = { hours: BOOKING_WINDOWS, blocks: [], paused: false, rev: 0, custom: false }
+  const saved = readState(BOOKING_SCHEDULE_FILE)
+  if (!saved || typeof saved !== 'object') return fallback
+  const checked = cleanSchedule(saved, { today: '0000-00-00', makeId: blockId })
+  if (checked.error) {
+    log.warn('calls', `booking-schedule.json did not validate (${checked.fields.join(', ')}) — using BOOKING_HOURS until it is saved again from the dashboard`)
+    return fallback
+  }
+  return { ...checked.schedule, rev: Number.isInteger(saved.rev) ? saved.rev : 0, custom: true }
+}
+
+let bookingSchedule = loadSchedule()
+
+if (bookingSchedule.custom && (process.env.BOOKING_HOURS || '').trim()) {
+  log.info('calls', 'weekly hours come from the dashboard (booking-schedule.json); BOOKING_HOURS is only the starting point')
+}
+
+function callOf(event) {
+  const start = timeOf(event.start, BOOKING_TIMEZONE)
+  const end = event.end ? timeOf(event.end, BOOKING_TIMEZONE) : start + BOOKING_MINUTES * 60_000
+  const lines = event.description ? event.description.split('\n') : []
+  const at = lines.findIndex((line) => /^.+ <[^<>\s]+@[^<>\s]+>$/.test(line.trim()))
+  const who = at >= 0 ? /^(.+) <([^<>\s]+@[^<>\s]+)>$/.exec(lines[at].trim()) : null
+  const zone = lines.map((line) => /^Their time zone: (.+)$/.exec(line.trim())?.[1]).find(Boolean)
+  return {
+    uid: event.uid,
+    start,
+    end,
+    name: who?.[1] || event.summary.replace(/^Call with /, '') || 'Guest',
+    email: who?.[2] || null,
+    note: at > 0 ? lines.slice(0, at).join('\n').trim() : '',
+    timeZone: zone && isTimeZone(zone) ? zone : null,
+    video: event.location || null,
+  }
 }
 
 class CalendarError extends Error {
@@ -1232,10 +1274,10 @@ async function fetchAvailability() {
   const watched = BOOKING_BUSY_CALENDARS.length ? calendars.filter((c) => c === target || BOOKING_BUSY_CALENDARS.includes(c.name.toLowerCase())) : calendars
   const events = watched.flatMap((c) => c.events)
   const busy = busyFrom(events, { from: at, to: at + (BOOKING_DAYS + 1) * 86_400_000, timeZone: BOOKING_TIMEZONE })
-  const booked = events
-    .filter((e) => !e.cancelled && !e.recurrenceId && e.uid?.endsWith(`@${BOOKING_UID_DOMAIN}`))
-    .map((e) => timeOf(e.start, BOOKING_TIMEZONE))
-  return { at, busy, booked, target: target.url }
+  const ours = events.filter((e) => !e.cancelled && !e.recurrenceId && e.uid?.endsWith(`@${BOOKING_UID_DOMAIN}`))
+  const booked = ours.map((e) => timeOf(e.start, BOOKING_TIMEZONE))
+  const calls = ours.map(callOf).filter((c) => c.end >= at - BOOKING_HISTORY_MS)
+  return { at, busy, booked, calls, target: target.url }
 }
 
 function keepAvailability(data) {
@@ -1276,19 +1318,78 @@ async function readAvailability() {
   }
 }
 
-const bookingSlots = (data, now = Date.now()) =>
+const scheduleSlots = (data, now = Date.now()) =>
   openSlots({
     now,
-    windows: BOOKING_WINDOWS,
+    windows: bookingSchedule.hours,
     timeZone: BOOKING_TIMEZONE,
     minutes: BOOKING_MINUTES,
     step: BOOKING_STEP,
     notice: BOOKING_NOTICE_HOURS * 60,
     days: BOOKING_DAYS,
-    busy: data.busy,
+    busy: [...data.busy, ...blockRanges(bookingSchedule.blocks, { from: now, to: now + (BOOKING_DAYS + 1) * 86_400_000, timeZone: BOOKING_TIMEZONE })],
     booked: data.booked,
     maxPerDay: BOOKING_MAX_PER_DAY,
   })
+
+const bookingSlots = (data, now = Date.now()) => (bookingSchedule.paused ? [] : scheduleSlots(data, now))
+
+const isoRange = ([a, b]) => [new Date(a).toISOString(), new Date(b).toISOString()]
+
+async function scheduleView() {
+  const view = {
+    timeZone: BOOKING_TIMEZONE,
+    minutes: BOOKING_MINUTES,
+    step: BOOKING_STEP,
+    notice: BOOKING_NOTICE_HOURS,
+    days: BOOKING_DAYS,
+    maxPerDay: BOOKING_MAX_PER_DAY,
+    video: BOOKING_VIDEO_URL ? BOOKING_VIDEO_LABEL : null,
+    connected: BOOKING_ON,
+    custom: bookingSchedule.custom,
+    rev: bookingSchedule.rev,
+    hours: bookingSchedule.hours,
+    blocks: bookingSchedule.blocks,
+    paused: bookingSchedule.paused,
+    calendar: null,
+    syncedAt: null,
+    calendarError: BOOKING_ON ? null : 'booking_disabled',
+    calls: [],
+    busy: [],
+    slots: [],
+  }
+  if (!BOOKING_ON) return view
+  try {
+    const data = await readAvailability()
+    const now = Date.now()
+    const ours = new Set(data.calls.map((c) => `${c.start}/${c.end}`))
+    return {
+      ...view,
+      calendar: bookingTargetName,
+      syncedAt: new Date(data.at).toISOString(),
+      calls: [...data.calls].sort((a, b) => a.start - b.start).map((c) => ({ ...c, start: new Date(c.start).toISOString(), end: new Date(c.end).toISOString() })),
+      busy: data.busy.filter(([a, b]) => b > now - 86_400_000 && !ours.has(`${a}/${b}`)).map(isoRange),
+      slots: scheduleSlots(data, now).map((at) => new Date(at).toISOString()),
+    }
+  } catch (err) {
+    if (!(err instanceof CalendarError)) log.warn('calls', 'the schedule view could not read the calendar', { detail: err?.message })
+    return { ...view, calendarError: err instanceof CalendarError ? err.code : 'calendar_failed' }
+  }
+}
+
+function saveSchedule(body) {
+  if (body.rev !== bookingSchedule.rev) return { status: 409, error: 'conflict' }
+  const checked = cleanSchedule(body, { today: zoneDayKey(Date.now(), BOOKING_TIMEZONE), makeId: blockId })
+  if (checked.error) return { status: 400, ...checked }
+  const next = { ...checked.schedule, rev: bookingSchedule.rev + 1 }
+  if (!writeState(BOOKING_SCHEDULE_FILE, next)) {
+    log.error('calls', 'booking-schedule.json could not be written — check STATE_DIRECTORY')
+    return { status: 500, error: 'save_failed' }
+  }
+  if (next.paused !== bookingSchedule.paused) log.info('calls', next.paused ? 'booking paused from the dashboard' : 'booking reopened from the dashboard')
+  bookingSchedule = { ...next, custom: true }
+  return null
+}
 
 function validateBooking(body) {
   const name = cleanLine(body?.name)
@@ -1369,7 +1470,13 @@ async function bookCall({ name, email, note, start, timeZone }) {
     url: video,
     alarmMinutes: 10,
   }))
-  bookingCache = { ...fresh, at: Date.now(), busy: [...fresh.busy, [start, end]], booked: [...fresh.booked, start] }
+  bookingCache = {
+    ...fresh,
+    at: Date.now(),
+    busy: [...fresh.busy, [start, end]],
+    booked: [...fresh.booked, start],
+    calls: [...fresh.calls, { uid, start, end, name, email, note, timeZone: timeZone && timeZone !== BOOKING_TIMEZONE ? timeZone : null, video }],
+  }
 
   const guestCopy = {
     uid,
@@ -2332,7 +2439,7 @@ async function blogDeployState(sha) {
   return { state: run.conclusion === 'success' ? 'live' : 'failed', url }
 }
 
-const EXPECTED_OFF = /^(?:[a-z]+_)?disabled$|^paused$|^warming$/
+const EXPECTED_OFF = /^(?:[a-z]+_)?(?:disabled|paused)$|^warming$/
 
 function apiLevel(status, code) {
   if (status < 500) return 'warn'
@@ -2432,6 +2539,7 @@ function bucketsFor(req, pathname) {
     pathname === '/api/hits' ||
     (pathname === '/api/vitals' && req.method === 'GET') ||
     pathname.startsWith('/api/reviews/panel') ||
+    pathname === '/api/book/schedule' ||
     pathname.startsWith('/api/blog/') ||
     pathname.startsWith('/api/mail/') ||
     pathname.startsWith('/api/account/') ||
@@ -2628,9 +2736,27 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { item: publicReview(record) }, NO_STORE)
     }
 
+    if (url.pathname === '/api/book/schedule') {
+      if (req.method !== 'GET' && req.method !== 'PUT') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      if (!SITE_OWNER_EMAIL) return json(res, 404, { error: 'not_found' }, NO_STORE)
+      const owner = await isSiteOwner(req)
+      if (owner !== true) return json(res, 401, ownerDenied(owner), NO_STORE)
+      if (req.method === 'PUT') {
+        const body = await readJsonBody(req, 64 * 1024)
+        if (!body || typeof body !== 'object') return json(res, 400, { error: 'invalid', fields: [] }, NO_STORE)
+        const refused = saveSchedule(body)
+        if (refused) {
+          const { status, ...error } = refused
+          return json(res, status, status === 409 ? { ...error, schedule: await scheduleView() } : error, NO_STORE)
+        }
+      }
+      return json(res, 200, await scheduleView(), NO_STORE)
+    }
+
     if (url.pathname === '/api/book') {
       if (req.method !== 'GET' && req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
       if (!BOOKING_ON) return json(res, 503, { error: 'booking_disabled' }, NO_STORE)
+      if (bookingSchedule.paused) return json(res, 503, { error: 'booking_paused' }, NO_STORE)
       try {
         if (req.method === 'GET') {
           const data = await readAvailability()

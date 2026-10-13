@@ -27,6 +27,7 @@ import StudioFact from './components/studio-fact'
 import ScrambleText from './components/scramble-text'
 import LandingMemes from './components/landing-memes'
 import LiveSelect from './components/live-select'
+import BookCallButton from './components/book-call-button'
 import { Facepile, CommentPin, Inspect, FrameLabel, CanvasLayer } from './components/figma'
 import SiteFooter from './components/site-footer'
 import StripeBand from './components/stripe-band'
@@ -566,11 +567,12 @@ function App() {
           </dl>
 
           {}
-          <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3 animate-fade-in-up delay-450">
+          <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-4 animate-fade-in-up delay-450">
+            <BookCallButton />
             <a
               {...link(PROJECTS_PATH, openProjects)}
-              data-component="Button / Primary"
-              className="project-cta group inline-flex h-10 items-center gap-2 rounded-[10px] bg-surface-inverted pl-4 pr-3.5 text-[13px] font-medium text-ink-on-inverted outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+              data-component="Button / Secondary"
+              className="project-cta group inline-flex h-11 items-center gap-2 rounded-full border border-line bg-surface pl-4.5 pr-4 text-[13px] font-medium text-ink-strong outline-none hover:border-line-strong focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
             >
               <span>See the work</span>
               <span className="project-arrow inline-block" aria-hidden="true">→</span>

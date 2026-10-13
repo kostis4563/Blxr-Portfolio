@@ -89,6 +89,134 @@ export function dayKey(ms, timeZone) {
   return `${p.year}-${pad(p.month)}-${pad(p.day)}`
 }
 
+export const REPEATS = ['none', 'daily', 'weekdays', 'weekly', 'biweekly', 'monthly']
+export const SCHEDULE_LIMITS = { hours: 42, blocks: 200, except: 100, label: 60 }
+const KEY_RE = /^(\d{4})-(\d{2})-(\d{2})$/
+const BLOCK_ID_RE = /^[a-z0-9]{6,24}$/
+
+const keyDate = (key) => {
+  const m = KEY_RE.exec(key || '')
+  if (!m) return null
+  const date = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  return date.getUTCDate() === Number(m[3]) && date.getUTCMonth() === Number(m[2]) - 1 ? date : null
+}
+
+export const isDayKey = (key) => typeof key === 'string' && Boolean(keyDate(key))
+
+const shiftKey = (key, days) => {
+  const d = keyDate(key)
+  d.setUTCDate(d.getUTCDate() + days)
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
+}
+
+export function occursOn(block, key) {
+  const day = keyDate(key)
+  const anchor = keyDate(block.date)
+  if (!day || !anchor || key < block.date) return false
+  if (block.until && key > block.until) return false
+  if (block.except?.includes(key)) return false
+  const weekday = day.getUTCDay()
+  switch (block.repeat) {
+    case 'daily':
+      return true
+    case 'weekdays':
+      return weekday >= 1 && weekday <= 5
+    case 'weekly':
+      return weekday === anchor.getUTCDay()
+    case 'biweekly':
+      return weekday === anchor.getUTCDay() && Math.round((day - anchor) / 86_400_000 / 7) % 2 === 0
+    case 'monthly':
+      return day.getUTCDate() === anchor.getUTCDate()
+    default:
+      return key === block.date
+  }
+}
+
+export function blockRanges(blocks, { from, to, timeZone }) {
+  const out = []
+  if (!blocks?.length) return out
+  const last = dayKey(to, timeZone)
+  for (let key = dayKey(from, timeZone); key <= last; key = shiftKey(key, 1)) {
+    const [y, m, d] = key.split('-').map(Number)
+    for (const block of blocks) {
+      if (!occursOn(block, key)) continue
+      const start = zonedTime(y, m, d, block.start ?? 0, timeZone)
+      const end = zonedTime(y, m, d, block.end ?? 24 * 60, timeZone)
+      if (end > from && start < to) out.push([start, end])
+    }
+  }
+  return out.sort((a, b) => a[0] - b[0])
+}
+
+const minuteOf = (value) => (Number.isInteger(value) && value >= 0 && value <= 24 * 60 && value % 5 === 0 ? value : null)
+
+function cleanLabel(value) {
+  return String(value ?? '')
+    .replace(/\p{Cc}/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, SCHEDULE_LIMITS.label)
+}
+
+export function cleanSchedule(input, { today, makeId }) {
+  const fields = new Set()
+  const hours = []
+  if (!Array.isArray(input?.hours) || input.hours.length > SCHEDULE_LIMITS.hours) fields.add('hours')
+  else {
+    for (const w of input.hours) {
+      const start = minuteOf(w?.start)
+      const end = minuteOf(w?.end)
+      if (!Number.isInteger(w?.day) || w.day < 0 || w.day > 6 || start === null || end === null || start >= end) fields.add('hours')
+      else hours.push({ day: w.day, start, end })
+    }
+  }
+
+  const blocks = []
+  if (!Array.isArray(input?.blocks) || input.blocks.length > SCHEDULE_LIMITS.blocks) fields.add('blocks')
+  else {
+    const seen = new Set()
+    for (const b of input.blocks) {
+      const allDay = b?.start === null && b?.end === null
+      const start = allDay ? null : minuteOf(b?.start)
+      const end = allDay ? null : minuteOf(b?.end)
+      const repeat = REPEATS.includes(b?.repeat) ? b.repeat : null
+      const until = b?.until === null || b?.until === undefined || b?.until === '' ? null : b.until
+      const except = Array.isArray(b?.except) ? b.except : []
+      const ok =
+        isDayKey(b?.date) &&
+        repeat &&
+        (allDay || (start !== null && end !== null && start < end)) &&
+        (until === null || (isDayKey(until) && until >= b.date)) &&
+        except.length <= SCHEDULE_LIMITS.except &&
+        except.every(isDayKey)
+      if (!ok) {
+        fields.add('blocks')
+        continue
+      }
+      let id = typeof b.id === 'string' && BLOCK_ID_RE.test(b.id) ? b.id : makeId()
+      while (seen.has(id)) id = makeId()
+      seen.add(id)
+      const last = repeat === 'none' ? b.date : until
+      if (last && last < today) continue
+      blocks.push({
+        id,
+        date: b.date,
+        start,
+        end,
+        repeat,
+        until: repeat === 'none' ? null : until,
+        except: repeat === 'none' ? [] : [...new Set(except.filter((k) => k >= today))].sort(),
+        label: cleanLabel(b.label),
+      })
+    }
+  }
+
+  if (input?.paused !== undefined && typeof input.paused !== 'boolean') fields.add('paused')
+  if (fields.size) return { error: 'invalid', fields: [...fields] }
+  hours.sort((a, b) => a.day - b.day || a.start - b.start || a.end - b.end)
+  return { schedule: { hours, blocks, paused: input.paused === true } }
+}
+
 export function openSlots({ now, windows, timeZone, minutes, step = minutes, notice = 0, days, busy = [], booked = [], maxPerDay = 0 }) {
   const length = minutes * MINUTE_MS
   const earliest = now + notice * MINUTE_MS

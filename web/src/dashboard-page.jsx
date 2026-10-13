@@ -12,6 +12,7 @@ import { CanvasLayer, Toasts } from './components/figma'
 const DashboardBlog = lazy(() => import('./dashboard-blog'))
 const DashboardVolunteer = lazy(() => import('./dashboard-volunteer'))
 const DashboardGallery = lazy(() => import('./dashboard-gallery'))
+const DashboardCalls = lazy(() => import('./dashboard-calls'))
 import { navigate, useRouteHash, dashboardPath, DASHBOARD_PATH } from './lib/router'
 import { Loading } from './components/skeleton'
 import { useAuth, profileOf } from './lib/supabase'
@@ -136,6 +137,14 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
   const blurb = top.subnav ? BLURBS[top.id] : BLURBS[item.path] || BLURBS[top.id]
 
   if (!user || !verified || item.children || hidden) return <Shell />
+
+  if (top.standalone) {
+    return (
+      <Suspense fallback={<Shell />}>
+        {top.id === 'calls' && <DashboardCalls theme={theme} onToggleTheme={onToggleTheme} />}
+      </Suspense>
+    )
+  }
 
   return (
     <div className="flex min-h-dvh bg-bg text-ink selection:bg-selection selection:text-ink-strong antialiased font-sans">

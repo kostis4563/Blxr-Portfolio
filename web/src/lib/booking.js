@@ -117,3 +117,130 @@ export function bookingProblems({ name, email, note }) {
   if (note.trim().length > BOOKING_LIMITS.note.max) out.note = `Keep it under ${BOOKING_LIMITS.note.max} characters.`
   return out
 }
+
+export function daysUntil(ms, timeZone, now = Date.now()) {
+  return Math.round((Date.parse(dateKey(ms, timeZone)) - Date.parse(dateKey(now, timeZone))) / 86_400_000)
+}
+
+export function shortDay(ms, timeZone) {
+  const key = dateKey(ms, timeZone)
+  return `${formatWeekday(key)} ${Number(key.slice(8))}`
+}
+
+export function fullShortDay(ms, timeZone) {
+  const key = dateKey(ms, timeZone)
+  return `${shortDay(ms, timeZone)} ${formatter('en-GB', { timeZone: 'UTC', month: 'short' }).format(noon(key))}`
+}
+
+export function whenWord(ms, timeZone, now = Date.now()) {
+  const days = daysUntil(ms, timeZone, now)
+  return days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`
+}
+
+export function dayPhrase(ms, timeZone, now = Date.now()) {
+  const days = daysUntil(ms, timeZone, now)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  if (days < 7) return `on ${formatDay(dateKey(ms, timeZone)).split(' ')[0]}`
+  return `on ${fullShortDay(ms, timeZone)}`
+}
+
+export const EVENT_TITLE = 'Call with Blxr'
+
+export const ALERTS = [
+  { minutes: null, label: 'None' },
+  { minutes: 0, label: 'At start' },
+  { minutes: 5, label: '5 min before' },
+  { minutes: 10, label: '10 min before' },
+  { minutes: 15, label: '15 min before' },
+  { minutes: 30, label: '30 min before' },
+  { minutes: 60, label: '1 hour before' },
+  { minutes: 1440, label: '1 day before' },
+]
+
+const icsStamp = (ms) => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+
+const icsText = (text) => String(text).replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/[,;]/g, '\\$&')
+
+const octets = (ch) => {
+  const cp = ch.codePointAt(0)
+  return cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4
+}
+
+function icsFold(line) {
+  const out = []
+  let chunk = ''
+  let size = 0
+  for (const ch of line) {
+    if (size + octets(ch) > (out.length ? 74 : 75)) {
+      out.push(chunk)
+      chunk = ''
+      size = 0
+    }
+    chunk += ch
+    size += octets(ch)
+  }
+  out.push(chunk)
+  return out.join('\r\n ')
+}
+
+export const icsUid = (ics) => /^UID:(.+)$/m.exec(ics || '')?.[1].trim() || null
+
+export function calendarIcs({ uid, start, end, title, notes, location, alert = null, stamp = Date.now() }) {
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//blxr.net//Book a call//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT']
+  lines.push(`UID:${uid}`, `DTSTAMP:${icsStamp(stamp)}`, `DTSTART:${icsStamp(start)}`, `DTEND:${icsStamp(end)}`, `SUMMARY:${icsText(title)}`)
+  if (notes) lines.push(`DESCRIPTION:${icsText(notes)}`)
+  if (location) lines.push(`LOCATION:${icsText(location)}`, `URL:${location}`)
+  lines.push('STATUS:CONFIRMED', 'TRANSP:OPAQUE', 'SEQUENCE:0')
+  if (Number.isInteger(alert) && alert >= 0) lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(title)}`, `TRIGGER:-PT${alert}M`, 'END:VALARM')
+  lines.push('END:VEVENT', 'END:VCALENDAR')
+  return `${lines.map(icsFold).join('\r\n')}\r\n`
+}
+
+const query = (params) =>
+  Object.entries(params)
+    .filter(([, value]) => value)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&')
+
+export const googleCalendarUrl = ({ start, end, title, notes, location }) =>
+  `https://calendar.google.com/calendar/render?${query({ action: 'TEMPLATE', text: title, dates: `${icsStamp(start)}/${icsStamp(end)}`, details: notes, location })}`
+
+export const outlookCalendarUrl = ({ start, end, title, notes, location }) =>
+  `https://outlook.live.com/calendar/0/action/compose?${query({ rru: 'addevent', subject: title, startdt: new Date(start).toISOString(), enddt: new Date(end).toISOString(), body: notes, location })}`
+
+export function icsFileName(title) {
+  const slug = String(title)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/, '')
+  return `${slug || 'call-with-blxr'}.ics`
+}
+
+const MAIL_DOMAINS = ['gmail.com', 'icloud.com', 'me.com', 'mac.com', 'outlook.com', 'hotmail.com', 'live.com', 'yahoo.com', 'proton.me', 'protonmail.com', 'gmx.com', 'aol.com', 'mail.com']
+
+function editDistance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)])
+  for (let j = 1; j <= b.length; j += 1) d[0][j] = j
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1)
+    }
+  }
+  return d[a.length][b.length]
+}
+
+export function emailTypo(email) {
+  const clean = email.trim()
+  const at = clean.lastIndexOf('@')
+  if (at < 1) return null
+  const domain = clean.slice(at + 1).toLowerCase()
+  if (domain.length < 4 || MAIL_DOMAINS.includes(domain)) return null
+  const fix = MAIL_DOMAINS.includes(`${domain}.com`) ? `${domain}.com` : MAIL_DOMAINS.find((known) => editDistance(domain, known) === 1)
+  return fix ? `${clean.slice(0, at)}@${fix}` : null
+}

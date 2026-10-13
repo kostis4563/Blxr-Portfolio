@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseHours, isTimeZone, zonedTime, dayKey, openSlots } from '../src/booking.mjs'
+import { parseHours, isTimeZone, zonedTime, dayKey, openSlots, occursOn, blockRanges, cleanSchedule } from '../src/booking.mjs'
 
 const iso = (ms) => new Date(ms).toISOString()
 const at = (s) => Date.parse(s)
@@ -84,5 +84,116 @@ describe('openSlots', () => {
     const slots = openSlots({ ...base, windows: parseHours('tue 10:00-11:00, tue 10:30-11:30') })
     assert.equal(slots.length, new Set(slots).size)
     assert.equal(slots.length, 3)
+  })
+})
+
+describe('blocks', () => {
+  const block = (over = {}) => ({ id: 'abc123', date: '2026-10-14', start: 840, end: 900, repeat: 'none', until: null, except: [], label: '', ...over })
+  const daysOf = (b, from = '2026-10-12', count = 92) =>
+    Array.from({ length: count }, (_, i) => new Date(Date.parse(`${from}T12:00:00Z`) + i * 86_400_000).toISOString().slice(0, 10)).filter((key) => occursOn(b, key))
+
+  test('each repeat lands on the right days, from its first day on', () => {
+    assert.deepEqual(daysOf(block()), ['2026-10-14'])
+    assert.deepEqual(daysOf(block({ repeat: 'daily', until: '2026-10-16' })), ['2026-10-14', '2026-10-15', '2026-10-16'])
+    assert.deepEqual(daysOf(block({ repeat: 'weekdays', until: '2026-10-20' })), ['2026-10-14', '2026-10-15', '2026-10-16', '2026-10-19', '2026-10-20'])
+    assert.deepEqual(daysOf(block({ repeat: 'weekly', until: '2026-11-04' })), ['2026-10-14', '2026-10-21', '2026-10-28', '2026-11-04'])
+    assert.deepEqual(daysOf(block({ repeat: 'biweekly', until: '2026-11-25' })), ['2026-10-14', '2026-10-28', '2026-11-11', '2026-11-25'])
+    assert.deepEqual(daysOf(block({ repeat: 'monthly', date: '2026-10-31' })), ['2026-10-31', '2026-12-31'])
+  })
+
+  test('skipped days are left out of a repeat', () => {
+    assert.deepEqual(daysOf(block({ repeat: 'weekly', until: '2026-11-04', except: ['2026-10-21', '2026-10-28'] })), ['2026-10-14', '2026-11-04'])
+  })
+
+  test('blockRanges turns wall-clock blocks into instants in the zone, all-day ones included', () => {
+    const ranges = blockRanges([block(), block({ id: 'allday', date: '2026-10-16', start: null, end: null })], {
+      from: at('2026-10-12T00:00:00Z'),
+      to: at('2026-10-20T00:00:00Z'),
+      timeZone: 'Europe/Athens',
+    })
+    assert.deepEqual(ranges.map(([a, b]) => `${iso(a)}/${iso(b)}`), ['2026-10-14T11:00:00.000Z/2026-10-14T12:00:00.000Z', '2026-10-15T21:00:00.000Z/2026-10-16T21:00:00.000Z'])
+  })
+
+  test('a weekly block keeps its wall-clock time across the DST change', () => {
+    const ranges = blockRanges([block({ date: '2026-10-19', start: 600, end: 660, repeat: 'weekly' })], {
+      from: at('2026-10-18T00:00:00Z'),
+      to: at('2026-10-28T00:00:00Z'),
+      timeZone: 'Europe/Athens',
+    })
+    assert.deepEqual(ranges.map(([a]) => iso(a)), ['2026-10-19T07:00:00.000Z', '2026-10-26T08:00:00.000Z'])
+  })
+
+  test('openSlots treats block ranges like any other busy time', () => {
+    const windows = parseHours('wed 13:00-16:00')
+    const busy = blockRanges([block()], { from: at('2026-10-12T00:00:00Z'), to: at('2026-10-16T00:00:00Z'), timeZone: 'Europe/Athens' })
+    const slots = openSlots({ now: at('2026-10-12T00:00:00Z'), windows, timeZone: 'Europe/Athens', minutes: 30, days: 4, busy }).map(iso)
+    assert.deepEqual(slots, ['2026-10-14T10:00:00.000Z', '2026-10-14T10:30:00.000Z', '2026-10-14T12:00:00.000Z', '2026-10-14T12:30:00.000Z'])
+  })
+})
+
+describe('cleanSchedule', () => {
+  let n = 0
+  const opts = { today: '2026-10-12', makeId: () => `gen${String(++n).padStart(4, '0')}` }
+
+  test('sorts the hours, names new blocks, and drops blocks and skips that are over', () => {
+    const { schedule } = cleanSchedule(
+      {
+        hours: [
+          { day: 3, start: 840, end: 1080 },
+          { day: 1, start: 600, end: 1080 },
+          { day: 3, start: 600, end: 780 },
+        ],
+        blocks: [
+          { date: '2026-10-20', start: null, end: null, repeat: 'none', label: '  Trip\n to   Crete ' },
+          { id: 'keepme', date: '2026-09-02', start: 720, end: 780, repeat: 'weekly', until: null, except: ['2026-09-09', '2026-10-21', '2026-10-21'] },
+          { id: 'oldone', date: '2026-10-01', start: 600, end: 660, repeat: 'none' },
+          { id: 'ended1', date: '2026-09-01', start: 600, end: 660, repeat: 'daily', until: '2026-10-11' },
+        ],
+        paused: true,
+      },
+      opts,
+    )
+    assert.deepEqual(schedule.hours, [
+      { day: 1, start: 600, end: 1080 },
+      { day: 3, start: 600, end: 780 },
+      { day: 3, start: 840, end: 1080 },
+    ])
+    assert.deepEqual(schedule.blocks, [
+      { id: 'gen0001', date: '2026-10-20', start: null, end: null, repeat: 'none', until: null, except: [], label: 'Trip to Crete' },
+      { id: 'keepme', date: '2026-09-02', start: 720, end: 780, repeat: 'weekly', until: null, except: ['2026-10-21'], label: '' },
+    ])
+    assert.equal(schedule.paused, true)
+  })
+
+  test('refuses broken hours and blocks, naming what was wrong', () => {
+    const good = { hours: [], blocks: [] }
+    assert.deepEqual(cleanSchedule({ ...good, hours: [{ day: 7, start: 600, end: 700 }] }, opts), { error: 'invalid', fields: ['hours'] })
+    assert.deepEqual(cleanSchedule({ ...good, hours: [{ day: 1, start: 700, end: 600 }] }, opts), { error: 'invalid', fields: ['hours'] })
+    assert.deepEqual(cleanSchedule({ ...good, hours: [{ day: 1, start: 601, end: 700 }] }, opts), { error: 'invalid', fields: ['hours'] })
+    for (const bad of [
+      { date: '2026-02-30', start: null, end: null, repeat: 'none' },
+      { date: '2026-10-20', start: 600, end: null, repeat: 'none' },
+      { date: '2026-10-20', start: 600, end: 1500, repeat: 'none' },
+      { date: '2026-10-20', start: 600, end: 660, repeat: 'yearly' },
+      { date: '2026-10-20', start: 600, end: 660, repeat: 'daily', until: '2026-10-19' },
+      { date: '2026-10-20', start: 600, end: 660, repeat: 'weekly', except: ['soon'] },
+    ]) {
+      assert.deepEqual(cleanSchedule({ ...good, blocks: [bad] }, opts), { error: 'invalid', fields: ['blocks'] }, JSON.stringify(bad))
+    }
+    assert.deepEqual(cleanSchedule({ hours: 'mon-fri', blocks: null, paused: 'yes' }, opts), { error: 'invalid', fields: ['hours', 'blocks', 'paused'] })
+  })
+
+  test('two blocks never share an id', () => {
+    const { schedule } = cleanSchedule(
+      {
+        hours: [],
+        blocks: [
+          { id: 'same12', date: '2026-10-20', start: null, end: null, repeat: 'none' },
+          { id: 'same12', date: '2026-10-21', start: null, end: null, repeat: 'none' },
+        ],
+      },
+      opts,
+    )
+    assert.equal(new Set(schedule.blocks.map((b) => b.id)).size, 2)
   })
 })
