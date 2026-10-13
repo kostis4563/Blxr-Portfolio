@@ -20,6 +20,7 @@ import {
   SECURITY_PATH,
   IB_PATH,
   LISTENING_PATH,
+  QUOTE_PATH,
   TERMINAL_PATH,
 } from '../lib/router'
 import { GITHUB_URL, DISCORD_URL, CONTACT_EMAIL, SOCIAL_ICON_PATHS } from '../lib/profile'
@@ -45,6 +46,7 @@ const COLUMNS = [
       { label: 'Uses', to: USES_PATH },
       { label: 'Reviews', to: REVIEWS_PATH },
       { label: 'Volunteering', to: VOLUNTEER_PATH },
+      { label: 'Quotes', to: QUOTE_PATH },
       { label: 'Security', to: SECURITY_PATH },
     ],
   },

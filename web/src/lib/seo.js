@@ -63,6 +63,9 @@ const LINKS_DESCRIPTION =
 const GALLERY_DESCRIPTION =
   'Gallery by Blxr: photos I took and UI designs I made, from city light to dashboards and product screens.'
 
+const QUOTE_DESCRIPTION =
+  'Words Blxr lives by: one main quote up top and more added over time, each one dated, some with a note on what it means.'
+
 const TERMINAL_DESCRIPTION =
   'blxr.net as a shell: type help, about, projects or contact, cd between pages, and find the commands that are not in help.'
 
@@ -225,6 +228,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'quote') {
+    return {
+      ...base,
+      title: 'Quotes — Words Blxr Lives By',
+      description: QUOTE_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'terminal') {
     return {
       ...base,
@@ -293,6 +304,7 @@ const SHORT_LABELS = {
   links: 'Links',
   volunteer: 'Volunteering',
   gallery: 'Gallery',
+  quote: 'Quotes',
   terminal: 'Terminal',
   login: 'Sign in',
   dashboard: 'Dashboard',
@@ -656,6 +668,18 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'quote') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Quotes',
+      description: QUOTE_DESCRIPTION,
+      url: `${SITE_URL}/quote`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'terminal') {
     return {
       '@context': 'https://schema.org',
@@ -732,6 +756,8 @@ function crumbsFor(route) {
     items.push({ name: 'Volunteering', item: urlOf('/volunteer') })
   } else if (route.name === 'gallery') {
     items.push({ name: 'Gallery', item: urlOf('/gallery') })
+  } else if (route.name === 'quote') {
+    items.push({ name: 'Quotes', item: urlOf('/quote') })
   } else if (route.name === 'terminal') {
     items.push({ name: 'Terminal', item: urlOf('/terminal') })
   } else if (route.name === 'library') {

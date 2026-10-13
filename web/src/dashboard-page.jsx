@@ -12,7 +12,9 @@ import { CanvasLayer, Toasts } from './components/figma'
 const DashboardBlog = lazy(() => import('./dashboard-blog'))
 const DashboardVolunteer = lazy(() => import('./dashboard-volunteer'))
 const DashboardGallery = lazy(() => import('./dashboard-gallery'))
+const DashboardQuotes = lazy(() => import('./dashboard-quotes'))
 const DashboardCalls = lazy(() => import('./dashboard-calls'))
+const DashboardAdmin = lazy(() => import('./dashboard-admin'))
 import { navigate, useRouteHash, dashboardPath, DASHBOARD_PATH } from './lib/router'
 import { Loading } from './components/skeleton'
 import { useAuth, profileOf } from './lib/supabase'
@@ -132,7 +134,7 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
   }, [item, hidden])
 
   const sub = hash.replace(/^#/, '').split('/')[1] || ''
-  const inside = Boolean(top.bare) || (Boolean(top.deep) && /^[0-9a-f-]{36}$/i.test(sub)) || ((top.id === 'blog' || top.id === 'volunteer' || top.id === 'gallery') && Boolean(sub))
+  const inside = Boolean(top.bare) || (Boolean(top.deep) && /^[0-9a-f-]{36}$/i.test(sub)) || ((top.id === 'blog' || top.id === 'volunteer' || top.id === 'gallery' || top.id === 'quotes') && Boolean(sub))
   const title = top.subnav ? top.label : item.label
   const blurb = top.subnav ? BLURBS[top.id] : BLURBS[item.path] || BLURBS[top.id]
 
@@ -149,7 +151,7 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
   return (
     <div className="flex min-h-dvh bg-bg text-ink selection:bg-selection selection:text-ink-strong antialiased font-sans">
       <DashboardSidebar
-        activePath={item.path}
+        activePath={top.section ? top.section.id : item.path}
         collapsed={collapsed}
         onToggleCollapsed={toggleCollapsed}
         mobileOpen={mobileOpen}
@@ -164,7 +166,7 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
       <div className="flex min-w-0 flex-1 flex-col">
         <DashboardTopbar item={item} user={session.user} theme={theme} onToggleTheme={onToggleTheme} onOpenMobile={() => setMobileOpen(true)} />
 
-        <main className={`mx-auto w-full flex-1 px-4 py-6 sm:px-8 sm:py-8 ${top.subnav && !top.roomy ? 'max-w-[820px]' : top.wide ? 'max-w-[1440px]' : 'max-w-[1080px]'}`}>
+        <main className={`mx-auto w-full flex-1 px-4 py-6 sm:px-8 sm:py-8 ${(top.subnav && !top.roomy) || top.narrow ? 'max-w-[820px]' : top.wide ? 'max-w-[1440px]' : 'max-w-[1080px]'}`}>
           {guest && <GuestBar user={user} boards={work} onClaim={openClaim} />}
           {!inside && (
             <div key={top.id} className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 animate-rise-in">
@@ -178,6 +180,10 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
             <MembersOnly path={item.path} onClaim={openClaim} />
           ) : top.id === 'home' ? (
             <DashboardHome user={user} guest={guest} />
+          ) : top.id === 'admin' ? (
+            <Suspense fallback={<Loading label="Opening admin" />}>
+              <DashboardAdmin />
+            </Suspense>
           ) : top.id === 'settings' ? (
             <DashboardSettings
               item={item}
@@ -209,6 +215,10 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
           ) : top.id === 'volunteer' ? (
             <Suspense fallback={<Loading label="Opening your events" />}>
               <DashboardVolunteer hash={hash} />
+            </Suspense>
+          ) : top.id === 'quotes' ? (
+            <Suspense fallback={<Loading label="Opening your quotes" />}>
+              <DashboardQuotes hash={hash} />
             </Suspense>
           ) : null}
         </main>

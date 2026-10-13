@@ -150,6 +150,12 @@ export default function DashboardTopbar({ item, user, theme, onToggleTheme, onOp
         <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5">
           <a {...link(dashboardPath())} className={`${CRUMB} hidden sm:block`}>Dashboard</a>
           <span aria-hidden="true" className="hidden text-ink-faint sm:block">/</span>
+          {top.section ? (
+            <>
+              <a {...link(dashboardPath(top.section.id))} className={CRUMB}>{top.section.label}</a>
+              <span aria-hidden="true" className="text-ink-faint">/</span>
+            </>
+          ) : null}
           {item.parent ? (
             <>
               <a {...link(dashboardPath(top.path))} className={CRUMB}>{top.label}</a>

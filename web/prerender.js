@@ -119,6 +119,7 @@ const ROUTE_SOURCES = {
   links: ['src/links-page.jsx', 'src/lib/links.js', 'src/lib/profile.js'],
   volunteer: ['src/volunteer-page.jsx', 'src/lib/volunteer.js'],
   gallery: ['src/gallery-page.jsx', 'src/lib/gallery.js'],
+  quote: ['src/quote-page.jsx', 'src/lib/quote.js', 'src/lib/quote-api.js'],
   terminal: ['src/terminal-page.jsx', 'src/lib/terminal.js'],
 }
 

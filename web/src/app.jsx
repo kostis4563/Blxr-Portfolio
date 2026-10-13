@@ -15,6 +15,7 @@ import PaymentPageImpl from '#ssr-page/payment'
 import LinksPageImpl from '#ssr-page/links'
 import VolunteerPageImpl from '#ssr-page/volunteer'
 import GalleryPageImpl from '#ssr-page/gallery'
+import QuotePageImpl from '#ssr-page/quote'
 import TerminalPageImpl from '#ssr-page/terminal'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
@@ -67,6 +68,7 @@ const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-pa
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
 const VolunteerPage = routePage(VolunteerPageImpl, withSupabase(() => import('#client-page/volunteer')))
 const GalleryPage = routePage(GalleryPageImpl, withSupabase(() => import('#client-page/gallery')))
+const QuotePage = routePage(QuotePageImpl, withSupabase(() => import('#client-page/quote')))
 const PublicProfilePage = routePage(PublicProfilePageImpl, withSupabase(() => import('#client-page/public-profile')))
 const NotFoundPage = routePage(NotFoundPageImpl, () => import('#client-page/not-found'))
 
@@ -398,6 +400,17 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <GalleryPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'quote') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <QuotePage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>

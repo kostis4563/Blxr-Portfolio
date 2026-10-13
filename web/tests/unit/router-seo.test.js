@@ -39,6 +39,7 @@ describe('parseRoute', () => {
     ['/links', 'links'],
     ['/volunteer', 'volunteer'],
     ['/gallery', 'gallery'],
+    ['/quote', 'quote'],
     ['/terminal', 'terminal'],
     ['/login', 'login'],
     ['/dashboard', 'dashboard'],

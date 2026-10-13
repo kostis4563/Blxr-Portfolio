@@ -1185,11 +1185,11 @@ export default function DashboardCalls({ theme, onToggleTheme }) {
       <header className="sched-header sticky top-0 z-40">
         <div className="relative mx-auto flex h-16 w-full max-w-282 items-center justify-between px-4 sm:px-6">
           <a
-            {...link(dashboardPath())}
+            {...link(dashboardPath('admin'))}
             className={`group -ms-2 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13.5px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink-strong ${FOCUS}`}
           >
             <Icon name="arrowLeft" className="h-4 w-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
-            <span className="max-[400px]:sr-only">Dashboard</span>
+            <span className="max-[400px]:sr-only">Admin</span>
           </a>
           <ScheduleIsland
             mode={mode}

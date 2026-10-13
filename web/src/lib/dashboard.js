@@ -129,10 +129,20 @@ export const NAV = [
   {
     label: 'Owner',
     owner: true,
+    items: [{ id: 'admin', label: 'Admin', icon: 'sliders', narrow: true }],
+  },
+]
+
+export const ADMIN_SECTION = NAV.at(-1).items[0]
+
+export const ADMIN = [
+  {
+    label: 'People',
     items: [
       {
         id: 'reviewpanel',
         label: 'Review panel',
+        hint: 'Moderate reviews and hand out invites',
         icon: 'star',
         subnav: true,
         roomy: true,
@@ -143,12 +153,21 @@ export const NAV = [
           { id: 'settings', label: 'Settings' },
         ],
       },
-      { id: 'calls', label: 'Calls', icon: 'phoneCall', standalone: true },
-      { id: 'blog', label: 'Blog', icon: 'pencil', deep: true },
-      { id: 'gallery', label: 'Gallery', icon: 'image', deep: true },
-      { id: 'volunteer', label: 'Volunteering', icon: 'heart', deep: true },
-      { id: 'logs', label: 'Logs', icon: 'logs', deep: true },
+      { id: 'calls', label: 'Calls', hint: 'Bookings, weekly hours and blocked time', icon: 'phoneCall', standalone: true },
     ],
+  },
+  {
+    label: 'Content',
+    items: [
+      { id: 'blog', label: 'Blog', hint: 'Posts and drafts on /blog', icon: 'pencil', deep: true },
+      { id: 'gallery', label: 'Gallery', hint: 'Photos and UI shots on /gallery', icon: 'image', deep: true },
+      { id: 'volunteer', label: 'Volunteering', hint: 'Events and photos on /volunteer', icon: 'heart', deep: true },
+      { id: 'quotes', label: 'Quotes', hint: 'The lines on /quote', icon: 'flag', deep: true },
+    ],
+  },
+  {
+    label: 'System',
+    items: [{ id: 'logs', label: 'Logs', hint: 'Requests, exceptions and browser errors', icon: 'logs', deep: true }],
   },
 ]
 
@@ -183,17 +202,23 @@ export const BLURBS = {
   'settings/appearance': 'Theme, density and motion for this browser.',
   'settings/notifications': 'What we email you and what shows up in the app.',
   'settings/privacy': 'Your data, analytics choices and account deletion.',
+  admin: 'Everything behind the public site, in one place.',
   reviewpanel: 'Moderate reviews, hand out invite links and tune the form — signed in as you.',
   calls: 'Booked calls, weekly hours and blocked time for /book.',
   volunteer: 'Events you volunteered at, with photos. Saved events show up on /volunteer right away.',
   gallery: 'Photos and UI shots. Drop images in and they show up on /gallery right away.',
+  quotes: 'Lines you live by. Pick the main one, add more, and they show up on /quote right away.',
   logs: 'What the server saw: failed requests, exceptions, upstreams and browser errors.',
 }
 
 export const DEFAULT_SECTION = 'home'
 
 const flat = () =>
-  [...NAV.map((group) => group.items.map((item) => (group.owner ? { ...item, owner: true } : item))), NAV_FOOTER].flatMap((items) =>
+  [
+    ...NAV.map((group) => group.items.map((item) => (group.owner ? { ...item, owner: true } : item))),
+    ADMIN.flatMap((group) => group.items.map((item) => ({ ...item, owner: true, section: ADMIN_SECTION }))),
+    NAV_FOOTER,
+  ].flatMap((items) =>
     items.flatMap((item) => [
       { ...item, path: item.id, parent: null },
       ...(item.children || []).map((child) => ({ ...child, path: `${item.id}/${child.id}`, parent: item })),

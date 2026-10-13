@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, GALLERY_PATH, TERMINAL_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -298,6 +298,16 @@ export function buildCommands({
       href: GALLERY_PATH,
       run: () => navigate(GALLERY_PATH),
       keywords: 'gallery photos photography pictures images ui design screens shots dribbble portfolio',
+    },
+    {
+      id: 'page-quote',
+      group: jump,
+      label: 'Quotes',
+      hint: 'Words I live by',
+      icon: 'flag',
+      href: QUOTE_PATH,
+      run: () => navigate(QUOTE_PATH),
+      keywords: 'quote motto saying words live by hero heroes never run courage brave philosophy meaning',
     },
     {
       id: 'page-terminal',

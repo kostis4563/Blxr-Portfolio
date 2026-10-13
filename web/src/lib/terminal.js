@@ -16,6 +16,7 @@ import {
   LINKS_PATH,
   VOLUNTEER_PATH,
   GALLERY_PATH,
+  QUOTE_PATH,
   TERMINAL_PATH,
   projectPath,
   libraryPath,
@@ -79,6 +80,7 @@ export const PAGES = [
   { name: 'links', to: LINKS_PATH, desc: 'every link on one page' },
   { name: 'payment', to: PAYMENT_PATH, desc: 'how to pay' },
   { name: 'security', to: SECURITY_PATH, desc: 'report a vulnerability' },
+  { name: 'quote', to: QUOTE_PATH, desc: 'words I live by' },
   { name: 'terminal', to: TERMINAL_PATH, desc: 'you are here' },
 ]
 
@@ -95,6 +97,8 @@ const PAGE_ALIASES = {
   pay: 'payment',
   call: 'book',
   meet: 'book',
+  motto: 'quote',
+  quotes: 'quote',
 }
 
 const cleanPath = (name) =>
