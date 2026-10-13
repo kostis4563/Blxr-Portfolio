@@ -219,6 +219,7 @@ export default function QuotePage({ theme, onToggleTheme }) {
             </div>
           </div>
 
+          {!featured && <h1 className="sr-only">Quotes</h1>}
           {state.status === 'loading' && <HeroSkeleton />}
           {state.status === 'error' && <Blank>{errorText(state.error)}</Blank>}
           {state.status === 'ready' && !featured && <Blank action={addLink}>No quotes here yet. The first one is on its way.</Blank>}
