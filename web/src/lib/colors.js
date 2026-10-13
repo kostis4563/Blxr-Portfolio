@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { crossfade } from './crossfade'
 
 const STORAGE_KEY = 'blxr-colors'
 const CSS_KEY = 'blxr-colors-css'
@@ -211,22 +212,18 @@ const listeners = new Set()
 
 if (typeof window !== 'undefined' && custom !== EMPTY) save()
 
-let fadeTimer = 0
-
 function commit(scheme, entry, animate) {
   const next = { ...custom }
   if (entry.bg || entry.ink) next[scheme] = entry
   else delete next[scheme]
   custom = next
 
-  const root = document.documentElement
-  if (animate && root.dataset.theme === scheme) {
-    clearTimeout(fadeTimer)
-    root.dataset.themeTransition = ''
-    fadeTimer = setTimeout(() => delete root.dataset.themeTransition, 300)
+  const update = () => {
+    save()
+    listeners.forEach((fn) => fn())
   }
-  save()
-  listeners.forEach((fn) => fn())
+  if (animate && document.documentElement.dataset.theme === scheme) crossfade(update)
+  else update()
 }
 
 export function setColor(scheme, key, value, { animate = false } = {}) {

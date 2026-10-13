@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { crossfade } from './crossfade'
 import { flashbang, funEnabled, NUKE_ODDS, nuke, smokeGrenade } from './memes'
 
 const STORAGE_KEY = 'blxr-theme'
@@ -57,7 +59,8 @@ function changeTheme(next, apply) {
   }
   const current = document.documentElement.dataset.theme
   const flipping = current === (next === 'light' ? 'dark' : 'light')
-  if (!flipping || !funEnabled()) applyIfLatest()
+  if (!flipping) applyIfLatest()
+  else if (!funEnabled()) crossfade(applyIfLatest)
   else if (spamming()) {
     applyIfLatest()
     import('./secret-effects').then(({ notResponding }) => notResponding()).catch(() => {})
@@ -66,28 +69,24 @@ function changeTheme(next, apply) {
   else smokeGrenade(applyIfLatest)
 }
 
+function paintTheme(theme) {
+  const root = document.documentElement
+  root.dataset.theme = theme
+  root.style.colorScheme = theme
+}
+
 export function useTheme() {
   const [theme, setTheme] = useState(resolveInitialTheme)
   const [preference, setPreferenceState] = useState(readPreference)
-  const isFirstApply = useRef(true)
 
   useEffect(() => {
-    const root = document.documentElement
-    const isInitialPaint = isFirstApply.current
-    isFirstApply.current = false
-
-    if (!isInitialPaint) root.dataset.themeTransition = ''
-
-    root.dataset.theme = theme
-    root.style.colorScheme = theme
-
-    if (isInitialPaint) return
-
-    const done = setTimeout(() => {
-      delete root.dataset.themeTransition
-    }, 300)
-    return () => clearTimeout(done)
+    paintTheme(theme)
   }, [theme])
+
+  const show = useCallback((next) => {
+    paintTheme(next)
+    flushSync(() => setTheme(next))
+  }, [])
 
   useEffect(() => {
     forced = (next) => {
@@ -95,12 +94,12 @@ export function useTheme() {
       if (document.documentElement.dataset.theme === next) return
       storeTheme(next)
       setPreferenceState(next)
-      setTheme(next)
+      crossfade(() => show(next))
     }
     return () => {
       forced = null
     }
-  }, [])
+  }, [show])
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)')
@@ -108,27 +107,28 @@ export function useTheme() {
 
     const onChange = (event) => {
       if (readStoredTheme() !== 'system') return
-      setTheme(event.matches ? 'light' : 'dark')
+      const next = event.matches ? 'light' : 'dark'
+      crossfade(() => show(next))
     }
 
     media.addEventListener('change', onChange)
     return () => media.removeEventListener('change', onChange)
-  }, [])
+  }, [show])
 
   const toggleTheme = useCallback(() => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
     storeTheme(next)
     setPreferenceState(next)
-    changeTheme(next, () => setTheme(next))
-  }, [])
+    changeTheme(next, () => show(next))
+  }, [show])
 
   const setPreference = useCallback((pref) => {
     if (pref !== 'system' && pref !== 'light' && pref !== 'dark') return
     const next = pref === 'system' ? systemTheme() : pref
     storeTheme(pref)
     setPreferenceState(pref)
-    changeTheme(next, () => setTheme(next))
-  }, [])
+    changeTheme(next, () => show(next))
+  }, [show])
 
   return { theme, preference, toggleTheme, setPreference }
 }

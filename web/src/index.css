@@ -679,21 +679,8 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  :root[data-theme-transition],
-  :root[data-theme-transition] *,
-  :root[data-theme-transition] *::before,
-  :root[data-theme-transition] *::after {
-    transition:
-      background-color 260ms ease,
-      border-color 260ms ease,
-      color 260ms ease,
-      fill 260ms ease,
-      stroke 260ms ease,
-      box-shadow 260ms ease,
-      outline-color 260ms ease !important;
-    transition-delay: 0ms !important;
-  }
+html:not([data-roll])::view-transition {
+  pointer-events: none;
 }
 
 html {
