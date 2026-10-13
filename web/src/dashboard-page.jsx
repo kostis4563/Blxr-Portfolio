@@ -1,20 +1,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import DashboardSidebar from './components/dashboard-sidebar'
 import DashboardTopbar from './components/dashboard-topbar'
-import DashboardSettings from './dashboard-settings'
-import DashboardProfile from './dashboard-profile'
-import DashboardBoards from './dashboard-boards'
-import DashboardMessages from './dashboard-messages'
-import DashboardReviewPanel from './dashboard-reviewpanel'
-import DashboardLogs from './dashboard-logs'
-import DashboardHome from './dashboard-home'
 import { CanvasLayer, Toasts } from './components/figma'
-const DashboardBlog = lazy(() => import('./dashboard-blog'))
-const DashboardVolunteer = lazy(() => import('./dashboard-volunteer'))
-const DashboardGallery = lazy(() => import('./dashboard-gallery'))
-const DashboardQuotes = lazy(() => import('./dashboard-quotes'))
-const DashboardCalls = lazy(() => import('./dashboard-calls'))
-const DashboardAdmin = lazy(() => import('./dashboard-admin'))
 import { navigate, useRouteHash, dashboardPath, DASHBOARD_PATH } from './lib/router'
 import { Loading } from './components/skeleton'
 import { useAuth, profileOf } from './lib/supabase'
@@ -22,6 +9,49 @@ import { loginUrlFor, mfaRequired, isGuest } from './lib/auth'
 import { itemForHash, isSiteOwner, SIDEBAR_STORAGE_KEY, BLURBS, OWNER_EMAIL } from './lib/dashboard'
 import { CLAIM_HASH, lockedForGuest } from './lib/guest'
 import { GuestBar, MembersOnly, ClaimDialog, useGuestWork } from './components/guest'
+
+const SECTIONS = {
+  home: () => import('./dashboard-home'),
+  settings: () => import('./dashboard-settings'),
+  profile: () => import('./dashboard-profile'),
+  boards: () => import('./dashboard-boards'),
+  messages: () => import('./dashboard-messages'),
+  reviewpanel: () => import('./dashboard-reviewpanel'),
+  logs: () => import('./dashboard-logs'),
+  admin: () => import('./dashboard-admin'),
+  blog: () => import('./dashboard-blog'),
+  volunteer: () => import('./dashboard-volunteer'),
+  gallery: () => import('./dashboard-gallery'),
+  quotes: () => import('./dashboard-quotes'),
+  calls: () => import('./dashboard-calls'),
+}
+
+const MEMBER_SECTIONS = ['home', 'boards', 'messages', 'profile', 'settings']
+
+const DashboardHome = lazy(SECTIONS.home)
+const DashboardSettings = lazy(SECTIONS.settings)
+const DashboardProfile = lazy(SECTIONS.profile)
+const DashboardBoards = lazy(SECTIONS.boards)
+const DashboardMessages = lazy(SECTIONS.messages)
+const DashboardReviewPanel = lazy(SECTIONS.reviewpanel)
+const DashboardLogs = lazy(SECTIONS.logs)
+const DashboardBlog = lazy(SECTIONS.blog)
+const DashboardVolunteer = lazy(SECTIONS.volunteer)
+const DashboardGallery = lazy(SECTIONS.gallery)
+const DashboardQuotes = lazy(SECTIONS.quotes)
+const DashboardCalls = lazy(SECTIONS.calls)
+const DashboardAdmin = lazy(SECTIONS.admin)
+
+const preload = (id) => SECTIONS[id]?.().catch(() => {})
+
+const whenIdle = (fn) => {
+  if (typeof requestIdleCallback === 'function') {
+    const handle = requestIdleCallback(fn, { timeout: 4000 })
+    return () => cancelIdleCallback(handle)
+  }
+  const handle = setTimeout(fn, 1500)
+  return () => clearTimeout(handle)
+}
 
 function readCollapsed() {
   try {
@@ -133,6 +163,16 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
     else if (item.children) navigate(dashboardPath(`${item.id}/${item.children[0].id}`), { replace: true })
   }, [item, hidden])
 
+  useEffect(() => {
+    if (!hidden) preload(top.id)
+  }, [top.id, hidden])
+
+  const ready = Boolean(user) && Boolean(verified)
+  useEffect(() => {
+    if (!ready || guest) return
+    return whenIdle(() => MEMBER_SECTIONS.forEach(preload))
+  }, [ready, guest])
+
   const sub = hash.replace(/^#/, '').split('/')[1] || ''
   const inside = Boolean(top.bare) || (Boolean(top.deep) && /^[0-9a-f-]{36}$/i.test(sub)) || ((top.id === 'blog' || top.id === 'volunteer' || top.id === 'gallery' || top.id === 'quotes') && Boolean(sub))
   const title = top.subnav ? top.label : item.label
@@ -176,51 +216,53 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
               </div>
             </div>
           )}
-          {locked ? (
-            <MembersOnly path={item.path} onClaim={openClaim} />
-          ) : top.id === 'home' ? (
-            <DashboardHome user={user} guest={guest} />
-          ) : top.id === 'admin' ? (
-            <Suspense fallback={<Loading label="Opening admin" />}>
-              <DashboardAdmin />
-            </Suspense>
-          ) : top.id === 'settings' ? (
-            <DashboardSettings
-              item={item}
-              user={session.user}
-              theme={theme}
-              themePreference={themePreference}
-              onSetTheme={onSetTheme}
-              sidebarCollapsed={collapsed}
-              onSetSidebarCollapsed={setCollapsedPersist}
-            />
-          ) : top.id === 'profile' ? (
-            <DashboardProfile user={session.user} />
-          ) : top.id === 'boards' ? (
-            <DashboardBoards hash={hash} guest={guest} onClaim={openClaim} />
-          ) : top.id === 'messages' ? (
-            <DashboardMessages hash={hash} user={session.user} />
-          ) : top.id === 'reviewpanel' ? (
-            <DashboardReviewPanel item={item} />
-          ) : top.id === 'logs' ? (
-            <DashboardLogs hash={hash} />
-          ) : top.id === 'blog' ? (
-            <Suspense fallback={<Loading label="Opening the blog editor" />}>
-              <DashboardBlog hash={hash} />
-            </Suspense>
-          ) : top.id === 'gallery' ? (
-            <Suspense fallback={<Loading label="Opening the gallery" />}>
-              <DashboardGallery hash={hash} />
-            </Suspense>
-          ) : top.id === 'volunteer' ? (
-            <Suspense fallback={<Loading label="Opening your events" />}>
-              <DashboardVolunteer hash={hash} />
-            </Suspense>
-          ) : top.id === 'quotes' ? (
-            <Suspense fallback={<Loading label="Opening your quotes" />}>
-              <DashboardQuotes hash={hash} />
-            </Suspense>
-          ) : null}
+          <Suspense fallback={<Loading label={`Opening ${title.toLowerCase()}`} />}>
+            {locked ? (
+              <MembersOnly path={item.path} onClaim={openClaim} />
+            ) : top.id === 'home' ? (
+              <DashboardHome user={user} guest={guest} />
+            ) : top.id === 'admin' ? (
+              <Suspense fallback={<Loading label="Opening admin" />}>
+                <DashboardAdmin />
+              </Suspense>
+            ) : top.id === 'settings' ? (
+              <DashboardSettings
+                item={item}
+                user={session.user}
+                theme={theme}
+                themePreference={themePreference}
+                onSetTheme={onSetTheme}
+                sidebarCollapsed={collapsed}
+                onSetSidebarCollapsed={setCollapsedPersist}
+              />
+            ) : top.id === 'profile' ? (
+              <DashboardProfile user={session.user} />
+            ) : top.id === 'boards' ? (
+              <DashboardBoards hash={hash} guest={guest} onClaim={openClaim} />
+            ) : top.id === 'messages' ? (
+              <DashboardMessages hash={hash} user={session.user} />
+            ) : top.id === 'reviewpanel' ? (
+              <DashboardReviewPanel item={item} />
+            ) : top.id === 'logs' ? (
+              <DashboardLogs hash={hash} />
+            ) : top.id === 'blog' ? (
+              <Suspense fallback={<Loading label="Opening the blog editor" />}>
+                <DashboardBlog hash={hash} />
+              </Suspense>
+            ) : top.id === 'gallery' ? (
+              <Suspense fallback={<Loading label="Opening the gallery" />}>
+                <DashboardGallery hash={hash} />
+              </Suspense>
+            ) : top.id === 'volunteer' ? (
+              <Suspense fallback={<Loading label="Opening your events" />}>
+                <DashboardVolunteer hash={hash} />
+              </Suspense>
+            ) : top.id === 'quotes' ? (
+              <Suspense fallback={<Loading label="Opening your quotes" />}>
+                <DashboardQuotes hash={hash} />
+              </Suspense>
+            ) : null}
+          </Suspense>
         </main>
       </div>
 

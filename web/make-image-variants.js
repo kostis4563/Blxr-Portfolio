@@ -1,4 +1,4 @@
-import { readFile, writeFile, readdir } from 'node:fs/promises'
+import { readFile, writeFile, readdir, rm } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, join, extname, basename } from 'node:path'
@@ -9,13 +9,15 @@ const pub = resolve(here, 'public')
 
 const COVER_Q = 78
 const LOGO_Q = 82
+const AVIF_Q = 55
+const AVIF_MIN_RATIO = 0.95
 
 const TARGETS = [
 
-  { glob: /^(async|amitista|delivo|7x0-site|web-scanner|fuse-bypass)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
+  { glob: /^(async|amitista|delivo|7x0-site|web-scanner|fuse-bypass)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q, avif: true },
 
-  { glob: /^7x0-site-(dashboard|landing)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
-  { dir: 'library', glob: /\.webp$/, widths: [480, 768, 1200], quality: COVER_Q },
+  { glob: /^7x0-site-(dashboard|landing)\.webp$/, widths: [480, 768, 1200], quality: COVER_Q, avif: true },
+  { dir: 'library', glob: /\.webp$/, widths: [480, 768, 1200], quality: COVER_Q, avif: true },
 
   { glob: /^banner-(chrome|crystal)\.webp$/, widths: [480, 768, 1600], quality: COVER_Q },
 
@@ -46,7 +48,7 @@ async function publicImages() {
   return out
 }
 
-const VARIANT_SUFFIX = /-\d+\.(webp|png)$/
+const VARIANT_SUFFIX = /-\d+\.(webp|png|avif)$/
 
 const targetFor = (image) =>
   VARIANT_SUFFIX.test(image.name)
@@ -81,6 +83,27 @@ for (const image of await publicImages()) {
     await writeFile(out, encoded)
     written.push({ width, size: encoded.length })
     wroteTotal += encoded.length
+
+    if (target.avif) {
+      written.at(-1).avifBuffer = await sharp(source)
+        .resize({ width, withoutEnlargement: true })
+        .avif({ quality: AVIF_Q, effort: 6 })
+        .toBuffer()
+    }
+  }
+
+  const sum = (pick) => written.reduce((total, w) => total + pick(w), 0)
+  const avifPays = Boolean(target.avif) && sum((w) => w.avifBuffer.length) < sum((w) => w.size) * AVIF_MIN_RATIO
+
+  for (const w of written) {
+    const out = join(pub, image.dir, `${stem}-${w.width}.avif`)
+    if (avifPays) {
+      await writeFile(out, w.avifBuffer)
+      w.avif = w.avifBuffer.length
+      wroteTotal += w.avif
+    } else {
+      await rm(out, { force: true })
+    }
   }
 
   const largest = written[written.length - 1]
@@ -90,11 +113,12 @@ for (const image of await publicImages()) {
     v: createHash('sha256').update(source).digest('hex').slice(0, 8),
     ext,
     widths: written.map((w) => w.width),
+    avif: avifPays,
   }
 
   console.log(
     `${image.url.padEnd(40)} ${meta.width}x${meta.height} ${bytes(source.length).padStart(9)}` +
-      ` -> ${written.map((w) => `${w.width}w ${bytes(w.size)}`).join(', ')}`,
+      ` -> ${written.map((w) => `${w.width}w ${bytes(w.size)}${w.avif ? ` (avif ${bytes(w.avif)})` : ''}`).join(', ')}`,
   )
 }
 
@@ -112,8 +136,8 @@ for (const image of await publicImages()) {
 const entries = Object.keys(manifest)
   .sort()
   .map((url) => {
-    const { v, ext, widths } = manifest[url]
-    return `  '${url}': { v: '${v}', ext: '${ext}', widths: [${widths.join(', ')}] },`
+    const { v, ext, widths, avif } = manifest[url]
+    return `  '${url}': { v: '${v}', ext: '${ext}', widths: [${widths.join(', ')}]${avif ? ', avif: true' : ''} },`
   })
 
 await writeFile(

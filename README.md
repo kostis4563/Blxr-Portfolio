@@ -180,7 +180,7 @@ Markdown from here.
 npm install --no-save sharp && node make-image-variants.js
 ```
 
-Run after adding or replacing any image. Writes `<name>-<width>.webp` and regenerates `src/lib/image-manifest.js` (used by `src/lib/images.js` for `srcset` and the `?v=` cache-busting hash). Commit the variants and the manifest with the source image.
+Run after adding or replacing any image. Writes `<name>-<width>.webp` and regenerates `src/lib/image-manifest.js` (used by `src/lib/images.js` for `srcset` and the `?v=` cache-busting hash). Covers and library shots also get `<name>-<width>.avif` when AVIF comes out at least 5% smaller; `components/picture.jsx` serves those through `<picture>` with the WebP as fallback. Commit the variants and the manifest with the source image.
 
 </details>
 

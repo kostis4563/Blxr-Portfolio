@@ -21,6 +21,17 @@ export function imageProps(src, sizes) {
   }
 }
 
+export function avifSource(src, sizes) {
+  const entry = IMAGES[src]
+  if (!entry?.avif || !entry.widths.length) return null
+  const stem = src.slice(0, src.lastIndexOf('.'))
+  return {
+    type: 'image/avif',
+    srcSet: entry.widths.map((width) => `${stem}-${width}.avif?v=${entry.v} ${width}w`).join(', '),
+    ...(sizes ? { sizes } : null),
+  }
+}
+
 export function imageUrl(src, width) {
   const entry = IMAGES[src]
   if (!entry) return src
@@ -34,6 +45,7 @@ export function imageUrl(src, width) {
 export const SIZES = {
     contentColumn: '(min-width: 768px) 720px, calc(100vw - 48px)',
     projectThumb: '(min-width: 640px) 200px, 88px',
+    libraryThumb: '(min-width: 640px) 240px, calc(100vw - 40px)',
     projectMedia: '(min-width: 960px) 656px, (min-width: 640px) calc(100vw - 306px), calc(100vw - 50px)',
     projectGallery: '(min-width: 960px) 322px, (min-width: 640px) calc(50vw - 159px), calc(100vw - 50px)',
     mark: '24px',

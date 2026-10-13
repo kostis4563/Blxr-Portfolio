@@ -23,6 +23,64 @@ export function toggleLayoutGrid() {
   toast(gridOn ? 'Layout grid on' : 'Layout grid off', '⇧G')
 }
 
+const canvas = store()
+let canvasOn = false
+
+export const onCanvas = canvas.subscribe
+export const canvasOpen = () => canvasOn
+
+export function setCanvas(next) {
+  if (canvasOn === next) return
+  canvasOn = next
+  canvas.emit()
+}
+
+export const openCanvas = () => setCanvas(true)
+
+export const CANVAS_FIT = { gap: 40, top: 88, bottom: 52, side: 32, maxScale: 0.6, minScale: 0.04, rowBias: 1.15 }
+
+const sum = (values) => values.reduce((total, value) => total + value, 0)
+
+export function fitFrames(sizes, viewport, fit = CANVAS_FIT) {
+  const { gap, top, bottom, side, maxScale, minScale, rowBias } = { ...CANVAS_FIT, ...fit }
+  if (!sizes.length) return { scale: 1, columns: 0, frames: [] }
+
+  const roomX = viewport.width - side * 2
+  const roomY = viewport.height - top - bottom
+  let best = null
+
+  for (let columns = sizes.length; columns >= 1; columns -= 1) {
+    const rows = []
+    for (let i = 0; i < sizes.length; i += columns) rows.push(sizes.slice(i, i + columns))
+    const widths = rows.map((row) => sum(row.map((size) => size.width)))
+    const heights = rows.map((row) => Math.max(...row.map((size) => size.height)))
+    const scale = Math.min(
+      maxScale,
+      ...rows.map((row, r) => (roomX - (row.length - 1) * gap) / widths[r]),
+      (roomY - (rows.length - 1) * gap) / sum(heights)
+    )
+    if (!best || scale > best.scale * rowBias) best = { scale, columns, rows, widths, heights }
+  }
+
+  const scale = Math.max(minScale, best.scale)
+  const width = Math.max(...best.rows.map((row, r) => best.widths[r] * scale + (row.length - 1) * gap))
+  const height = sum(best.heights) * scale + (best.rows.length - 1) * gap
+  const left = (viewport.width - width) / 2
+  let y = top + Math.max(0, (roomY - height) / 2)
+  const frames = []
+
+  best.rows.forEach((row, r) => {
+    let x = left
+    for (const size of row) {
+      frames.push({ x, y, width: size.width * scale, height: size.height * scale })
+      x += size.width * scale + gap
+    }
+    y += best.heights[r] * scale + gap
+  })
+
+  return { scale, columns: best.columns, frames }
+}
+
 const toasts = store()
 let current = null
 let toastId = 0

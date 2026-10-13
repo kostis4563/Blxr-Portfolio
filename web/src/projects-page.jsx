@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import ProjectCover from './components/project-cover'
+import Picture from './components/picture'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import { projectsList, findProject, isVideoLink } from './lib/projects'
@@ -8,7 +9,7 @@ import SiteFooter from './components/site-footer'
 import StripeBand from './components/stripe-band'
 import BottomBlur from './components/bottom-blur'
 import { link, useRouteHash, HOME_PATH, LIBRARY_PATH, CONTACT_PATH } from './lib/router'
-import { imageProps, SIZES } from './lib/images'
+import { SIZES } from './lib/images'
 
 const youtubeId = (url) => /(?:v=|youtu\.be\/|embed\/)([\w-]{11})/.exec(url ?? '')?.[1] ?? null
 
@@ -25,8 +26,9 @@ const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('
 function Cover({ project, sizes }) {
   if (!project.image) return <ProjectCover project={project} />
   return (
-    <img
-      {...imageProps(project.image, sizes)}
+    <Picture
+      src={project.image}
+      sizes={sizes}
       alt={project.imageAlt ?? `${project.title} cover`}
       loading="lazy"
       decoding="async"
@@ -159,8 +161,9 @@ function Details({ project, videoId, isPlaying, onPlay }) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {project.gallery.map((item) => (
               <figure key={item.src} className="relative aspect-[4/3] overflow-hidden rounded-lg bg-surface-raised">
-                <img
-                  {...imageProps(item.src, SIZES.projectGallery)}
+                <Picture
+                  src={item.src}
+                  sizes={SIZES.projectGallery}
                   alt={item.alt}
                   loading="lazy"
                   decoding="async"

@@ -2271,6 +2271,205 @@ button.fig-face {
   outline: none;
 }
 
+:root[data-canvas] {
+  scrollbar-gutter: stable;
+}
+:root[data-canvas] body {
+  overflow: hidden;
+}
+:root[data-canvas] .canvas-page {
+  --zoom: 520ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: relative;
+  z-index: 56;
+  border-color: transparent;
+  background-color: transparent;
+  transform-origin: 0 0;
+  transition: translate var(--zoom), scale var(--zoom);
+}
+:root[data-canvas] .canvas-page > [data-frame] {
+  background-color: var(--color-bg);
+  transition: translate var(--zoom);
+}
+#intro {
+  --frame-lift: 48px;
+}
+:root[data-canvas] #intro::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 100%;
+  height: var(--frame-lift);
+  background-color: var(--color-bg);
+}
+:root[data-canvas] .canvas-page > :not([data-frame]),
+:root[data-canvas] .canvas-page .fig-frame-label {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+:root[data-canvas] .canvas-page :is(.frame-bleed, .frame-bleed-b)::before,
+:root[data-canvas] .canvas-page :is(.frame-bleed, .frame-bleed-b)::after {
+  display: none;
+}
+:root[data-canvas] #main-header {
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+:root[data-canvas='closing'] #main-header {
+  z-index: 57;
+  opacity: 1;
+}
+:root[data-canvas] .cm-layer {
+  visibility: hidden;
+}
+.canvas-page > [data-frame]:focus {
+  outline: none;
+}
+
+.cv-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background-color: color-mix(in srgb, var(--color-bg), var(--color-ink-strong) 4%);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--color-ink-strong) 16%, transparent) 1px, transparent 1.5px);
+  background-size: 20px 20px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 520ms ease, visibility 0s linear 520ms;
+}
+:root[data-canvas='open'] .cv-backdrop {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 400ms ease;
+}
+
+.cv {
+  --live: #0d99ff;
+
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+}
+
+.cv-frame {
+  position: absolute;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px var(--color-line-strong), 0 18px 40px -22px rgb(0 0 0 / 0.55);
+  cursor: pointer;
+  outline: none;
+  transition: box-shadow 150ms ease;
+}
+.cv-frame:hover {
+  box-shadow: 0 0 0 1px var(--live), 0 18px 40px -22px rgb(0 0 0 / 0.55);
+}
+.cv-frame:focus-visible {
+  box-shadow: 0 0 0 2px var(--live), 0 18px 40px -22px rgb(0 0 0 / 0.55);
+}
+
+.cv-label {
+  bottom: calc(100% + 7px);
+  left: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-ink-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+.cv-frame[data-current] .cv-label {
+  color: var(--color-ink-strong);
+}
+.cv-frame:hover .cv-label,
+.cv-frame:focus-visible .cv-label {
+  color: var(--live);
+}
+
+.cv-frame .fig-inspect-size,
+.cv-frame .fig-handle {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.cv-frame:hover .fig-inspect-size,
+.cv-frame:focus-visible .fig-inspect-size,
+.cv-frame:focus-visible .fig-handle {
+  opacity: 1;
+}
+
+.cv-hud {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 5px 0 14px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-line-strong), 0 12px 32px -14px rgb(0 0 0 / 0.55);
+  color: var(--color-ink-muted);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  translate: -50% 0;
+}
+.cv-hud-sep {
+  height: 14px;
+  border-left: 1px dashed var(--color-line-strong);
+}
+.cv-hud-zoom {
+  color: var(--color-ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+.cv-hud-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 6px;
+  color: var(--color-ink-strong);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 150ms ease;
+}
+.cv-hud-button:hover,
+.cv-hud-button:focus-visible {
+  background: var(--color-surface-hover);
+}
+.cv-hud-button:focus-visible {
+  box-shadow: 0 0 0 2px var(--live);
+}
+.cv-hud kbd {
+  display: none;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--color-ink-faint);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cv-hud kbd {
+    display: inline;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cv-hud {
+    animation: cv-in 220ms ease 140ms both;
+  }
+  .cv-frame {
+    animation: cv-in 200ms ease 380ms both;
+  }
+}
+:root[data-motion='reduced'] :is(.cv-hud, .cv-frame) {
+  animation: none;
+}
+
+@keyframes cv-in {
+  from { opacity: 0; }
+}
+
 .cm-layer {
   position: absolute;
   top: 0;
@@ -2607,6 +2806,8 @@ button.fig-face {
   .fig-frame-label,
   .fig-grid,
   .fig-toast-region,
+  .cv-backdrop,
+  .cv,
   .cm-layer,
   .cm-placing,
   .live-select-ripple,

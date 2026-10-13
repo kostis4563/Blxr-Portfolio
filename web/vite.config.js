@@ -177,8 +177,6 @@ export default defineConfig(({ command, mode, isSsrBuild }) => ({
         advancedChunks: {
           groups: [
 
-            { name: 'gsap', test: /[\\/]node_modules[\\/]gsap[\\/]/ },
-
             { name: 'supabase', test: /[\\/]node_modules[\\/](@supabase|iceberg-js)[\\/]/ },
 
             { name: (id, ctx) => (onEntryPath(id, ctx) ? 'vendor' : null), test: /node_modules/ },

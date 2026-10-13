@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import ProjectCover from './components/project-cover'
+import Picture from './components/picture'
 import ThemeToggle from './components/theme-toggle'
 import { CommandButton } from './components/command-button'
 import {
@@ -8,20 +9,22 @@ import {
   hasPlaceholders
 } from './lib/library'
 import { link, backOr, libraryPath, LIBRARY_PATH, PROJECTS_PATH } from './lib/router'
-import { imageProps, SIZES } from './lib/images'
+import { SIZES } from './lib/images'
 
 function EntryCover(
-  { entry, src = entry.image, alt = `${entry.title} preview`, className = '' }
+  { entry, src = entry.image, alt = `${entry.title} preview`, className = '', sizes = SIZES.contentColumn, priority = false }
 ) {
   const [failed, setFailed] = useState(false)
 
   if (!src || failed) return <ProjectCover project={entry} />
 
   return (
-    <img
-      {...imageProps(src, SIZES.contentColumn)}
+    <Picture
+      src={src}
+      sizes={sizes}
       alt={alt}
-      loading="lazy"
+      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : undefined}
       decoding="async"
       width="1200"
       height="675"
@@ -169,7 +172,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
         </div>
 
         <div className="flex flex-col w-full border-t border-line">
-          {filteredItems.map((entry) => (
+          {filteredItems.map((entry, i) => (
             <a
               key={entry.id}
               {...link(libraryPath(entry.id))}
@@ -179,6 +182,8 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
               <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-surface-raised">
                 <EntryCover
                   entry={entry}
+                  sizes={SIZES.libraryThumb}
+                  priority={i === 0}
                   className="w-full h-full object-cover object-center"
                 />
 
@@ -242,7 +247,7 @@ export default function LibraryPage({ openItemId = null, theme, onToggleTheme })
 
             {}
             <div className="relative aspect-[16/9] w-full shrink-0 overflow-hidden bg-surface-raised">
-              <EntryCover entry={selectedItem} className="w-full h-full object-cover object-center" />
+              <EntryCover entry={selectedItem} priority className="w-full h-full object-cover object-center" />
               <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
 
               <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7 flex items-center gap-3">

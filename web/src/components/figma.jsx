@@ -9,6 +9,7 @@ import {
   layoutGridOn,
   onLayoutGrid,
   onToast,
+  openCanvas,
   toast,
   toggleLayoutGrid,
 } from '../lib/figma'
@@ -221,6 +222,20 @@ export function GridToggle({ className = '' }) {
     >
       <Icon name="grid" className="h-3.5 w-3.5" />
       <kbd className="hidden font-sans text-[10px] text-ink-faint pointer-fine:inline">⇧G</kbd>
+    </button>
+  )
+}
+
+export function CanvasToggle({ className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={openCanvas}
+      aria-label="Zoom to fit"
+      title="Zoom to fit (Shift 1)"
+      className={className}
+    >
+      <Icon name="maximize" className="h-3.5 w-3.5" />
     </button>
   )
 }

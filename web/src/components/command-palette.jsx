@@ -4,7 +4,7 @@ import { link, navigate, normalizePath, parseRoute, CONTACT_PATH } from '../lib/
 import { buildCommands, rankCommands, groupCommands, sudoCommand, recentCommands, inScope, SCOPES } from '../lib/commands'
 import { usePaletteOpen, closePalette } from '../lib/palette'
 import { readRecent } from '../lib/recent'
-import { toggleLayoutGrid } from '../lib/figma'
+import { openCanvas, toggleLayoutGrid } from '../lib/figma'
 import { reducedMotion } from '../lib/memes'
 import { useAuth } from '../lib/supabase'
 import { useComments, useCommentsHidden, startCommenting } from '../lib/comments'
@@ -157,6 +157,7 @@ export default function CommandPalette({ theme, onToggleTheme }) {
         theme,
         toggleTheme: onToggleTheme,
         toggleGrid: onHome ? toggleLayoutGrid : null,
+        zoomToFit: onHome ? openCanvas : null,
         signedIn,
         comments,
         commentsHidden,

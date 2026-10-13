@@ -26,10 +26,10 @@ import CommandPaletteHost from './components/command-palette-host'
 import NavMenu from './components/nav-menu'
 import StudioFact from './components/studio-fact'
 import ScrambleText from './components/scramble-text'
-import LandingMemes from './components/landing-memes'
 import LiveSelect from './components/live-select'
 import BookCallButton from './components/book-call-button'
 import { Facepile, CommentPin, Inspect, FrameLabel, CanvasLayer } from './components/figma'
+import CanvasView from './components/canvas-view'
 import SiteFooter from './components/site-footer'
 import StripeBand from './components/stripe-band'
 import BottomBlur from './components/bottom-blur'
@@ -79,6 +79,13 @@ function CommentLayer() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   return mounted ? <Suspense fallback={null}><CommentLayerImpl /></Suspense> : null
+}
+
+const LandingMemesImpl = lazy(() => import('./components/landing-memes'))
+function LandingMemes() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted ? <Suspense fallback={null}><LandingMemesImpl /></Suspense> : null
 }
 
 function SkillTile({ skill, featured }) {
@@ -507,9 +514,9 @@ function App() {
       </header>
 
       {}
-      <main className={`w-full max-w-[960px] mx-auto px-6 pt-24 pb-6 flex flex-col items-start border-l border-dashed border-r border-line min-h-screen bg-bg ${isReturningHome ? '' : 'animate-rise-in'}`}>
+      <main className={`canvas-page w-full max-w-[960px] mx-auto px-6 pt-24 pb-6 flex flex-col items-start border-l border-dashed border-r border-line min-h-screen bg-bg ${isReturningHome ? '' : 'animate-rise-in'}`}>
 
-        <section id="intro" className="relative flex flex-col items-start text-left w-[calc(100%+3rem)] border-b border-dashed border-line -mx-6 px-6 pb-12">
+        <section id="intro" data-frame="Intro" className="relative flex flex-col items-start text-left w-[calc(100%+3rem)] border-b border-dashed border-line -mx-6 px-6 pb-12">
           <FrameLabel className="left-6 -top-7">Intro</FrameLabel>
 
           <div className="mb-6 flex w-full items-start justify-between gap-4">
@@ -605,7 +612,7 @@ function App() {
 
         <StripeBand className="-mx-6 w-[calc(100%+3rem)]" />
 
-        <section id="skills" className="relative scroll-mt-8 w-[calc(100%+3rem)] -mx-6 px-6 pt-12 text-left">
+        <section id="skills" data-frame="About" className="relative scroll-mt-8 w-[calc(100%+3rem)] -mx-6 px-6 pt-12 text-left">
           <FrameLabel className="left-6 top-4">About</FrameLabel>
 
           <h2 className="text-[20px] text-ink-strong tracking-tight mb-8 font-bagus">
@@ -816,13 +823,15 @@ function App() {
           </div>
         </section>
 
-        <SiteFooter id="site-footer" showGrid stripe className="w-[calc(100%+3rem)] -mx-6 -mb-6 mt-16" />
+        <SiteFooter id="site-footer" data-frame="Footer" showGrid stripe className="w-[calc(100%+3rem)] -mx-6 -mb-6 mt-16" />
 
       </main>
 
       <BottomBlur />
 
       <CanvasLayer />
+
+      <CanvasView />
 
       <LandingMemes />
 

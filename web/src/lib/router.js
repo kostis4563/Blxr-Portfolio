@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { projectsList } from './projects'
 import { libraryList } from './library'
 import { postsList, findPost } from './blog'
-import { imageProps, SIZES } from './images'
+import { imageProps, avifSource, SIZES } from './images'
 
 export function normalizePath(pathname) {
   let p = (pathname || '/').replace(/\/index\.html$/, '/').replace(/\.html$/, '')
@@ -94,11 +94,13 @@ export function warmRoute(to) {
   warmed.add(hero.src)
 
   const { src: href, srcSet, sizes } = imageProps(hero.src, hero.sizes)
+  const avif = avifSource(hero.src, hero.sizes)
   const el = document.createElement('link')
   el.rel = 'preload'
   el.as = 'image'
   el.href = href
-  if (srcSet) el.imageSrcset = srcSet
+  if (avif) el.type = avif.type
+  if (avif || srcSet) el.imageSrcset = avif ? avif.srcSet : srcSet
   if (sizes) el.imageSizes = sizes
   el.fetchPriority = 'low'
   document.head.appendChild(el)

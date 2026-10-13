@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Icon } from './icon'
-import { GridToggle } from './figma'
+import { CanvasToggle, GridToggle } from './figma'
 import StripeBand from './stripe-band'
 import {
   link,
@@ -95,11 +95,11 @@ function LocalTime() {
   )
 }
 
-export default function SiteFooter({ id, className = '', gutter = 'px-6', showGrid = false, stripe = false }) {
+export default function SiteFooter({ id, className = '', gutter = 'px-6', showGrid = false, stripe = false, ...props }) {
   const year = new Date().getFullYear()
 
   return (
-    <footer id={id} className={`border-t border-dashed border-line text-[12.5px] text-ink-muted ${className}`}>
+    <footer id={id} {...props} className={`border-t border-dashed border-line text-[12.5px] text-ink-muted ${className}`}>
       {stripe && <StripeBand />}
       <div className={`flex flex-col gap-10 py-12 md:flex-row md:justify-between ${gutter}`}>
         <div className="flex max-w-60 flex-col items-start gap-3">
@@ -152,6 +152,7 @@ export default function SiteFooter({ id, className = '', gutter = 'px-6', showGr
             <li className="flex items-center">
               <span aria-hidden="true" className="mx-1.5 h-4 border-l border-dashed border-line" />
               <GridToggle className={`aria-pressed:text-ink-strong [&>kbd]:hidden ${ICON_BUTTON}`} />
+              <CanvasToggle className={ICON_BUTTON} />
             </li>
           )}
         </ul>

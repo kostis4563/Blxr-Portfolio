@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { projectsList, isVideoLink } from '../../src/lib/projects.js'
 import { libraryList } from '../../src/lib/library.js'
 import { IMAGES } from '../../src/lib/image-manifest.js'
-import { imageProps, imageUrl, SIZES } from '../../src/lib/images.js'
+import { imageProps, imageUrl, avifSource, SIZES } from '../../src/lib/images.js'
 import * as cv from '../../src/lib/cv.js'
 import * as skills from '../../src/lib/skills.js'
 import * as uses from '../../src/lib/uses.js'
@@ -103,10 +103,11 @@ describe('image manifest', () => {
 
   test('every source and every generated width exists on disk', () => {
     const missing = []
-    for (const [src, { ext, widths }] of entries) {
+    for (const [src, { ext, widths, avif }] of entries) {
       if (!onDisk(src)) missing.push(src)
       const stem = src.slice(0, src.lastIndexOf('.'))
       for (const w of widths) if (!onDisk(`${stem}-${w}${ext}`)) missing.push(`${stem}-${w}${ext}`)
+      if (avif) for (const w of widths) if (!onDisk(`${stem}-${w}.avif`)) missing.push(`${stem}-${w}.avif`)
     }
     expect(missing).toEqual([])
   })
@@ -139,5 +140,17 @@ describe('image manifest', () => {
     expect(imageUrl(src, widths[0] + 1)).toContain(`-${widths[1]}`)
     expect(imageUrl(src, 99_999)).toMatch(new RegExp(`^${src.replace('.', '\\.')}\\?v=`))
     expect(imageUrl('/unknown.webp', 100)).toBe('/unknown.webp')
+  })
+
+  test('avifSource mirrors the srcset widths for images that have AVIF', () => {
+    const [src, { v, widths }] = entries.find(([, e]) => e.avif && e.widths.length > 1)
+    const source = avifSource(src, SIZES.contentColumn)
+    expect(source.type).toBe('image/avif')
+    expect(source.srcSet.split(', ')).toHaveLength(widths.length)
+    expect(source.srcSet).toContain(`-${widths[0]}.avif?v=${v} ${widths[0]}w`)
+    expect(source.sizes).toBe(SIZES.contentColumn)
+    const [plain] = entries.find(([, e]) => !e.avif && e.widths.length) ?? []
+    if (plain) expect(avifSource(plain)).toBeNull()
+    expect(avifSource('/unknown.webp')).toBeNull()
   })
 })

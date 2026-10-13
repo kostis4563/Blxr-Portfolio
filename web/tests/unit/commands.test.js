@@ -25,6 +25,14 @@ describe('buildCommands', () => {
     const withGrid = buildCommands({ theme: 'dark', toggleTheme: () => {}, toggleGrid: () => {} })
     expect(withGrid.find((c) => c.id === 'action-grid').shortcut).toEqual(['⇧', 'G'])
   })
+
+  test('zoom to fit only exists when the page has a canvas', () => {
+    expect(commands.some((c) => c.id === 'action-zoom-fit')).toBe(false)
+    const withCanvas = buildCommands({ theme: 'dark', toggleTheme: () => {}, zoomToFit: () => {} })
+    const zoom = withCanvas.find((c) => c.id === 'action-zoom-fit')
+    expect(zoom.shortcut).toEqual(['⇧', '1'])
+    expect(zoom.scope).toBe('actions')
+  })
 })
 
 describe('comment commands', () => {
