@@ -74,12 +74,13 @@ export function passwordChangedMail({ email, client, at = new Date() }) {
   }
 }
 
-export function bookingMail({ name, start, end, timeZone, video, videoLabel = 'Video call' }) {
+export function bookingMail({ name, start, end, timeZone, video, videoLabel = 'Video call', plan = null }) {
   const day = new Date(start).toLocaleString('en-GB', { timeZone, weekday: 'long', day: 'numeric', month: 'long' })
   const time = (ms) => new Date(ms).toLocaleString('en-GB', { timeZone, hour: '2-digit', minute: '2-digit' })
   const when = `${day}, ${time(start)}–${time(end)}`
   const zone = timeZone.replace(/_/g, ' ')
-  const join = video ? `Join on ${videoLabel}: ${video}` : 'I’ll email you the video link before we talk.'
+  const later = plan || 'I’ll email you the video link before we talk.'
+  const join = video ? `Join on ${videoLabel}: ${video}` : later
   return {
     subject: `Call booked: ${day}, ${time(start)}`,
     text: [
@@ -98,7 +99,7 @@ export function bookingMail({ name, start, end, timeZone, video, videoLabel = 'V
       intro: `Hi ${escapeHtml(name)}, you&#39;re booked for <span style="color:#ffffff;">${escapeHtml(when)}</span> (${escapeHtml(zone)}).<br><br>${
         video
           ? `<a href="${escapeHtml(video)}" style="color:#ffffff;text-decoration:underline;">Join on ${escapeHtml(videoLabel)}</a>`
-          : 'I&#39;ll email you the video link before we talk.'
+          : escapeHtml(later)
       }`,
       footer: 'The calendar invite is attached — open it to add the call to your calendar.<br>Need to move it? Just reply to this email.',
     }),

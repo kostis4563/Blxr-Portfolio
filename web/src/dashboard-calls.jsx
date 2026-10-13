@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { Icon } from './components/icon'
 import { Bone } from './components/skeleton'
-import { CalendarAppIcon, NoteStack } from './components/book-touches'
+import { CalendarAppIcon, NoteStack, PlaceIcon } from './components/book-touches'
+import { CALL_TOPICS, CALL_BUDGETS, CALL_TIMELINES, placeById, labelOf } from './lib/call-options'
 import { BlockSheet, ScheduleIsland } from './components/schedule-touches'
 import { link, dashboardPath, BOOK_PATH, LOGIN_PATH } from './lib/router'
 import { imageProps, SIZES } from './lib/images'
@@ -255,11 +256,30 @@ function MonthView({ month, onMonth, today, selected, onSelect, infoFor }) {
   )
 }
 
+const linkHost = (href) => {
+  try {
+    return new URL(href).hostname.replace(/^www\./, '')
+  } catch {
+    return href
+  }
+}
+
+function callReach(call) {
+  const digits = (call.contact || '').replace(/\D/g, '')
+  if (call.place === 'whatsapp' && digits) return { href: `https://wa.me/${digits}`, label: 'WhatsApp', external: true }
+  if (call.place === 'phone' && digits) return { href: `tel:${call.contact.replace(/[^\d+]/g, '')}`, label: 'Call' }
+  return null
+}
+
 function CallItem({ item, zone, twelve, now, flash }) {
   const { call, start, end } = item
   const past = end <= now
   const going = start <= now && now < end
   const theirs = call.timeZone && call.timeZone !== zone && formatTime(start, call.timeZone, twelve) !== formatTime(start, zone, twelve)
+  const place = placeById(call.place)
+  const about = [labelOf(CALL_TOPICS, call.topic), labelOf(CALL_BUDGETS, call.budget), labelOf(CALL_TIMELINES, call.timeline)].filter(Boolean)
+  const reach = callReach(call)
+  const showContact = call.contact && call.place !== 'facetime' && !/^https:/.test(call.contact)
   return (
     <div className="sched-item" data-tone="call" data-past={past || undefined} data-flash={flash || undefined}>
       <div className="flex items-baseline justify-between gap-2">
@@ -268,20 +288,47 @@ function CallItem({ item, zone, twelve, now, flash }) {
         </p>
         {past ? <span className="text-[11.5px] font-medium text-ink-subtle">Done</span> : going && <span className="sched-now">Now</span>}
       </div>
-      <p className="mt-0.5 truncate text-[14px] font-semibold text-ink-strong">{call.name}</p>
+      <p className="mt-0.5 truncate text-[14px] font-semibold text-ink-strong">
+        {call.name}
+        {call.company && <span className="font-normal text-ink-subtle"> · {call.company}</span>}
+      </p>
       {call.email && <p className="truncate text-[12.5px] text-ink-muted">{call.email}</p>}
       {theirs && (
         <p className="text-[12px] text-ink-subtle">
           {formatTime(start, call.timeZone, twelve)} for them in {cityOf(call.timeZone, start)}
         </p>
       )}
+      {place && (
+        <p className="mt-1.5 flex items-start gap-2 text-[12.5px] text-ink-secondary">
+          <PlaceIcon place={place.id} size="sm" />
+          <span className="min-w-0 wrap-break-word">
+            {place.label}
+            {showContact && <span className="text-ink-strong"> · {call.contact}</span>}
+            {call.mode === 'voice' && call.place !== 'phone' && <span className="text-ink-subtle"> · Voice only</span>}
+            {call.lang === 'el' && <span className="text-ink-subtle"> · Greek</span>}
+          </span>
+        </p>
+      )}
+      {about.length > 0 && <p className="mt-1 text-[12.5px] font-medium text-ink-secondary">{about.join(' · ')}</p>}
       {call.note && <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-pretty text-[13px] leading-relaxed text-ink-secondary">{call.note}</p>}
-      {!past && (call.video || call.email) && (
+      {call.link && (
+        <a href={call.link} target="_blank" rel="noopener noreferrer" className={`mt-1.5 inline-flex max-w-full items-center gap-1 text-[12.5px] ${TEXT_LINK}`}>
+          <span className="truncate">{linkHost(call.link)}</span>
+          <Icon name="arrowUpRight" className="h-3 w-3" strokeWidth={2} />
+        </a>
+      )}
+      {!past && (call.video || reach || call.email) && (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {call.video && (
             <a href={call.video} target="_blank" rel="noopener noreferrer" className={`${CHIP} bg-[#30d158] text-black hover:brightness-105`}>
               Join
               <Icon name="arrowUpRight" className="h-3.5 w-3.5" strokeWidth={2} />
+            </a>
+          )}
+          {reach && (
+            <a href={reach.href} {...(reach.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={`${CHIP} bg-[#30d158] text-black hover:brightness-105`}>
+              <Icon name="phoneCall" className="h-3.5 w-3.5" strokeWidth={2} />
+              {reach.label}
             </a>
           )}
           {call.email && (
@@ -658,8 +705,9 @@ function UpcomingCalls({ calls, zone, twelve, now, onShow, onCopy }) {
                               <span className="truncate text-[14px] font-medium text-ink-strong">{call.name}</span>
                               {going && <span className="sched-now">Now</span>}
                             </span>
-                            <span className="block truncate text-[12.5px] text-ink-muted">{call.note || call.email}</span>
+                            <span className="block truncate text-[12.5px] text-ink-muted">{call.note || labelOf(CALL_TOPICS, call.topic) || call.email}</span>
                           </span>
+                          {call.place && <PlaceIcon place={call.place} size="sm" />}
                           <Icon name="chevronRight" className="h-4 w-4 text-ink-faint transition-colors group-hover:text-ink-muted" />
                         </button>
                       </li>

@@ -91,6 +91,21 @@ describe('bookingProblems', () => {
     expect(bookingProblems({ ...ok, email: 'a b@example.com' }).email).toBeTruthy()
     expect(bookingProblems({ ...ok, name: 'Buy now at spam.com' }).name).toMatch(/no links/)
   })
+
+  test('the contact asked for depends on where we talk', () => {
+    expect(bookingProblems({ ...ok, place: 'whatsapp', contact: '' }).contact).toMatch(/number/)
+    expect(bookingProblems({ ...ok, place: 'phone', contact: '694' }).contact).toMatch(/country code/)
+    expect(bookingProblems({ ...ok, place: 'phone', contact: '+30 694 215 8830' })).toEqual({})
+    expect(bookingProblems({ ...ok, place: 'discord', contact: '' }).contact).toMatch(/Discord/)
+    expect(bookingProblems({ ...ok, place: 'other', contact: '' }).contact).toMatch(/where/)
+    expect(bookingProblems({ ...ok, place: 'zoom', contact: '' })).toEqual({})
+    expect(bookingProblems({ ...ok, place: 'zoom', contact: 'not a link' }).contact).toMatch(/link/)
+  })
+
+  test('company and link are optional but checked when filled in', () => {
+    expect(bookingProblems({ ...ok, company: 'Papadaki Studio', link: 'papadaki.studio' })).toEqual({})
+    expect(Object.keys(bookingProblems({ ...ok, company: 'x'.repeat(81), link: 'no spaces allowed' }))).toEqual(['company', 'link'])
+  })
 })
 
 describe('daysUntil', () => {

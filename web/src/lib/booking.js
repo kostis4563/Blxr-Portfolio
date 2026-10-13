@@ -1,4 +1,5 @@
 import { LINK_RE } from './reviews'
+import { CALL_LIMITS, cleanLink, contactProblem } from './call-options'
 
 export const BOOKING_LIMITS = { name: { min: 2, max: 80 }, email: { max: 254 }, note: { max: 1000 } }
 export const EMAIL_RE = /^[^\s@<>()[\],;:"]+@[^\s@<>()[\],;:"]+\.[a-z0-9-]{2,}$/i
@@ -105,7 +106,7 @@ export function formatZone(timeZone, at = Date.now()) {
   return offset && offset !== city ? `${city} (${offset})` : city
 }
 
-export function bookingProblems({ name, email, note }) {
+export function bookingProblems({ name, email, note, place = null, contact = '', company = '', link = '' }) {
   const out = {}
   const cleanName = name.trim()
   if (cleanName.length < BOOKING_LIMITS.name.min || !/\p{L}/u.test(cleanName)) out.name = 'Add your name.'
@@ -115,6 +116,10 @@ export function bookingProblems({ name, email, note }) {
   if (!cleanEmail) out.email = 'Add your email so the invite reaches you.'
   else if (cleanEmail.length > BOOKING_LIMITS.email.max || !EMAIL_RE.test(cleanEmail)) out.email = 'That email doesn’t look right.'
   if (note.trim().length > BOOKING_LIMITS.note.max) out.note = `Keep it under ${BOOKING_LIMITS.note.max} characters.`
+  const reach = contactProblem(place, contact)
+  if (reach) out.contact = reach
+  if (company.replace(/\s+/g, ' ').trim().length > CALL_LIMITS.company) out.company = `Keep it under ${CALL_LIMITS.company} characters.`
+  if (link.trim() && !cleanLink(link)) out.link = 'That link doesn’t look right.'
   return out
 }
 

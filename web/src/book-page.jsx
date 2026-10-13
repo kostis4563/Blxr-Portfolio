@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ThemeToggle from './components/theme-toggle'
 import { Icon } from './components/icon'
 import { Bone, Spinner } from './components/skeleton'
-import { BookIsland, DoneMark, HostClock, NoteStack } from './components/book-touches'
+import { BookIsland, DoneMark, HostClock, NoteStack, PlaceIcon } from './components/book-touches'
+import { CALL_PLACES, CALL_MODES, CALL_LANGS, CALL_TOPICS, CALL_BUDGETS, CALL_TIMELINES, placeById, labelOf } from './lib/call-options'
 import { link, HOME_PATH } from './lib/router'
 import { CONTACT_EMAIL } from './lib/profile'
 import { imageProps, SIZES } from './lib/images'
@@ -60,7 +61,38 @@ const inputClass = (invalid) =>
     invalid ? 'border-red-500/70 focus:ring-red-500/15' : 'border-line-strong hover:border-ink-faint focus:border-ink-strong focus:ring-ink-strong/10'
   }`
 
-const EMPTY_DRAFT = { name: '', email: '', note: '', website: '' }
+const EMPTY_DRAFT = {
+  name: '',
+  email: '',
+  company: '',
+  link: '',
+  place: null,
+  reach: { link: '', phone: '', handle: '', place: '' },
+  mode: 'video',
+  lang: 'en',
+  topic: null,
+  budget: null,
+  timeline: null,
+  note: '',
+  website: '',
+}
+
+const FIELD_ORDER = ['name', 'email', 'company', 'link', 'contact', 'note']
+
+const REACH = {
+  meet: { help: (mine) => (mine ? 'Leave it empty and you’ll get my link in the invite.' : 'Leave it empty and I’ll send you a link by email.') },
+  discord: { label: 'Discord username', placeholder: 'username', help: 'I’ll add you a few minutes before and call you there.' },
+  whatsapp: { label: 'WhatsApp number', placeholder: '+44 7700 900123', type: 'tel', help: 'Include the country code. I’ll call you on WhatsApp.' },
+  phone: { label: 'Phone number', placeholder: '+44 7700 900123', type: 'tel', help: 'Include the country code. I’ll ring you, voice only.' },
+  other: { label: 'Where should we meet?', placeholder: 'Slack huddle, Telegram, a café in Athens…', help: 'I’ll confirm the details by email.' },
+}
+
+const reachKind = (place) => (place === 'facetime' ? null : placeById(place)?.contact || null)
+
+const planOf = (draft, hostPlace) => {
+  const place = draft.place || hostPlace || 'facetime'
+  return { place, mode: place === 'phone' ? 'voice' : draft.mode, lang: draft.lang }
+}
 
 const SEND_ERRORS = {
   rate_limited: 'You’ve booked a few calls already today. Email me if you need another one.',
@@ -73,6 +105,9 @@ const SERVER_FIELD_ERRORS = {
   name: 'Just your name, no links.',
   email: 'That email doesn’t look right.',
   note: `Keep it under ${BOOKING_LIMITS.note.max} characters.`,
+  contact: 'Check this and try again.',
+  company: 'Keep it shorter.',
+  link: 'That link doesn’t look right.',
 }
 
 const MOD_KEY = typeof navigator !== 'undefined' && !/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? 'Ctrl' : '⌘'
@@ -134,16 +169,16 @@ function ZonePicker({ zone, onChange }) {
   )
 }
 
-function Meta({ icon, children }) {
+function Meta({ icon, glyph, children }) {
   return (
     <li className="flex items-start gap-3">
-      <Icon name={icon} className="mt-0.5 h-4 w-4 text-ink-subtle" />
+      {glyph || <Icon name={icon} className="mt-0.5 h-4 w-4 text-ink-subtle" />}
       <div className="min-w-0">{children}</div>
     </li>
   )
 }
 
-function Host({ load, zone, onZone, slot, twelve }) {
+function Host({ load, zone, onZone, slot, twelve, plan }) {
   const ready = load.state === 'ready' && zone
   const differentClock = Boolean(slot && ready && formatTime(slot, zone) !== formatTime(slot, load.timeZone))
 
@@ -161,7 +196,7 @@ function Host({ load, zone, onZone, slot, twelve }) {
         <p className="text-[14px] font-medium text-ink-muted">Blxr</p>
         <h1 className="mt-1 text-[22px] font-semibold leading-snug tracking-[-0.02em] text-ink-strong">Book a call</h1>
         <p className="mt-3 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-ink-muted">
-          A short video call to talk through a project, an idea or a question. Times are synced live with my calendar.
+          A short call to talk through a project, an idea or a question, on whatever app suits you. Times are synced live with my calendar.
         </p>
       </div>
 
@@ -176,6 +211,19 @@ function Host({ load, zone, onZone, slot, twelve }) {
             </Meta>
           )}
           <Meta icon="clock">{minutesLabel(load.minutes)}</Meta>
+          {plan && (
+            <Meta glyph={<PlaceIcon place={plan.place} size="sm" />}>
+              <p key={plan.place} className="animate-view-in">
+                {placeById(plan.place).label}
+                {plan.mode === 'voice' && <span className="text-ink-subtle"> · Voice only</span>}
+              </p>
+            </Meta>
+          )}
+          {plan?.lang === 'el' && (
+            <Meta icon="message">
+              <span lang="el">Στα ελληνικά</span>
+            </Meta>
+          )}
           <Meta icon="globe">{slot ? formatZone(zone, slot) : <ZonePicker zone={zone} onChange={onZone} />}</Meta>
         </ul>
       ) : (
@@ -366,26 +414,141 @@ function Message({ icon, title, children, action }) {
   )
 }
 
-function DetailsForm({ slot, zone, onBooked, onTaken, onBack, onSending, headingRef }) {
-  const [draft, setDraft] = useState(EMPTY_DRAFT)
+function Section({ id, title, note, children }) {
+  return (
+    <section aria-labelledby={id} className="book-section">
+      <div className="book-section-head">
+        <h3 id={id}>{title}</h3>
+        {note && <span>{note}</span>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function PlacePicker({ value, onChange }) {
+  return (
+    <div role="radiogroup" aria-labelledby="book-where" className="book-places">
+      {CALL_PLACES.map((p) => (
+        <label key={p.id} className="book-place">
+          <input type="radio" name="book-place" value={p.id} checked={value === p.id} onChange={() => onChange(p.id)} className="sr-only" />
+          <PlaceIcon place={p.id} />
+          <span className="book-place-name">{p.short || p.label}</span>
+          <span className="book-place-check">
+            <Icon name="check" className="" strokeWidth={3.2} />
+          </span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
+function Segmented({ name, labelledBy, options, value, onChange, off = null }) {
+  const index = Math.max(0, options.findIndex((o) => o.id === value))
+  return (
+    <div role="radiogroup" aria-labelledby={labelledBy} className="book-seg" style={{ '--i': index, '--n': options.length }}>
+      <span className="book-seg-thumb" aria-hidden="true" />
+      {options.map((o) => (
+        <label key={o.id}>
+          <input type="radio" name={name} value={o.id} checked={value === o.id} disabled={o.id === off} onChange={() => onChange(o.id)} className="sr-only" />
+          <span lang={o.own ? o.id : undefined}>{o.own || o.label}</span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
+function Chips({ label, options, value, onChange }) {
+  return (
+    <div role="group" aria-label={label} className="book-chips">
+      {options.map((o) => (
+        <button key={o.id} type="button" aria-pressed={value === o.id} onClick={() => onChange(value === o.id ? null : o.id)} className="book-chip">
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function PlaceReach({ place, hostPlace, value, onChange, onBlur, error, inputRef }) {
+  const info = placeById(place)
+  const kind = reachKind(place)
+  const mine = place === hostPlace
+  let body
+  if (!kind) {
+    body = (
+      <div className="book-reach-text">
+        <p>{mine ? 'You’ll get my FaceTime link in the invite.' : 'I’ll email you a FaceTime link before we talk.'}</p>
+        <p>It opens in Chrome and Edge too, so no Apple device is needed.</p>
+      </div>
+    )
+  } else {
+    const copy = kind === 'link' ? { label: `Your ${info.short || info.label} link`, placeholder: info.example, help: REACH.meet.help(mine), optional: true } : REACH[place]
+    body = (
+      <div className="min-w-0 flex-1">
+        <Field id="book-contact" label={copy.label} optional={copy.optional} help={copy.help} error={error}>
+          <input
+            id="book-contact"
+            ref={inputRef}
+            type={copy.type || (kind === 'link' ? 'url' : 'text')}
+            inputMode={copy.type === 'tel' ? 'tel' : kind === 'link' ? 'url' : undefined}
+            autoComplete={copy.type === 'tel' ? 'tel' : 'off'}
+            autoCapitalize="off"
+            spellCheck="false"
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            placeholder={copy.placeholder}
+            aria-invalid={Boolean(error) || undefined}
+            aria-describedby={error ? 'book-contact-error' : 'book-contact-help'}
+            className={`${inputClass(error)} h-10`}
+          />
+        </Field>
+      </div>
+    )
+  }
+  return (
+    <div key={place} className="book-reach animate-view-in">
+      <PlaceIcon place={place} size="lg" />
+      {body}
+    </div>
+  )
+}
+
+function DetailsForm({ slot, zone, hostPlace, draft, setDraft, onBooked, onTaken, onBack, onSending, headingRef }) {
   const [touched, setTouched] = useState({})
   const [showAll, setShowAll] = useState(false)
   const [serverFields, setServerFields] = useState([])
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
-  const refs = { name: useRef(null), email: useRef(null), note: useRef(null) }
+  const refs = { name: useRef(null), email: useRef(null), company: useRef(null), link: useRef(null), contact: useRef(null), note: useRef(null) }
 
-  const problems = bookingProblems(draft)
+  const { place, mode } = planOf(draft, hostPlace)
+  const kind = reachKind(place)
+  const contact = kind ? draft.reach[kind] : ''
+  const problems = bookingProblems({ ...draft, place: kind ? place : null, contact })
   const visible = (field) => (showAll || touched[field]) && problems[field]
   const fieldError = (field) => visible(field) || (serverFields.includes(field) ? SERVER_FIELD_ERRORS[field] : null)
-  const set = (field) => (e) => {
-    const value = e.target.value
+  const clearServer = (field) => setServerFields((f) => f.filter((x) => x !== field))
+  const put = (field, value) => {
     setDraft((d) => ({ ...d, [field]: value }))
-    setServerFields((f) => f.filter((x) => x !== field))
+    clearServer(field)
+  }
+  const set = (field) => (e) => put(field, e.target.value)
+  const setReach = (e) => {
+    const value = e.target.value
+    setDraft((d) => ({ ...d, reach: { ...d.reach, [kind]: value } }))
+    clearServer('contact')
   }
   const touch = (field) => () => setTouched((t) => ({ ...t, [field]: true }))
+  const choosePlace = (id) => {
+    put('place', id)
+    clearServer('contact')
+    setTouched((t) => ({ ...t, contact: false }))
+  }
   const noteLength = draft.note.trim().length
   const typo = !fieldError('email') && emailTypo(draft.email)
+  const topic = CALL_TOPICS.find((t) => t.id === draft.topic)
 
   useEffect(() => {
     onSending(sending)
@@ -395,7 +558,7 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, onSending, heading
   const onSubmit = async (event) => {
     event.preventDefault()
     if (sending) return
-    const first = ['name', 'email', 'note'].find((f) => problems[f])
+    const first = FIELD_ORDER.find((f) => problems[f])
     if (first) {
       setShowAll(true)
       refs[first].current?.focus()
@@ -403,6 +566,17 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, onSending, heading
     }
     setSending(true)
     setError(null)
+    const details = {
+      place,
+      contact: contact.trim(),
+      mode,
+      lang: draft.lang,
+      topic: draft.topic,
+      budget: draft.topic === 'project' ? draft.budget : null,
+      timeline: draft.topic === 'project' ? draft.timeline : null,
+      company: draft.company.trim(),
+      link: draft.link.trim(),
+    }
     try {
       const booking = await bookCall({
         start: new Date(slot).toISOString(),
@@ -411,8 +585,9 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, onSending, heading
         note: draft.note.trim(),
         timeZone: zone,
         website: draft.website,
+        ...details,
       })
-      onBooked({ ...booking, name: draft.name.trim(), email: draft.email.trim(), note: draft.note.trim() })
+      onBooked({ ...booking, ...details, name: draft.name.trim(), email: draft.email.trim(), note: draft.note.trim() })
     } catch (err) {
       setSending(false)
       if (err?.code === 'slot_taken' || err?.fields?.includes('start')) return onTaken()
@@ -436,9 +611,12 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, onSending, heading
       noValidate
       className={`${PANEL} relative flex animate-view-in flex-col md:col-span-2`}
     >
-      <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-24 text-[15px] font-semibold text-ink-strong outline-none">
-        Your details
-      </h2>
+      <div className="book-section-head">
+        <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-24 text-[15px] font-semibold text-ink-strong outline-none">
+          Your details
+        </h2>
+        <span>Optional bits help me prepare</span>
+      </div>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field id="book-name" label="Name" error={fieldError('name')}>
@@ -490,12 +668,89 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, onSending, heading
             className={`${inputClass(fieldError('email'))} h-10`}
           />
         </Field>
+        <Field id="book-company" label="Company or project" optional error={fieldError('company')}>
+          <input
+            id="book-company"
+            ref={refs.company}
+            type="text"
+            autoComplete="organization"
+            value={draft.company}
+            onChange={set('company')}
+            onBlur={touch('company')}
+            aria-invalid={Boolean(fieldError('company')) || undefined}
+            aria-describedby={fieldError('company') ? 'book-company-error' : undefined}
+            className={`${inputClass(fieldError('company'))} h-10`}
+          />
+        </Field>
+        <Field id="book-link" label="Website or link" optional help="A site, portfolio, GitHub or Figma file to look at first." error={fieldError('link')}>
+          <input
+            id="book-link"
+            ref={refs.link}
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            autoCapitalize="off"
+            spellCheck="false"
+            value={draft.link}
+            onChange={set('link')}
+            onBlur={touch('link')}
+            placeholder="yoursite.com"
+            aria-invalid={Boolean(fieldError('link')) || undefined}
+            aria-describedby={fieldError('link') ? 'book-link-error' : 'book-link-help'}
+            className={`${inputClass(fieldError('link'))} h-10`}
+          />
+        </Field>
       </div>
 
-      <div className="mt-4">
+      <Section id="book-where" title="Where should we talk?" note="Pick what’s easiest for you">
+        <PlacePicker value={place} onChange={choosePlace} />
+        <PlaceReach
+          place={place}
+          hostPlace={hostPlace}
+          value={contact}
+          onChange={setReach}
+          onBlur={touch('contact')}
+          error={fieldError('contact')}
+          inputRef={refs.contact}
+        />
+      </Section>
+
+      <Section id="book-how" title="How should we talk?">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <span id="book-mode" className="text-[13px] font-medium text-ink-strong">
+              Camera
+            </span>
+            <Segmented name="book-mode" labelledBy="book-mode" options={CALL_MODES} value={mode} onChange={(id) => put('mode', id)} off={place === 'phone' ? 'video' : null} />
+            <p className="text-[12.5px] text-ink-subtle">{place === 'phone' ? 'Phone calls are voice only.' : mode === 'voice' ? 'No camera needed, just your voice.' : 'Cameras on, the usual way.'}</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span id="book-lang" className="text-[13px] font-medium text-ink-strong">
+              Language
+            </span>
+            <Segmented name="book-lang" labelledBy="book-lang" options={CALL_LANGS} value={draft.lang} onChange={(id) => put('lang', id)} />
+            <p className="text-[12.5px] text-ink-subtle">I speak both, so pick what feels natural.</p>
+          </div>
+        </div>
+      </Section>
+
+      <Section id="book-about" title="What’s it about?" note="Optional">
+        <Chips label="Topic" options={CALL_TOPICS} value={draft.topic} onChange={(id) => put('topic', id)} />
+        {draft.topic === 'project' && (
+          <div className="book-sub animate-view-in">
+            <div className="flex flex-col gap-2">
+              <span className="text-[13px] font-medium text-ink-strong">Rough budget</span>
+              <Chips label="Rough budget" options={CALL_BUDGETS} value={draft.budget} onChange={(id) => put('budget', id)} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-[13px] font-medium text-ink-strong">When would you like to start?</span>
+              <Chips label="When would you like to start?" options={CALL_TIMELINES} value={draft.timeline} onChange={(id) => put('timeline', id)} />
+            </div>
+          </div>
+        )}
         <Field
           id="book-note"
-          label="What would you like to talk about?"
+          label="Notes"
           optional
           counter={noteLength > BOOKING_LIMITS.note.max * 0.8 ? { text: `${noteLength}/${BOOKING_LIMITS.note.max}`, over: noteLength > BOOKING_LIMITS.note.max } : null}
           error={fieldError('note')}
@@ -507,13 +762,13 @@ function DetailsForm({ slot, zone, onBooked, onTaken, onBack, onSending, heading
             value={draft.note}
             onChange={set('note')}
             onBlur={touch('note')}
-            placeholder="Share anything that will help me prepare."
+            placeholder={topic?.hint || 'Share anything that will help me prepare.'}
             aria-invalid={Boolean(fieldError('note')) || undefined}
             aria-describedby={fieldError('note') ? 'book-note-error' : undefined}
             className={`${inputClass(fieldError('note'))} min-h-28 resize-y py-2.5 leading-relaxed`}
           />
         </Field>
-      </div>
+      </Section>
 
       <div aria-hidden="true" className="absolute -start-[9999px] top-0 h-px w-px overflow-hidden">
         <label>
@@ -567,10 +822,22 @@ function Detail({ label, children }) {
   )
 }
 
+function reachLine(booking) {
+  const { place, contact, video } = booking
+  if (place === 'phone') return `I’ll ring you at ${contact}.`
+  if (place === 'whatsapp') return `I’ll call you on WhatsApp at ${contact}.`
+  if (place === 'discord') return `I’ll add ${contact} on Discord and call you there.`
+  if (place === 'other') return `${contact}. I’ll confirm the details by email.`
+  if (video) return contact ? 'On your own link. Join with the button below.' : 'Join with the button below when it’s time.'
+  return 'I’ll email you the link before we talk.'
+}
+
 function Booked({ booking, zone, twelve, onAdd, headingRef }) {
   const start = Date.parse(booking.start)
   const end = Date.parse(booking.end)
   const minutes = Math.round((end - start) / 60_000)
+  const place = placeById(booking.place)
+  const about = [labelOf(CALL_TOPICS, booking.topic), labelOf(CALL_BUDGETS, booking.budget), labelOf(CALL_TIMELINES, booking.timeline)].filter(Boolean)
 
   return (
     <div className="flex flex-col items-center px-6 py-10 text-center animate-rise-in sm:px-10 sm:py-12">
@@ -599,13 +866,37 @@ function Booked({ booking, zone, twelve, onAdd, headingRef }) {
             {formatTime(start, zone, twelve)} – {formatTime(end, zone, twelve)} · {formatZone(zone, start)}
           </p>
         </Detail>
+        {place && (
+          <Detail label="Where">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <PlaceIcon place={place.id} size="sm" />
+              {place.label}
+              {booking.mode === 'voice' && <span className="text-ink-subtle">· Voice only</span>}
+              {booking.lang === 'el' && (
+                <span lang="el" className="text-ink-subtle">
+                  · Ελληνικά
+                </span>
+              )}
+            </p>
+            <p className="mt-0.5 text-ink-muted">{reachLine(booking)}</p>
+          </Detail>
+        )}
         <Detail label="Who">
           <p>
             Blxr <span className="text-ink-subtle">· Host</span>
           </p>
-          <p className="mt-0.5">{booking.name}</p>
+          <p className="mt-0.5">
+            {booking.name}
+            {booking.company && <span className="text-ink-subtle"> · {booking.company}</span>}
+          </p>
           <p className="mt-0.5 text-ink-muted">{booking.email}</p>
         </Detail>
+        {(about.length > 0 || booking.note) && (
+          <Detail label="About">
+            {about.length > 0 && <p>{about.join(' · ')}</p>}
+            {booking.note && <p className={`line-clamp-3 whitespace-pre-line text-ink-muted ${about.length ? 'mt-0.5' : ''}`}>{booking.note}</p>}
+          </Detail>
+        )}
       </dl>
 
       <div className="mt-6 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -639,6 +930,7 @@ export default function BookPage({ theme, onToggleTheme }) {
   const [step, setStep] = useState('pick')
   const [notice, setNotice] = useState(null)
   const [booking, setBooking] = useState(null)
+  const [draft, setDraft] = useState(EMPTY_DRAFT)
   const [sending, setSending] = useState(false)
   const [flash, setFlash] = useState(false)
   const headingRef = useRef(null)
@@ -772,8 +1064,8 @@ export default function BookPage({ theme, onToggleTheme }) {
       start,
       end,
       title,
-      notes: [prefs.notes.trim(), booking.video ? `Join: ${booking.video}` : 'The video link follows by email.'].filter(Boolean).join('\n\n'),
-      location: booking.video || '',
+      notes: [prefs.notes.trim(), booking.plan || (booking.video ? `Join: ${booking.video}` : 'The video link follows by email.')].filter(Boolean).join('\n\n'),
+      location: booking.video || booking.where || '',
     }
     if (prefs.app === 'apple') {
       const file = icsFileName(title)
@@ -858,7 +1150,18 @@ export default function BookPage({ theme, onToggleTheme }) {
     )
   } else if (choosing) {
     panels = (
-      <DetailsForm slot={slot} zone={zone} onBooked={booked} onTaken={taken} onBack={() => setStep('pick')} onSending={setSending} headingRef={headingRef} />
+      <DetailsForm
+        slot={slot}
+        zone={zone}
+        hostPlace={load.place}
+        draft={draft}
+        setDraft={setDraft}
+        onBooked={booked}
+        onTaken={taken}
+        onBack={() => setStep('pick')}
+        onSending={setSending}
+        headingRef={headingRef}
+      />
     )
   } else {
     panels = (
@@ -924,7 +1227,7 @@ export default function BookPage({ theme, onToggleTheme }) {
             </div>
           ) : (
             <div className={CARD}>
-              <Host load={load} zone={zone} onZone={setZone} slot={choosing ? slot : null} twelve={twelve} />
+              <Host load={load} zone={zone} onZone={setZone} slot={choosing ? slot : null} twelve={twelve} plan={choosing ? planOf(draft, load.place) : null} />
               {panels}
             </div>
           )}

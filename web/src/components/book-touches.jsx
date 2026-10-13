@@ -46,6 +46,75 @@ export function Dot({ tone }) {
   return <span className="book-island-dot" data-tone={tone} />
 }
 
+const LENS = 'm16.5 10.3 3.9-2.5c.5-.3 1.1.1 1.1.6v7.2c0 .6-.6.9-1.1.6l-3.9-2.5z'
+
+function PlaceGlyph({ place }) {
+  switch (place) {
+    case 'facetime':
+    case 'zoom':
+      return (
+        <>
+          <rect x="2.5" y="6.5" width="13" height="11" rx="3" />
+          <path d={LENS} />
+        </>
+      )
+    case 'meet':
+      return (
+        <>
+          <rect x="2.5" y="6.5" width="13" height="11" rx="2" fill="#00ac47" />
+          <path d="M7 6.5h6.5a2 2 0 0 1 2 2V10H7z" fill="#ffba00" />
+          <path d="M2.5 10H7v7.5H4.5a2 2 0 0 1-2-2z" fill="#0066da" />
+          <path d="M4.5 6.5H7V10H2.5V8.5a2 2 0 0 1 2-2z" fill="#ea4335" />
+          <path d={LENS} fill="#00832d" />
+        </>
+      )
+    case 'teams':
+      return (
+        <>
+          <circle cx="17.6" cy="6.6" r="2.4" />
+          <path d="M15.2 10.2h5c.7 0 1.3.6 1.3 1.3v3.9a3.3 3.3 0 0 1-6.3 1.4z" opacity=".75" />
+          <rect x="2.5" y="7" width="11.5" height="11.5" rx="2" />
+          <path d="M5.4 9.7h5.7v1.8H9.2v4.8H7.3v-4.8H5.4z" fill="#4b53bc" />
+        </>
+      )
+    case 'discord':
+      return (
+        <>
+          <path d="M18.6 6.4a15.6 15.6 0 0 0-3.8-1.2l-.5 1a14.4 14.4 0 0 0-4.6 0l-.5-1a15.6 15.6 0 0 0-3.8 1.2c-2.4 3.6-3.1 7.1-2.7 10.6a15.8 15.8 0 0 0 4.7 2.4l1-1.6c-.6-.2-1.1-.5-1.6-.8l.4-.3a11.2 11.2 0 0 0 9.6 0l.4.3c-.5.3-1 .6-1.6.8l1 1.6a15.8 15.8 0 0 0 4.7-2.4c.4-4-.7-7.5-2.7-10.6z" />
+          <ellipse cx="9.1" cy="12.9" rx="1.5" ry="1.7" fill="#5865f2" />
+          <ellipse cx="14.9" cy="12.9" rx="1.5" ry="1.7" fill="#5865f2" />
+        </>
+      )
+    case 'whatsapp':
+      return (
+        <>
+          <path d="M12 3.6a8.4 8.4 0 0 0-7.3 12.6L3.6 20.4l4.3-1.1A8.4 8.4 0 1 0 12 3.6z" fill="none" stroke="currentColor" strokeWidth="1.7" />
+          <path d="M9.3 7.9c-.3 0-.6.1-.8.4-.3.3-1 1-1 2.3s1 2.6 1.1 2.8c.1.2 1.9 3 4.7 4.1 2.3.9 2.8.7 3.3.7s1.6-.7 1.8-1.3c.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.5-.3l-1.8-.9c-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.6.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.5-1.8-.1-.3 0-.4.1-.5l.4-.5.3-.4c.1-.2 0-.4 0-.5l-.8-2c-.2-.5-.4-.4-.6-.4z" />
+        </>
+      )
+    case 'phone':
+      return <path d={HANDSET} transform="translate(2.4 2.4) scale(0.8)" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    default:
+      return (
+        <>
+          <circle cx="6.5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="17.5" cy="12" r="1.8" />
+        </>
+      )
+  }
+}
+
+export function PlaceIcon({ place, size }) {
+  return (
+    <span className="book-app" data-place={place} data-size={size} aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <PlaceGlyph place={place} />
+      </svg>
+    </span>
+  )
+}
+
 export function CalendarAppIcon({ ms, zone, big = false }) {
   const key = dateKey(ms, zone)
   return (

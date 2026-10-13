@@ -5,7 +5,21 @@ import crypto from 'node:crypto'
 import { REMOVED_REVIEWS, BLOCKED_TERMS } from './moderation.mjs'
 import { mailConfigured, sendMail, passwordChangedMail, bookingMail, describeClient } from './mail.mjs'
 import { readState, writeState } from './state.mjs'
-import { parseHours, isTimeZone, openSlots, pickCalendar, cleanSchedule, blockRanges, dayKey as zoneDayKey } from './booking.mjs'
+import {
+  parseHours,
+  isTimeZone,
+  openSlots,
+  pickCalendar,
+  cleanSchedule,
+  blockRanges,
+  dayKey as zoneDayKey,
+  CALL_PLACES,
+  placeOfUrl,
+  cleanCallDetails,
+  callDetailLines,
+  readCallDetails,
+  callPlan,
+} from './booking.mjs'
 import { busyFrom, timeOf, eventIcs } from './ical.mjs'
 import { CalDavClient, CalendarMirror, CalDavError } from './icloud.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
@@ -1153,6 +1167,7 @@ const BOOKING_VIDEO_LABEL = (() => {
   if (host === 'whereby.com') return 'Whereby'
   return 'Video call'
 })()
+const BOOKING_VIDEO_PLACE = BOOKING_VIDEO_URL ? placeOfUrl(BOOKING_VIDEO_URL) : null
 const BOOKING_UID_DOMAIN = 'book.blxr.net'
 const BOOKING_BUDGET_MS = 10_000
 const BOOKING_WARM_MS = 5 * 60_000
@@ -1213,7 +1228,8 @@ function callOf(event) {
     email: who?.[2] || null,
     note: at > 0 ? lines.slice(0, at).join('\n').trim() : '',
     timeZone: zone && isTimeZone(zone) ? zone : null,
-    video: event.location || null,
+    video: /^https:\/\/\S+$/.test(event.location || '') ? event.location : null,
+    ...readCallDetails(at >= 0 ? lines.slice(at + 1) : []),
   }
 }
 
@@ -1400,9 +1416,11 @@ function validateBooking(body) {
   if (!withinLimits(name, BOOKING_FIELDS.name) || !/\p{L}/u.test(name) || REVIEW_LINK_RE.test(name)) fields.push('name')
   if (email.length > 254 || !BOOKING_EMAIL_RE.test(email)) fields.push('email')
   if (!withinLimits(note, BOOKING_FIELDS.note)) fields.push('note')
+  const { details, fields: detailFields } = cleanCallDetails(body)
+  fields.push(...detailFields)
   if (!Number.isFinite(start)) fields.push('start')
   if (fields.length) return { error: 'invalid', fields }
-  return { booking: { name, email, note, start, timeZone: isTimeZone(body?.timeZone) ? body.timeZone : null } }
+  return { booking: { name, email, note, start, timeZone: isTimeZone(body?.timeZone) ? body.timeZone : null, details } }
 }
 
 const bookingHits = new Map()
@@ -1445,13 +1463,26 @@ async function saveToCalendar(calendarUrl, uid, ics) {
   }
 }
 
-async function bookCall({ name, email, note, start, timeZone }) {
+function callPlace(details) {
+  const place = details?.place || null
+  const label = place ? CALL_PLACES[place].label : null
+  const hostLink = BOOKING_VIDEO_URL && (!place || place === BOOKING_VIDEO_PLACE) ? BOOKING_VIDEO_URL : null
+  const ownLink = place && CALL_PLACES[place].contact === 'link' && details.contact ? details.contact : null
+  const video = ownLink || hostLink
+  let where = video || label
+  if (place === 'other') where = details.contact
+  else if (place && CALL_PLACES[place].contact !== 'link') where = `${label}: ${details.contact}`
+  return { label, hostLink, video, where, guestWhere: hostLink || (place && place !== 'other' ? label : null) }
+}
+
+async function bookCall({ name, email, note, start, timeZone, details }) {
   const fresh = keepAvailability(await fetchAvailability())
   if (!bookingSlots(fresh).includes(start)) throw new CalendarError('slot_taken', 409)
   const end = start + BOOKING_MINUTES * 60_000
   const uid = `${crypto.randomUUID()}@${BOOKING_UID_DOMAIN}`
   const stamp = Date.now()
-  const video = BOOKING_VIDEO_URL || null
+  const { label, hostLink, video, where, guestWhere } = callPlace(details)
+  const extra = callDetailLines(details)
   const ownerEmail = SITE_OWNER_EMAIL || ICLOUD_EMAIL
 
   await saveToCalendar(fresh.target, uid, eventIcs({
@@ -1463,10 +1494,11 @@ async function bookCall({ name, email, note, start, timeZone }) {
     description: [
       ...(note ? [note, ''] : []),
       `${name} <${email}>`,
+      ...extra,
       ...(timeZone && timeZone !== BOOKING_TIMEZONE ? [`Their time zone: ${timeZone}`] : []),
       `Booked on ${BOOKING_SITE}/book`,
     ].join('\n'),
-    location: video,
+    location: where,
     url: video,
     alarmMinutes: 10,
   }))
@@ -1475,18 +1507,19 @@ async function bookCall({ name, email, note, start, timeZone }) {
     at: Date.now(),
     busy: [...fresh.busy, [start, end]],
     booked: [...fresh.booked, start],
-    calls: [...fresh.calls, { uid, start, end, name, email, note, timeZone: timeZone && timeZone !== BOOKING_TIMEZONE ? timeZone : null, video }],
+    calls: [...fresh.calls, { uid, start, end, name, email, note, timeZone: timeZone && timeZone !== BOOKING_TIMEZONE ? timeZone : null, video, ...readCallDetails(extra) }],
   }
 
+  const plan = callPlan(details, video)
   const guestCopy = {
     uid,
     stamp,
     start,
     end,
     summary: 'Call with blxr',
-    description: video ? `Join: ${video}` : 'The video link follows by email.',
-    location: video,
-    url: video,
+    description: plan,
+    location: guestWhere,
+    url: hostLink,
     alarmMinutes: 10,
   }
   let emailed = false
@@ -1498,7 +1531,7 @@ async function bookCall({ name, email, note, start, timeZone }) {
           {
             to: email,
             replyTo: ownerEmail,
-            ...bookingMail({ name, start, end, timeZone: timeZone || BOOKING_TIMEZONE, video, videoLabel: BOOKING_VIDEO_LABEL }),
+            ...bookingMail({ name, start, end, timeZone: timeZone || BOOKING_TIMEZONE, video: hostLink, videoLabel: label || BOOKING_VIDEO_LABEL, plan: details?.place ? plan : null }),
             attachments: [{ filename: 'invite.ics', content: Buffer.from(invite).toString('base64'), content_type: 'text/calendar; charset=utf-8; method=REQUEST' }],
           },
           { signal },
@@ -1509,7 +1542,7 @@ async function bookCall({ name, email, note, start, timeZone }) {
       log.warn('mail', 'the booking invite email was not sent; the call is still in the calendar', { detail: err?.message })
     }
   }
-  return { ...bookingShape(start), emailed, ics: eventIcs({ ...guestCopy, method: 'PUBLISH' }) }
+  return { ...bookingShape(start), video, where: guestWhere, plan, emailed, ics: eventIcs({ ...guestCopy, method: 'PUBLISH' }) }
 }
 
 const bookingWhen = (ms) =>
@@ -2765,11 +2798,12 @@ const server = http.createServer(async (req, res) => {
             minutes: BOOKING_MINUTES,
             days: BOOKING_DAYS,
             video: BOOKING_VIDEO_LABEL,
+            place: BOOKING_VIDEO_PLACE,
             slots: bookingSlots(data).map((at) => new Date(at).toISOString()),
           }, NO_STORE)
         }
 
-        const body = await readJsonBody(req, 4096)
+        const body = await readJsonBody(req, 8192)
         if (!body || typeof body !== 'object') return json(res, 400, { error: 'invalid', fields: [] }, NO_STORE)
         const checked = validateBooking(body)
         if (checked.error) return json(res, 400, checked, NO_STORE)

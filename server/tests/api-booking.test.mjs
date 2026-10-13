@@ -113,7 +113,7 @@ describe('booking: making a booking', () => {
     const res = await book(srv, guest(first, { email: 'ada@example.com' }))
     assert.equal(res.status, 201)
     const { ics, ...rest } = res.body.booking
-    assert.deepEqual(rest, { start: first, end: iso(Date.parse(first) + 30 * 60_000), minutes: 30, video: null, emailed: true })
+    assert.deepEqual(rest, { start: first, end: iso(Date.parse(first) + 30 * 60_000), minutes: 30, video: null, where: null, plan: 'The video link follows by email.', emailed: true })
     assert.match(ics, /METHOD:PUBLISH/)
     assert.doesNotMatch(ics, /ATTENDEE/)
 
@@ -185,6 +185,63 @@ describe('booking: making a booking', () => {
     for (const name of ['Visit https://spam.example', 'Cheap pills at pills.com', 'www.example']) {
       assert.deepEqual((await book(srv, guest(first, { name }))).body, { error: 'invalid', fields: ['name'] }, name)
     }
+  })
+
+  test('where, how and what it is about go into the calendar, and nothing the guest typed is emailed back', async () => {
+    const [first] = await slots(srv)
+    await srv.clearCalls()
+    const res = await book(
+      srv,
+      guest(first, { place: 'whatsapp', contact: '+30 694 215 8830', mode: 'video', lang: 'el', topic: 'project', budget: 'mid', timeline: 'month', company: 'Papadaki Studio', link: 'papadaki.studio' }),
+    )
+    assert.equal(res.status, 201)
+    assert.equal(res.body.booking.video, null)
+    assert.equal(res.body.booking.where, 'WhatsApp')
+    assert.equal(res.body.booking.plan, 'On WhatsApp. I’ll call you there.')
+
+    const body = (await puts(srv))[0].body.replace(/\r\n /g, '')
+    assert.match(
+      body,
+      /<ada\d+@example\.com>\\nWhere: WhatsApp — \+30 694 215 8830\\nHow: Video\\nLanguage: Greek\\nAbout: A project\\nBudget: €1k–5k\\nStart: Within a month\\nCompany: Papadaki Studio\\nLink: https:\/\/papadaki\.studio\/\\nTheir time zone: Europe\/London/,
+    )
+    assert.match(body, /LOCATION:WhatsApp: \+30 694 215 8830\r\n/)
+    assert.doesNotMatch(body, /^URL:/m)
+
+    const [mail] = await mails(srv)
+    const invite = decodeAttachment(mail)
+    assert.match(mail.text, /On WhatsApp\. I’ll call you there\./)
+    assert.match(invite, /LOCATION:WhatsApp\r\n/)
+    for (const typed of [/694/, /papadaki/i, /€/]) {
+      assert.doesNotMatch(`${mail.subject}${mail.text}${mail.html}`, typed)
+      assert.doesNotMatch(invite, typed)
+    }
+  })
+
+  test('a meeting link of their own is used for the call but never mailed out', async () => {
+    const [first] = await slots(srv)
+    await srv.clearCalls()
+    const res = await book(srv, guest(first, { place: 'zoom', contact: 'zoom.us/j/84213370012', mode: 'voice' }))
+    assert.equal(res.status, 201)
+    assert.equal(res.body.booking.video, 'https://zoom.us/j/84213370012')
+    assert.equal(res.body.booking.plan, 'On Zoom, using your link. Voice only, no camera needed.')
+    const body = (await puts(srv))[0].body.replace(/\r\n /g, '')
+    assert.match(body, /LOCATION:https:\/\/zoom\.us\/j\/84213370012\r\n/)
+    assert.match(body, /Where: Zoom — https:\/\/zoom\.us\/j\/84213370012\\nHow: Voice only/)
+    const [mail] = await mails(srv)
+    assert.doesNotMatch(`${mail.text}${mail.html}${decodeAttachment(mail)}${res.body.booking.ics}`, /84213370012/)
+    assert.match(mail.text, /On Zoom, using your link\./)
+  })
+
+  test('the details are checked too: a known place, a reachable contact, a real link', async () => {
+    const [first] = await slots(srv)
+    const refused = async (extra) => (await book(srv, guest(first, extra))).body
+    assert.deepEqual(await refused({ place: 'skype' }), { error: 'invalid', fields: ['place'] })
+    assert.deepEqual(await refused({ place: 'phone', contact: 'call me maybe' }), { error: 'invalid', fields: ['contact'] })
+    assert.deepEqual(await refused({ place: 'whatsapp', contact: '' }), { error: 'invalid', fields: ['contact'] })
+    assert.deepEqual(await refused({ place: 'discord', contact: 'two words' }), { error: 'invalid', fields: ['contact'] })
+    assert.deepEqual(await refused({ place: 'other', contact: 'x'.repeat(81) }), { error: 'invalid', fields: ['contact'] })
+    assert.deepEqual(await refused({ place: 'meet', contact: 'javascript:alert(1)' }), { error: 'invalid', fields: ['contact'] })
+    assert.deepEqual(await refused({ link: 'not a link', company: 'x'.repeat(81) }), { error: 'invalid', fields: ['company', 'link'] })
   })
 
   test('the honeypot answers like a booking and touches nothing', async () => {
@@ -268,14 +325,23 @@ describe('booking: settings', () => {
     const video = 'https://facetime.apple.com/join#v=1&p=abcdef&k=xyz'
     const srv = await startServer({ env: { ...OPEN, BOOKING_VIDEO_URL: video }, scenario: { icloud: { calendars } } })
     try {
-      assert.equal((await srv.request('/api/book')).body.video, 'FaceTime')
-      const [first] = await slots(srv)
-      const res = await book(srv, guest(first))
+      const page = (await srv.request('/api/book')).body
+      assert.equal(page.video, 'FaceTime')
+      assert.equal(page.place, 'facetime')
+      const [first, second] = await slots(srv)
+      const res = await book(srv, guest(first, { place: 'facetime' }))
       assert.equal(res.body.booking.video, video)
       assert.match((await puts(srv))[0].body.replace(/\r\n /g, ''), /URL:https:\/\/facetime\.apple\.com\/join#v=1&p=abcdef&k=xyz/)
       const [mail] = await mails(srv)
       assert.match(mail.html, /Join on FaceTime/)
       assert.match(decodeAttachment(mail), /LOCATION:https:\/\/facetime\.apple\.com/)
+
+      await srv.clearCalls()
+      const meet = await book(srv, guest(second, { place: 'meet' }))
+      assert.equal(meet.body.booking.video, null)
+      assert.equal(meet.body.booking.plan, 'On Google Meet. I’ll email you the link before we talk.')
+      assert.doesNotMatch((await puts(srv))[0].body, /facetime/)
+      assert.match((await mails(srv))[0].text, /On Google Meet\. I’ll email you the link before we talk\./)
     } finally {
       await srv.cleanup()
     }
@@ -316,7 +382,7 @@ describe('booking: the owner schedule', () => {
                     booked,
                     booked + HOUR / 2,
                     'SUMMARY:Call with Maria Papadaki',
-                    'DESCRIPTION:Studio site\\, redesign\\n\\nMaria Papadaki <maria@example.com>\\nTheir time zone: Europe/London\\nBooked on https://blxr.test/book',
+                    'DESCRIPTION:Studio site\\, redesign\\n\\nMaria Papadaki <maria@example.com>\\nWhere: FaceTime\\nHow: Voice only\\nLanguage: Greek\\nAbout: A project\\nBudget: €1k–5k\\nStart: Within a month\\nCompany: Papadaki Studio\\nLink: https://papadaki.studio/\\nTheir time zone: Europe/London\\nBooked on https://blxr.test/book',
                     'LOCATION:https://facetime.apple.com/join',
                   ),
                 ),
@@ -354,6 +420,15 @@ describe('booking: the owner schedule', () => {
         note: 'Studio site, redesign',
         timeZone: 'Europe/London',
         video: 'https://facetime.apple.com/join',
+        place: 'facetime',
+        contact: '',
+        mode: 'voice',
+        lang: 'el',
+        topic: 'project',
+        budget: 'mid',
+        timeline: 'month',
+        company: 'Papadaki Studio',
+        link: 'https://papadaki.studio/',
       },
     ])
     assert.ok(body.busy.some(([a, b]) => a === iso(midnight(2) + 13 * HOUR) && b === iso(midnight(2) + 14 * HOUR)))

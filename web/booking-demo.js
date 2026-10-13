@@ -1,4 +1,16 @@
-import { parseHours, openSlots, blockRanges, cleanSchedule, dayKey, zonedTime } from '../server/src/booking.mjs'
+import {
+  parseHours,
+  openSlots,
+  blockRanges,
+  cleanSchedule,
+  dayKey,
+  zonedTime,
+  CALL_PLACES,
+  cleanCallDetails,
+  callDetailLines,
+  readCallDetails,
+  callPlan,
+} from '../server/src/booking.mjs'
 
 const ZONE = 'Europe/Athens'
 const MINUTES = 30
@@ -57,8 +69,28 @@ function freeSlots(now, { ignorePause = false } = {}) {
   })
 }
 
-function addCall(start, [name, email, note, timeZone]) {
-  calls.push({ uid: `${makeId()}@book.blxr.net`, start, end: start + MINUTES * 60_000, name, email, note, timeZone, video: VIDEO })
+function demoPlace(details) {
+  const place = details.place
+  const own = place && CALL_PLACES[place].contact === 'link' && details.contact ? details.contact : null
+  const video = own || (!place || place === 'facetime' ? VIDEO : null)
+  const where = video ? (own ? CALL_PLACES[place].label : VIDEO) : place && place !== 'other' ? CALL_PLACES[place].label : null
+  return { video, where }
+}
+
+function addCall(start, [name, email, note, timeZone], input = {}) {
+  const { details } = cleanCallDetails(input)
+  calls.push({
+    uid: `${makeId()}@book.blxr.net`,
+    start,
+    end: start + MINUTES * 60_000,
+    name,
+    email,
+    note,
+    timeZone,
+    video: demoPlace(details).video,
+    ...readCallDetails(callDetailLines(details)),
+  })
+  return details
 }
 
 function seed(now) {
@@ -73,21 +105,32 @@ function seed(now) {
   ]
 
   const people = [
-    ['Maria Papadaki', 'maria@papadaki.studio', 'Redesign of our studio site. We have a rough sitemap and a few references.', null],
-    ['Jonas Becker', 'jonas@becker.dev', 'Quick intro, and whether you take on small React audits.', 'Europe/Berlin'],
-    ['Elena Rossi', 'elena.rossi@gmail.com', '', 'Europe/Rome'],
-    ['Nikos Georgiou', 'nikos@georgiou.gr', 'Landing page for a café opening in Thessaloniki.', null],
-    ['Priya Raman', 'priya@raman.io', 'Portfolio review before I apply to agencies.', 'Asia/Kolkata'],
+    [
+      ['Maria Papadaki', 'maria@papadaki.studio', 'Redesign of our studio site. We have a rough sitemap and a few references.', null],
+      { place: 'facetime', topic: 'project', budget: 'mid', timeline: 'month', company: 'Papadaki Studio', link: 'papadaki.studio', lang: 'el' },
+    ],
+    [
+      ['Jonas Becker', 'jonas@becker.dev', 'Quick intro, and whether you take on small React audits.', 'Europe/Berlin'],
+      { place: 'zoom', contact: 'https://zoom.us/j/84213370012', topic: 'job', company: 'Becker Labs' },
+    ],
+    [['Elena Rossi', 'elena.rossi@gmail.com', '', 'Europe/Rome'], { place: 'whatsapp', contact: '+39 347 120 4471', mode: 'voice', topic: 'chat' }],
+    [
+      ['Nikos Georgiou', 'nikos@georgiou.gr', 'Landing page for a café opening in Thessaloniki.', null],
+      { place: 'phone', contact: '+30 694 215 8830', topic: 'project', budget: 'small', timeline: 'now', lang: 'el' },
+    ],
+    [['Priya Raman', 'priya@raman.io', 'Portfolio review before I apply to agencies.', 'Asia/Kolkata'], { place: 'discord', contact: 'priya.raman', topic: 'advice', link: 'priya.design' }],
   ]
 
   const soon = Math.ceil((now + 100 * 60_000) / (30 * 60_000)) * 30 * 60_000
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: ZONE, hour: '2-digit', hourCycle: 'h23' }).format(new Date(soon)))
-  if (hour >= 9 && hour < 20 && dayKey(soon, ZONE) === today) addCall(soon, ['Sofia Dimitriou', 'sofia@dimitriou.gr', 'Follow-up on the brand colours.', null])
-  addCall(wall(shiftKey(today, -2), 11 * 60), ['Alex Chen', 'alex@chen.design', 'Talked through a Figma handoff.', 'America/New_York'])
+  if (hour >= 9 && hour < 20 && dayKey(soon, ZONE) === today) {
+    addCall(soon, ['Sofia Dimitriou', 'sofia@dimitriou.gr', 'Follow-up on the brand colours.', null], { place: 'meet', topic: 'collab', lang: 'el' })
+  }
+  addCall(wall(shiftKey(today, -2), 11 * 60), ['Alex Chen', 'alex@chen.design', 'Talked through a Figma handoff.', 'America/New_York'], { place: 'facetime', topic: 'advice' })
 
   const open = freeSlots(now)
   ;[1, 9, 18, 31, 47].forEach((index, i) => {
-    if (open[index]) addCall(open[index], people[i])
+    if (open[index]) addCall(open[index], ...people[i])
   })
 }
 
@@ -171,11 +214,17 @@ async function book(req, res) {
   const fields = []
   if (typeof body?.name !== 'string' || body.name.trim().length < 2) fields.push('name')
   if (typeof body?.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email.trim())) fields.push('email')
+  fields.push(...cleanCallDetails(body).fields)
   if (fields.length) return send(res, 400, { error: 'invalid', fields })
   if (!freeSlots(Date.now()).includes(start)) return send(res, 409, { error: 'slot_taken' })
   const end = start + MINUTES * 60_000
-  addCall(start, [body.name.trim(), body.email.trim(), typeof body.note === 'string' ? body.note.trim() : '', typeof body.timeZone === 'string' && body.timeZone !== ZONE ? body.timeZone : null])
-  send(res, 201, { booking: { start: iso(start), end: iso(end), minutes: MINUTES, video: null, emailed: true, ics: invite(start, end) } }, 700)
+  const details = addCall(
+    start,
+    [body.name.trim(), body.email.trim(), typeof body.note === 'string' ? body.note.trim() : '', typeof body.timeZone === 'string' && body.timeZone !== ZONE ? body.timeZone : null],
+    body,
+  )
+  const { video, where } = demoPlace(details)
+  send(res, 201, { booking: { start: iso(start), end: iso(end), minutes: MINUTES, video, where, plan: callPlan(details, video), emailed: true, ics: invite(start, end) } }, 700)
 }
 
 async function saveSchedule(req, res) {
@@ -205,7 +254,7 @@ export default function bookingDemo() {
         if (!/^\/?(\?.*)?$/.test(req.url)) return next()
         if ((req.method === 'GET' || req.method === 'POST') && schedule.paused) return send(res, 503, { error: 'booking_paused' })
         if (req.method === 'GET') {
-          return send(res, 200, { timeZone: ZONE, minutes: MINUTES, days: DAYS, video: 'FaceTime', slots: freeSlots(now).map(iso) })
+          return send(res, 200, { timeZone: ZONE, minutes: MINUTES, days: DAYS, video: 'FaceTime', place: 'facetime', slots: freeSlots(now).map(iso) })
         }
         if (req.method === 'POST') return book(req, res)
         next()

@@ -1,6 +1,22 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseHours, isTimeZone, zonedTime, dayKey, openSlots, occursOn, blockRanges, cleanSchedule } from '../src/booking.mjs'
+import {
+  parseHours,
+  isTimeZone,
+  zonedTime,
+  dayKey,
+  openSlots,
+  occursOn,
+  blockRanges,
+  cleanSchedule,
+  placeOfUrl,
+  cleanLink,
+  cleanContact,
+  cleanCallDetails,
+  callDetailLines,
+  readCallDetails,
+  callPlan,
+} from '../src/booking.mjs'
 
 const iso = (ms) => new Date(ms).toISOString()
 const at = (s) => Date.parse(s)
@@ -195,5 +211,68 @@ describe('cleanSchedule', () => {
       opts,
     )
     assert.equal(new Set(schedule.blocks.map((b) => b.id)).size, 2)
+  })
+})
+
+describe('call details', () => {
+  test('a video link names its app', () => {
+    assert.equal(placeOfUrl('https://facetime.apple.com/join#v=1'), 'facetime')
+    assert.equal(placeOfUrl('https://meet.google.com/abc-defg-hij'), 'meet')
+    assert.equal(placeOfUrl('https://us02web.zoom.us/j/1'), 'zoom')
+    assert.equal(placeOfUrl('https://teams.live.com/meet/1'), 'teams')
+    assert.equal(placeOfUrl('https://whereby.com/blxr'), null)
+    assert.equal(placeOfUrl('not a url'), null)
+  })
+
+  test('links get https:// when it is missing, and only web links pass', () => {
+    assert.equal(cleanLink('papadaki.studio'), 'https://papadaki.studio/')
+    assert.equal(cleanLink(' http://example.com/a?b=1 '), 'http://example.com/a?b=1')
+    for (const bad of ['', 'localhost', 'javascript:alert(1)', 'ftp://example.com', 'https://user:pw@example.com', 'two words.com', `https://example.com/${'a'.repeat(300)}`]) {
+      assert.equal(cleanLink(bad), null, bad)
+    }
+  })
+
+  test('each kind of contact has its own shape', () => {
+    assert.equal(cleanContact('phone', ' +30 694  215 8830 '), '+30 694 215 8830')
+    assert.equal(cleanContact('phone', '(212) 555-0199'), '(212) 555-0199')
+    assert.equal(cleanContact('phone', '12345'), null)
+    assert.equal(cleanContact('phone', '+30 69x 215'), null)
+    assert.equal(cleanContact('handle', '@priya.raman'), 'priya.raman')
+    assert.equal(cleanContact('handle', 'Old Name#1234'), null)
+    assert.equal(cleanContact('handle', 'OldName#1234'), 'OldName#1234')
+    assert.equal(cleanContact('place', 'Slack huddle'), 'Slack huddle')
+    assert.equal(cleanContact('place', 'x'), null)
+    assert.equal(cleanContact('link', ''), '')
+    assert.equal(cleanContact('link', 'zoom.us/j/1'), 'https://zoom.us/j/1')
+  })
+
+  test('only what the place needs is kept, and budget and timing only for a project', () => {
+    const { details, fields } = cleanCallDetails({ place: 'phone', contact: '+44 7700 900123', mode: 'video', lang: 'xx', topic: 'chat', budget: 'mid', timeline: 'now' })
+    assert.deepEqual(fields, [])
+    assert.deepEqual(details, { place: 'phone', contact: '+44 7700 900123', mode: 'voice', lang: 'en', topic: 'chat', budget: null, timeline: null, company: '', link: '' })
+    assert.deepEqual(cleanCallDetails({}).details.place, null)
+    assert.deepEqual(cleanCallDetails({ place: 'facetime', contact: '' }).fields, [])
+  })
+
+  test('what is written into the event reads back the same', () => {
+    const input = { place: 'other', contact: 'Café — Athens', mode: 'voice', lang: 'el', topic: 'project', budget: 'huge', timeline: 'later', company: 'Kafeneio', link: 'kafeneio.gr' }
+    const { details } = cleanCallDetails(input)
+    const lines = callDetailLines(details)
+    assert.equal(lines[0], 'Where: Somewhere else — Café — Athens')
+    assert.deepEqual(readCallDetails(['Note: ignored', ...lines]), details)
+    assert.deepEqual(readCallDetails([]), { place: null, contact: '', mode: null, lang: 'en', topic: null, budget: null, timeline: null, company: '', link: '' })
+    assert.equal(readCallDetails(['Where: Signal']).place, 'other')
+    assert.equal(readCallDetails(['Where: Signal']).contact, 'Signal')
+  })
+
+  test('the plan sent to the guest names the place without repeating what they typed', () => {
+    const plan = (input, video = null) => callPlan(cleanCallDetails(input).details, video)
+    assert.equal(plan({}), 'The video link follows by email.')
+    assert.equal(plan({ place: 'facetime' }, 'https://facetime.apple.com/join'), 'Join on FaceTime: https://facetime.apple.com/join')
+    assert.equal(plan({ place: 'zoom', contact: 'https://zoom.us/j/9' }, 'https://zoom.us/j/9'), 'On Zoom, using your link.')
+    assert.equal(plan({ place: 'teams', mode: 'voice' }), 'On Microsoft Teams. I’ll email you the link before we talk. Voice only, no camera needed.')
+    assert.equal(plan({ place: 'phone', contact: '+44 7700 900123' }), 'By phone. I’ll call you at the number you gave.')
+    assert.equal(plan({ place: 'discord', contact: 'priya' }), 'On Discord. I’ll call you there.')
+    assert.equal(plan({ place: 'other', contact: 'Signal' }), 'Where you suggested. I’ll confirm the details by email.')
   })
 })

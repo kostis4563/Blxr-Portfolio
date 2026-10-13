@@ -180,6 +180,7 @@ export async function fetchBookingSlots({ signal } = {}) {
     minutes: Number(data?.minutes) || 30,
     days: Number(data?.days) || 0,
     video: typeof data?.video === 'string' && data.video ? data.video : 'Video call',
+    place: typeof data?.place === 'string' && data.place ? data.place : null,
     slots: Array.isArray(data?.slots) ? data.slots.filter((s) => typeof s === 'string') : [],
   }
 }

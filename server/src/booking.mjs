@@ -217,6 +217,145 @@ export function cleanSchedule(input, { today, makeId }) {
   return { schedule: { hours, blocks, paused: input.paused === true } }
 }
 
+export const CALL_PLACES = {
+  facetime: { label: 'FaceTime', contact: 'link' },
+  meet: { label: 'Google Meet', contact: 'link' },
+  zoom: { label: 'Zoom', contact: 'link' },
+  teams: { label: 'Microsoft Teams', contact: 'link' },
+  discord: { label: 'Discord', contact: 'handle' },
+  whatsapp: { label: 'WhatsApp', contact: 'phone' },
+  phone: { label: 'Phone', contact: 'phone' },
+  other: { label: 'Somewhere else', contact: 'place' },
+}
+export const CALL_MODES = { video: 'Video', voice: 'Voice only' }
+export const CALL_LANGS = { en: 'English', el: 'Greek' }
+export const CALL_TOPICS = { project: 'A project', job: 'A job or role', collab: 'A collaboration', advice: 'Advice or feedback', chat: 'Just to chat' }
+export const CALL_BUDGETS = { small: 'Under €1k', mid: '€1k–5k', large: '€5k–15k', huge: '€15k+', open: 'Not sure yet' }
+export const CALL_TIMELINES = { now: 'As soon as possible', month: 'Within a month', later: 'Later on' }
+export const CALL_LIMITS = { company: 80, link: 300, phone: 24, place: 80 }
+
+const PHONE_RE = /^\+?[\d\s().-]+$/
+const HANDLE_RE = /^@?(?:[a-z0-9_.]{2,32}|[^\s@#:]{2,32}#\d{4})$/i
+
+export function placeOfUrl(url) {
+  let host = ''
+  try {
+    host = new URL(url).hostname
+  } catch {
+    return null
+  }
+  if (host === 'facetime.apple.com') return 'facetime'
+  if (host === 'meet.google.com') return 'meet'
+  if (host === 'zoom.us' || host.endsWith('.zoom.us')) return 'zoom'
+  if (host === 'teams.microsoft.com' || host === 'teams.live.com') return 'teams'
+  return null
+}
+
+export function cleanLink(value) {
+  const raw = String(value ?? '').trim()
+  if (!raw || raw.length > CALL_LIMITS.link || /\s/.test(raw)) return null
+  try {
+    const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`)
+    if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !/^[^.]+(\.[^.]+)+$/.test(url.hostname) || url.username || url.password) return null
+    return url.href
+  } catch {
+    return null
+  }
+}
+
+export function cleanContact(kind, value) {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim()
+  if (kind === 'link') return text ? cleanLink(text) : ''
+  if (!text) return null
+  if (kind === 'phone') {
+    const digits = text.replace(/\D/g, '').length
+    return text.length <= CALL_LIMITS.phone && PHONE_RE.test(text) && digits >= 6 && digits <= 15 ? text : null
+  }
+  if (kind === 'handle') return HANDLE_RE.test(text) ? text.replace(/^@/, '') : null
+  return text.length >= 2 && text.length <= CALL_LIMITS.place ? text : null
+}
+
+const pick = (options, value) => (typeof value === 'string' && Object.hasOwn(options, value) ? value : null)
+
+export function cleanCallDetails(body) {
+  const fields = []
+  const place = pick(CALL_PLACES, body?.place)
+  if (body?.place != null && body.place !== '' && !place) fields.push('place')
+  const contact = place ? cleanContact(CALL_PLACES[place].contact, body?.contact) : ''
+  if (contact === null) fields.push('contact')
+  const company = String(body?.company ?? '').replace(/\s+/g, ' ').trim()
+  if (company.length > CALL_LIMITS.company) fields.push('company')
+  const rawLink = String(body?.link ?? '').trim()
+  const link = rawLink ? cleanLink(rawLink) : ''
+  if (link === null) fields.push('link')
+  const topic = pick(CALL_TOPICS, body?.topic)
+  const details = {
+    place,
+    contact: contact || '',
+    mode: place === 'phone' ? 'voice' : pick(CALL_MODES, body?.mode) || 'video',
+    lang: pick(CALL_LANGS, body?.lang) || 'en',
+    topic,
+    budget: topic === 'project' ? pick(CALL_BUDGETS, body?.budget) : null,
+    timeline: topic === 'project' ? pick(CALL_TIMELINES, body?.timeline) : null,
+    company,
+    link: link || '',
+  }
+  return { details, fields }
+}
+
+export function callDetailLines(details) {
+  if (!details) return []
+  const lines = []
+  if (details.place) {
+    lines.push(`Where: ${CALL_PLACES[details.place].label}${details.contact ? ` — ${details.contact}` : ''}`)
+    lines.push(`How: ${CALL_MODES[details.mode] || CALL_MODES.video}`)
+  }
+  if (details.lang && details.lang !== 'en') lines.push(`Language: ${CALL_LANGS[details.lang]}`)
+  if (details.topic) lines.push(`About: ${CALL_TOPICS[details.topic]}`)
+  if (details.budget) lines.push(`Budget: ${CALL_BUDGETS[details.budget]}`)
+  if (details.timeline) lines.push(`Start: ${CALL_TIMELINES[details.timeline]}`)
+  if (details.company) lines.push(`Company: ${details.company}`)
+  if (details.link) lines.push(`Link: ${details.link}`)
+  return lines
+}
+
+const byLabel = (options, label) => Object.keys(options).find((id) => options[id] === label) || null
+
+export function readCallDetails(lines) {
+  const out = { place: null, contact: '', mode: null, lang: 'en', topic: null, budget: null, timeline: null, company: '', link: '' }
+  for (const raw of lines) {
+    const m = /^(Where|How|Language|About|Budget|Start|Company|Link): (.+)$/.exec(raw.trim())
+    if (!m) continue
+    const [, key, value] = m
+    if (key === 'Where') {
+      const [label, ...rest] = value.split(' — ')
+      const known = Object.keys(CALL_PLACES).find((id) => CALL_PLACES[id].label === label)
+      out.place = known || 'other'
+      out.contact = known ? rest.join(' — ') : value
+    } else if (key === 'How') out.mode = byLabel(CALL_MODES, value)
+    else if (key === 'Language') out.lang = byLabel(CALL_LANGS, value) || 'en'
+    else if (key === 'About') out.topic = byLabel(CALL_TOPICS, value)
+    else if (key === 'Budget') out.budget = byLabel(CALL_BUDGETS, value)
+    else if (key === 'Start') out.timeline = byLabel(CALL_TIMELINES, value)
+    else if (key === 'Company') out.company = value
+    else out.link = cleanLink(value) || ''
+  }
+  return out
+}
+
+export function callPlan(details, video) {
+  const place = details?.place
+  const label = place ? CALL_PLACES[place].label : null
+  const voice = details?.mode === 'voice' && place !== 'phone' ? ' Voice only, no camera needed.' : ''
+  if (!place) return video ? `Join: ${video}` : 'The video link follows by email.'
+  if (video && details.contact === video) return `On ${label}, using your link.${voice}`
+  if (video) return `Join on ${label}: ${video}${voice}`
+  if (CALL_PLACES[place].contact === 'link') return `On ${label}. I’ll email you the link before we talk.${voice}`
+  if (place === 'phone') return 'By phone. I’ll call you at the number you gave.'
+  if (place === 'other') return `Where you suggested. I’ll confirm the details by email.${voice}`
+  return `On ${label}. I’ll call you there.${voice}`
+}
+
 export function openSlots({ now, windows, timeZone, minutes, step = minutes, notice = 0, days, busy = [], booked = [], maxPerDay = 0 }) {
   const length = minutes * MINUTE_MS
   const earliest = now + notice * MINUTE_MS
