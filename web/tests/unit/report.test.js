@@ -14,7 +14,7 @@ import {
   formatWhen,
   reportApiBase,
 } from '../../src/lib/report.js'
-import { FindingDetails, ReportView, overview } from '../../src/report-page.jsx'
+import { FindingDetails, ReportView } from '../../src/report-page.jsx'
 
 const API = 'https://api.example.test'
 const ID = 'qHFwbXrI3ivE5zuvJ9JDMQ'
@@ -265,9 +265,8 @@ describe('rendering', () => {
   test('the report view: host title, grade, filters only for non-empty severities, footer', () => {
     const html = renderToStaticMarkup(createElement(ReportView, { summary: summarize(REPORT), expiresAt: EXPIRES }))
     expect(html).toContain('>example.com</h1>')
-    expect(html).toContain('https://example.com/')
+    expect(html).toContain('Site Scan + Port Scan · Deep')
     expect(html).toContain('aria-label="Grade F"')
-    expect(html).toContain('Three findings, one of them critical.')
     expect(html).toContain('aria-pressed="true" aria-label="All: 3"')
     expect(html).toContain('aria-pressed="false" aria-label="Critical: 1"')
     expect(html).toContain('aria-pressed="false" aria-label="Medium: 1"')
@@ -282,19 +281,6 @@ describe('rendering', () => {
     expect(html).toContain('All clear.')
     expect(html).not.toContain('aria-pressed')
     expect(html).not.toContain('Link expires')
-  })
-})
-
-describe('overview', () => {
-  const tail = ' They’re sorted worst first, so start at the top.'
-  test.each([
-    [0, {}, null, 'No findings this time.'],
-    [1, { high: 1 }, 'high', 'One finding, rated high severity.'],
-    [3, { critical: 1 }, 'critical', `Three findings, one of them critical.${tail}`],
-    [2, { info: 2 }, 'info', `Two findings, all informational.${tail}`],
-    [14, { medium: 14 }, 'medium', `14 findings, all medium severity.${tail}`],
-  ])('%i findings, worst %s', (total, counts, worst, expected) => {
-    expect(overview(total, counts, worst)).toBe(expected)
   })
 })
 

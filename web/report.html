@@ -15,7 +15,6 @@
     <title>Scan Report · blxr</title>
 
     <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/yang-bagus-latin-e4902677.woff2" as="font" type="font/woff2" crossorigin />
     <script>
       (function () {
         try {
@@ -45,38 +44,25 @@
   </head>
   <body>
     <div id="root">
-      <div class="mx-auto flex min-h-screen w-full max-w-[960px] flex-col border-x border-dashed border-line bg-bg text-ink">
-        <header class="frame-bleed-b sticky top-0 z-40 h-[60px] shrink-0 border-b border-dashed border-line bg-bg md:bg-bg/90 md:backdrop-blur-md">
-          <div class="flex h-full items-center justify-between gap-3 px-4 sm:px-6">
-            <a href="/" aria-label="blxr.net home" class="group flex shrink-0 items-end gap-1.5 rounded-md">
-              <img src="/wordmark-nav.png?v=95fab63c" alt="" width="111" height="50" draggable="false" class="h-[42px] w-auto select-none sm:h-[50px]" />
-              <span class="mb-[12px] text-[10px] font-bold leading-none tracking-tight text-ink-muted">report</span>
-            </a>
-            <nav aria-label="Site" class="-mr-2 flex h-full items-center text-ink-muted sm:-mr-4">
-              <a href="/" class="hidden h-8 items-center gap-1 whitespace-nowrap rounded-md px-2.5 text-[13px] font-medium sm:inline-flex">
-                blxr.net
-                <svg viewBox="0 0 16 16" aria-hidden="true" class="h-3 w-3 text-ink-faint"><path d="M5.5 10.5 10.5 5.5M6 5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              </a>
-              <span aria-hidden="true" class="mx-1 h-full border-l border-dashed border-line"></span>
-              <span aria-hidden="true" class="h-9 w-9"></span>
-            </nav>
+      <div class="flex min-h-screen flex-col bg-bg text-ink">
+        <header class="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
+          <div class="mx-auto flex h-14 w-full max-w-[760px] items-center justify-between gap-4 px-6">
+            <div class="flex min-w-0 items-center gap-2.5 text-[13.5px]">
+              <a href="/" class="rounded font-semibold tracking-tight text-ink-strong">blxr</a>
+              <span aria-hidden="true" class="text-ink-faint">/</span>
+              <span class="truncate text-ink-muted">Security report</span>
+            </div>
+            <span aria-hidden="true" class="-mr-2 h-8 w-8"></span>
           </div>
         </header>
         <main aria-busy="true" class="flex min-w-0 flex-1 flex-col">
-          <section class="relative border-b border-dashed border-line pt-12 pb-14 px-6">
-            <span aria-hidden="true" class="frame-label left-6 top-4"><svg viewBox="0 0 12 12"><path d="M4 1v10M8 1v10M1 4h10M1 8h10" /></svg>Report</span>
-            <h1 class="mt-2 font-bagus text-[30px] font-normal leading-[1.05] tracking-[-0.01em] text-ink-strong sm:text-[36px]">Decrypting report<span aria-hidden="true" class="dots"><span>.</span><span>.</span><span>.</span></span></h1>
-            <p class="mt-3 max-w-[54ch] text-[15px] leading-[1.6] text-ink-muted">The report is being decrypted in your browser.</p>
+          <section class="mx-auto w-full max-w-[760px] px-6 pt-20 pb-24">
+            <h1 class="text-[22px] font-semibold tracking-[-0.02em] text-ink-strong">Decrypting report<span aria-hidden="true" class="dots"><span>.</span><span>.</span><span>.</span></span></h1>
+            <p class="mt-2 max-w-[54ch] text-[14px] leading-relaxed text-ink-muted">The report is being decrypted in your browser.</p>
             <noscript>
-              <p class="mt-3 max-w-[54ch] text-[15px] leading-[1.6] text-ink-subtle">This page needs JavaScript: the key never leaves your browser, so the report can only be opened here.</p>
+              <p class="mt-2 max-w-[54ch] text-[14px] leading-relaxed text-ink-subtle">This page needs JavaScript: the key never leaves your browser, so the report can only be opened here.</p>
             </noscript>
           </section>
-          <div aria-hidden="true" data-busy class="stripe-band frame-bleed relative h-8 shrink-0 border-b border-dashed border-line">
-            <span data-pos="tl" class="frame-cross"></span>
-            <span data-pos="tr" class="frame-cross"></span>
-            <span data-pos="bl" class="frame-cross"></span>
-            <span data-pos="br" class="frame-cross"></span>
-          </div>
         </main>
       </div>
     </div>
