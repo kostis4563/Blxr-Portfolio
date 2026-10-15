@@ -31,13 +31,17 @@ function blocks(text, keyword) {
   return out
 }
 
-const csp = (() => {
-  const value = /Content-Security-Policy "([^"]+)"/.exec(headers)[1]
+const reportHeaders = await read('deploy/nginx/blxr-report-headers.conf')
+
+const parseCsp = (text) => {
+  const value = /Content-Security-Policy "([^"]+)"/.exec(text)[1]
   return Object.fromEntries(value.split(';').map((d) => d.trim()).filter(Boolean).map((d) => {
     const [name, ...sources] = d.split(/\s+/)
     return [name, sources]
   }))
-})()
+}
+const csp = parseCsp(headers)
+const reportCsp = parseCsp(reportHeaders)
 const hostAllowed = (directive, url) => {
   const u = new URL(url)
   return (csp[directive] || csp['default-src']).some((s) => s === `${u.protocol}//${u.host}` || s === u.origin)
@@ -191,6 +195,39 @@ describe('Content-Security-Policy', () => {
     const hosts = [...(/SPOTIFY_ART_HOSTS = new Set\(\[([^\]]+)\]\)/.exec(server)?.[1] || '').matchAll(/'([^']+)'/g)].map((m) => m[1])
     assert.ok(hosts.length >= 1)
     for (const host of hosts) assert.ok(hostAllowed('img-src', `https://${host}/image/x`), `${host} album art`)
+  })
+})
+
+describe('/report (WebScanner shared reports)', () => {
+  const location = () => blocks(conf, 'location').find((l) => l.head === 'location = /report')
+
+  test('served from report.html, revalidated, with the site headers plus its own and no Early Hints', () => {
+    const report = location()
+    assert.ok(report, 'location = /report exists')
+    assert.match(report.body, /try_files \/report\.html =404;/)
+    assert.match(report.body, /Cache-Control "no-cache"/)
+    assert.match(report.body, /include \/etc\/nginx\/snippets\/blxr-security-headers\.conf;/)
+    assert.match(report.body, /include \/etc\/nginx\/snippets\/blxr-report-headers\.conf;/)
+    assert.doesNotMatch(report.body, /early-hints/, 'the hints name the main app bundle, which this page never loads')
+  })
+
+  test('its CSP lets the page reach only itself and the report API, and run only its own scripts', () => {
+    assert.deepEqual(reportCsp['default-src'], ["'none'"])
+    assert.deepEqual(reportCsp['connect-src'], ["'self'", 'https://api.blxr.net'])
+    assert.deepEqual(reportCsp['script-src'], ["'self'", '{{SCRIPT_HASHES}}'], 'no analytics or other third-party script, even if one is injected')
+    assert.deepEqual(reportCsp['img-src'], ["'self'", 'data:'])
+    for (const directive of ['base-uri', 'object-src', 'frame-ancestors', 'form-action']) assert.deepEqual(reportCsp[directive], ["'none'"], directive)
+    for (const s of Object.values(reportCsp).flat()) assert.ok(!s.startsWith('http:') && s !== '*', s)
+  })
+
+  test('the site-wide CSP, which applies as well, allows the report API', () => {
+    assert.ok(hostAllowed('connect-src', 'https://api.blxr.net/v1/reports/x'))
+  })
+
+  test('never indexed, never sends a referrer, and every header is sent on errors too', () => {
+    assert.match(reportHeaders, /X-Robots-Tag "noindex, nofollow"/)
+    assert.match(reportHeaders, /Referrer-Policy "no-referrer"/)
+    for (const line of reportHeaders.trim().split('\n')) assert.match(line, / always;$/, line.slice(0, 50))
   })
 })
 

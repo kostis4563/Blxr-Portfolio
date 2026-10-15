@@ -111,6 +111,7 @@ describe('deploy.sh', () => {
   test('nginx dry-run succeeds once a build has produced the CSP hashes and Early Hints', { skip: !built && 'run npm run build first' }, async () => {
     const { stdout } = await exec('bash', [path.join(ROOT, 'deploy/deploy.sh'), 'nginx'], { env: { ...process.env, DRY_RUN: '1' } })
     assert.match(stdout, /install security-headers snippet with\s+[1-9]\d* hash/)
+    assert.match(stdout, /install report-headers snippet with\s+[1-9]\d* hash/)
     assert.match(stdout, /nginx -t/)
   })
 

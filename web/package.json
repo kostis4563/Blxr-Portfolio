@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build:client": "vite build",
+    "build:client": "vite build && npm run build:report",
+    "build:report": "vite build --config vite.report.config.js",
     "build:server": "vite build --ssr src/entry-server.jsx --outDir dist-ssr --emptyOutDir",
     "prerender": "node prerender.js",
     "compress": "node compress.js",

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A WebScanner security report, decrypted in your browser." />
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon.png?v=2" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#090909" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f1ee" />
+
+    <title>Scan Report · blxr</title>
+
+    <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/playfair-display-report-italic-6da948aa.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      (function () {
+        try {
+          var stored = null
+          try { stored = localStorage.getItem('blxr-theme') } catch (e) {}
+          var theme = stored === 'light' || stored === 'dark'
+            ? stored
+            : stored === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark'
+          document.documentElement.dataset.theme = theme
+          document.documentElement.style.colorScheme = theme
+          try {
+            var colors = localStorage.getItem('blxr-colors-css')
+            if (colors) {
+              var sheet = document.createElement('style')
+              sheet.id = 'custom-colors'
+              sheet.textContent = colors
+              document.head.appendChild(sheet)
+            }
+          } catch (e) {}
+        } catch (e) {
+          document.documentElement.dataset.theme = 'dark'
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <div class="mx-auto flex min-h-screen w-full max-w-[960px] flex-col border-x border-dashed border-line bg-bg text-ink">
+        <header class="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-dashed border-line px-4 sm:px-8">
+          <a href="/" class="inline-flex items-center gap-2 rounded-md text-[13px] font-medium text-ink-muted transition-colors duration-200 hover:text-ink-strong">
+            <span aria-hidden="true">←</span>
+            <span>blxr.net</span>
+          </a>
+        </header>
+        <main aria-busy="true" class="flex min-w-0 flex-1 flex-col">
+          <section class="px-4 py-24 text-center sm:py-32">
+            <h1 class="font-serif text-[26px] font-normal italic leading-tight text-ink-strong sm:text-[30px]">Decrypting report…</h1>
+            <p class="mx-auto mt-3 max-w-[46ch] text-[13.5px] leading-relaxed text-ink-subtle">The report is being decrypted in your browser.</p>
+            <noscript>
+              <p class="mx-auto mt-3 max-w-[46ch] text-[13.5px] leading-relaxed text-ink-muted">This page needs JavaScript: the key never leaves your browser, so the report can only be opened here.</p>
+            </noscript>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/src/report-main.jsx"></script>
+  </body>
+</html>

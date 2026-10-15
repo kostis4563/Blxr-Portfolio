@@ -1,0 +1,55 @@
+@import "tailwindcss" source(none);
+
+@import "./fonts.css";
+@import "./theme.css";
+
+@source "./report-page.jsx";
+@source "../report.html";
+
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/playfair-display-report-italic-6da948aa.woff2') format('woff2');
+  unicode-range: U+0020-007E, U+00B7, U+2013-2014, U+2018-2019, U+201C-201D, U+2026;
+}
+
+:root {
+  --sev-critical: #f43f5e;
+  --sev-high: #fb7185;
+  --sev-medium: #fbbf24;
+  --sev-low: #60a5fa;
+  --sev-info: #34d399;
+}
+
+:root[data-theme='light'] {
+  --sev-critical: #e11d48;
+  --sev-high: #f43f5e;
+  --sev-medium: #b45309;
+  --sev-low: #2563eb;
+  --sev-info: #047857;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-selection);
+  color: var(--color-ink-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -16,6 +16,7 @@ SERVER_ROOT=/opt/blxr-search
 UNIT=/etc/systemd/system/blxr-search.service
 NGINX_SITE=/etc/nginx/sites-available/blxr
 NGINX_SNIPPET=/etc/nginx/snippets/blxr-security-headers.conf
+NGINX_REPORT_SNIPPET=/etc/nginx/snippets/blxr-report-headers.conf
 NGINX_HINTS_SNIPPET=/etc/nginx/snippets/blxr-early-hints.conf
 NGINX_CF_SNIPPET=/etc/nginx/snippets/blxr-cloudflare-realip.conf
 SERVER_ENV=/etc/blxr-search.env
@@ -161,10 +162,14 @@ deploy_nginx() {
   hashes="$(cat "$hashes_file")"
   if [[ "$DRY_RUN" == "1" ]]; then
     printf '  [dry-run] install security-headers snippet with %s hash(es)\n' "$(wc -w <<< "$hashes")"
+    printf '  [dry-run] install report-headers snippet with %s hash(es)\n' "$(wc -w <<< "$hashes")"
   else
     sed "s|{{SCRIPT_HASHES}}|$hashes|" "$ROOT/deploy/nginx/blxr-security-headers.conf" \
       > "$NGINX_SNIPPET"
     chmod 0644 "$NGINX_SNIPPET"
+    sed "s|{{SCRIPT_HASHES}}|$hashes|" "$ROOT/deploy/nginx/blxr-report-headers.conf" \
+      > "$NGINX_REPORT_SNIPPET"
+    chmod 0644 "$NGINX_REPORT_SNIPPET"
   fi
 
   local hints_file="$ROOT/web/early-hints.conf"

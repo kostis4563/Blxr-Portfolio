@@ -104,6 +104,42 @@ describe('pages', () => {
   })
 })
 
+describe('/report', () => {
+  const html = () => read('report.html')
+  const scripts = () => [...html().matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1])
+  const bundle = () => scripts().map((src) => read(src.slice(1))).join('\n')
+
+  test('is its own page: noindex, no referrer before anything loads, the default title', () => {
+    const h = html()
+    expect(h).toContain('<meta name="robots" content="noindex, nofollow" />')
+    expect(h.indexOf('<meta name="referrer" content="no-referrer" />')).toBeGreaterThan(0)
+    expect(h.indexOf('<meta name="referrer"')).toBeLessThan(h.search(/<link\b|<script\b/))
+    expect(h.match(/<title>/g)).toHaveLength(1)
+    expect(h).toContain('<title>Scan Report · blxr</title>')
+    expect(h).toContain('Decrypting report…')
+  })
+
+  test('loads only its own bundle: no main app chunk, no third-party script', () => {
+    expect(scripts().length).toBeGreaterThan(0)
+    for (const src of scripts()) expect(src).toMatch(/^\/assets\/report-[\w-]+\.js$/)
+    expect(html()).not.toMatch(/\/assets\/(app|index|vendor|supabase)-/)
+    const h = html()
+    const urls = [...h.matchAll(/\s(?:src|href)="(\/[^"]*)"/g)].map((m) => m[1])
+    expect(urls.filter((u) => !served(u))).toEqual([])
+  })
+
+  test('the production bundle talks to api.blxr.net only, and reports nothing anywhere', () => {
+    const js = bundle()
+    expect(js).toContain('https://api.blxr.net')
+    expect(js).not.toContain('127.0.0.1:8787')
+    for (const marker of ['/api/logs', '/api/vitals', '/api/hit', 'sendBeacon', 'supabase.co', 'cloudflareinsights']) expect(js, marker).not.toContain(marker)
+  })
+
+  test('stays out of the sitemap', () => {
+    expect(read('sitemap.xml')).not.toContain('/report')
+  })
+})
+
 describe('Content-Security-Policy hashes', () => {
   test('every inline executable script in every page has its hash listed', () => {
     const listed = new Set(readFileSync(path.join(WEB, 'csp-script-hashes.txt'), 'utf8').trim().split(/\s+/))
