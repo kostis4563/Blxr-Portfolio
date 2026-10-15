@@ -81,6 +81,16 @@ Setup:
 3. SSL/TLS: **Full (strict)**.
 4. Speed: HTTP/3 (QUIC) on (default).
 5. `Always Use HTTPS` on. Origin already sends HSTS with `preload`.
+6. SSL/TLS -> Edge Certificates: **Minimum TLS Version 1.2**, TLS 1.3 on.
+   The default is 1.0, and visitors only ever handshake with Cloudflare, so
+   the origin's `options-ssl-nginx.conf` doesn't help here. Check:
+   `openssl s_client -connect blxr.net:443 -tls1 -cipher 'DEFAULT:@SECLEVEL=0'`
+   must fail.
+
+External scanners hit the challenge below, so the CSP, missing HSTS, missing
+`Cache-Control`, `server-timing` and 403 they report all describe
+Cloudflare's challenge page, not ours. So does any "SSRF via `?url=`" hit:
+`/` is a static file and nginx ignores the query.
 
 Keep these **off** — they break this site:
 
@@ -162,15 +172,23 @@ renewal needs the box reachable directly.
 
 ## DNS
 
-Zone is at GoDaddy (`ns37/ns38.domaincontrol.com`), moving to Cloudflare.
+Zone is on Cloudflare (`maya/norm.ns.cloudflare.com`); the registrar is
+still GoDaddy.
 
-**Order matters:**
+1. DNSSEC: Cloudflare -> DNS -> Settings -> **Enable DNSSEC**, then paste the
+   DS record it shows into GoDaddy -> domain -> DNS -> DNSSEC. Only ever
+   enable it on Cloudflare's side: a DS record made anywhere else points at
+   the wrong signing keys and the zone stops resolving entirely.
+2. CAA: Cloudflare's Universal SSL CAs plus `letsencrypt.org` (certbot here
+   uses http-01 via nginx/webroot). No `issuewild`: the Universal SSL
+   certificate covers `*.blxr.net`.
 
-1. DNSSEC only after nameservers move to Cloudflare, and only enabled there.
-   Enabling at GoDaddy first, then moving nameservers, publishes a DS record
-   pointing at the wrong signing keys — the zone stops resolving entirely.
-2. CAA only after Cloudflare is live, listing Cloudflare's current CAs plus
-   `letsencrypt.org` (certbot here uses http-01 via nginx/webroot).
+```dns
+blxr.net.  CAA  0 issue "letsencrypt.org"
+blxr.net.  CAA  0 issue "pki.goog"
+blxr.net.  CAA  0 issue "ssl.com"
+blxr.net.  CAA  0 iodef "mailto:kostisnomikos@gmail.com"
+```
 
 ### Mail
 
@@ -178,8 +196,21 @@ No MX record, no mail agent on the box. Outbound mail (account emails) goes
 through Resend — DNS records and Supabase's SMTP form are in
 [`supabase/README.md`](supabase/README.md); the one mail the Node server
 sends itself needs `RESEND_API_KEY` in `/etc/blxr-search.env`. Contact is
-still a `mailto:` link. If mail is ever dropped again, the records for a
-domain that sends nothing are:
+still a `mailto:` link.
+
+Resend's SPF lives on `send.blxr.net` (the Return-Path), and DMARC passes
+on its DKIM (`resend._domainkey`, `d=blxr.net`), so the bare domain never
+sends and needs its own SPF that says so. The DMARC record imported from
+GoDaddy sends reports to GoDaddy (`onsecureserver.net`); point them back
+here:
+
+```dns
+blxr.net.         TXT  "v=spf1 -all"
+_dmarc.blxr.net.  TXT  "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:kostisnomikos@gmail.com"
+```
+
+If mail is ever dropped again, the records for a domain that sends nothing
+are:
 
 ```dns
 blxr.net.                TXT  "v=spf1 -all"
