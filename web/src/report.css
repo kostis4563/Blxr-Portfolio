@@ -71,6 +71,56 @@ body {
   40% { opacity: 1; }
 }
 
+@page {
+  margin: 16mm 14mm 18mm;
+
+  @bottom-right {
+    content: counter(page) ' / ' counter(pages);
+    font: 8pt 'Plus Jakarta Sans', system-ui, sans-serif;
+    color: #8a8a8a;
+  }
+}
+
+@media print {
+  :root,
+  :root[data-theme] {
+    color-scheme: light;
+    --color-bg: #ffffff;
+    --color-surface: #f6f6f4;
+    --color-surface-hover: #ecebe7;
+    --color-line: #e3e1dc;
+    --color-line-strong: #cbc7bf;
+    --color-ink-strong: #111111;
+    --color-ink: #1c1c1c;
+    --color-ink-secondary: #333333;
+    --color-ink-muted: #555555;
+    --color-ink-subtle: #666666;
+    --color-ink-faint: #9a9a9a;
+    --sev-critical: #be123c;
+    --sev-high: #c2410c;
+    --sev-medium: #a16207;
+    --sev-low: #1d4ed8;
+    --sev-info: #047857;
+  }
+
+  html {
+    color-scheme: light !important;
+    background-color: #ffffff;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
