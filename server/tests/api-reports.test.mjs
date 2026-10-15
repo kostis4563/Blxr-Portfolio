@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { startServer } from './support/server.mjs'
-import { openReports, ReportStoreFull, REPORT_TTLS } from '../src/reports.mjs'
+import { openReports, ReportStoreFull, REPORT_TTL_MS } from '../src/reports.mjs'
 
 const blob = (size = 64, version = 1) => {
   const bytes = crypto.randomBytes(size)
@@ -21,7 +21,7 @@ before(async () => {
 })
 after(() => srv?.cleanup())
 
-const upload = (body = blob(), query = '?ttl=7d', headers = OCTET) => srv.request(`/api/reports${query}`, { method: 'POST', body, headers })
+const upload = (body = blob(), query = '', headers = OCTET) => srv.request(`/api/reports${query}`, { method: 'POST', body, headers })
 
 describe('/api/reports', () => {
   test('upload → download → delete, with the shape the macOS app expects', async () => {
@@ -34,7 +34,7 @@ describe('/api/reports', () => {
     assert.match(created.body.deleteToken, /^[A-Za-z0-9_-]{43}$/)
     assert.equal(created.body.viewerUrl, 'https://blxr.test/report')
     const ttl = Date.parse(created.body.expiresAt) - before
-    assert.ok(ttl > REPORT_TTLS['7d'] - 60_000 && ttl <= REPORT_TTLS['7d'] + 60_000, 'expires in 7 days')
+    assert.ok(ttl > REPORT_TTL_MS - 60_000 && ttl <= REPORT_TTL_MS + 60_000, 'kept for 120 days')
     assert.equal(created.headers.get('cache-control'), 'no-store')
 
     const { id, deleteToken } = created.body
@@ -64,15 +64,14 @@ describe('/api/reports', () => {
     assert.equal((await srv.request(`/api/reports/${id}`, { method: 'DELETE', headers: { authorization: `Bearer ${deleteToken}` } })).status, 404)
   })
 
-  test('ttl defaults to 7d and only takes 1d, 7d or 30d', async () => {
-    const plain = await upload(blob(), '')
-    assert.equal(plain.status, 201)
-    const day = await upload(blob(), '?ttl=1d')
-    assert.ok(Date.parse(day.body.expiresAt) - Date.now() <= REPORT_TTLS['1d'])
-    for (const ttl of ['2d', 'forever', 'constructor', '__proto__']) {
-      const res = await upload(blob(), `?ttl=${ttl}`)
-      assert.equal(res.status, 400, ttl)
-      assert.equal(res.body.error, 'bad_ttl', ttl)
+  test('every report is kept 120 days; the uploader cannot change that', async () => {
+    assert.equal(REPORT_TTL_MS, 120 * 24 * 60 * 60 * 1000)
+    for (const query of ['', '?ttl=1d', '?ttl=forever', '?expires=0']) {
+      const before = Date.now()
+      const res = await upload(blob(), query)
+      assert.equal(res.status, 201, query)
+      const ttl = Date.parse(res.body.expiresAt) - before
+      assert.ok(ttl > REPORT_TTL_MS - 60_000 && ttl <= REPORT_TTL_MS + 60_000, query)
     }
   })
 

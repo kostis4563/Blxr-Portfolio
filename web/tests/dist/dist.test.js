@@ -116,7 +116,7 @@ describe('/report', () => {
     expect(h.indexOf('<meta name="referrer"')).toBeLessThan(h.search(/<link\b|<script\b/))
     expect(h.match(/<title>/g)).toHaveLength(1)
     expect(h).toContain('<title>Scan Report · blxr</title>')
-    expect(h).toContain('Decrypting report…')
+    expect(h).toContain('Decrypting report<span aria-hidden="true" class="dots">')
   })
 
   test('loads only its own bundle: no main app chunk, no third-party script', () => {

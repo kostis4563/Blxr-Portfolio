@@ -68,7 +68,7 @@ export const INTENSITY_LABEL = { quick: 'Quick', standard: 'Standard', deep: 'De
 
 export const GRADE_SEVERITY = { A: 'info', 'A-': 'info', B: 'low', C: 'medium', D: 'high', F: 'critical' }
 
-export const LOADING_STATE = { title: 'Decrypting report…', message: 'The report is being decrypted in your browser.' }
+export const LOADING_STATE = { title: 'Decrypting report', message: 'The report is being decrypted in your browser.' }
 
 export const INCOMPLETE_STATE = {
   title: 'This link is incomplete.',
@@ -147,7 +147,7 @@ export function summarize(report) {
     findings,
     counts,
     worst: SEVERITIES.find((s) => counts[s] > 0) || null,
-    eyebrow: [modes.join(' + ') || 'Scan', own(INTENSITY_LABEL, report.intensity), 'Report'].filter(Boolean).join(' · '),
+    scan: [modes.join(' + ') || 'Scan', own(INTENSITY_LABEL, report.intensity)].filter(Boolean).join(' · '),
     url: text(report.finalURL) || text(report.target),
     host,
     title: host ? `${host} · Scan Report · blxr` : DEFAULT_TITLE,

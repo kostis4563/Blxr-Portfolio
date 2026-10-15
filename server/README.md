@@ -503,10 +503,11 @@ the report, seals it with a fresh AES-256-GCM key and uploads only the
 ciphertext; the key travels in the link's `#fragment`, which browsers never
 send, so this server can't read a report.
 
-- `POST /api/reports?ttl=1d|7d|30d` (default `7d`), body
-  `application/octet-stream`: `0x01 | nonce (12) | ciphertext | tag (16)`,
-  at most 5 MB (`413 too_large`). Anything else is `400 bad_payload` (or
-  `bad_ttl`). Answers `201`:
+- `POST /api/reports`, body `application/octet-stream`:
+  `0x01 | nonce (12) | ciphertext | tag (16)`, at most 5 MB
+  (`413 too_large`). Anything else is `400 bad_payload`. Every report is
+  kept 120 days (`REPORT_TTL_MS`); the uploader can't change that, and any
+  query string is ignored. Answers `201`:
 
   ```json
   { "id": "<22 chars>", "viewerUrl": "https://blxr.net/report", "expiresAt": "…", "deleteToken": "<43 chars>" }

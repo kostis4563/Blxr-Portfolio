@@ -7,8 +7,7 @@ import { safeEqual } from './guard.mjs'
 export const REPORT_FORMAT = 1
 export const REPORT_MIN_BYTES = 1 + 12 + 16
 export const REPORT_MAX_BYTES = 5 * 1024 * 1024
-export const REPORT_TTLS = { '1d': 86_400_000, '7d': 7 * 86_400_000, '30d': 30 * 86_400_000 }
-export const REPORT_DEFAULT_TTL = '7d'
+export const REPORT_TTL_MS = 120 * 86_400_000
 export const REPORT_ID_RE = /^[A-Za-z0-9_-]{22}$/
 const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/
 const META_RE = /^([A-Za-z0-9_-]{22})\.json$/

@@ -24,7 +24,7 @@ import { busyFrom, timeOf, eventIcs } from './ical.mjs'
 import { CalDavClient, CalendarMirror, CalDavError } from './icloud.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
 import { rateLimit, rateLimitSize, originAllowed, ALLOWED_ORIGINS, bearerOf, jwtLooksUsable, isAal2, hasVerifiedFactor, fingerprint, safeEqual, isHttps, isJsonBody, API_HEADERS } from './guard.mjs'
-import { openReports, ReportStoreFull, REPORT_FORMAT, REPORT_MIN_BYTES, REPORT_MAX_BYTES, REPORT_TTLS, REPORT_DEFAULT_TTL, REPORT_ID_RE } from './reports.mjs'
+import { openReports, ReportStoreFull, REPORT_FORMAT, REPORT_MIN_BYTES, REPORT_MAX_BYTES, REPORT_TTL_MS, REPORT_ID_RE } from './reports.mjs'
 
 const PORT = Number(process.env.PORT) || 8899
 const HOST = '127.0.0.1'
@@ -3101,15 +3101,13 @@ const server = http.createServer(async (req, res) => {
       const [, id] = reportMatch
       if (id === undefined) {
         if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
-        const ttlKey = url.searchParams.get('ttl') || REPORT_DEFAULT_TTL
-        if (!Object.hasOwn(REPORT_TTLS, ttlKey)) return json(res, 400, { error: 'bad_ttl', message: `ttl must be one of ${Object.keys(REPORT_TTLS).join(', ')}` }, NO_STORE)
         const blob = await readBlobBody(req, REPORT_MAX_BYTES)
         if (blob === TOO_LARGE) return json(res, 413, { error: 'too_large', message: `Reports are limited to ${REPORT_MAX_BYTES / 1024 / 1024} MB.` }, NO_STORE)
         if (!blob || blob.length < REPORT_MIN_BYTES || blob[0] !== REPORT_FORMAT) {
           return json(res, 400, { error: 'bad_payload', message: 'Body must be a WebScanner encrypted report blob.' }, NO_STORE)
         }
         try {
-          const created = await reportStore.create(blob, REPORT_TTLS[ttlKey])
+          const created = await reportStore.create(blob, REPORT_TTL_MS)
           return json(res, 201, { id: created.id, viewerUrl: REPORT_VIEWER_URL, expiresAt: created.expiresAt, deleteToken: created.deleteToken }, NO_STORE)
         } catch (err) {
           if (err instanceof ReportStoreFull) return json(res, 507, { error: 'reports_full', message: 'The report service is full right now, try again later.' }, NO_STORE)
