@@ -211,17 +211,29 @@ describe('/report (WebScanner shared reports)', () => {
     assert.doesNotMatch(report.body, /early-hints/, 'the hints name the main app bundle, which this page never loads')
   })
 
-  test('its CSP lets the page reach only itself and the report API, and run only its own scripts', () => {
+  test('its CSP lets the page reach only itself (the report API is /api/reports), and run only its own scripts', () => {
     assert.deepEqual(reportCsp['default-src'], ["'none'"])
-    assert.deepEqual(reportCsp['connect-src'], ["'self'", 'https://api.blxr.net'])
+    assert.deepEqual(reportCsp['connect-src'], ["'self'"])
     assert.deepEqual(reportCsp['script-src'], ["'self'", '{{SCRIPT_HASHES}}'], 'no analytics or other third-party script, even if one is injected')
     assert.deepEqual(reportCsp['img-src'], ["'self'", 'data:'])
     for (const directive of ['base-uri', 'object-src', 'frame-ancestors', 'form-action']) assert.deepEqual(reportCsp[directive], ["'none'"], directive)
     for (const s of Object.values(reportCsp).flat()) assert.ok(!s.startsWith('http:') && s !== '*', s)
   })
 
-  test('the site-wide CSP, which applies as well, allows the report API', () => {
-    assert.ok(hostAllowed('connect-src', 'https://api.blxr.net/v1/reports/x'))
+  test('the site-wide CSP, which applies as well, allows same-origin fetches', () => {
+    assert.ok(csp['connect-src'].includes("'self'"))
+  })
+
+  test('the report API takes a 5 MB upload through the same proxy headers as the rest of /api/', () => {
+    const api = blocks(conf, 'location').find((l) => l.head === 'location /api/reports')
+    assert.ok(api, 'location /api/reports exists')
+    const cap = /client_max_body_size (\d+)m;/.exec(api.body)
+    assert.ok(cap && Number(cap[1]) > 5, 'room for a 5 MB report plus headers')
+    assert.match(api.body, /proxy_pass http:\/\/127\.0\.0\.1:8899;/)
+    assert.match(api.body, /proxy_set_header X-Forwarded-Proto https;/)
+    assert.match(api.body, /proxy_set_header X-Forwarded-For \$remote_addr;/)
+    assert.match(api.body, /limit_req zone=blxr_api/)
+    assert.match(api.body, /proxy_hide_header X-Powered-By;/)
   })
 
   test('never indexed, never sends a referrer, and every header is sent on errors too', () => {

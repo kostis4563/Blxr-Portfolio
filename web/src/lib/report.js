@@ -1,4 +1,4 @@
-const API_BASE = 'https://api.blxr.net'
+const API_BASE = '/api'
 
 export function parseLink(hash) {
   const p = new URLSearchParams(String(hash).replace(/^#/, ''))
@@ -20,7 +20,7 @@ export class ReportError extends Error {
 export async function loadReport({ id, key }, apiBase = API_BASE) {
   let res
   try {
-    res = await fetch(`${apiBase}/v1/reports/${id}`, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' })
+    res = await fetch(`${apiBase}/reports/${id}`, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' })
   } catch {
     throw new ReportError('network', 'Could not reach the report service.')
   }
@@ -42,11 +42,9 @@ export async function loadReport({ id, key }, apiBase = API_BASE) {
   return { report, expiresAt }
 }
 
-export const LOCAL_API_BASE = 'http://127.0.0.1:8787'
-
 export function reportApiBase(search = '') {
   if (!import.meta.env.DEV) return API_BASE
-  return new URLSearchParams(search).get('api') || LOCAL_API_BASE
+  return new URLSearchParams(search).get('api') || API_BASE
 }
 
 export const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info']

@@ -24,6 +24,7 @@ import { busyFrom, timeOf, eventIcs } from './ical.mjs'
 import { CalDavClient, CalendarMirror, CalDavError } from './icloud.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
 import { rateLimit, rateLimitSize, originAllowed, ALLOWED_ORIGINS, bearerOf, jwtLooksUsable, isAal2, hasVerifiedFactor, fingerprint, safeEqual, isHttps, isJsonBody, API_HEADERS } from './guard.mjs'
+import { openReports, ReportStoreFull, REPORT_FORMAT, REPORT_MIN_BYTES, REPORT_MAX_BYTES, REPORT_TTLS, REPORT_DEFAULT_TTL, REPORT_ID_RE } from './reports.mjs'
 
 const PORT = Number(process.env.PORT) || 8899
 const HOST = '127.0.0.1'
@@ -471,6 +472,43 @@ function readJsonBody(req, limit = 512) {
     req.on('error', () => resolve(null))
   })
 }
+
+const TOO_LARGE = Symbol('too_large')
+
+function readBlobBody(req, limit) {
+  return new Promise((resolve) => {
+    const type = req.headers['content-type']
+    if (typeof type !== 'string' || !/^application\/octet-stream\s*(;|$)/i.test(type)) {
+      req.resume()
+      resolve(null)
+      return
+    }
+    if (Number(req.headers['content-length']) > limit) {
+      req.resume()
+      resolve(TOO_LARGE)
+      return
+    }
+    let size = 0
+    const chunks = []
+    req.on('data', (chunk) => {
+      size += chunk.length
+      if (size > limit) {
+        req.destroy()
+        resolve(TOO_LARGE)
+        return
+      }
+      chunks.push(chunk)
+    })
+    req.on('end', () => resolve(Buffer.concat(chunks)))
+    req.on('error', () => resolve(null))
+  })
+}
+
+const REPORTS_MAX_MB = Number(process.env.REPORTS_MAX_MB) > 0 ? Number(process.env.REPORTS_MAX_MB) : 512
+const REPORTS_MAX_COUNT = 5000
+const REPORTS_SWEEP_MS = 10 * 60_000
+const REPORT_VIEWER_URL = `${(process.env.SITE_URL || 'https://blxr.net').replace(/\/$/, '')}/report`
+const reportStore = openReports(path.join(STATE_DIR, 'reports'), { maxBytes: REPORTS_MAX_MB * 1024 * 1024, maxCount: REPORTS_MAX_COUNT })
 
 const REVIEWS_FILE = path.join(STATE_DIR, 'reviews.json')
 const REVIEWS_MAX = 1000
@@ -2583,7 +2621,7 @@ function bucketsFor(req, pathname) {
     out.push('auth')
   }
   if (pathname.startsWith('/api/music/') || pathname.startsWith('/api/github/') || pathname.startsWith('/api/spotify/') || pathname === '/api/discord/user' || pathname === '/api/weather' || pathname === '/api/book') out.push('upstream')
-  if ((pathname === '/api/reviews' && req.method === 'POST') || (/^\/api\/reviews\/[a-z0-9]{8}$/.test(pathname) && req.method === 'PATCH') || (pathname === '/api/book' && req.method === 'POST')) out.push('write')
+  if ((pathname === '/api/reviews' && req.method === 'POST') || (/^\/api\/reviews\/[a-z0-9]{8}$/.test(pathname) && req.method === 'PATCH') || (pathname === '/api/book' && req.method === 'POST') || (pathname.startsWith('/api/reports') && req.method !== 'GET')) out.push('write')
   if (pathname === '/api/hit' || pathname === '/api/logs/client' || (pathname === '/api/vitals' && req.method === 'POST')) out.push('beacon')
   out.push('all')
   return out
@@ -3058,6 +3096,55 @@ const server = http.createServer(async (req, res) => {
       return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
     }
 
+    const reportMatch = /^\/api\/reports(?:\/([^/]+))?$/.exec(url.pathname)
+    if (reportMatch) {
+      const [, id] = reportMatch
+      if (id === undefined) {
+        if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+        const ttlKey = url.searchParams.get('ttl') || REPORT_DEFAULT_TTL
+        if (!Object.hasOwn(REPORT_TTLS, ttlKey)) return json(res, 400, { error: 'bad_ttl', message: `ttl must be one of ${Object.keys(REPORT_TTLS).join(', ')}` }, NO_STORE)
+        const blob = await readBlobBody(req, REPORT_MAX_BYTES)
+        if (blob === TOO_LARGE) return json(res, 413, { error: 'too_large', message: `Reports are limited to ${REPORT_MAX_BYTES / 1024 / 1024} MB.` }, NO_STORE)
+        if (!blob || blob.length < REPORT_MIN_BYTES || blob[0] !== REPORT_FORMAT) {
+          return json(res, 400, { error: 'bad_payload', message: 'Body must be a WebScanner encrypted report blob.' }, NO_STORE)
+        }
+        try {
+          const created = await reportStore.create(blob, REPORT_TTLS[ttlKey])
+          return json(res, 201, { id: created.id, viewerUrl: REPORT_VIEWER_URL, expiresAt: created.expiresAt, deleteToken: created.deleteToken }, NO_STORE)
+        } catch (err) {
+          if (err instanceof ReportStoreFull) return json(res, 507, { error: 'reports_full', message: 'The report service is full right now, try again later.' }, NO_STORE)
+          throw err
+        }
+      }
+
+      if (!REPORT_ID_RE.test(id)) return json(res, 404, { error: 'not_found' }, NO_STORE)
+
+      if (req.method === 'DELETE') {
+        const auth = req.headers.authorization
+        const token = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+        if (!token) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
+        const outcome = reportStore.remove(id, token)
+        if (outcome === 'not_found') return json(res, 404, { error: 'not_found' }, NO_STORE)
+        if (outcome === 'forbidden') return json(res, 403, { error: 'forbidden' }, NO_STORE)
+        res.writeHead(204, NO_STORE)
+        res.end()
+        return
+      }
+
+      if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      const report = await reportStore.get(id)
+      if (!report) return json(res, 404, { error: 'not_found', message: 'This report does not exist or has expired.' }, NO_STORE)
+      res.writeHead(200, {
+        'content-type': 'application/octet-stream',
+        'content-length': String(report.blob.length),
+        'cache-control': 'no-store',
+        'x-report-created-at': report.createdAt,
+        'x-report-expires-at': report.expiresAt,
+      })
+      res.end(report.blob)
+      return
+    }
+
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' })
 
     if (url.pathname === '/api/vitals' || url.pathname === '/api/hits') {
@@ -3262,6 +3349,7 @@ if (GH_TOKEN) {
 
 sweepInvites()
 setInterval(sweepInvites, INVITE_SWEEP_MS).unref()
+setInterval(() => reportStore.sweep(), REPORTS_SWEEP_MS).unref()
 
 if (BOOKING_ON) {
   const warmBooking = () =>

@@ -128,10 +128,11 @@ describe('/report', () => {
     expect(urls.filter((u) => !served(u))).toEqual([])
   })
 
-  test('the production bundle talks to api.blxr.net only, and reports nothing anywhere', () => {
+  test('the production bundle talks to its own /api/reports only, and reports nothing anywhere', () => {
     const js = bundle()
-    expect(js).toContain('https://api.blxr.net')
-    expect(js).not.toContain('127.0.0.1:8787')
+    expect(js).toContain('/reports/')
+    expect(js).not.toContain('api.blxr.net')
+    expect(js).not.toContain('127.0.0.1')
     for (const marker of ['/api/logs', '/api/vitals', '/api/hit', 'sendBeacon', 'supabase.co', 'cloudflareinsights']) expect(js, marker).not.toContain(marker)
   })
 

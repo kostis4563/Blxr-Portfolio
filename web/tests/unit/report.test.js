@@ -13,7 +13,6 @@ import {
   errorState,
   formatWhen,
   reportApiBase,
-  LOCAL_API_BASE,
 } from '../../src/lib/report.js'
 import { FindingDetails, ReportView } from '../../src/report-page.jsx'
 
@@ -105,7 +104,7 @@ describe('loadReport', () => {
     expect(expiresAt).toBe(EXPIRES)
     expect(fetch).toHaveBeenCalledTimes(1)
     const [url, init] = fetch.mock.calls[0]
-    expect(url).toBe(`${API}/v1/reports/${ID}`)
+    expect(url).toBe(`${API}/reports/${ID}`)
     expect(url).not.toContain(key)
     expect(init).toEqual({ cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' })
   })
@@ -143,8 +142,8 @@ describe('loadReport', () => {
 })
 
 describe('reportApiBase', () => {
-  test('outside a production build it talks to wrangler dev, or ?api=', () => {
-    expect(reportApiBase('')).toBe(LOCAL_API_BASE)
+  test('outside a production build it talks to the proxied /api, or ?api=', () => {
+    expect(reportApiBase('')).toBe('/api')
     expect(reportApiBase('?api=http://127.0.0.1:9999')).toBe('http://127.0.0.1:9999')
   })
 })

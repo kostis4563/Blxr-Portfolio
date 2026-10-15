@@ -4,7 +4,7 @@ Backend behind `/api/` on blxr.net. Fans search out across public mirrors,
 caches results, gives the frontend one stable shape.
 
 Zero npm dependencies — `node:http`, `node:fs`, `node:path`, `node:crypto` only.
-Nine files: `server.mjs` (everything), `guard.mjs` (rate limits, the
+Ten files: `server.mjs` (everything), `guard.mjs` (rate limits, the
 same-origin rule and bearer-token checks, see [Security](#security)),
 `moderation.mjs` (the review blocklist, see [Reviews](#reviews)), `mail.mjs`
 (the emails the app sends itself, see [Account mail](#account-mail)),
@@ -12,7 +12,8 @@ same-origin rule and bearer-token checks, see [Security](#security)),
 `booking.mjs` (working hours, time zones and free slots), `ical.mjs`
 (reading and writing iCalendar, repeating events included) and `icloud.mjs`
 (the CalDAV client and calendar copy) for `/book`, see
-[Booking](#get-apibook--post-apibook), and
+[Booking](#get-apibook--post-apibook), `reports.mjs` (the store behind
+shared WebScanner reports, see [Reports](#post-apireports--get--delete-apireportsid)), and
 `state.mjs` (crash-safe reads and writes of the state files, see [State](#state)).
 
 ## Running it
@@ -27,7 +28,8 @@ Listens on `127.0.0.1:8899`. No credentials needed — see `.env.example`.
 
 All routes `GET` except `/api/hit`, `POST /api/vitals` and
 `POST /api/logs/client`; `/api/vitals` and `/api/reviews` answer both verbs,
-`/api/reviews/<id>` takes `PATCH`, `/api/logs` takes `GET` and `DELETE`, and
+`/api/reviews/<id>` takes `PATCH`, `/api/logs` takes `GET` and `DELETE`,
+`/api/reports` takes `POST` and `/api/reports/<id>` `GET` and `DELETE`, and
 the owner routes under `/api/reviews/panel` and `/api/reviews/invites` take
 what the [panel](#review-panel) section lists. Anything else: `405`. Errors:
 `{ "error": "..." }` with `400` (bad review), `401` (no panel session;
@@ -55,14 +57,17 @@ Everything in `guard.mjs`, applied before any route runs:
   `Content-Type: application/json` and declare a `Content-Length` within the
   route's cap, else the body is dropped and the route answers `400`. HTML
   forms can't send that type, so a cross-site form post never reaches a
-  handler even if the origin list were wrong.
+  handler even if the origin list were wrong. The one exception is
+  `POST /api/reports`, which takes `application/octet-stream` — also a type
+  forms can't send, and one that makes a cross-site `fetch` preflight, which
+  gets `405`.
 - **Rate limits.** Token buckets per address, refilled continuously, all
   per minute: `all` 300 for anything; `auth` 30 for routes that verify a
   bearer token (`/api/logs`, the panel, invites, `/api/mail/*`,
   `/api/account/*`, `/api/discord/user`,
   `/api/github/stats` with a token); `upstream` 90 for `/api/music/*`,
   `/api/github/*`, `/api/discord/user`, `/api/weather` and `/api/book`; `write` 12
-  for review posts and edits and call bookings;
+  for review posts and edits, call bookings and report uploads and deletes;
   `beacon` 60 for hits, vitals and browser error reports; reads of
   `/api/hits` and `/api/vitals` count as `auth`. Over the limit
   answers `429 rate_limited` with `Retry-After`. nginx has a coarser
@@ -491,6 +496,39 @@ already are. Consumed by `web/src/lib/console-hello.js` for the DevTools banner.
 { "ip": "203.0.113.7", "country": "GR" }
 ```
 
+### `POST /api/reports` · `GET` / `DELETE /api/reports/<id>`
+End-to-end encrypted scan reports shared from the WebScanner macOS app
+("Export → Open on blxr.net"), read by the `/report` page. The app deflates
+the report, seals it with a fresh AES-256-GCM key and uploads only the
+ciphertext; the key travels in the link's `#fragment`, which browsers never
+send, so this server can't read a report.
+
+- `POST /api/reports?ttl=1d|7d|30d` (default `7d`), body
+  `application/octet-stream`: `0x01 | nonce (12) | ciphertext | tag (16)`,
+  at most 5 MB (`413 too_large`). Anything else is `400 bad_payload` (or
+  `bad_ttl`). Answers `201`:
+
+  ```json
+  { "id": "<22 chars>", "viewerUrl": "https://blxr.net/report", "expiresAt": "…", "deleteToken": "<43 chars>" }
+  ```
+
+  The app sends no `Origin`, so it passes the same-origin rule like curl;
+  a write from another site is `403 bad_origin`.
+- `GET /api/reports/<id>`: the blob, `application/octet-stream`,
+  `Cache-Control: no-store`, with `X-Report-Created-At` and
+  `X-Report-Expires-At`. Unknown or expired: `404 not_found`.
+- `DELETE /api/reports/<id>` with `Authorization: Bearer <deleteToken>`:
+  `204`, `401` without a token, `403` with the wrong one, `404` if it's
+  already gone.
+
+Each report is `reports/<id>.bin` + `reports/<id>.json` under the state
+directory; the JSON holds the dates, the size and only a SHA-256 of the
+delete token. Expired reports are swept every 10 minutes and on start, along
+with any half-written file. The store holds at most 5000 reports and
+`REPORTS_MAX_MB` (default 512) MB, else `507 reports_full` (logged as an error, unlike the deliberate 503s). nginx lets this
+path through with a 6 MB body cap (`location /api/reports`). Error bodies
+carry a `message` the app shows as is.
+
 ### `GET /api/github/contributions?user=<login>&y=last|YYYY`
 `user` must be a valid GitHub login (`400 bad_user` otherwise) **and one
 the proxy is for**: the login that owns `GITHUB_TOKEN`, plus anything in
@@ -638,7 +676,8 @@ Chart-rank history: `$STATE_DIRECTORY/chart-history.json`
 
 View counts in `hits.json`, Core Web Vitals histograms in `vitals.json`,
 reviews in `reviews.json`, invite links in `review-invites.json`, the event
-log in `logs.json`. All flushed every 30s and on `SIGTERM`/`SIGINT`;
+log in `logs.json`, shared reports in `reports/` (written as they arrive,
+see [Reports](#post-apireports--get--delete-apireportsid)). All flushed every 30s and on `SIGTERM`/`SIGINT`;
 hits and vitals pruned to the last 90 days per write, reviews kept
 indefinitely.
 

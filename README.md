@@ -97,7 +97,7 @@ web/src/
     ├── messages-unread.js  the unread count behind the sidebar badge
     ├── logs-api.js      Dashboard → Logs (/api/logs)
     ├── report-errors.js  window.onerror / unhandledrejection → POST /api/logs/client
-    ├── report.js        /report: fetch + AES-GCM decrypt from api.blxr.net, report model, labels
+    ├── report.js        /report: fetch + AES-GCM decrypt from /api/reports, report model, labels
     ├── supabase.js      Supabase client + session store (useAuth)
     ├── auth.js          sign in / up / out, reset, OAuth — on top of supabase.js
     ├── github.js        contributions mirror
