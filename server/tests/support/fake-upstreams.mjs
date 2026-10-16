@@ -94,6 +94,14 @@ function weather(s) {
   return reply(200, { current: { temperature_2m: 21.345, weather_code: 3 } })
 }
 
+const STATUS_HOSTS = new Set(['blxr.test', 'blxr.net'])
+
+function statusTarget(url, s) {
+  const mode = s.status?.[url.pathname] ?? 200
+  if (mode === 'offline') throw networkDown(url.href)
+  return new Response(mode < 300 ? 'ok' : null, { status: mode, headers: { 'content-type': 'text/plain' } })
+}
+
 function supabase(url, init, s) {
   const headers = new Headers(init?.headers)
   if (s.supabase === 'down') return reply(503, { message: 'down' })
@@ -503,5 +511,6 @@ globalThis.fetch = async function fakeFetch(input, init = {}) {
   if (host === 'accounts.spotify.com') return spotifyAccounts(init, s)
   if (host === 'api.spotify.com') return spotifyApi(url, init, s)
   if (host === 'caldav.icloud.test' || host === ICLOUD_PARTITION) return icloud(url, init, s)
+  if (STATUS_HOSTS.has(host)) return statusTarget(url, s)
   throw networkDown(url.href)
 }

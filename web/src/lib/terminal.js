@@ -19,6 +19,7 @@ import {
   GALLERY_PATH,
   QUOTE_PATH,
   TERMINAL_PATH,
+  STATUS_PATH,
   projectPath,
   libraryPath,
   blogPath,
@@ -83,6 +84,7 @@ export const PAGES = [
   { name: 'payment', to: PAYMENT_PATH, desc: 'how to pay' },
   { name: 'security', to: SECURITY_PATH, desc: 'report a vulnerability' },
   { name: 'quote', to: QUOTE_PATH, desc: 'words I live by' },
+  { name: 'status', to: STATUS_PATH, desc: 'live uptime checks' },
   { name: 'terminal', to: TERMINAL_PATH, desc: 'you are here' },
 ]
 

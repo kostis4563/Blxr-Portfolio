@@ -18,6 +18,7 @@ import TravelPageImpl from '#ssr-page/travel'
 import GalleryPageImpl from '#ssr-page/gallery'
 import QuotePageImpl from '#ssr-page/quote'
 import TerminalPageImpl from '#ssr-page/terminal'
+import StatusPageImpl from '#ssr-page/status'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
 import PublicProfilePageImpl from '#ssr-page/public-profile'
@@ -64,6 +65,7 @@ const PaymentPage = routePage(PaymentPageImpl, () => import('#client-page/paymen
 const LinksPage = routePage(LinksPageImpl, () => import('#client-page/links'))
 const TerminalPage = routePage(TerminalPageImpl, () => import('#client-page/terminal'))
 const TravelPage = routePage(TravelPageImpl, () => import('#client-page/travel'))
+const StatusPage = routePage(StatusPageImpl, () => import('#client-page/status'))
 const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
 const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
@@ -421,6 +423,17 @@ function App() {
     )
   }
 
+  if (currentView === 'status') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <StatusPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
   if (currentView === 'gallery') {
     return (
       <>
@@ -689,7 +702,7 @@ function App() {
 
               <ul
                 className={`-mr-px grid grid-cols-[repeat(var(--cols-mobile),minmax(0,1fr))] sm:grid-cols-[repeat(var(--cols),minmax(0,1fr))] -mb-px`}
-                style={{ '--cols': otherSkills.length, '--cols-mobile': Math.min(otherSkills.length, 4) }}
+                style={{ '--cols': otherSkills.length, '--cols-mobile': [4, 3].find((cols) => otherSkills.length % cols === 0) ?? Math.min(otherSkills.length, 4) }}
                 aria-label="Also working with"
               >
                 {otherSkills.map((skill) => (
@@ -749,33 +762,31 @@ function App() {
                         })}
                       </ul>
                       ) : (
-                      <ul className="-mx-2 grid grid-cols-1 md:grid-cols-2 md:gap-x-2">
+                      <ul className="border-t border-line/70" aria-label={category.name}>
                         {category.items.map((skill, itemIdx) => {
                           const Row = skill.url ? 'a' : 'span'
                           return (
                             <li
                               key={skill.name}
-                              className="skills-all-item"
+                              className="skills-all-item border-b border-line/70"
                               style={{ '--delay': `${90 + idx * 60 + itemIdx * 35}ms` }}
                             >
                               <Row
                                 {...(skill.url ? { href: skill.url, target: '_blank', rel: 'noopener noreferrer' } : {})}
-                                className="group/item flex items-center gap-3 rounded-xl p-2 outline-none transition-colors duration-200 hover:bg-surface-hover active:bg-surface-hover focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50 motion-reduce:transition-none"
+                                className="skill-row group/item grid grid-cols-[1.125rem_minmax(0,1fr)] items-center gap-x-4 py-3.5 outline-none transition-opacity duration-300 focus-visible:bg-surface-hover/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-strong/50 motion-reduce:transition-none"
                               >
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-raised transition-colors duration-200 group-hover/item:border-line-strong motion-reduce:transition-none">
-                                  <img
-                                    {...imageProps(skill.icon)}
-                                    alt=""
-                                    aria-hidden="true"
-                                    width="18"
-                                    height="18"
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="h-4.5 w-4.5 object-contain"
-                                  />
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="flex items-center gap-1 text-[13px] font-medium text-ink-strong">
+                                <img
+                                  {...imageProps(skill.icon)}
+                                  alt=""
+                                  aria-hidden="true"
+                                  width="18"
+                                  height="18"
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="skill-logo h-4.5 w-4.5 object-contain"
+                                />
+                                <span className="min-w-0 sm:flex sm:items-baseline sm:gap-6">
+                                  <span className="flex shrink-0 items-center gap-1 text-[13.5px] font-medium text-ink-strong sm:w-36">
                                     {skill.name}
                                     {skill.url && (
                                       <svg
@@ -787,7 +798,7 @@ function App() {
                                       </svg>
                                     )}
                                   </span>
-                                  <span className="mt-0.5 block text-[12px] leading-snug text-ink-subtle sm:truncate">{skill.desc}</span>
+                                  <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-subtle transition-colors duration-200 group-hover/item:text-ink-muted group-focus-visible/item:text-ink-muted motion-reduce:transition-none sm:mt-0 sm:truncate">{skill.desc}</span>
                                 </span>
                               </Row>
                             </li>

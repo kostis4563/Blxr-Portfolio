@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, TRAVEL_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, TRAVEL_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, STATUS_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -329,6 +329,16 @@ export function buildCommands({
       href: TERMINAL_PATH,
       run: () => navigate(TERMINAL_PATH),
       keywords: 'terminal shell cli command line bash zsh console prompt type commands hacker',
+    },
+    {
+      id: 'page-status',
+      group: jump,
+      label: 'Status',
+      hint: 'Live uptime checks',
+      icon: 'activity',
+      href: STATUS_PATH,
+      run: () => navigate(STATUS_PATH),
+      keywords: 'status uptime up down outage incident health monitor online offline server ping',
     },
 
     ...SECTIONS.map((section) => ({

@@ -25,6 +25,7 @@ import { CalDavClient, CalendarMirror, CalDavError } from './icloud.mjs'
 import { openLog, saveLog, record, log, queryLog, facetsOf, summariseLog, clearLog, logSize, LEVELS, SOURCES } from './log.mjs'
 import { rateLimit, rateLimitSize, originAllowed, ALLOWED_ORIGINS, bearerOf, jwtLooksUsable, isAal2, hasVerifiedFactor, fingerprint, safeEqual, isHttps, isJsonBody, API_HEADERS } from './guard.mjs'
 import { openReports, ReportStoreFull, REPORT_FORMAT, REPORT_MIN_BYTES, REPORT_MAX_BYTES, REPORT_TTL_MS, REPORT_ID_RE } from './reports.mjs'
+import { createMonitor, statusTargets, STATUS_RETRY_MS } from './status.mjs'
 
 const PORT = Number(process.env.PORT) || 8899
 const HOST = '127.0.0.1'
@@ -1179,6 +1180,16 @@ const envInt = (name, fallback, min, max) => {
   const n = raw ? Number(raw) : NaN
   return Number.isInteger(n) && n >= min && n <= max ? n : fallback
 }
+
+const statusMonitor = createMonitor({
+  file: path.join(STATE_DIR, 'status.json'),
+  targets: statusTargets(process.env.SITE_URL),
+  retryMs: envInt('STATUS_RETRY_MS', STATUS_RETRY_MS, 0, 60_000),
+  onChange: (target, previous, next, result) => {
+    if (next === 'down') log.warn('upstream', `status: ${target.name} is down (${result.code})`, { detail: target.url })
+    else if (previous === 'down') log.info('upstream', `status: ${target.name} is back up`, { detail: target.url })
+  },
+})
 
 const ICLOUD_EMAIL = (process.env.ICLOUD_EMAIL || '').trim()
 const ICLOUD_APP_PASSWORD = (process.env.ICLOUD_APP_PASSWORD || '').replace(/\s+/g, '')
@@ -2548,6 +2559,7 @@ const CONTRIBUTIONS_CACHE = { 'cache-control': 'public, max-age=600, stale-while
 const SPOTIFY_NOW_CACHE = { 'cache-control': 'public, max-age=10' }
 const SPOTIFY_RECENT_CACHE = { 'cache-control': 'public, max-age=60, stale-while-revalidate=300' }
 const SPOTIFY_TOP_CACHE = { 'cache-control': 'public, max-age=3600, stale-while-revalidate=86400' }
+const STATUS_CACHE = { 'cache-control': 'public, max-age=30' }
 
 const CLIENT_LOG_WINDOW_MS = 10 * 60_000
 const CLIENT_LOG_MAX = 40
@@ -2569,7 +2581,7 @@ function clientLogAllowed(req) {
 
 function systemReport() {
   const mem = process.memoryUsage()
-  const files = ['hits.json', 'vitals.json', 'reviews.json', 'review-invites.json', 'review-settings.json', 'chart-history.json', 'logs.json'].map((name) => {
+  const files = ['hits.json', 'vitals.json', 'reviews.json', 'review-invites.json', 'review-settings.json', 'chart-history.json', 'logs.json', 'status.json'].map((name) => {
     try {
       const st = fs.statSync(path.join(STATE_DIR, name))
       return { name, size: st.size, modified: st.mtime.toISOString() }
@@ -3169,6 +3181,8 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/api/music/health') return json(res, 200, { ok: true, source: 'youtube' })
 
+    if (url.pathname === '/api/status') return json(res, 200, statusMonitor.view(), STATUS_CACHE)
+
     if (url.pathname === '/api/music/top') {
       const country = ((url.searchParams.get('country') || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us').slice(0, 2)
       const limit = Math.min(15, Math.max(1, Number(url.searchParams.get('limit')) || 10))
@@ -3344,6 +3358,8 @@ if (GH_TOKEN) {
   warmGithubStats()
   setInterval(warmGithubStats, GH_STATS_WARM_MS).unref()
 }
+
+statusMonitor.start()
 
 sweepInvites()
 setInterval(sweepInvites, INVITE_SWEEP_MS).unref()

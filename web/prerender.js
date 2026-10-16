@@ -122,6 +122,7 @@ const ROUTE_SOURCES = {
   gallery: ['src/gallery-page.jsx', 'src/lib/gallery.js'],
   quote: ['src/quote-page.jsx', 'src/lib/quote.js', 'src/lib/quote-api.js'],
   terminal: ['src/terminal-page.jsx', 'src/lib/terminal.js'],
+  status: ['src/status-page.jsx', 'src/lib/status.js'],
 }
 
 const repo = resolve(here, '..')

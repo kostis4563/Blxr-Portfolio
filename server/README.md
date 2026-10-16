@@ -364,6 +364,41 @@ bucket. Consumed by `web/src/lib/weather.js`, which falls back to Open-Meteo
 directly when this route isn't there (`npm run dev` forwards `/api` to
 production) — hence `api.open-meteo.com` in the CSP's `connect-src`.
 
+### `GET /api/status`
+Uptime for `/status`. The server checks every target in `statusTargets()`
+(`status.mjs`) every 5 minutes and on start: the site (`SITE_URL` +
+`/site.webmanifest`, since Cloudflare challenges headless requests for HTML
+and caches `robots.txt`) and the API (`/api/music/health` through the public
+URL). Any `2xx`/`3xx` is up; redirects are not followed.
+A failed check is tried once more after `STATUS_RETRY_MS` (default `15000`)
+before it counts as down. Going down opens an incident and logs a `warn`
+(`upstream` source); coming back closes it and logs an `info`.
+
+```json
+{
+  "checkedAt": "2026-10-16T12:00:00.000Z",
+  "every": 300,
+  "days": 90,
+  "services": [
+    {
+      "id": "website", "name": "Website", "host": "blxr.net", "link": "https://blxr.net",
+      "state": "up", "since": "2026-10-01T08:15:00.000Z", "ms": 142, "code": null,
+      "uptime": 0.99965, "avgMs": 138,
+      "days": [{ "day": "2026-10-16", "checks": 144, "up": 144, "ms": 140 }]
+    }
+  ],
+  "incidents": [{ "service": "website", "name": "Website", "start": "…", "end": null, "code": "http_530" }]
+}
+```
+
+`state` is `up`, `down` or `unknown` (no check yet). `code` is the last
+failure (`http_<status>`, `timeout` or `unreachable`), `ms` the last response
+time, `uptime` the share of passing checks over the 90 days, `avgMs` the mean
+over the last 7. `days` is always 90 entries, oldest first, UTC; a day
+nothing checked has `checks: 0`. `incidents` is the newest 20. Served from
+memory with `max-age=30`; no upstream call per request. To watch another
+site, add it to `statusTargets()`.
+
 ### `GET /api/spotify/now` · `/api/spotify/recent` · `/api/spotify/top?range=short|medium|long`
 The owner's Spotify listening, for `/listening`. Needs `SPOTIFY_CLIENT_ID`,
 `SPOTIFY_CLIENT_SECRET` and `SPOTIFY_REFRESH_TOKEN` (scopes
@@ -678,7 +713,9 @@ Chart-rank history: `$STATE_DIRECTORY/chart-history.json`
 View counts in `hits.json`, Core Web Vitals histograms in `vitals.json`,
 reviews in `reviews.json`, invite links in `review-invites.json`, the event
 log in `logs.json`, shared reports in `reports/` (written as they arrive,
-see [Reports](#post-apireports--get--delete-apireportsid)). All flushed every 30s and on `SIGTERM`/`SIGINT`;
+see [Reports](#post-apireports--get--delete-apireportsid)), uptime history
+in `status.json` (written after every check, so it is never dirty at
+shutdown; days and closed incidents older than 90 days dropped). The rest are flushed every 30s and on `SIGTERM`/`SIGINT`;
 hits and vitals pruned to the last 90 days per write, reviews kept
 indefinitely.
 

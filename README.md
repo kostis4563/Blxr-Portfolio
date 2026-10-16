@@ -123,6 +123,7 @@ web/src/
 | `/gallery` | `gallery.html` — photos and UI shots, managed from `/dashboard#gallery` (owner only) |
 | `/travel` | `travel.html` — world map, countries I've been to in white; list in `lib/travel.js`, shapes in `lib/travel-map.js` |
 | `/listening` | `listening.html` — Spotify now playing, last 50 plays and top tracks/artists via `/api/spotify/*` |
+| `/status` | `status.html` — live uptime for the site and the API, 90 days of history and incidents via `/api/status`; targets in `server/src/status.mjs` |
 | `/book` | `book.html` — free times from my iCloud calendar via `/api/book`; a booking lands in iCloud (so on every Apple device) and the guest gets an emailed `.ics` invite |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
 | `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |

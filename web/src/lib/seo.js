@@ -69,6 +69,9 @@ const QUOTE_DESCRIPTION =
 const TERMINAL_DESCRIPTION =
   'blxr.net as a shell: type help, about, projects or contact, cd between pages, and find the commands that are not in help.'
 
+const STATUS_DESCRIPTION =
+  'Live uptime for blxr.net and its API: checked every few minutes, with 90 days of history and recent incidents.'
+
 const VOLUNTEER_DESCRIPTION =
   'Volunteering by Kostis: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
 
@@ -255,6 +258,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'status') {
+    return {
+      ...base,
+      title: 'Status — Live Uptime for blxr.net',
+      description: STATUS_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'login') {
     return {
       ...base,
@@ -318,6 +329,7 @@ const SHORT_LABELS = {
   gallery: 'Gallery',
   quote: 'Quotes',
   terminal: 'Terminal',
+  status: 'Status',
   login: 'Sign in',
   dashboard: 'Dashboard',
   profile: 'Profile',
@@ -716,6 +728,18 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'status') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Status',
+      description: STATUS_DESCRIPTION,
+      url: `${SITE_URL}/status`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'library') {
     if (realEntries.length === 0) return null
     return {
@@ -786,6 +810,8 @@ function crumbsFor(route) {
     items.push({ name: 'Quotes', item: urlOf('/quote') })
   } else if (route.name === 'terminal') {
     items.push({ name: 'Terminal', item: urlOf('/terminal') })
+  } else if (route.name === 'status') {
+    items.push({ name: 'Status', item: urlOf('/status') })
   } else if (route.name === 'library') {
     items.push({ name: 'FiveM Library', item: urlOf('/library') })
     if (route.itemId) {
@@ -877,6 +903,8 @@ export function headTags(pathname) {
     ogRoute.name === 'listening'
       ? '<link rel="preload" href="/api/spotify/now" as="fetch" crossorigin="anonymous" />\n    <link rel="preload" href="/api/spotify/recent" as="fetch" crossorigin="anonymous" />'
       : '',
+
+    ogRoute.name === 'status' ? '<link rel="preload" href="/api/status" as="fetch" crossorigin="anonymous" />' : '',
 
     jsonLd
       ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`

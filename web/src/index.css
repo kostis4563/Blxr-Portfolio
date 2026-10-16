@@ -1449,6 +1449,7 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
   filter: grayscale(1) brightness(0.5);
 }
 .skill-cell:focus-visible .skill-logo,
+.skill-row:focus-visible .skill-logo,
 .tool-tile:focus-visible .skill-logo,
 .skills-toggle:focus-visible .skill-logo,
 .skills-toggle[aria-expanded='true'] .skill-logo {
@@ -1472,6 +1473,7 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
 }
 @media (hover: hover) {
   .skill-cell:hover .skill-logo,
+  .skill-row:hover .skill-logo,
   .tool-tile:hover .skill-logo,
   .skills-toggle:hover .skill-logo {
     opacity: 1;
@@ -1479,7 +1481,8 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
     transform: scale(1.04) translateY(-2px);
   }
   .skill-cell:hover .skill-name { opacity: 1; transform: none; }
-  .skills-grid:has(.skill-cell:hover) .skill-cell:not(:hover) { opacity: 0.65; }
+  .skills-grid:has(.skill-cell:hover) .skill-cell:not(:hover),
+  .skills-all:has(.skill-row:hover) .skill-row:not(:hover) { opacity: 0.65; }
 }
 @media (hover: none) {
   .skill-logo,

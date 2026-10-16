@@ -22,7 +22,14 @@ export const SKILL_CATEGORIES = [
     name: 'Frameworks',
     items: [
       { name: 'Bootstrap', icon: '/icons/bootstrap.svg', level: 'comfortable', url: 'https://getbootstrap.com', desc: 'Bootstrap is a framework for building responsive websites.' },
+      { name: 'jQuery', icon: '/icons/jquery.svg', level: 'comfortable', url: 'https://jquery.com', desc: 'JavaScript library for DOM manipulation & events' },
       { name: 'Tailwind CSS', icon: '/icons/tailwindcss.svg', level: 'comfortable', url: 'https://tailwindcss.com', desc: 'Utility-first CSS framework', featured: true },
+    ],
+  },
+  {
+    name: 'Backend',
+    items: [
+      { name: 'Node.js', icon: '/icons/nodejs.svg', level: 'comfortable', url: 'https://nodejs.org', desc: 'JavaScript runtime for servers & tooling' },
     ],
   },
   {
@@ -37,6 +44,7 @@ export const SKILL_CATEGORIES = [
     items: [
       { name: 'Visual Studio', icon: '/icons/visual-studio.svg', url: 'https://visualstudio.microsoft.com', desc: 'IDE for app development' },
       { name: 'VS Code', icon: '/icons/vscode.svg', url: 'https://code.visualstudio.com', desc: 'Code editor' },
+      { name: 'Terminal', icon: '/icons/terminal.svg', url: 'https://support.apple.com/guide/terminal/welcome/mac', desc: 'Command line & shell scripting' },
       { name: 'Git', icon: '/icons/git.svg', url: 'https://git-scm.com', desc: 'Version control' },
       { name: 'GitHub Desktop', icon: '/icons/github-desktop.svg', url: 'https://desktop.github.com', desc: 'Git client for commits & branches' },
       { name: 'npm', icon: '/icons/npm.svg', url: 'https://www.npmjs.com', desc: 'Package manager for Node.js' },
