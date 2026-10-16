@@ -45,7 +45,7 @@ export const CV_EDUCATION = [
   {
     degree: 'IB Diploma Programme',
     org: 'Athens',
-    period: { from: '2026', present: true },
+    period: { from: '2026', to: '2028' },
     note: 'Computer Science, Mathematics AA, Physics, Business, English B, Greek.',
   },
 ]

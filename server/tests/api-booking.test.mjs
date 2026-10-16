@@ -138,7 +138,7 @@ describe('booking: making a booking', () => {
     assert.doesNotMatch(invite, /engines/)
     assert.doesNotMatch(ics, /engines/)
     assert.doesNotMatch(JSON.stringify(mail), /engines/)
-    assert.match(invite, /ORGANIZER;CN="blxr":mailto:owner@example\.com/)
+    assert.match(invite, /ORGANIZER;CN="Kostis":mailto:owner@example\.com/)
     assert.match(invite, /ATTENDEE;CN="Ada Lovelace";.*:mailto:ada@example\.com/)
     assert.equal(/UID:(.+)\r\n/.exec(invite)[1], /UID:(.+)\r\n/.exec(put.body)[1])
 

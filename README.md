@@ -57,6 +57,7 @@ web/src/
 ├── reviews-page.jsx   /reviews — public review form and list
 ├── now-page.jsx       /now — what I'm doing at the moment, content in lib/now.js
 ├── cv-page.jsx        /cv — printable CV, content in lib/cv.js
+├── travel-page.jsx    /travel — world map, countries I've been to in white (lib/travel.js)
 ├── book-page.jsx      /book — pick a free time on my iCloud calendar and book a video call
 ├── login-page.jsx     /login — sign in / register / reset, backed by Supabase Auth
 ├── dashboard-page.jsx /dashboard — signed-in dashboard (components/dashboard-sidebar.jsx + dashboard-topbar.jsx)
@@ -120,6 +121,7 @@ web/src/
 | `/blog` · `/blog/<slug>` | `blog.html` · `blog/<slug>.html` (+ `blog/rss.xml`) |
 | `/reviews` · `/now` · `/cv` | `reviews.html` · `now.html` · `cv.html` |
 | `/gallery` | `gallery.html` — photos and UI shots, managed from `/dashboard#gallery` (owner only) |
+| `/travel` | `travel.html` — world map, countries I've been to in white; list in `lib/travel.js`, shapes in `lib/travel-map.js` |
 | `/listening` | `listening.html` — Spotify now playing, last 50 plays and top tracks/artists via `/api/spotify/*` |
 | `/book` | `book.html` — free times from my iCloud calendar via `/api/book`; a booking lands in iCloud (so on every Apple device) and the guest gets an emailed `.ics` invite |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
@@ -181,13 +183,19 @@ Markdown from here.
 
 `npm run build:protected` also runs the app chunk through an obfuscator.
 
-**One-off tools** (not part of the build): `fetch-fonts.js` · `fetch-icons.js` · `make-og-image.js` · `make-image-variants.js`
+**One-off tools** (not part of the build): `fetch-fonts.js` · `fetch-icons.js` · `make-og-image.js` · `make-image-variants.js` · `make-travel-map.js`
 
 ```bash
 npm install --no-save sharp && node make-image-variants.js
 ```
 
 Run after adding or replacing any image. Writes `<name>-<width>.webp` and regenerates `src/lib/image-manifest.js` (used by `src/lib/images.js` for `srcset` and the `?v=` cache-busting hash). Covers and library shots also get `<name>-<width>.avif` when AVIF comes out at least 5% smaller; `components/picture.jsx` serves those through `<picture>` with the WebP as fallback. Commit the variants and the manifest with the source image.
+
+```bash
+npm install --no-save d3-geo topojson-client topojson-simplify world-atlas && node make-travel-map.js
+```
+
+Regenerates `src/lib/travel-map.js`, the world shapes behind `/travel`. Not needed to add a country: that is one line in `src/lib/travel.js`.
 
 </details>
 

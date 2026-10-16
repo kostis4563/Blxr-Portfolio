@@ -13,64 +13,67 @@ export const SITE_NAME = 'blxr'
 const OG_IMAGE = `${SITE_URL}/og.png`
 
 const HOME_DESCRIPTION =
-  'Blxr — IB Diploma student in Athens building backend and web tooling with Go, JavaScript ' +
+  'Kostis — IB Diploma student in Athens building backend and web tooling with Go, JavaScript ' +
   'and Python. Security tooling projects, skills, CV and contact.'
 
 const PROJECTS_DESCRIPTION =
-  'Everything Blxr has built — security tooling, web apps and mobile apps — with case studies, ' +
+  'Everything Kostis has built — security tooling, web apps and mobile apps — with case studies, ' +
   'stacks and source code.'
 
 const LIBRARY_DESCRIPTION =
   'The UIs and scripts built for FiveM servers — interfaces, HUDs and standalone resources.'
 
 const BLOG_DESCRIPTION =
-  'Writing by Blxr — notes on what I build, break and learn: backend, web tooling, security and the setup behind it.'
+  'Writing by Kostis — notes on what I build, break and learn: backend, web tooling, security and the setup behind it.'
 
 const REVIEWS_DESCRIPTION =
-  'What clients and collaborators say about working with Blxr. Worked with me? Leave a review.'
+  'What clients and collaborators say about working with Kostis. Worked with me? Leave a review.'
 
 const USES_DESCRIPTION =
   'The desk, the machine and the software behind blxr.net: a MacBook Air, a 240 Hz display, ' +
   'the editor, terminal, fonts, hosting and music.'
 
 const CV_DESCRIPTION =
-  'CV of Blxr, a full stack developer in Athens: experience, education, skills and languages. Printable.'
+  'CV of Kostis, a full stack developer in Athens: experience, education, skills and languages. Printable.'
 
 const SECURITY_DESCRIPTION =
-  'Report a security issue in blxr.net or a Blxr project: private email, keys, disclosure timeline, ' +
+  'Report a security issue in blxr.net or a project by Kostis: private email, keys, disclosure timeline, ' +
   'scope and safe harbour.'
 
 const IB_DESCRIPTION =
   'IB grade calculator: turn paper and IA marks into a 1–7 grade, add up your diploma points out of 45 with TOK ' +
   'and EE, and check them against your offers.'
 
-const LISTENING_DESCRIPTION = 'What Blxr is playing on Spotify right now, the last 50 songs, and the top tracks and artists lately.'
+const LISTENING_DESCRIPTION = 'What Kostis is playing on Spotify right now, the last 50 songs, and the top tracks and artists lately.'
 
 const CONTACT_DESCRIPTION =
-  'How to reach Blxr: email for anything, a private thread on blxr.net, or GitHub and Discord. ' +
+  'How to reach Kostis: email for anything, a private thread on blxr.net, or GitHub and Discord. ' +
   'Based in Athens, Greece (EET / EEST).'
 
 const BOOK_DESCRIPTION =
-  'Book a video call with Blxr. Pick a free time straight from my calendar, shown in your own time zone, ' +
+  'Book a video call with Kostis. Pick a free time straight from my calendar, shown in your own time zone, ' +
   'and get a calendar invite by email right away.'
 
 const PAYMENT_DESCRIPTION =
-  'Payment methods Blxr accepts: PayPal, Paysafecard, Revolut, Wise, SEPA bank transfer and crypto (BTC, ETH, USDT, LTC).'
+  'Payment methods Kostis accepts: PayPal, Paysafecard, Revolut, Wise, SEPA bank transfer and crypto (BTC, ETH, USDT, LTC).'
 
 const LINKS_DESCRIPTION =
-  'Every Blxr link on one page: GitHub, Discord, email, Amitista Studio and the best of blxr.net.'
+  'All of Kostis’s links on one page: GitHub, Discord, email, Amitista Studio and the best of blxr.net.'
 
 const GALLERY_DESCRIPTION =
-  'Gallery by Blxr: photos I took and UI designs I made, from city light to dashboards and product screens.'
+  'Gallery by Kostis: photos I took and UI designs I made, from city light to dashboards and product screens.'
 
 const QUOTE_DESCRIPTION =
-  'Words Blxr lives by: one main quote up top and more added over time, each one dated, some with a note on what it means.'
+  'Words Kostis lives by: one main quote up top and more added over time, each one dated, some with a note on what it means.'
 
 const TERMINAL_DESCRIPTION =
   'blxr.net as a shell: type help, about, projects or contact, cd between pages, and find the commands that are not in help.'
 
 const VOLUNTEER_DESCRIPTION =
-  'Volunteering by Blxr: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
+  'Volunteering by Kostis: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
+
+const TRAVEL_DESCRIPTION =
+  'A world map of the countries Kostis has been to: Greece, Italy, Germany, France, Spain, Austria, Belgium and the UK.'
 
 export function metaFor(pathname) {
   const path = normalizePath(pathname)
@@ -80,7 +83,7 @@ export function metaFor(pathname) {
   if (route.name === 'home') {
     return {
       ...base,
-      title: 'Blxr — Student Developer Portfolio, Projects & CV',
+      title: 'Kostis — Student Developer Portfolio, Projects & CV',
       description: HOME_DESCRIPTION,
     }
   }
@@ -88,7 +91,7 @@ export function metaFor(pathname) {
   if (route.name === 'projects') {
     return {
       ...base,
-      title: 'Projects — Security Tooling, Web & Mobile Apps by Blxr',
+      title: 'Projects — Security Tooling, Web & Mobile Apps by Kostis',
       description: PROJECTS_DESCRIPTION,
     }
   }
@@ -107,7 +110,7 @@ export function metaFor(pathname) {
   if (route.name === 'library') {
     return {
       ...base,
-      title: 'FiveM Library — UIs, HUDs & Scripts by Blxr',
+      title: 'FiveM Library — UIs, HUDs & Scripts by Kostis',
       description: LIBRARY_DESCRIPTION,
       noindex: libraryList.every((entry) => entry.placeholder),
     }
@@ -126,7 +129,7 @@ export function metaFor(pathname) {
   if (route.name === 'blog') {
     return {
       ...base,
-      title: 'Blog — Notes & Writing by Blxr',
+      title: 'Blog — Notes & Writing by Kostis',
       description: BLOG_DESCRIPTION,
       noindex: postsList.every((post) => post.draft),
     }
@@ -135,7 +138,7 @@ export function metaFor(pathname) {
   if (route.name === 'reviews') {
     return {
       ...base,
-      title: 'Reviews — What Clients Say About Working With Blxr',
+      title: 'Reviews — What Clients Say About Working With Kostis',
       description: REVIEWS_DESCRIPTION,
     }
   }
@@ -151,7 +154,7 @@ export function metaFor(pathname) {
   if (route.name === 'cv') {
     return {
       ...base,
-      title: 'CV — Blxr, Full Stack Developer in Athens',
+      title: 'CV — Kostis, Full Stack Developer in Athens',
       description: CV_DESCRIPTION,
     }
   }
@@ -159,7 +162,7 @@ export function metaFor(pathname) {
   if (route.name === 'security') {
     return {
       ...base,
-      title: 'Security — Report a Vulnerability to Blxr',
+      title: 'Security — Report a Vulnerability to Kostis',
       description: SECURITY_DESCRIPTION,
     }
   }
@@ -175,7 +178,7 @@ export function metaFor(pathname) {
   if (route.name === 'listening') {
     return {
       ...base,
-      title: 'Listening — Blxr on Spotify',
+      title: 'Listening — Kostis on Spotify',
       description: LISTENING_DESCRIPTION,
     }
   }
@@ -183,7 +186,7 @@ export function metaFor(pathname) {
   if (route.name === 'contact') {
     return {
       ...base,
-      title: 'Contact — Get in Touch With Blxr',
+      title: 'Contact — Get in Touch With Kostis',
       description: CONTACT_DESCRIPTION,
     }
   }
@@ -191,7 +194,7 @@ export function metaFor(pathname) {
   if (route.name === 'book') {
     return {
       ...base,
-      title: 'Book a Call — Pick a Time With Blxr',
+      title: 'Book a Call — Pick a Time With Kostis',
       description: BOOK_DESCRIPTION,
     }
   }
@@ -199,7 +202,7 @@ export function metaFor(pathname) {
   if (route.name === 'payment') {
     return {
       ...base,
-      title: 'Payment — How to Pay Blxr',
+      title: 'Payment — How to Pay Kostis',
       description: PAYMENT_DESCRIPTION,
     }
   }
@@ -207,7 +210,7 @@ export function metaFor(pathname) {
   if (route.name === 'links') {
     return {
       ...base,
-      title: 'Links — Everywhere to Find Blxr',
+      title: 'Links — Everywhere to Find Kostis',
       description: LINKS_DESCRIPTION,
     }
   }
@@ -215,15 +218,23 @@ export function metaFor(pathname) {
   if (route.name === 'volunteer') {
     return {
       ...base,
-      title: 'Volunteering: Events Blxr Gave Time To',
+      title: 'Volunteering: Events Kostis Gave Time To',
       description: VOLUNTEER_DESCRIPTION,
+    }
+  }
+
+  if (route.name === 'travel') {
+    return {
+      ...base,
+      title: 'Travel — Countries Kostis Has Been To',
+      description: TRAVEL_DESCRIPTION,
     }
   }
 
   if (route.name === 'gallery') {
     return {
       ...base,
-      title: 'Gallery: Photos and UI Design by Blxr',
+      title: 'Gallery: Photos and UI Design by Kostis',
       description: GALLERY_DESCRIPTION,
     }
   }
@@ -231,7 +242,7 @@ export function metaFor(pathname) {
   if (route.name === 'quote') {
     return {
       ...base,
-      title: 'Quotes — Words Blxr Lives By',
+      title: 'Quotes — Words Kostis Lives By',
       description: QUOTE_DESCRIPTION,
     }
   }
@@ -303,6 +314,7 @@ const SHORT_LABELS = {
   payment: 'Payment',
   links: 'Links',
   volunteer: 'Volunteering',
+  travel: 'Travel',
   gallery: 'Gallery',
   quote: 'Quotes',
   terminal: 'Terminal',
@@ -394,8 +406,8 @@ function jsonLdFor(path) {
   const person = {
     '@type': 'Person',
     '@id': `${SITE_URL}/#blxr`,
-    name: 'Blxr',
-    alternateName: 'kostis4563',
+    name: 'Kostis',
+    alternateName: ['Blxr', 'kostis4563'],
     url: SITE_URL,
     image: `${SITE_URL}/pfp.webp`,
     description: 'Student in Athens building backend and web tooling.',
@@ -433,7 +445,7 @@ function jsonLdFor(path) {
           '@type': 'ProfilePage',
           '@id': `${SITE_URL}/#profile`,
           url: SITE_URL,
-          name: 'Blxr',
+          name: 'Kostis',
           inLanguage: 'en',
           dateModified: CV_UPDATED,
           mainEntity: { '@id': `${SITE_URL}/#blxr` },
@@ -656,6 +668,18 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'travel') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Travel',
+      description: TRAVEL_DESCRIPTION,
+      url: `${SITE_URL}/travel`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'gallery') {
     return {
       '@context': 'https://schema.org',
@@ -754,6 +778,8 @@ function crumbsFor(route) {
     items.push({ name: 'Links', item: urlOf('/links') })
   } else if (route.name === 'volunteer') {
     items.push({ name: 'Volunteering', item: urlOf('/volunteer') })
+  } else if (route.name === 'travel') {
+    items.push({ name: 'Travel', item: urlOf('/travel') })
   } else if (route.name === 'gallery') {
     items.push({ name: 'Gallery', item: urlOf('/gallery') })
   } else if (route.name === 'quote') {

@@ -56,7 +56,7 @@ export const LIVE_TYPES = [
       { key: 'text', label: 'Text', max: 40, required: true },
       { key: 'alt', label: 'Scrambles to', max: 40, required: true },
     ],
-    defaults: { text: 'Blxr', alt: 'Kostis' },
+    defaults: { text: 'Kostis', alt: 'Blxr' },
   },
   {
     value: 'html',

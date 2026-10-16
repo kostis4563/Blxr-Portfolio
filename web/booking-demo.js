@@ -146,7 +146,7 @@ const invite = (start, end) =>
     `DTSTAMP:${stamp(Date.now())}`,
     `DTSTART:${stamp(start)}`,
     `DTEND:${stamp(end)}`,
-    'SUMMARY:Call with Blxr',
+    'SUMMARY:Call with Kostis',
     'END:VEVENT',
     'END:VCALENDAR',
     '',

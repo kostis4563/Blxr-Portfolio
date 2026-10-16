@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, TRAVEL_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -289,6 +289,16 @@ export function buildCommands({
       href: VOLUNTEER_PATH,
       run: () => navigate(VOLUNTEER_PATH),
       keywords: 'volunteer volunteering charity events community cause help ngo hours',
+    },
+    {
+      id: 'page-travel',
+      group: jump,
+      label: 'Travel',
+      hint: 'Countries I have been to',
+      icon: 'globe',
+      href: TRAVEL_PATH,
+      run: () => navigate(TRAVEL_PATH),
+      keywords: 'travel countries trips places visited abroad italy germany france spain austria belgium uk london greece',
     },
     {
       id: 'page-gallery',

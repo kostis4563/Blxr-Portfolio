@@ -579,7 +579,7 @@ function Controls({ track, playing, big }) {
 function Nav({ theme, onToggleTheme }) {
   return (
     <header className="sp-nav">
-      <a {...link(HOME_PATH)} className="sp-logo" aria-label="Blxr home">
+      <a {...link(HOME_PATH)} className="sp-logo" aria-label="Kostis home">
         <img {...imageProps('/blxr-logo.webp', '44px')} alt="" width="44" height="44" />
       </a>
       <div className="sp-nav-mid">
@@ -623,7 +623,7 @@ function Hero({ recent, clock }) {
       <div style={{ minWidth: 0 }}>
         <p className="sp-kicker">Profile</p>
         <h1 className="sp-h1">
-          Blxr<span className="sp-sr">, what I&rsquo;m listening to</span>
+          Kostis<span className="sp-sr">, what I&rsquo;m listening to</span>
         </h1>
         {meta}
       </div>
@@ -1154,7 +1154,7 @@ function Sheet({ open, onClose, ...props }) {
             </button>
             <p>
               <small>{heroWord(hero)}</small>
-              <b>Blxr&rsquo;s Spotify</b>
+              <b>Kostis&rsquo;s Spotify</b>
             </p>
             <a href={track?.url || 'https://open.spotify.com'} target="_blank" rel="noreferrer" className="sp-icon" aria-label="Open in Spotify" style={{ color: '#fff' }}>
               <SpotifyMark size={20} />
@@ -1175,7 +1175,7 @@ function Bar({ hero, now, clock, rank, onOpen }) {
   let strip = hero.label
   if (hero.kind === 'loading') strip = 'Connecting to Spotify'
   else if (hero.kind === 'message') strip = hero.title
-  else if (playing) strip = 'Listening on Blxr’s Spotify'
+  else if (playing) strip = 'Listening on Kostis’s Spotify'
 
   let left
   if (hero.kind === 'loading') {
@@ -1375,7 +1375,7 @@ export default function ListeningPage({ theme, onToggleTheme }) {
         <main className="sp-main">
           <div className="sp-stick" data-on={scrolled} aria-hidden={!scrolled}>
             <GreenPlay track={heroTrack} size={48} />
-            <b>Blxr</b>
+            <b>Kostis</b>
           </div>
           <Hero recent={recent} clock={clock} />
           <div className="sp-body">

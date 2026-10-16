@@ -14,6 +14,7 @@ import BookPageImpl from '#ssr-page/book'
 import PaymentPageImpl from '#ssr-page/payment'
 import LinksPageImpl from '#ssr-page/links'
 import VolunteerPageImpl from '#ssr-page/volunteer'
+import TravelPageImpl from '#ssr-page/travel'
 import GalleryPageImpl from '#ssr-page/gallery'
 import QuotePageImpl from '#ssr-page/quote'
 import TerminalPageImpl from '#ssr-page/terminal'
@@ -62,6 +63,7 @@ const BookPage = routePage(BookPageImpl, () => import('#client-page/book'))
 const PaymentPage = routePage(PaymentPageImpl, () => import('#client-page/payment'))
 const LinksPage = routePage(LinksPageImpl, () => import('#client-page/links'))
 const TerminalPage = routePage(TerminalPageImpl, () => import('#client-page/terminal'))
+const TravelPage = routePage(TravelPageImpl, () => import('#client-page/travel'))
 const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
 const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
@@ -182,7 +184,7 @@ function App() {
 
   const educationEntries = [
     {
-      period: `2025 – Present`,
+      period: `2026 – 2028`,
       degree: 'International Baccalaureate Diploma Programme (IBDP)',
       org: 'Athens',
       description: 'A two year diploma with as much independent research and writing in it as actual coursework. My subjects lean heavily into computer science: how systems are put together underneath the frameworks, and why they were built that way. Most of what I build outside school started with something I picked up here.',
@@ -408,6 +410,17 @@ function App() {
     )
   }
 
+  if (currentView === 'travel') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <TravelPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
   if (currentView === 'gallery') {
     return (
       <>
@@ -531,7 +544,7 @@ function App() {
               <img
 
                 {...imageProps('/pfp.webp', SIZES.avatar)}
-                alt="Blxr avatar"
+                alt="Kostis avatar"
                 width="64"
                 height="64"
                 draggable="false"
@@ -553,7 +566,7 @@ function App() {
 
           {}
           <h1 className="hero-title font-bagus text-[36px] sm:text-[44px] font-normal tracking-[-0.02em] leading-none mb-3 animate-fade-in-up">
-            <ScrambleText text="Blxr" alt="Kostis" />
+            <ScrambleText text="Kostis" alt="Blxr" />
           </h1>
 
           {}

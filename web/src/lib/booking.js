@@ -150,7 +150,7 @@ export function dayPhrase(ms, timeZone, now = Date.now()) {
   return `on ${fullShortDay(ms, timeZone)}`
 }
 
-export const EVENT_TITLE = 'Call with Blxr'
+export const EVENT_TITLE = 'Call with Kostis'
 
 export const ALERTS = [
   { minutes: null, label: 'None' },

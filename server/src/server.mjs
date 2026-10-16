@@ -1554,7 +1554,7 @@ async function bookCall({ name, email, note, start, timeZone, details }) {
     stamp,
     start,
     end,
-    summary: 'Call with blxr',
+    summary: 'Call with Kostis',
     description: plan,
     location: guestWhere,
     url: hostLink,
@@ -1562,7 +1562,7 @@ async function bookCall({ name, email, note, start, timeZone, details }) {
   }
   let emailed = false
   if (mailConfigured()) {
-    const invite = eventIcs({ ...guestCopy, method: 'REQUEST', organizer: { name: 'blxr', email: ownerEmail }, attendee: { name, email } })
+    const invite = eventIcs({ ...guestCopy, method: 'REQUEST', organizer: { name: 'Kostis', email: ownerEmail }, attendee: { name, email } })
     try {
       await withTimeout((signal) =>
         sendMail(

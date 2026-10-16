@@ -16,6 +16,7 @@ import {
   PAYMENT_PATH,
   LINKS_PATH,
   VOLUNTEER_PATH,
+  TRAVEL_PATH,
   GALLERY_PATH,
   SECURITY_PATH,
   IB_PATH,
@@ -46,6 +47,7 @@ const COLUMNS = [
       { label: 'Uses', to: USES_PATH },
       { label: 'Reviews', to: REVIEWS_PATH },
       { label: 'Volunteering', to: VOLUNTEER_PATH },
+      { label: 'Travel', to: TRAVEL_PATH },
       { label: 'Quotes', to: QUOTE_PATH },
       { label: 'Security', to: SECURITY_PATH },
     ],
@@ -129,7 +131,7 @@ export default function SiteFooter({ id, className = '', gutter = 'px-6', showGr
 
       <div className={`flex items-center justify-between gap-4 border-t border-dashed border-line py-4 ${gutter}`}>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-ink-subtle">
-          <span>© {year} Blxr · Athens, Greece</span>
+          <span>© {year} Kostis · Athens, Greece</span>
           <LocalTime />
         </p>
 

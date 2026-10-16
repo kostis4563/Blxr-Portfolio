@@ -107,7 +107,7 @@ const EJECTIONS = [
   ['You were not The Impostor.', '1 Impostor remains.'],
   ['Light mode was The Impostor.', '0 Impostors remain.'],
   ['The Minecraft parkour was The Impostor.', '0 Impostors remain.'],
-  ['blxr was not The Impostor.', '1 Impostor remains.'],
+  ['Kostis was not The Impostor.', '1 Impostor remains.'],
   ['Internet Explorer was The Impostor.', '0 Impostors remain.'],
   ['The 404 page was not The Impostor.', '1 Impostor remains.'],
 ]

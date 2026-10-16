@@ -62,7 +62,7 @@ function InspectPiece({ text }) {
         <img
           ref={ref}
           {...imageProps('/pfp.webp', SIZES.avatar)}
-          alt="Blxr avatar"
+          alt="Kostis avatar"
           width="64"
           height="64"
           draggable="false"

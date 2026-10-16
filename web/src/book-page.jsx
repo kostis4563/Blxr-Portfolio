@@ -193,7 +193,7 @@ function Host({ load, zone, onZone, slot, twelve, plan }) {
         className="h-9 w-9 select-none rounded-full object-cover"
       />
       <div>
-        <p className="text-[14px] font-medium text-ink-muted">Blxr</p>
+        <p className="text-[14px] font-medium text-ink-muted">Kostis</p>
         <h1 className="mt-1 text-[22px] font-semibold leading-snug tracking-[-0.02em] text-ink-strong">Book a call</h1>
         <p className="mt-3 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-ink-muted">
           A short call to talk through a project, an idea or a question, on whatever app suits you. Times are synced live with my calendar.
@@ -856,7 +856,7 @@ function Booked({ booking, zone, twelve, onAdd, headingRef }) {
       </p>
 
       <dl className="mt-8 grid w-full gap-5 border-y border-line py-6 text-start text-[14px]">
-        <Detail label="What">{minutesLabel(minutes)} call with Blxr</Detail>
+        <Detail label="What">{minutesLabel(minutes)} call with Kostis</Detail>
         <Detail label="When">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {formatDay(dateKey(start, zone))}
@@ -883,7 +883,7 @@ function Booked({ booking, zone, twelve, onAdd, headingRef }) {
         )}
         <Detail label="Who">
           <p>
-            Blxr <span className="text-ink-subtle">· Host</span>
+            Kostis <span className="text-ink-subtle">· Host</span>
           </p>
           <p className="mt-0.5">
             {booking.name}
@@ -1094,7 +1094,7 @@ export default function BookPage({ theme, onToggleTheme }) {
     later(700, {
       id: 'message',
       icon: 'message',
-      title: 'Blxr',
+      title: 'Kostis',
       body: `Thanks ${first}, talk ${dayPhrase(start, zone)} at ${at(start)}.`,
       action: { label: 'Reply', href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Our call ${dayPhrase(start, zone)}`)}` },
       ttl: 9000,

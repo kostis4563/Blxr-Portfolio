@@ -98,7 +98,7 @@ function Overview({ data, paused, zone, now, upcoming, onPause, onCopy }) {
     <aside aria-label="Overview" className={`${PANEL} flex flex-col gap-5 border-b border-line md:col-span-2 lg:col-span-1 lg:border-b-0 lg:border-e`}>
       <img {...imageProps('/pfp.webp', SIZES.avatar)} alt="" width="36" height="36" draggable="false" className="h-9 w-9 select-none rounded-full object-cover" />
       <div>
-        <p className="text-[14px] font-medium text-ink-muted">Blxr</p>
+        <p className="text-[14px] font-medium text-ink-muted">Kostis</p>
         <h1 className="mt-1 text-[22px] font-semibold leading-snug tracking-[-0.02em] text-ink-strong">Calls</h1>
         <p className="mt-3 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-ink-muted">Who’s booked, when /book is open, and the time you keep for yourself.</p>
       </div>

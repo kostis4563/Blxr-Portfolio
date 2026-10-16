@@ -169,7 +169,7 @@ function ReviewCard({ item, isOwn, highlighted, copied, onCopyId, editMinutes = 
       {item.reply && (
         <div className="mt-4 rounded-xl border border-line bg-surface-raised/40 px-4 py-3 sm:ms-[52px]">
           <p className="font-mono text-[10.5px] uppercase tracking-wider text-ink-subtle">
-            Reply from Blxr
+            Reply from Kostis
             <span className="ms-2 normal-case tracking-normal text-ink-faint">{relativeTime(item.reply.at)}</span>
           </p>
           <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-ink-secondary">{item.reply.text}</p>

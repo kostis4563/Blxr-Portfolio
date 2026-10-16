@@ -45,7 +45,7 @@ export function blogFeed() {
     `    <title>${SITE_NAME} — Blog</title>`,
     `    <link>${SITE_URL}${BLOG_PATH}</link>`,
     `    <atom:link href="${SITE_URL}${BLOG_FEED_PATH}" rel="self" type="application/rss+xml" />`,
-    '    <description>Notes on what Blxr builds, breaks and learns.</description>',
+    '    <description>Notes on what Kostis builds, breaks and learns.</description>',
     '    <language>en</language>',
     BLOG_UPDATED ? `    <lastBuildDate>${rfc822(BLOG_UPDATED)}</lastBuildDate>` : '',
     ...items,

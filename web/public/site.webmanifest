@@ -1,7 +1,7 @@
 {
   "name": "blxr",
   "short_name": "blxr",
-  "description": "Projects, experience and contact for Blxr — backend and web tooling.",
+  "description": "Projects, experience and contact for Kostis — backend and web tooling.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

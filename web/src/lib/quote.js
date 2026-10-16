@@ -5,7 +5,7 @@ export const LIMITS = {
   slug: 60,
 }
 
-export const DEFAULT_AUTHOR = 'Blxr'
+export const DEFAULT_AUTHOR = 'Kostis'
 
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 export const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/

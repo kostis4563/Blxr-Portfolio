@@ -9,7 +9,7 @@ import bookingDemo from './booking-demo.js'
 const obfuscate = process.env.OBFUSCATE === '1'
 const BUILT_AT = process.env.BUILT_AT || new Date().toISOString()
 
-const ROUTE_PAGES = ['projects', 'library', 'blog', 'reviews', 'uses', 'cv', 'security', 'ib', 'listening', 'contact', 'book', 'payment', 'links','volunteer', 'gallery', 'quote', 'terminal', 'login', 'dashboard', 'public-profile', 'not-found']
+const ROUTE_PAGES = ['projects', 'library', 'blog', 'reviews', 'uses', 'cv', 'security', 'ib', 'listening', 'contact', 'book', 'payment', 'links','volunteer', 'travel', 'gallery', 'quote', 'terminal', 'login', 'dashboard', 'public-profile', 'not-found']
 
 const pageSource = (name) => fileURLToPath(new URL(`./src/${name}-page.jsx`, import.meta.url))
 const stubPage = fileURLToPath(new URL('./src/stub-page.js', import.meta.url))
@@ -26,7 +26,7 @@ const pageAliases = (ssr) => {
 }
 
 const BANNER = `<!--
-  this is a page by blxr
+  this is a page by kostis
 
   ${
     obfuscate

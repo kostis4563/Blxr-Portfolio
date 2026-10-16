@@ -4,7 +4,7 @@ const HOLD_MS = 1000
 const ERASE_STEP = 26
 const CARET_MS = 500
 const CARET = '\u258c'
-const INTRO_LABEL = 'Blxr'
+const INTRO_LABEL = 'Kostis'
 
 const reducedMotion = () =>
   typeof document !== 'undefined' &&
