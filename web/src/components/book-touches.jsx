@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Icon } from './icon'
-import { ICONS } from '../lib/dashboard'
+import { ICONS } from '../lib/icons'
 import { imageProps, SIZES } from '../lib/images'
 import { CONTACT_EMAIL } from '../lib/profile'
 import { ALERTS, EVENT_TITLE, dateKey, formatDay, formatTime, formatWeekday, formatZone, shortDay, fullShortDay } from '../lib/booking'

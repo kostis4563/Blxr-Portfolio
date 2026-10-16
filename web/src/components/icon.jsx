@@ -1,4 +1,4 @@
-import { ICONS } from '../lib/dashboard'
+import { ICONS } from '../lib/icons'
 
 export function Icon({ name, className = 'h-[18px] w-[18px]', strokeWidth = 1.7 }) {
   return (
