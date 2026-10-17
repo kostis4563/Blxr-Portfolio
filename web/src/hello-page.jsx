@@ -3,7 +3,11 @@ import { link, backOr, HOME_PATH } from './lib/router'
 
 export default function HelloPage() {
   return (
-    <main className="fixed inset-0 grid place-items-center overflow-hidden bg-[#0b0d13] bg-[url('/hello-bg.webp')] bg-cover bg-center bg-no-repeat">
+    <main className="fixed inset-0 grid place-items-center overflow-hidden bg-[#0b0d13]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 animate-drift bg-[url('/hello-bg.webp')] bg-cover bg-center bg-no-repeat will-change-transform motion-reduce:animate-none"
+      />
       <a
         {...link(HOME_PATH, () => backOr(HOME_PATH))}
         aria-label="Exit"
@@ -11,7 +15,7 @@ export default function HelloPage() {
       >
         <Icon name="x" className="h-4.5 w-4.5" />
       </a>
-      <h1 className="whitespace-nowrap font-pixel text-[min(max(4.967vw,7.471svh),12.98vw)] leading-[normal] text-[#767c8a] selection:bg-[#2f6fed] selection:text-white">
+      <h1 className="relative whitespace-nowrap font-pixel text-[min(max(4.967vw,7.471svh),12.98vw)] leading-[normal] text-[#767c8a] selection:bg-[#2f6fed] selection:text-white">
         hello world
       </h1>
     </main>

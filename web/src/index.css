@@ -46,6 +46,14 @@
 
   --animate-eq: eq 0.9s ease-in-out infinite;
   --animate-marquee: marquee 30s linear infinite;
+  --animate-drift: drift 20s ease-in-out infinite;
+
+  @keyframes drift {
+    0%, 100% { transform: scale(1.25) translate3d(0, 0, 0); }
+    25% { transform: scale(1.3) translate3d(-6%, 4%, 0); }
+    50% { transform: scale(1.25) translate3d(4%, 6%, 0); }
+    75% { transform: scale(1.3) translate3d(6%, -4%, 0); }
+  }
 
   @keyframes marquee {
     to { transform: translateX(-50%); }
