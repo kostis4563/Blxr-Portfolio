@@ -257,7 +257,7 @@ function Memes() {
   useEffect(() => {
     let progress = 0
     const onKey = (event) => {
-      if (event.repeat || event.target.isContentEditable || event.target.closest?.('input, textarea, select')) return
+      if (event.repeat || typeof event.key !== 'string' || event.target.isContentEditable || event.target.closest?.('input, textarea, select')) return
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key
       if (key.length > 1 && !key.startsWith('Arrow')) return
       if (key === KONAMI[progress]) progress += 1

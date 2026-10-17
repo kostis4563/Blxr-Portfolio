@@ -115,6 +115,17 @@ describe('deploy.sh', () => {
     assert.match(stdout, /nginx -t/)
   })
 
+  test('a web deploy keeps the previous build\'s chunks, so open tabs can still lazy-load pages', async () => {
+    const sh = await deploySh()
+    const web = sh.slice(sh.indexOf('deploy_web() {'), sh.indexOf('\n}', sh.indexOf('deploy_web() {')))
+    const assets = web.indexOf('rsync -a "$ROOT/web/dist/assets/" "$WEB_ROOT/assets/"')
+    const pages = web.search(/rsync -a --delete .*--exclude '\/assets\/' "\$ROOT\/web\/dist\/" "\$WEB_ROOT\/"/)
+    assert.ok(assets >= 0, 'assets are copied without --delete')
+    assert.ok(pages > assets, 'the rest syncs with --delete after the new assets are in place, leaving assets/ alone')
+    assert.match(web, /find "\$WEB_ROOT\/assets" -type f -mtime \+"\$OLD_ASSETS_DAYS" -delete/)
+    assert.ok(Number(/^OLD_ASSETS_DAYS=(\d+)$/m.exec(sh)[1]) >= 1)
+  })
+
   test('the deploy workflow lints and tests before it deploys', async () => {
     const wf = await read('.github/workflows/deploy.yml')
     const at = (s) => wf.indexOf(s)

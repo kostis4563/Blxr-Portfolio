@@ -221,7 +221,7 @@ export default function AccountMenu({
       else if (e.key === 'Home') go(0)
       else if (e.key === 'End') go(-1)
       else if (e.key === 'Tab') setOpen(false)
-      else if (e.key.length === 1 && e.key !== ' ' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      else if (typeof e.key === 'string' && e.key.length === 1 && e.key !== ' ' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const now = Date.now()
         typed.current.text = now - typed.current.at > TYPEAHEAD_MS ? e.key : typed.current.text + e.key
         typed.current.at = now

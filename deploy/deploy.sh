@@ -12,6 +12,7 @@ restore_ownership() {
 trap restore_ownership EXIT
 
 WEB_ROOT=/var/www/blxr
+OLD_ASSETS_DAYS=7
 SERVER_ROOT=/opt/blxr-search
 UNIT=/etc/systemd/system/blxr-search.service
 NGINX_SITE=/etc/nginx/sites-available/blxr
@@ -40,7 +41,11 @@ deploy_web() {
   ( cd "$ROOT" && npm run build )
 
   step "Syncing web/dist/ -> $WEB_ROOT"
-  run rsync -a --delete --exclude '.well-known' "$ROOT/web/dist/" "$WEB_ROOT/"
+  run rsync -a "$ROOT/web/dist/assets/" "$WEB_ROOT/assets/"
+  run rsync -a --delete --exclude '.well-known' --exclude '/assets/' "$ROOT/web/dist/" "$WEB_ROOT/"
+
+  step "Pruning assets from builds older than $OLD_ASSETS_DAYS days"
+  run find "$WEB_ROOT/assets" -type f -mtime +"$OLD_ASSETS_DAYS" -delete
 
   check_csp_hashes
   check_early_hints

@@ -42,6 +42,56 @@ test('an unknown path gets the 404 page with a 404 status', async ({ page }) => 
   expect(errors).toEqual([])
 })
 
+test('a keydown with no key, like the one autofill sends, does not throw', async ({ page }) => {
+  const errors = scriptErrors(page)
+  await page.goto('/login')
+  await page.waitForLoadState('networkidle')
+  await page.locator('input').first().evaluate((input) => input.dispatchEvent(new Event('keydown', { bubbles: true })))
+  await page.evaluate(() => document.body.dispatchEvent(new Event('keydown', { bubbles: true })))
+  expect(errors).toEqual([])
+})
+
+const mangleBeforeHydration = (page, { translate }) =>
+  page.addInitScript((translate) => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const text = document.createTreeWalker(document.getElementById('root'), NodeFilter.SHOW_TEXT)
+      for (let node = text.nextNode(); node; node = text.nextNode()) {
+        if (node.textContent.trim()) node.textContent = `${node.textContent} (changed)`
+      }
+      if (translate) document.documentElement.lang = 'el'
+    })
+  }, translate)
+
+const captureClientLogs = (page) =>
+  page.addInitScript(() => {
+    window.clientLogs = []
+    navigator.sendBeacon = (url, body) => {
+      if (new URL(url, location.href).pathname === '/api/logs/client') body.text().then((text) => window.clientLogs.push(JSON.parse(text)))
+      return true
+    }
+  })
+
+const mismatchesSent = async (page) => {
+  await page.waitForLoadState('networkidle')
+  return (await page.evaluate(() => window.clientLogs)).filter((log) => /#418|[Hh]ydration/.test(log.message))
+}
+
+test('a hydration mismatch is reported with the component stack', async ({ page }) => {
+  await captureClientLogs(page)
+  await mangleBeforeHydration(page, { translate: false })
+  await page.goto('/library')
+  const [mismatch] = await mismatchesSent(page)
+  expect(mismatch).toBeTruthy()
+  expect(mismatch.stack).toMatch(/\b(?:div|main)\b/)
+})
+
+test('a page a translator rewrote before hydration is not reported as a mismatch', async ({ page }) => {
+  await captureClientLogs(page)
+  await mangleBeforeHydration(page, { translate: true })
+  await page.goto('/library')
+  expect(await mismatchesSent(page)).toEqual([])
+})
+
 test('header links switch pages in place, without a full reload', async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => { window.stayedOnPage = true })

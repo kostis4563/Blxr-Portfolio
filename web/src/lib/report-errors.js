@@ -56,6 +56,21 @@ const isForeign = (stack) => {
   return frames.some((line) => /https?:\/\//.test(line)) || frames.every((line) => line.includes('<anonymous>'))
 }
 
+const TRANSLATED = 'html.translated-ltr, html.translated-rtl, #root font, [_msttexthash]'
+
+const translated = () => {
+  const lang = document.documentElement.lang
+  return Boolean(lang && !/^en\b/i.test(lang)) || Boolean(document.querySelector(TRANSLATED))
+}
+
+export function reportRecoverableError(error, info) {
+  console.error(error)
+  if (translated()) return
+  const { message, stack } = describe(error)
+  const components = typeof info?.componentStack === 'string' ? info.componentStack.trim() : ''
+  post({ kind: 'error', message, stack: [stack, components].filter(Boolean).join('\n\n').slice(0, STACK_MAX) || undefined })
+}
+
 export function installErrorReporting() {
   if (typeof window === 'undefined' || window.__blxrErrorsInstalled) return
   window.__blxrErrorsInstalled = true

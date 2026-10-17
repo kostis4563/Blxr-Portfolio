@@ -239,7 +239,7 @@ export function installSecrets() {
 
   let typed = ''
   window.addEventListener('keydown', (event) => {
-    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) return
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || typeof event.key !== 'string' || event.key.length !== 1) return
     if (event.target.isContentEditable || event.target.closest?.('input, textarea, select')) return
     typed = (typed + event.key.toLowerCase()).replace(/[^a-z]/g, '').slice(-LONGEST)
     const code = Object.keys(CODES).find((name) => typed.endsWith(name))

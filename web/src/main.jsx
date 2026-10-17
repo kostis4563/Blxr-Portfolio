@@ -2,7 +2,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client'
 import './index.css'
 import Root from './root.jsx'
 import { reportWebVitals } from './lib/vitals'
-import { installErrorReporting } from './lib/report-errors'
+import { installErrorReporting, reportRecoverableError } from './lib/report-errors'
 import { installChunkRecovery } from './lib/chunk-recovery'
 import { applyDevicePrefs } from './lib/prefs'
 import { installSecrets } from './lib/secrets'
@@ -17,7 +17,7 @@ consoleHello()
 const container = document.getElementById('root')
 const hydrate = () => {
   if (container.firstElementChild) {
-    hydrateRoot(container, <Root />)
+    hydrateRoot(container, <Root />, { onRecoverableError: reportRecoverableError })
   } else {
     createRoot(container).render(<Root />)
   }
