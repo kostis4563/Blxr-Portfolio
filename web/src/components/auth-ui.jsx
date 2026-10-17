@@ -2,8 +2,19 @@ import { useState, useEffect } from 'react'
 import { authSignInWith, AUTH_PROVIDERS } from '../lib/auth'
 import { SOCIAL_ICON_PATHS } from '../lib/profile'
 import { strengthOf } from '../lib/password'
+import { Icon } from './icon'
 
 export const LABEL = 'text-[11px] font-mono font-semibold text-ink-subtle uppercase tracking-wider'
+export const FIELD_LABEL = 'text-[13.5px] font-medium text-ink-strong'
+export const FILLED =
+  'h-12 w-full rounded-xl border border-transparent bg-surface-hover px-4 text-[14px] text-ink-strong placeholder:text-ink-subtle transition-[border-color,background-color,box-shadow] duration-200 hover:bg-surface-hover-strong focus:border-line-strong focus:bg-surface-hover focus:shadow-[0_0_0_4px_var(--hairline)] focus:outline-none aria-[invalid=true]:border-red-500/60'
+export const SOLID_CTA =
+  'inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-ink-strong px-5 text-[14px] font-semibold text-ink-inverse outline-none transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100'
+export const TILE =
+  'flex h-12 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line-strong px-3 text-[13.5px] font-medium text-ink-strong outline-none transition-colors duration-200 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink-strong/50'
+export const FORM_TITLE = 'text-center text-[26px] font-semibold leading-tight tracking-[-0.02em] text-ink-strong sm:text-[28px]'
+export const FORM_TAGLINE = 'mx-auto mt-2.5 max-w-[340px] text-center text-[14px] leading-relaxed text-ink-muted'
+export const STRONG_LINK = 'cursor-pointer whitespace-nowrap font-semibold text-ink-strong underline-offset-4 transition-colors hover:underline'
 export const INPUT =
   'w-full rounded-xl border border-line bg-surface-raised/60 px-3.5 py-2.5 text-[13.5px] text-ink-strong placeholder:text-ink-faint transition-colors hover:border-line-strong focus:border-line-strong focus:bg-surface focus:outline-none aria-[invalid=true]:border-red-500/60'
 export const CTA =
@@ -24,11 +35,11 @@ export const PROVIDER_NAMES = { google: 'Google', discord: 'Discord', github: 'G
 const STRENGTH_LABEL = ['', 'Weak', 'Okay', 'Good', 'Strong']
 const STRENGTH_COLOR = ['', 'bg-red-500', 'bg-amber-500', 'bg-emerald-500', 'bg-emerald-500']
 
-export function Field({ label, error, hint, children }) {
+export function Field({ label, error, hint, children, labelClass = LABEL }) {
   return (
     <label className="flex flex-col gap-2">
       <span className="flex items-baseline justify-between gap-3">
-        <span className={LABEL}>{label}</span>
+        <span className={labelClass}>{label}</span>
         {hint}
       </span>
       {children}
@@ -37,7 +48,7 @@ export function Field({ label, error, hint, children }) {
   )
 }
 
-export function PasswordInput({ id, value, onChange, autoComplete, invalid, autoFocus, className = INPUT, placeholder, label }) {
+export function PasswordInput({ id, value, onChange, autoComplete, invalid, autoFocus, className = INPUT, placeholder, label, iconToggle = false }) {
   const [shown, setShown] = useState(false)
   const [caps, setCaps] = useState(false)
   const watchCaps = (e) => setCaps(Boolean(e.getModifierState?.('CapsLock')))
@@ -57,16 +68,29 @@ export function PasswordInput({ id, value, onChange, autoComplete, invalid, auto
           onKeyUp={watchCaps}
           onBlur={() => setCaps(false)}
           aria-invalid={invalid || undefined}
-          className={`${className} pe-16`}
+          className={`${className} ${iconToggle ? 'pe-12' : 'pe-16'}`}
         />
-        <button
-          type="button"
-          onClick={() => setShown((v) => !v)}
-          aria-pressed={shown}
-          className="absolute inset-y-0 end-0 cursor-pointer px-3.5 font-mono text-[11px] uppercase tracking-wider text-ink-subtle transition-colors hover:text-ink-strong"
-        >
-          {shown ? 'Hide' : 'Show'}
-        </button>
+        {iconToggle ? (
+          <button
+            type="button"
+            onClick={() => setShown((v) => !v)}
+            aria-pressed={shown}
+            aria-label="Show password"
+            title={shown ? 'Hide password' : 'Show password'}
+            className="absolute inset-y-0 end-0 grid w-12 cursor-pointer place-items-center rounded-e-xl text-ink-subtle outline-none transition-colors hover:text-ink-strong focus-visible:text-ink-strong"
+          >
+            <Icon name={shown ? 'eye' : 'eyeOff'} className="h-[18px] w-[18px]" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShown((v) => !v)}
+            aria-pressed={shown}
+            className="absolute inset-y-0 end-0 cursor-pointer px-3.5 font-mono text-[11px] uppercase tracking-wider text-ink-subtle transition-colors hover:text-ink-strong"
+          >
+            {shown ? 'Hide' : 'Show'}
+          </button>
+        )}
       </span>
       {caps && <span className="text-[11px] text-amber-500">Caps Lock is on.</span>}
     </>
@@ -89,7 +113,7 @@ export function Strength({ password }) {
 
 const BRAND_HOVER = { google: 'hover:text-ink-strong', discord: 'hover:text-[#5865F2]', github: 'hover:text-ink-strong' }
 
-export function Providers({ next, disabled, onStart, onError, action = authSignInWith, verb = 'Continue', layout = 'grid', tileClass = PROVIDER }) {
+export function Providers({ next, disabled, onStart, onError, action = authSignInWith, verb = 'Continue', layout = 'grid', tileClass = PROVIDER, labels = false }) {
   const [pending, setPending] = useState(null)
   useEffect(() => {
     const onShow = (e) => { if (e.persisted) setPending(null) }
@@ -109,7 +133,7 @@ export function Providers({ next, disabled, onStart, onError, action = authSignI
   }
   const rows = layout === 'rows'
   return (
-    <div className={rows ? 'flex flex-col gap-2' : 'grid grid-cols-3 gap-2'}>
+    <div className={rows ? 'flex flex-col gap-2' : `grid grid-cols-3 ${labels ? 'gap-2.5' : 'gap-2'}`}>
       {AUTH_PROVIDERS.map((provider) => {
         const label = `${verb} with ${PROVIDER_NAMES[provider]}`
         const lit = pending === provider
@@ -121,11 +145,12 @@ export function Providers({ next, disabled, onStart, onError, action = authSignI
             disabled={disabled || Boolean(pending)}
             className={`${rows ? PROVIDER : `${tileClass} ${BRAND_HOVER[provider]}`} disabled:cursor-not-allowed disabled:opacity-50 ${rows ? 'gap-3 px-4 text-[13px] font-medium' : ''} ${lit ? 'border-line-strong text-ink-strong' : ''}`}
             aria-label={rows ? undefined : label}
-            title={rows ? undefined : label}
+            title={rows || labels ? undefined : label}
           >
-            <svg className={`${rows ? 'h-[16px] w-[16px]' : 'h-[18px] w-[18px]'} shrink-0`} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg className={`${rows || labels ? 'h-[16px] w-[16px]' : 'h-[18px] w-[18px]'} shrink-0`} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path d={PROVIDER_ICONS[provider]} />
             </svg>
+            {labels && !rows && <span className="hidden truncate min-[360px]:inline">{lit ? 'Opening…' : PROVIDER_NAMES[provider]}</span>}
             {rows && <span className="flex-1 text-left">{lit ? `Opening ${PROVIDER_NAMES[provider]}…` : label}</span>}
             {rows && <span aria-hidden="true" className="text-ink-faint">→</span>}
           </button>

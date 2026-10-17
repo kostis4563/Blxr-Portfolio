@@ -21,6 +21,7 @@ function walk(dir, base = '') {
 
 const PAGES = { ...Object.fromEntries(staticPaths().map((p) => [p, p === '/' ? 'index.html' : `${p.slice(1)}.html`])), '/404': '404.html', '/login': 'login.html', '/dashboard': 'dashboard.html', '/@': PROFILE_SHELL_FILE }
 const SHELLS = new Set(['/dashboard', '/@'])
+const MINIMAL = new Set(['/hello'])
 const SITE = 'https://blxr.net'
 
 function served(url) {
@@ -59,7 +60,7 @@ describe('pages', () => {
     test('prerendered content (not an empty shell) for public pages', () => {
       const body = /<div id="root">([\s\S]*?)<\/div><!--email_on-->/.exec(html())?.[1] ?? ''
       if (SHELLS.has(route)) return
-      expect(body.length).toBeGreaterThan(1000)
+      expect(body.length).toBeGreaterThan(MINIMAL.has(route) ? 200 : 1000)
       expect(html().match(/<h1[\s>]/g), 'exactly one h1').toHaveLength(1)
     })
 

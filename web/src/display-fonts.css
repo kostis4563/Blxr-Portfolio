@@ -21,3 +21,11 @@
   font-display: swap;
   src: url('/fonts/watom-latin-8a598f2d.woff2') format('woff2');
 }
+
+@font-face {
+  font-family: 'Hello Pixel';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('/fonts/hello-pixel-f4c3c487.woff2') format('woff2');
+}

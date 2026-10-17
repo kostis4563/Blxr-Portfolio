@@ -5,7 +5,7 @@ import { link, LOGIN_PATH } from '../lib/router'
 import { clearRecovery } from '../lib/supabase'
 import { Captcha, TICK_FIRST } from './captcha'
 import { Icon } from './icon'
-import { LABEL, INPUT, CTA, SWITCH, QUIET, Field, PasswordInput } from './auth-ui'
+import { FIELD_LABEL, FILLED, SOLID_CTA, SWITCH, STRONG_LINK, FORM_TITLE, FORM_TAGLINE, Field, PasswordInput } from './auth-ui'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const CODE_LENGTH = 8
@@ -19,7 +19,8 @@ const CTA_COPY = {
 }
 
 const BOX =
-  'h-12 w-full min-w-0 rounded-lg border bg-surface-raised/60 text-center font-mono text-[16px] font-semibold sm:rounded-xl sm:text-[18px] caret-transparent transition-colors focus:bg-surface focus:outline-none disabled:cursor-not-allowed'
+  'h-12 w-full min-w-0 rounded-lg border bg-surface-hover text-center font-mono text-[16px] font-semibold sm:rounded-xl sm:text-[18px] caret-transparent transition-colors focus:bg-surface-hover focus:outline-none disabled:cursor-not-allowed'
+const QUIET = 'cursor-pointer text-[12.5px] text-ink-muted transition-colors hover:text-ink-strong'
 
 function CodeInput({ digits, onChange, onComplete, inputs, labelledBy, readOnly, verified, invalid }) {
   const focus = (i) => inputs.current[Math.min(Math.max(i, 0), CODE_LENGTH - 1)]?.focus()
@@ -39,7 +40,7 @@ function CodeInput({ digits, onChange, onComplete, inputs, labelledBy, readOnly,
     ? 'border-emerald-500/40 text-emerald-500'
     : invalid
       ? 'border-red-500/60 text-ink-strong'
-      : 'border-line text-ink-strong hover:border-line-strong focus:border-ink-strong/60'
+      : 'border-transparent text-ink-strong hover:border-line-strong focus:border-ink-strong/50'
 
   return (
     <div role="group" aria-labelledby={labelledBy} className="grid grid-cols-8 gap-1.5 sm:gap-2">
@@ -212,9 +213,8 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
 
   return (
     <form onSubmit={submit} noValidate aria-busy={Boolean(busy) || undefined} className={className}>
-      <p className={`${LABEL} mb-2`}>{copy.eyebrow}</p>
-      <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">{copy.title}</h1>
-      <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
+      <h1 className={FORM_TITLE}>{copy.title}</h1>
+      <p className={FORM_TAGLINE}>
         {step === 'email' ? (
           'Enter your email and we will send you a reset code.'
         ) : verified ? (
@@ -224,9 +224,9 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
         )}
       </p>
 
-      <div className="mt-6 flex flex-col gap-4">
+      <div className="mt-8 flex flex-col gap-5">
         {step === 'email' ? (
-          <Field label="Email" error={fieldError}>
+          <Field label="Email" error={fieldError} labelClass={FIELD_LABEL}>
             <input
               id={`${id}-email`}
               type="email"
@@ -234,19 +234,20 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
               autoFocus
               inputMode="email"
               spellCheck={false}
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => {
                 onEmailChange(e.target.value)
                 setFieldError(null)
               }}
               aria-invalid={Boolean(fieldError) || undefined}
-              className={INPUT}
+              className={FILLED}
             />
           </Field>
         ) : (
           <div className="flex flex-col gap-2">
             <span className="flex items-baseline justify-between gap-3">
-              <span id={`${id}-code`} className={LABEL}>Code</span>
+              <span id={`${id}-code`} className={FIELD_LABEL}>Code</span>
               {!verified && (
                 <button type="button" onClick={changeEmail} disabled={Boolean(busy)} className={`${QUIET} disabled:cursor-not-allowed disabled:opacity-50`}>
                   Use a different email
@@ -272,7 +273,7 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
                 Code verified
               </p>
             ) : (
-              <p className="text-[12px] text-ink-muted">
+              <p className="text-[12.5px] text-ink-muted">
                 {resent ? 'New code sent.' : "Didn't get it?"}{' '}
                 <button
                   type="button"
@@ -290,9 +291,9 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
         {verified && (
           <div className="grid animate-expand-in">
             <div className="min-h-0 overflow-hidden">
-              <div className="mt-1 flex flex-col gap-3 border-t border-dashed border-line pt-5">
+              <div className="mt-1 flex flex-col gap-3 border-t border-line pt-5">
                 <input type="text" name="username" autoComplete="username" value={sentTo} readOnly hidden />
-                <Field label="New password" error={fieldError}>
+                <Field label="New password" error={fieldError} labelClass={FIELD_LABEL}>
                   <PasswordInput
                     id={`${id}-password`}
                     value={password}
@@ -302,7 +303,10 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
                     }}
                     autoComplete="new-password"
                     autoFocus
+                    placeholder="Choose a new password"
                     invalid={Boolean(fieldError)}
+                    className={FILLED}
+                    iconToggle
                   />
                 </Field>
                 <ul aria-label="Password requirements" className="grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -327,22 +331,21 @@ export default function ResetPassword({ email, onEmailChange, copy, describe, ne
       <button
         type="submit"
         disabled={Boolean(busy) || (step === 'code' && !complete) || (verified && !ready)}
-        className={`${CTA} mt-6`}
+        className={`${SOLID_CTA} mt-7`}
       >
-        <span>{busy === cta.kind ? cta.busy : cta.idle}</span>
-        {busy !== cta.kind && <span aria-hidden="true">→</span>}
+        {busy === cta.kind ? cta.busy : cta.idle}
       </button>
 
-      <p className="mt-5 text-center text-[12.5px] text-ink-muted">
+      <p className="mt-6 text-center text-[13.5px] text-ink-muted">
         {verified ? (
           <>
             Changed your mind?{' '}
-            <a {...link(next, () => { clearRecovery(); onDone() })} className={SWITCH}>Skip for now</a>
+            <a {...link(next, () => { clearRecovery(); onDone() })} className={STRONG_LINK}>Skip for now</a>
           </>
         ) : (
           <>
             Remembered it?{' '}
-            <a {...link(LOGIN_PATH)} className={SWITCH}>Back to sign in</a>
+            <a {...link(LOGIN_PATH)} className={STRONG_LINK}>Back to sign in</a>
           </>
         )}
       </p>

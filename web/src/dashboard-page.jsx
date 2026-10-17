@@ -11,7 +11,6 @@ import { CLAIM_HASH, lockedForGuest } from './lib/guest'
 import { GuestBar, MembersOnly, ClaimDialog, useGuestWork } from './components/guest'
 
 const SECTIONS = {
-  home: () => import('./dashboard-home'),
   settings: () => import('./dashboard-settings'),
   profile: () => import('./dashboard-profile'),
   boards: () => import('./dashboard-boards'),
@@ -26,9 +25,8 @@ const SECTIONS = {
   calls: () => import('./dashboard-calls'),
 }
 
-const MEMBER_SECTIONS = ['home', 'boards', 'messages', 'profile', 'settings']
+const MEMBER_SECTIONS = ['boards', 'messages', 'profile', 'settings']
 
-const DashboardHome = lazy(SECTIONS.home)
 const DashboardSettings = lazy(SECTIONS.settings)
 const DashboardProfile = lazy(SECTIONS.profile)
 const DashboardBoards = lazy(SECTIONS.boards)
@@ -219,8 +217,6 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
           <Suspense fallback={<Loading label={`Opening ${title.toLowerCase()}`} />}>
             {locked ? (
               <MembersOnly path={item.path} onClaim={openClaim} />
-            ) : top.id === 'home' ? (
-              <DashboardHome user={user} guest={guest} />
             ) : top.id === 'admin' ? (
               <Suspense fallback={<Loading label="Opening admin" />}>
                 <DashboardAdmin />

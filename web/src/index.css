@@ -5297,3 +5297,34 @@ html[data-roll]::view-transition-new(root) {
 .term-violet { color: #a78bfa; }
 :root[data-theme='light'] .term-dir { color: #0369a1; }
 :root[data-theme='light'] .term-violet { color: #6d28d9; }
+
+.login-aurora {
+  background-color: #08060c;
+  background-image:
+    radial-gradient(75% 30% at 0% 0%, rgba(255, 246, 255, 0.62), rgba(255, 246, 255, 0.16) 45%, transparent),
+    radial-gradient(65% 26% at 100% 0%, rgba(255, 240, 255, 0.42), rgba(255, 240, 255, 0.1) 45%, transparent),
+    linear-gradient(180deg, #efd3fc 0%, #cf9cf7 4%, #ad66f0 9%, #9142e6 15%, #7a2ddb 22%, #6522c4 30%, #4d1a9c 38%, #351371 46%, #220d48 54%, #160a2c 62%, #0f0819 72%, #0b0711 84%, #09070d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+.login-aurora::before,
+.login-aurora::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url%28%23n%29'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+}
+.login-aurora::before {
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+.login-aurora::after {
+  opacity: 0.07;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(180deg, transparent 35%, #000 75%);
+  mask-image: linear-gradient(180deg, transparent 35%, #000 75%);
+}

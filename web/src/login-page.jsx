@@ -5,8 +5,7 @@ import { authLogin, authRegister, authUpdatePassword, authSignOut, authContinueA
 import { useAuth, clearRecovery } from './lib/supabase'
 import { PASSWORD_MIN, passwordProblem } from './lib/password'
 import { Captcha, TICK_FIRST } from './components/captcha'
-import { Icon } from './components/icon'
-import { LABEL, INPUT, CTA, SWITCH, QUIET, Field, PasswordInput, Strength, Providers, Divider } from './components/auth-ui'
+import { FIELD_LABEL, FILLED, SOLID_CTA, TILE, SWITCH, STRONG_LINK, FORM_TITLE, FORM_TAGLINE, Field, PasswordInput, Strength, Providers } from './components/auth-ui'
 import ResetPassword from './components/reset-password'
 
 export { PASSWORD_MIN }
@@ -15,36 +14,36 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const MODES = {
   login: {
-    eyebrow: 'Welcome back',
-    title: 'Sign in',
+    title: 'Sign in to your account',
     tagline: 'Pick a provider, or use your email and password.',
     cta: 'Sign in',
     busy: 'Signing in…',
+    quote: { text: 'Talk is cheap. Show me the code.', by: 'Linus Torvalds' },
   },
   register: {
-    eyebrow: 'New here',
-    title: 'Create an account',
+    title: 'Create your account',
     tagline: 'Pick a provider, or sign up with an email and password.',
     cta: 'Create account',
     busy: 'Creating account…',
+    quote: { text: 'Real artists ship.', by: 'Steve Jobs' },
   },
   reset: {
-    eyebrow: 'Forgot password',
     title: 'Reset your password',
+    quote: { text: 'Premature optimization is the root of all evil.', by: 'Donald Knuth' },
   },
   update: {
-    eyebrow: 'Almost there',
     title: 'Choose a new password',
     tagline: 'You are signed in through the reset link. Pick a new password to keep using.',
     cta: 'Update password',
     busy: 'Updating…',
+    quote: { text: 'Make it work, make it right, make it fast.', by: 'Kent Beck' },
   },
   verify: {
-    eyebrow: 'Two-factor authentication',
     title: 'Enter your code',
     tagline: 'Open your authenticator app and type the 6-digit code for blxr.',
     cta: 'Verify',
     busy: 'Verifying…',
+    quote: { text: 'Security is a process, not a product.', by: 'Bruce Schneier' },
   },
 }
 
@@ -117,55 +116,37 @@ function validate(mode, form, accountEmail = '') {
   return errors
 }
 
-const PERKS = [
-  { icon: 'kanban', title: 'Boards', body: 'Columns, cards and due dates. Private to you.' },
-  { icon: 'message', title: 'A line to me', body: 'One private thread, straight to the owner.' },
-  { icon: 'user', title: 'Your page', body: 'blxr.net/@you — links, skills, what you are up to.' },
-]
-
-function Perks() {
+function Panel({ mode, quote }) {
   return (
-    <ul className="flex flex-col">
-      {PERKS.map((perk, i) => (
-        <li key={perk.title} className="flex items-start gap-3.5 border-t border-dashed border-line py-3.5 first:border-t-0 first:pt-0">
-          <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-line bg-surface-raised/60 text-ink-muted">
-            <Icon name={perk.icon} className="h-[14px] w-[14px]" />
-          </span>
-          <span className="min-w-0">
-            <span className="flex items-baseline gap-2">
-              <span className="text-[13.5px] font-semibold text-ink-strong">{perk.title}</span>
-              <span className="font-mono text-[10px] text-ink-faint">0{i + 1}</span>
-            </span>
-            <span className="mt-0.5 block text-[12.5px] leading-relaxed text-ink-muted">{perk.body}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
+    <aside className="login-aurora relative isolate flex h-[148px] flex-col overflow-hidden rounded-[24px] text-white md:sticky md:top-4 md:col-start-1 md:row-span-2 md:row-start-1 md:h-[calc(100dvh-2rem)] md:min-h-[600px] md:rounded-[28px]">
+      <div className="relative z-10 mt-auto w-full px-6 pb-6 md:px-12 md:pb-12 lg:px-14 lg:pb-14">
+        <p className="flex items-baseline text-[34px] font-semibold leading-none tracking-[-0.045em] md:text-[clamp(3.25rem,5.6vw,5.75rem)]">
+          Hello, world
+          <span aria-hidden="true" className="ms-[0.12em] h-[0.74em] w-[0.07em] rounded-[1px] bg-white/85 animate-caret" />
+        </p>
+        <figure key={mode} className="mt-6 hidden max-w-[380px] animate-rise-in md:block lg:mt-8">
+          <blockquote className="text-pretty text-[16px] leading-relaxed text-white/75 lg:text-[17px]">“{quote.text}”</blockquote>
+          <figcaption className="mt-2.5 text-[13px] text-white/45">{quote.by}</figcaption>
+        </figure>
+      </div>
+    </aside>
   )
 }
 
-function GuestDoor({ onClick, busy, disabled }) {
+function OrRule() {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-dashed border-line-strong px-4 py-3.5 text-left outline-none transition-colors hover:border-ink-strong/60 hover:bg-surface-raised/40 focus-visible:ring-2 focus-visible:ring-ink-strong/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-dashed border-line-strong font-semibold text-ink-subtle transition-colors group-hover:text-ink-strong">?</span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[13.5px] font-medium text-ink-strong">{busy ? 'Opening a guest session…' : 'Just looking? Continue as guest'}</span>
-        <span className="mt-0.5 block text-[12px] leading-relaxed text-ink-muted">No email. Try one board, claim it as yours whenever you like.</span>
-      </span>
-      <span aria-hidden="true" className="text-ink-faint transition-transform duration-200 group-hover:translate-x-0.5">→</span>
-    </button>
+    <div className="my-7 flex items-center gap-4 text-[12.5px] text-ink-subtle" aria-hidden="true">
+      <span className="h-px flex-1 bg-line-strong" />
+      Or
+      <span className="h-px flex-1 bg-line-strong" />
+    </div>
   )
 }
 
 function Notice({ title, children, tone = 'ok' }) {
   const ring = tone === 'ok' ? 'border-emerald-500/30 bg-emerald-500/[0.06]' : 'border-line bg-surface'
   return (
-    <div className={`mt-6 rounded-xl border px-4 py-3.5 text-[12.5px] leading-relaxed text-ink ${ring}`}>
+    <div className={`rounded-xl border px-4 py-3.5 text-[13px] leading-relaxed text-ink ${ring}`}>
       <p className="font-medium text-ink-strong">{title}</p>
       <p className="mt-1 text-ink-muted">{children}</p>
     </div>
@@ -319,8 +300,8 @@ export default function LoginPage({ theme, onToggleTheme }) {
     }
   }
 
-  const wide = mode === 'login' || mode === 'register'
-  const card = `w-full max-w-[400px] rounded-2xl border border-line bg-surface-raised/40 p-6 sm:p-7 transition-opacity ${leaving ? 'pointer-events-none opacity-60' : ''}`
+  const social = mode === 'login' || mode === 'register'
+  const card = `w-full animate-rise-in transition-opacity ${leaving ? 'pointer-events-none opacity-60' : ''}`
   const leave = () => {
     setLeaving(true)
     navigate(next, { replace: true })
@@ -334,263 +315,249 @@ export default function LoginPage({ theme, onToggleTheme }) {
     : 'Pick a new password for your account.'
 
   return (
-    <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
-      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 border-b border-line top-0 flex items-center px-5 sm:px-8">
-        <div className="w-full flex items-center justify-between">
-          <a {...link(HOME_PATH)} className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer">
-            <span>←</span>
+    <div className="min-h-dvh bg-bg text-ink selection:bg-selection selection:text-ink-strong antialiased font-sans animate-view-in">
+      <div className="grid min-h-dvh w-full grid-cols-1 grid-rows-[auto_auto_1fr] gap-3 p-3 sm:p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:grid-rows-[auto_1fr] md:gap-x-6 lg:gap-x-10 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+        <div className="flex h-11 items-center justify-between px-1 md:col-start-2 md:row-start-1 md:px-2">
+          <a {...link(HOME_PATH)} className="inline-flex items-center gap-2 rounded-lg text-[13px] font-medium text-ink-muted transition-colors duration-200 hover:text-ink-strong">
+            <span aria-hidden="true">←</span>
             <span>Home</span>
           </a>
-          <ThemeToggle theme={theme} onToggle={onToggleTheme} className="text-ink-muted hover:text-ink-strong transition-colors duration-200" />
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} className="grid h-9 w-9 place-items-center rounded-full text-ink-muted transition-colors duration-200 hover:bg-surface-hover hover:text-ink-strong" />
         </div>
-      </header>
 
-      <main className={`mx-auto flex min-h-screen w-full max-w-[960px] flex-1 px-5 pt-20 pb-16 animate-rise-in sm:px-8 ${wide ? 'flex-col justify-center md:grid md:grid-cols-[minmax(0,1fr)_400px] md:items-center md:gap-14' : 'items-center justify-center'}`}>
-        {wide && (
-          <section className="mb-10 md:mb-0">
-            <p className={`${LABEL} mb-3`}>{copy.eyebrow}</p>
-            <h1 className="text-[32px] font-extrabold leading-[1.1] tracking-[-0.03em] text-ink-strong sm:text-[38px]">{copy.title}</h1>
-            <p className="mt-3 max-w-[380px] text-[14px] leading-relaxed text-ink-muted">{tagline}</p>
-            <div className="mt-8 hidden md:block">
-              <p className={`${LABEL} mb-4`}>What an account is for</p>
-              <Perks />
-            </div>
-            {!guest && (
-              <div className="mt-8 hidden md:block">
-                <GuestDoor onClick={continueAsGuest} busy={guestBusy} disabled={busy || guestBusy} />
-              </div>
-            )}
-          </section>
-        )}
+        <Panel mode={mode} quote={copy.quote} />
 
-        {mode === 'reset' ? (
-          <ResetPassword
-            email={form.email}
-            onEmailChange={(email) => setForm((f) => ({ ...f, email }))}
-            copy={copy}
-            describe={messageFor}
-            next={next}
-            onDone={leave}
-            className={card}
-          />
-        ) : (
-          <form
-            key={mode}
-            onSubmit={submit}
-            noValidate
-            aria-busy={leaving || undefined}
-            className={`${card} ${wide ? 'mx-auto md:mx-0' : ''}`}
-          >
-            {!wide && (
-              <>
-                <p className={`${LABEL} mb-2`}>{copy.eyebrow}</p>
-                <h1 className="text-[24px] font-bold tracking-tight text-ink-strong">{copy.title}</h1>
-                <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{tagline}</p>
-              </>
-            )}
-
-            {notice?.kind === 'confirm' ? (
-              <Notice title="Confirm your email">
-                We sent a link to <span className="text-ink-strong">{notice.email}</span>. Open it to activate the account, then sign in.
-              </Notice>
-            ) : updateLocked ? (
-              <Notice title="That link has expired" tone="plain">
-                Open the reset link from your email in this browser, or request a new code.
-              </Notice>
+        <main className="flex min-w-0 items-center justify-center px-2 pb-10 pt-6 sm:px-4 md:col-start-2 md:row-start-2 md:pb-14 md:pt-2">
+          <div className="w-full max-w-[420px]">
+            {mode === 'reset' ? (
+              <ResetPassword
+                email={form.email}
+                onEmailChange={(email) => setForm((f) => ({ ...f, email }))}
+                copy={copy}
+                describe={messageFor}
+                next={next}
+                onDone={leave}
+                className={card}
+              />
             ) : (
-              <>
-                {guest && (mode === 'login' || mode === 'register') && (
-                  <div className="mb-6 rounded-xl border border-line bg-surface px-4 py-3.5 text-[12.5px] leading-relaxed">
-                    <p className="font-medium text-ink-strong">You are browsing as a guest.</p>
-                    <p className="mt-1 text-ink-muted">
-                      Signing in here switches to that account and leaves your guest board behind. To keep it,{' '}
-                      <a {...link(`${DASHBOARD_PATH}#claim`)} className={SWITCH}>claim the guest account</a> instead.
-                    </p>
+              <form key={mode} onSubmit={submit} noValidate aria-busy={leaving || undefined} className={card}>
+                <h1 className={FORM_TITLE}>{copy.title}</h1>
+                <p className={FORM_TAGLINE}>{tagline}</p>
+
+                {notice?.kind === 'confirm' ? (
+                  <div className="mt-8">
+                    <Notice title="Confirm your email">
+                      We sent a link to <span className="text-ink-strong">{notice.email}</span>. Open it to activate the account, then sign in.
+                    </Notice>
                   </div>
-                )}
-
-                {(mode === 'login' || mode === 'register') && (
-                  <div className="flex flex-col gap-5">
-                    <Providers next={next} disabled={busy} onStart={() => setError(null)} onError={fail} />
-                    <Divider>or with email</Divider>
+                ) : updateLocked ? (
+                  <div className="mt-8">
+                    <Notice title="That link has expired" tone="plain">
+                      Open the reset link from your email in this browser, or request a new code.
+                    </Notice>
                   </div>
-                )}
+                ) : (
+                  <>
+                    {guest && social && (
+                      <div className="mt-8 rounded-xl border border-line bg-surface px-4 py-3.5 text-[13px] leading-relaxed">
+                        <p className="font-medium text-ink-strong">You are browsing as a guest.</p>
+                        <p className="mt-1 text-ink-muted">
+                          Signing in here switches to that account and leaves your guest board behind. To keep it,{' '}
+                          <a {...link(`${DASHBOARD_PATH}#claim`)} className={SWITCH}>claim the guest account</a> instead.
+                        </p>
+                      </div>
+                    )}
 
-                <div className={`${mode === 'login' || mode === 'register' ? 'mt-5' : 'mt-6'} flex flex-col gap-4`}>
-                  {mode === 'verify' && (
-                    <Field label="Verification code" error={errors.code}>
-                      <input
-                        id={`${id}-code`}
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="one-time-code"
-                        pattern="[0-9]*"
-                        maxLength={7}
-                        autoFocus
-                        placeholder="123 456"
-                        value={form.code}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^\d\s]/g, '')
-                          setForm((f) => ({ ...f, code: value }))
-                          if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
-                        }}
-                        aria-invalid={Boolean(errors.code) || undefined}
-                        className={`${INPUT} font-mono tracking-[0.25em]`}
-                      />
-                    </Field>
-                  )}
+                    {social && (
+                      <div className="mt-8">
+                        <Providers next={next} disabled={busy} onStart={() => setError(null)} onError={fail} tileClass={TILE} labels />
+                        <OrRule />
+                      </div>
+                    )}
 
-                  {mode === 'register' && (
-                    <Field label="Name" error={errors.name}>
-                      <input
-                        id={`${id}-name`}
-                        type="text"
-                        autoComplete="nickname"
-                        autoFocus
-                        maxLength={NAME_MAX}
-                        value={form.name}
-                        onChange={set('name')}
-                        aria-invalid={Boolean(errors.name) || undefined}
-                        className={INPUT}
-                      />
-                    </Field>
-                  )}
+                    <div className={`${social ? '' : 'mt-8'} flex flex-col gap-5`}>
+                      {mode === 'verify' && (
+                        <Field label="Verification code" error={errors.code} labelClass={FIELD_LABEL}>
+                          <input
+                            id={`${id}-code`}
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            pattern="[0-9]*"
+                            maxLength={7}
+                            autoFocus
+                            placeholder="123 456"
+                            value={form.code}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^\d\s]/g, '')
+                              setForm((f) => ({ ...f, code: value }))
+                              if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
+                            }}
+                            aria-invalid={Boolean(errors.code) || undefined}
+                            className={`${FILLED} text-center font-mono text-[18px] tracking-[0.35em]`}
+                          />
+                        </Field>
+                      )}
 
-                  {mode !== 'update' && mode !== 'verify' && (
-                    <Field label="Email" error={errors.email}>
-                      <input
-                        id={`${id}-email`}
-                        type="email"
-                        autoComplete="email"
-                        autoFocus={mode !== 'register'}
-                        inputMode="email"
-                        spellCheck={false}
-                        value={form.email}
-                        onChange={set('email')}
-                        aria-invalid={Boolean(errors.email) || undefined}
-                        className={INPUT}
-                      />
-                    </Field>
-                  )}
+                      {mode === 'register' && (
+                        <Field label="Name" error={errors.name} labelClass={FIELD_LABEL}>
+                          <input
+                            id={`${id}-name`}
+                            type="text"
+                            autoComplete="nickname"
+                            autoFocus
+                            maxLength={NAME_MAX}
+                            placeholder="What should I call you?"
+                            value={form.name}
+                            onChange={set('name')}
+                            aria-invalid={Boolean(errors.name) || undefined}
+                            className={FILLED}
+                          />
+                        </Field>
+                      )}
 
-                  {mode !== 'verify' && (
-                    <Field
-                      label={mode === 'update' ? 'New password' : 'Password'}
-                      error={errors.password}
-                      hint={
-                        mode === 'login' ? (
-                          <a {...link(RESET_PATH)} className={QUIET}>Forgot password?</a>
-                        ) : (
-                          <span className="text-[11px] text-ink-faint">{PASSWORD_MIN}+ characters</span>
-                        )
-                      }
-                    >
-                      <PasswordInput
-                        id={`${id}-password`}
-                        value={form.password}
-                        onChange={set('password')}
-                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                        autoFocus={mode === 'update'}
-                        invalid={Boolean(errors.password)}
-                      />
-                      {mode !== 'login' && form.password && <Strength password={form.password} />}
-                    </Field>
-                  )}
+                      {mode !== 'update' && mode !== 'verify' && (
+                        <Field label="Email" error={errors.email} labelClass={FIELD_LABEL}>
+                          <input
+                            id={`${id}-email`}
+                            type="email"
+                            autoComplete="email"
+                            autoFocus={mode !== 'register'}
+                            inputMode="email"
+                            spellCheck={false}
+                            placeholder="you@example.com"
+                            value={form.email}
+                            onChange={set('email')}
+                            aria-invalid={Boolean(errors.email) || undefined}
+                            className={FILLED}
+                          />
+                        </Field>
+                      )}
 
-                  {(mode === 'register' || mode === 'update') && (
-                    <Field label="Confirm password" error={errors.confirm}>
-                      <PasswordInput
-                        id={`${id}-confirm`}
-                        value={form.confirm}
-                        onChange={set('confirm')}
-                        autoComplete="new-password"
-                        invalid={Boolean(errors.confirm)}
-                      />
-                    </Field>
-                  )}
+                      {mode !== 'verify' && (
+                        <Field
+                          label={mode === 'update' ? 'New password' : 'Password'}
+                          error={errors.password}
+                          labelClass={FIELD_LABEL}
+                          hint={
+                            mode === 'login' && (
+                              <a {...link(RESET_PATH)} className="cursor-pointer text-[12.5px] text-ink-muted transition-colors hover:text-ink-strong">Forgot password?</a>
+                            )
+                          }
+                        >
+                          <PasswordInput
+                            id={`${id}-password`}
+                            value={form.password}
+                            onChange={set('password')}
+                            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                            autoFocus={mode === 'update'}
+                            placeholder={mode === 'login' ? 'Enter your password' : 'Choose a password'}
+                            invalid={Boolean(errors.password)}
+                            className={FILLED}
+                            iconToggle
+                          />
+                          {mode !== 'login' && (form.password
+                            ? <Strength password={form.password} />
+                            : !errors.password && <span className="text-[12.5px] text-ink-subtle">Must be at least {PASSWORD_MIN} characters.</span>)}
+                        </Field>
+                      )}
 
-                  {mode === 'login' && (
-                    <label className="flex cursor-pointer items-center gap-2.5 text-[12.5px] text-ink-muted">
-                      <input
-                        type="checkbox"
-                        checked={form.remember}
-                        onChange={set('remember')}
-                        className="h-3.5 w-3.5 cursor-pointer rounded border-line accent-ink-strong"
-                      />
-                      Keep me signed in
-                    </label>
-                  )}
-                </div>
+                      {(mode === 'register' || mode === 'update') && (
+                        <Field label="Confirm password" error={errors.confirm} labelClass={FIELD_LABEL}>
+                          <PasswordInput
+                            id={`${id}-confirm`}
+                            value={form.confirm}
+                            onChange={set('confirm')}
+                            autoComplete="new-password"
+                            placeholder="Type it once more"
+                            invalid={Boolean(errors.confirm)}
+                            className={FILLED}
+                            iconToggle
+                          />
+                        </Field>
+                      )}
 
-                {(mode === 'login' || mode === 'register') && <Captcha handle={captcha} visible />}
+                      {mode === 'login' && (
+                        <label className="-mt-1 flex w-fit cursor-pointer items-center gap-2.5 text-[13px] text-ink-muted">
+                          <input
+                            type="checkbox"
+                            checked={form.remember}
+                            onChange={set('remember')}
+                            className="h-4 w-4 cursor-pointer rounded border-line accent-ink-strong"
+                          />
+                          Keep me signed in
+                        </label>
+                      )}
+                    </div>
 
-                {error && (
-                  <p role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-3.5 py-2.5 text-[12.5px] text-red-500">
-                    {error}
-                  </p>
-                )}
+                    {social && <Captcha handle={captcha} visible />}
 
-                <button type="submit" disabled={busy || guestBusy} className={`${CTA} mt-6`}>
-                  <span>{busy ? copy.busy : copy.cta}</span>
-                  {!busy && <span aria-hidden="true">→</span>}
-                </button>
+                    {error && (
+                      <p role="alert" className="mt-5 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-3.5 py-2.5 text-[13px] text-red-500">
+                        {error}
+                      </p>
+                    )}
 
-                {mode === 'login' && !guest && (
-                  <div className="mt-4 text-center md:hidden">
-                    <button
-                      type="button"
-                      onClick={continueAsGuest}
-                      disabled={busy || guestBusy}
-                      className="cursor-pointer text-[12.5px] text-ink-muted transition-colors hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {guestBusy ? 'Opening a guest session…' : <>Just looking? <span className={SWITCH}>Continue as guest</span></>}
+                    <button type="submit" disabled={busy || guestBusy} className={`${SOLID_CTA} mt-7`}>
+                      {busy ? copy.busy : copy.cta}
                     </button>
-                    <p className="mt-1.5 text-[11px] leading-relaxed text-ink-faint">
-                      No email needed. You can try a board and claim it as yours later.
-                    </p>
-                  </div>
+
+                    {mode === 'login' && guest && (
+                      <p className="mt-4 text-center text-[13px] text-ink-muted">
+                        Or{' '}
+                        <a {...link(DASHBOARD_PATH)} className={SWITCH}>back to the dashboard</a> as a guest.
+                      </p>
+                    )}
+                  </>
                 )}
 
-                {mode === 'login' && guest && (
-                  <p className="mt-4 text-center text-[12px] text-ink-muted">
-                    Or{' '}
-                    <a {...link(DASHBOARD_PATH)} className={SWITCH}>back to the dashboard</a> as a guest.
-                  </p>
-                )}
-              </>
+                <p className="mt-6 text-balance text-center text-[13.5px] leading-relaxed text-ink-muted">
+                  {mode === 'login' ? (
+                    <>
+                      No account yet?{' '}
+                      <a {...link(REGISTER_PATH)} className={STRONG_LINK}>Create one</a>
+                      {!guest && (
+                        <>
+                          {' '}or{' '}
+                          <button
+                            type="button"
+                            onClick={continueAsGuest}
+                            disabled={busy || guestBusy}
+                            title="No email needed. Try a board and claim it as yours later."
+                            className={`${STRONG_LINK} disabled:cursor-not-allowed disabled:opacity-50 disabled:no-underline`}
+                          >
+                            {guestBusy ? 'opening a guest session…' : 'continue as guest'}
+                          </button>
+                        </>
+                      )}
+                    </>
+                  ) : mode === 'register' ? (
+                    <>
+                      Already have an account?{' '}
+                      <a {...link(LOGIN_PATH)} className={STRONG_LINK}>Sign in</a>
+                    </>
+                  ) : mode === 'verify' ? (
+                    <>
+                      Not you?{' '}
+                      <a {...link(LOGIN_PATH, async () => { await authSignOut(); navigate(LOGIN_PATH, { replace: true }) })} className={STRONG_LINK}>Sign out</a>
+                    </>
+                  ) : updateLocked ? (
+                    <>
+                      Link expired?{' '}
+                      <a {...link(RESET_PATH)} className={STRONG_LINK}>Get a new code</a>
+                    </>
+                  ) : (
+                    <>
+                      Changed your mind?{' '}
+                      <a {...link(next, () => { clearRecovery(); navigate(next, { replace: true }) })} className={STRONG_LINK}>Skip for now</a>
+                    </>
+                  )}
+                </p>
+              </form>
             )}
-
-            <p className="mt-5 text-center text-[12.5px] text-ink-muted">
-              {mode === 'login' ? (
-                <>
-                  No account yet?{' '}
-                  <a {...link(REGISTER_PATH)} className={SWITCH}>Create one</a>
-                </>
-              ) : mode === 'register' ? (
-                <>
-                  Already have an account?{' '}
-                  <a {...link(LOGIN_PATH)} className={SWITCH}>Sign in</a>
-                </>
-              ) : mode === 'verify' ? (
-                <>
-                  Not you?{' '}
-                  <a {...link(LOGIN_PATH, async () => { await authSignOut(); navigate(LOGIN_PATH, { replace: true }) })} className={SWITCH}>Sign out</a>
-                </>
-              ) : updateLocked ? (
-                <>
-                  Link expired?{' '}
-                  <a {...link(RESET_PATH)} className={SWITCH}>Get a new code</a>
-                </>
-              ) : (
-                <>
-                  Changed your mind?{' '}
-                  <a {...link(next, () => { clearRecovery(); navigate(next, { replace: true }) })} className={SWITCH}>Skip for now</a>
-                </>
-              )}
-            </p>
-          </form>
-        )}
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

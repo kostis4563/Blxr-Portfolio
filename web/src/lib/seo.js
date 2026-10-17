@@ -266,6 +266,15 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'hello') {
+    return {
+      ...base,
+      title: `hello world — ${SITE_NAME}`,
+      description: 'hello world, in pixel letters on a dark gradient. That is the whole page.',
+      noindex: true,
+    }
+  }
+
   if (route.name === 'login') {
     return {
       ...base,
@@ -330,6 +339,7 @@ const SHORT_LABELS = {
   quote: 'Quotes',
   terminal: 'Terminal',
   status: 'Status',
+  hello: 'hello world',
   login: 'Sign in',
   dashboard: 'Dashboard',
   profile: 'Profile',
@@ -905,6 +915,10 @@ export function headTags(pathname) {
       : '',
 
     ogRoute.name === 'status' ? '<link rel="preload" href="/api/status" as="fetch" crossorigin="anonymous" />' : '',
+
+    ogRoute.name === 'hello'
+      ? '<link rel="preload" href="/fonts/hello-pixel-f4c3c487.woff2" as="font" type="font/woff2" crossorigin="anonymous" />'
+      : '',
 
     jsonLd
       ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`

@@ -48,7 +48,7 @@ export async function mountCaptcha(container, { visible = false, theme = 'auto',
   const widgetId = ts.render(el, {
     sitekey: SITE_KEY,
     execution: visible ? 'render' : 'execute',
-    appearance: 'interaction-only',
+    appearance: visible ? 'always' : 'interaction-only',
     size: visible ? 'flexible' : 'normal',
     theme,
     callback: (token) => {

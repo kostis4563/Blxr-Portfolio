@@ -7,7 +7,6 @@ export const NAV = [
   {
     label: 'Workspace',
     items: [
-      { id: 'home', label: 'Overview', icon: 'home', bare: true },
       { id: 'boards', label: 'Boards', icon: 'kanban', deep: true, wide: true },
       { id: 'messages', label: 'Messages', icon: 'message', deep: true, bare: true },
     ],
@@ -83,7 +82,6 @@ export const NAV_FOOTER = [
 ]
 
 export const BLURBS = {
-  home: 'Everything you have going on, on one canvas.',
   profile: 'Build the page people see at blxr.net/@you.',
   boards: 'Columns, cards and due dates for whatever you are building.',
   messages: 'A private line between your account and the owner.',
@@ -103,7 +101,7 @@ export const BLURBS = {
   logs: 'What the server saw: failed requests, exceptions, upstreams and browser errors.',
 }
 
-export const DEFAULT_SECTION = 'home'
+export const DEFAULT_SECTION = 'boards'
 
 const flat = () =>
   [
