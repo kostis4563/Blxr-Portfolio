@@ -5133,6 +5133,34 @@ html[data-roll]::view-transition-new(root) {
 :root[data-theme='light'] .term-dir { color: #0369a1; }
 :root[data-theme='light'] .term-violet { color: #6d28d9; }
 
+.term-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+.term-cursor {
+  border-radius: 1px;
+  background: var(--color-ink-strong);
+  color: var(--color-surface);
+}
+.term-cursor[data-state='on'] {
+  animation: term-blink 1.1s step-end infinite;
+}
+.term-cursor[data-state='off'] {
+  background: transparent;
+  color: inherit;
+  box-shadow: inset 0 0 0 1px var(--color-ink-muted);
+}
+@keyframes term-blink {
+  50% {
+    background: transparent;
+    color: var(--color-ink-strong);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .term-cursor[data-state='on'] { animation: none; }
+}
+
 .login-aurora {
   background-color: #08060c;
   background-image:

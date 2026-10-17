@@ -629,7 +629,7 @@ export const COMMANDS = {
       if (args[0]) return helpFor(args[0])
       const visible = Object.entries(COMMANDS).filter(([, command]) => !command.hidden)
       const width = widest(visible.map(([name]) => name)) + 3
-      const lines = [[strong(`${SHELL} ${SHELL_VERSION}`), dim(' — Tab completes, ↑ ↓ walks history, Ctrl+L clears')]]
+      const lines = [[strong(`${SHELL} ${SHELL_VERSION}`), dim(' — Tab completes, ↑ ↓ walks history, Ctrl+R searches it, Ctrl+L clears')]]
       for (const group of GROUPS) {
         const inGroup = visible.filter(([, command]) => command.group === group)
         if (!inGroup.length) continue
@@ -1551,8 +1551,7 @@ export function welcomeLines(lastLogin) {
     BLANK,
     [`Welcome to ${SHELL} ${SHELL_VERSION}, the terminal for blxr.net.`],
     [dim('type '), run('help'), dim(' for the commands, or try '), ...joinParts([run('about'), run('projects'), run('contact'), run('neofetch')])],
+    [run('exit'), dim(' takes you back to the site')],
     lastLogin ? [dim(`Last login: ${lastLogin} on ttys000`)] : [dim('first time in here. welcome')],
   ]
 }
-
-export const SUGGESTIONS = ['help', 'about', 'projects', 'skills', 'contact', 'neofetch']

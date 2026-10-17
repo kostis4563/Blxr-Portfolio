@@ -1,8 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import ThemeToggle from './components/theme-toggle'
-import { CommandButton } from './components/command-button'
 import { link, navigate, HOME_PATH } from './lib/router'
-import { execute, complete, expandHistory, welcomeLines, SUGGESTIONS, USER, HOST, SHELL } from './lib/terminal'
+import { execute, complete, expandHistory, welcomeLines, USER, HOST, SHELL } from './lib/terminal'
 import { fetchSpotifyNow, sampleNow } from './lib/listening'
 import { athensTemp } from './lib/weather'
 import { openPalette } from './lib/palette'
@@ -23,8 +21,6 @@ const HISTORY_KEY = 'blxr:terminal-history'
 const LOGIN_KEY = 'blxr:terminal-login'
 const HISTORY_MAX = 100
 const NAV_DELAY_MS = 450
-
-const FOCUS = 'outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/50'
 
 const TONES = {
   dim: 'text-ink-faint',
@@ -95,6 +91,14 @@ const loginStamp = (date) =>
 
 const finePointer = () => Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches)
 
+function findMatch(history, query, before) {
+  if (!query) return -1
+  for (let i = Math.min(before, history.length) - 1; i >= 0; i--) {
+    if (history[i].includes(query)) return i
+  }
+  return -1
+}
+
 function Prompt() {
   return (
     <span aria-hidden="true" className="select-none">
@@ -149,8 +153,31 @@ function Line({ line, onRun }) {
   const parts = Array.isArray(line) ? line : line?.parts ?? []
   return (
     <div className={pre ? 'whitespace-pre' : 'whitespace-pre-wrap break-words'}>
-      {parts.length ? parts.map((part, i) => <Part key={i} part={part} onRun={onRun} />) : ' '}
+      {parts.length ? parts.map((part, i) => <Part key={i} part={part} onRun={onRun} />) : ' '}
     </div>
+  )
+}
+
+function Typed({ value, start, end, focused }) {
+  const from = Math.min(start, value.length)
+  const to = Math.min(end, value.length)
+  if (from !== to) {
+    return (
+      <>
+        {value.slice(0, from)}
+        <span className="bg-selection">{value.slice(from, to)}</span>
+        {value.slice(to)}
+      </>
+    )
+  }
+  return (
+    <>
+      {value.slice(0, from)}
+      <span key={`${value.length}:${from}`} className="term-cursor" data-state={focused ? 'on' : 'off'}>
+        {value[from] ?? ' '}
+      </span>
+      {value.slice(from + 1)}
+    </>
   )
 }
 
@@ -160,18 +187,34 @@ export default function TerminalPage({ theme, onToggleTheme }) {
   const [lastLogin, setLastLogin] = useState(null)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
+  const [ended, setEnded] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [caret, setCaret] = useState({ start: 0, end: 0 })
+  const [search, setSearch] = useState(null)
 
+  const rootRef = useRef(null)
   const inputRef = useRef(null)
   const scrollerRef = useRef(null)
   const measureRef = useRef(null)
   const historyRef = useRef([])
-  const cursorRef = useRef(null)
+  const browseRef = useRef(null)
   const draftRef = useRef('')
   const seqRef = useRef(0)
   const runningRef = useRef(null)
   const startedAtRef = useRef(0)
   const columnsRef = useRef(80)
-  const caretToEndRef = useRef(false)
+  const pendingCaretRef = useRef(null)
+
+  const value = search ? search.query : input
+  const searching = search !== null
+
+  const syncCaret = () => {
+    const el = inputRef.current
+    if (!el) return
+    const start = el.selectionStart ?? 0
+    const end = el.selectionEnd ?? start
+    setCaret((prev) => (prev.start === start && prev.end === end ? prev : { start, end }))
+  }
 
   useEffect(() => {
     startedAtRef.current = Date.now()
@@ -182,6 +225,37 @@ export default function TerminalPage({ theme, onToggleTheme }) {
     if (previousDate && !Number.isNaN(previousDate.getTime())) setLastLogin(loginStamp(previousDate))
     writeStored(LOGIN_KEY, new Date().toISOString())
     if (finePointer()) inputRef.current?.focus({ preventScroll: true })
+  }, [])
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1) return
+      const el = document.activeElement
+      if (!inputRef.current || el === inputRef.current) return
+      if (el && (el.isContentEditable || el.closest('input, textarea, select, [role="dialog"]'))) return
+      if (event.key === ' ' && el?.closest('button, a')) return
+      inputRef.current.focus({ preventScroll: true })
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  useEffect(() => {
+    const viewport = window.visualViewport
+    const root = rootRef.current
+    if (!viewport || !root) return
+    const update = () => {
+      if (Math.abs(viewport.scale - 1) > 0.01) return
+      root.style.setProperty('--term-vh', `${viewport.height}px`)
+      root.style.setProperty('--term-vt', `${viewport.offsetTop}px`)
+    }
+    update()
+    viewport.addEventListener('resize', update)
+    viewport.addEventListener('scroll', update)
+    return () => {
+      viewport.removeEventListener('resize', update)
+      viewport.removeEventListener('scroll', update)
+    }
   }, [])
 
   useEffect(() => {
@@ -204,14 +278,35 @@ export default function TerminalPage({ theme, onToggleTheme }) {
   useLayoutEffect(() => {
     const scroller = scrollerRef.current
     if (scroller) scroller.scrollTop = scroller.scrollHeight
-  }, [entries, showWelcome])
+  }, [entries, showWelcome, value, busy])
 
   useLayoutEffect(() => {
-    if (!caretToEndRef.current) return
-    caretToEndRef.current = false
     const el = inputRef.current
-    if (el) el.setSelectionRange(el.value.length, el.value.length)
-  }, [input])
+    if (!el) return
+    const pending = pendingCaretRef.current
+    if (pending !== null) {
+      pendingCaretRef.current = null
+      const pos = pending === 'end' ? el.value.length : Math.min(pending, el.value.length)
+      el.setSelectionRange(pos, pos)
+    }
+    syncCaret()
+  }, [value, searching])
+
+  const moveCaret = (pos) => {
+    const el = inputRef.current
+    if (!el) return
+    el.setSelectionRange(pos, pos)
+    syncCaret()
+  }
+
+  const setLine = (next, caretAt = 'end') => {
+    if (next === input) {
+      moveCaret(caretAt === 'end' ? next.length : caretAt)
+      return
+    }
+    pendingCaretRef.current = caretAt
+    setInput(next)
+  }
 
   const pushHistory = (command) => {
     const list = historyRef.current
@@ -274,28 +369,28 @@ export default function TerminalPage({ theme, onToggleTheme }) {
   })
 
   const submit = async (raw) => {
-    if (runningRef.current) return
-    const id = ++seqRef.current
-    cursorRef.current = null
+    if (runningRef.current || ended) return
+    const seq = ++seqRef.current
+    browseRef.current = null
     draftRef.current = ''
     setInput('')
 
     const expanded = expandHistory(raw, historyRef.current)
     if (expanded === null) {
-      append({ id, input: raw, lines: [[{ text: `${SHELL}: event not found`, tone: 'err' }]] })
+      append({ id: seq, input: raw, lines: [[{ text: `${SHELL}: event not found`, tone: 'err' }]] })
       return
     }
     const command = expanded.trim()
     if (!command) {
-      append({ id, input: raw, lines: [] })
+      append({ id: seq, input: raw, lines: [] })
       return
     }
     pushHistory(command)
 
     let cleared = false
     const echo = expanded !== raw ? [[{ text: command, tone: 'dim' }]] : []
-    append({ id, input: raw, lines: echo, pending: true })
-    runningRef.current = id
+    append({ id: seq, input: raw, lines: echo })
+    runningRef.current = seq
     setBusy(true)
 
     let lines
@@ -304,89 +399,181 @@ export default function TerminalPage({ theme, onToggleTheme }) {
     } catch {
       lines = [[{ text: `${SHELL}: something broke in there`, tone: 'err' }]]
     }
-    if (runningRef.current !== id) return
+    if (runningRef.current !== seq) return
     runningRef.current = null
     setBusy(false)
 
-    const done = { id, input: raw, lines: [...echo, ...lines], pending: false }
+    const done = { id: seq, input: raw, lines: [...echo, ...lines] }
     if (cleared) {
       setShowWelcome(false)
       setEntries(lines.length ? [done] : [])
       return
     }
-    setEntries((prev) => prev.map((entry) => (entry.id === id ? done : entry)))
+    setEntries((prev) => prev.map((entry) => (entry.id === seq ? done : entry)))
+  }
+
+  const matchOf = (state) => (state && state.index >= 0 ? historyRef.current[state.index] ?? '' : '')
+
+  const startSearch = () => {
+    draftRef.current = input
+    browseRef.current = null
+    pendingCaretRef.current = 0
+    setSearch({ query: '', index: -1, failed: false })
+  }
+
+  const updateSearch = (query) => {
+    const index = findMatch(historyRef.current, query, historyRef.current.length)
+    setSearch({ query, index, failed: index === -1 && Boolean(query) })
+  }
+
+  const searchOlder = () => {
+    setSearch((prev) => {
+      if (!prev) return prev
+      const from = prev.index >= 0 ? prev.index : historyRef.current.length
+      const index = findMatch(historyRef.current, prev.query, from)
+      return index === -1 ? { ...prev, failed: Boolean(prev.query) } : { ...prev, index, failed: false }
+    })
+  }
+
+  const acceptSearch = () => {
+    const line = search.index >= 0 ? matchOf(search) : draftRef.current
+    pendingCaretRef.current = 'end'
+    setSearch(null)
+    setInput(line)
+  }
+
+  const cancelSearch = () => {
+    pendingCaretRef.current = 'end'
+    setSearch(null)
+    setInput(draftRef.current)
+  }
+
+  const runSearch = () => {
+    const line = search.index >= 0 ? matchOf(search) : draftRef.current
+    setSearch(null)
+    submit(line)
   }
 
   const interrupt = () => {
+    if (search) {
+      cancelSearch()
+      return
+    }
     const running = runningRef.current
     if (running) {
       runningRef.current = null
       setBusy(false)
       setEntries((prev) =>
-        prev.map((entry) => (entry.id === running ? { ...entry, pending: false, lines: [...entry.lines, [{ text: '^C', tone: 'dim' }]] } : entry)),
+        prev.map((entry) => (entry.id === running ? { ...entry, lines: [...entry.lines, [{ text: '^C', tone: 'dim' }]] } : entry)),
       )
       return
     }
     append({ id: ++seqRef.current, input: `${input}^C`, lines: [] })
     setInput('')
-    cursorRef.current = null
+    browseRef.current = null
+  }
+
+  const logout = () => {
+    append({ id: ++seqRef.current, input: '', lines: [[{ text: 'logout', tone: 'dim' }], [{ text: '[Process completed]', tone: 'dim' }]] })
+    setEnded(true)
+    setTimeout(() => navigate(HOME_PATH), NAV_DELAY_MS)
   }
 
   const browse = (step) => {
     const list = historyRef.current
     if (!list.length) return
-    if (cursorRef.current === null) {
+    if (browseRef.current === null) {
       if (step > 0) return
       draftRef.current = input
-      cursorRef.current = list.length
+      browseRef.current = list.length
     }
-    const next = Math.min(list.length, Math.max(0, cursorRef.current + step))
-    caretToEndRef.current = true
+    const next = Math.min(list.length, Math.max(0, browseRef.current + step))
     if (next === list.length) {
-      cursorRef.current = null
-      setInput(draftRef.current)
+      browseRef.current = null
+      setLine(draftRef.current)
     } else {
-      cursorRef.current = next
-      setInput(list[next])
+      browseRef.current = next
+      setLine(list[next])
+    }
+  }
+
+  const completeInput = () => {
+    const result = complete(input, context(() => {}))
+    if (result.options.length) {
+      append({ id: ++seqRef.current, input, lines: [[{ text: result.options.join('  '), tone: 'muted' }]] })
+    }
+    setLine(result.value)
+  }
+
+  const onSearchKey = (event, ctrl, lower) => {
+    const key = event.key
+    if (key === 'Enter') {
+      event.preventDefault()
+      runSearch()
+    } else if (ctrl && lower === 'r') {
+      event.preventDefault()
+      searchOlder()
+    } else if (key === 'Escape' || (ctrl && (lower === 'g' || lower === 'c'))) {
+      event.preventDefault()
+      cancelSearch()
+    } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key) || (key === 'Tab' && !event.shiftKey)) {
+      event.preventDefault()
+      acceptSearch()
+    } else {
+      requestAnimationFrame(syncCaret)
     }
   }
 
   const onKeyDown = (event) => {
     const key = event.key
-    if (key === 'Tab') {
+    const ctrl = event.ctrlKey && !event.metaKey && !event.altKey
+    const lower = key.toLowerCase()
+    if (search) {
+      onSearchKey(event, ctrl, lower)
+      return
+    }
+    const el = event.currentTarget
+    const at = el.selectionStart ?? input.length
+    if (key === 'Tab' && !event.shiftKey) {
       event.preventDefault()
-      const result = complete(input, context(() => {}))
-      if (result.options.length) {
-        append({ id: ++seqRef.current, input, lines: [[{ text: result.options.join('  '), tone: 'muted' }]] })
-      }
-      caretToEndRef.current = true
-      setInput(result.value)
+      completeInput()
     } else if (key === 'ArrowUp') {
       event.preventDefault()
       browse(-1)
     } else if (key === 'ArrowDown') {
       event.preventDefault()
       browse(1)
-    } else if (event.ctrlKey && !event.metaKey && !event.altKey) {
-      const lower = key.toLowerCase()
-      if (lower === 'l') {
-        event.preventDefault()
-        clearScreen()
-      } else if (lower === 'c') {
-        const el = event.currentTarget
-        const selecting = el.selectionStart !== el.selectionEnd || Boolean(window.getSelection?.()?.toString())
-        if (selecting) return
-        event.preventDefault()
-        interrupt()
-      } else if (lower === 'u') {
-        event.preventDefault()
-        setInput('')
-      }
+    } else if (ctrl && lower === 'c') {
+      const selecting = el.selectionStart !== el.selectionEnd || Boolean(window.getSelection?.()?.toString())
+      if (selecting) return
+      event.preventDefault()
+      interrupt()
+    } else if (ctrl && ['l', 'u', 'w', 'a', 'e', 'r', 'd'].includes(lower)) {
+      event.preventDefault()
+      if (lower === 'l') clearScreen()
+      else if (lower === 'u') setLine(input.slice(at), 0)
+      else if (lower === 'w') {
+        const head = input.slice(0, at).replace(/\S*\s*$/, '')
+        setLine(head + input.slice(at), head.length)
+      } else if (lower === 'a') moveCaret(0)
+      else if (lower === 'e') moveCaret(input.length)
+      else if (lower === 'r') startSearch()
+      else if (!input) logout()
+      else if (at < input.length) setLine(input.slice(0, at) + input.slice(at + 1), at)
+    } else {
+      requestAnimationFrame(syncCaret)
     }
   }
 
+  const onChange = (event) => {
+    if (search) updateSearch(event.target.value)
+    else setInput(event.target.value)
+    syncCaret()
+  }
+
   const runFromClick = (command) => {
-    if (runningRef.current) return
+    if (runningRef.current || ended) return
+    if (search) setSearch(null)
     submit(command)
     if (finePointer()) inputRef.current?.focus({ preventScroll: true })
   }
@@ -398,124 +585,113 @@ export default function TerminalPage({ theme, onToggleTheme }) {
   }
 
   return (
-    <div className="min-h-screen bg-bg text-ink flex flex-col selection:bg-selection selection:text-ink-strong relative overflow-x-hidden antialiased font-sans animate-view-in">
-      <header className="w-full max-w-[960px] bg-bg/90 backdrop-blur-md text-ink h-14 fixed left-1/2 -translate-x-1/2 z-40 frame-bleed-b border-b border-x border-dashed border-line top-0 flex items-center px-6 sm:px-10">
-        <div className="w-full flex items-center justify-between">
-          <a
-            {...link(HOME_PATH)}
-            className="group inline-flex items-center gap-2 text-[13px] font-medium text-ink-muted hover:text-ink-strong transition-colors duration-200 cursor-pointer"
-          >
-            <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:-translate-x-0.5">←</span>
-            <span>Back to Home</span>
-          </a>
-          <div className="flex items-center gap-4">
-            <CommandButton className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-strong transition-colors duration-200" />
-            <ThemeToggle
-              theme={theme}
-              onToggle={onToggleTheme}
-              className="text-ink-muted hover:text-ink-strong transition-colors duration-200"
-            />
-          </div>
-        </div>
-      </header>
+    <div
+      ref={rootRef}
+      className="fixed inset-x-0 top-0 bg-bg text-ink antialiased selection:bg-selection selection:text-ink-strong"
+      style={{ height: 'var(--term-vh, 100dvh)', transform: 'translateY(var(--term-vt, 0px))' }}
+    >
+      <h1 className="sr-only">Terminal</h1>
 
-      <main className="w-full max-w-[960px] mx-auto flex flex-col items-center min-h-screen pt-14 border-x border-dashed border-line bg-bg px-4 sm:px-6">
-        <div className="w-full max-w-[760px] pt-14 pb-16 sm:pt-20">
-          <h1 className="font-bagus text-[28px] leading-none text-ink-strong">Terminal</h1>
-          <p className="mt-3 max-w-[54ch] text-[14px] leading-relaxed text-ink-subtle">
-            The site as a shell. It is optional: everything in here is one click away on the normal pages, so type{' '}
-            <span className="font-mono text-ink-muted">help</span> only if you feel like it.
-          </p>
+      <a
+        {...link(HOME_PATH)}
+        aria-label="Back to the site"
+        className="group absolute right-5 top-2.5 z-10 inline-flex h-7 items-center gap-1.5 rounded-md bg-bg/85 px-2 font-mono text-[12px] text-ink-faint outline-none backdrop-blur-sm transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-1 focus-visible:ring-ink-strong/40 sm:right-7 sm:top-3.5"
+      >
+        <span aria-hidden="true" className="inline-block transition-transform duration-200 group-hover:-translate-x-0.5">
+          ←
+        </span>
+        <span>back</span>
+      </a>
 
-          <section aria-label="Terminal" className="mt-8 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_24px_60px_-32px_rgb(0_0_0/0.55)]">
-            <div className="flex h-9 items-center border-b border-line bg-surface-raised px-3.5">
-              <span aria-hidden="true" className="flex w-12 gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-                <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-                <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-              </span>
-              <span className="flex-1 truncate text-center font-mono text-[11px] text-ink-subtle">{`${USER}@${HOST}: ~ — ${SHELL}`}</span>
-              <span aria-hidden="true" className="w-12 text-right font-mono text-[10.5px] text-ink-faint">{busy ? 'busy' : ''}</span>
-            </div>
+      <section
+        ref={scrollerRef}
+        aria-label="Terminal"
+        onClick={focusInput}
+        className="term-scroll relative h-full overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-3 font-mono text-[12.5px] leading-[1.6] text-ink-secondary sm:px-6 sm:py-4 sm:text-[13px] xl:text-[13.5px]"
+      >
+        <span ref={measureRef} aria-hidden="true" className="invisible absolute left-0 top-0 whitespace-pre">
+          0000000000
+        </span>
 
-            <div
-              ref={scrollerRef}
-              onClick={focusInput}
-              className="relative h-[min(68vh,620px)] min-h-[360px] overflow-auto overscroll-contain px-4 py-3.5 font-mono text-[12.5px] leading-[1.65] text-ink-secondary sm:px-5 sm:text-[13px]"
-            >
-              <span ref={measureRef} aria-hidden="true" className="invisible absolute left-0 top-0 whitespace-pre">
-                0000000000
-              </span>
-
-              <div role="log" aria-live="polite" aria-label="Terminal output">
-                {showWelcome && (
-                  <div className="mb-3">
-                    {welcomeLines(lastLogin).map((line, i) => (
-                      <Line key={i} line={line} onRun={runFromClick} />
-                    ))}
-                  </div>
-                )}
-                {entries.map((entry) => (
-                  <div key={entry.id} className="mb-2">
-                    {entry.input !== null && (
-                      <div className="whitespace-pre-wrap break-words">
-                        <Prompt />
-                        <span className="text-ink-strong">{entry.input}</span>
-                      </div>
-                    )}
-                    {entry.lines.map((line, i) => (
-                      <Line key={i} line={line} onRun={runFromClick} />
-                    ))}
-                    {entry.pending && <div className="text-ink-faint motion-safe:animate-pulse">…</div>}
-                  </div>
-                ))}
-              </div>
-
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  submit(input)
-                }}
-                className="flex items-baseline"
-              >
-                <label htmlFor="terminal-input" className="sr-only">
-                  Command
-                </label>
-                <Prompt />
-                <input
-                  id="terminal-input"
-                  ref={inputRef}
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  onKeyDown={onKeyDown}
-                  autoComplete="off"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  enterKeyHint="send"
-                  className="min-w-0 flex-1 bg-transparent p-0 font-mono text-[16px] text-ink-strong caret-emerald-400 outline-none sm:text-[13px]"
-                />
-              </form>
-            </div>
-          </section>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-1.5" aria-label="Try a command">
-              {SUGGESTIONS.map((command) => (
-                <button
-                  key={command}
-                  type="button"
-                  onClick={() => runFromClick(command)}
-                  className={`h-7 cursor-pointer rounded-md border border-line bg-surface px-2.5 font-mono text-[11.5px] text-ink-muted transition-colors duration-200 hover:border-line-strong hover:text-ink-strong ${FOCUS}`}
-                >
-                  {command}
-                </button>
+        <div role="log" aria-live="polite" aria-label="Terminal output">
+          {showWelcome && (
+            <div className="mb-3">
+              {welcomeLines(lastLogin).map((line, i) => (
+                <Line key={i} line={line} onRun={runFromClick} />
               ))}
             </div>
-            <p className="hidden font-mono text-[11px] text-ink-faint sm:block">Tab completes · ↑ ↓ history · Ctrl+L clears</p>
-          </div>
+          )}
+          {entries.map((entry) => (
+            <div key={entry.id} className="mb-2">
+              <div className="whitespace-pre-wrap break-words">
+                <Prompt />
+                <span className="text-ink-strong">{entry.input}</span>
+              </div>
+              {entry.lines.map((line, i) => (
+                <Line key={i} line={line} onRun={runFromClick} />
+              ))}
+            </div>
+          ))}
         </div>
-      </main>
+
+        {!ended && (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (search) runSearch()
+              else submit(input)
+            }}
+            className="relative whitespace-pre-wrap break-all"
+          >
+            <label htmlFor="terminal-input" className="sr-only">
+              Command
+            </label>
+            <span aria-hidden="true">
+              {search ? (
+                <>
+                  <span className={search.failed ? 'text-red-400' : 'text-ink-faint'}>
+                    {search.failed ? '(failed reverse-i-search)' : '(reverse-i-search)'}
+                  </span>
+                  <span className="text-ink-faint">`</span>
+                  <span className="text-ink-strong">
+                    <Typed value={value} start={caret.start} end={caret.end} focused={focused} />
+                  </span>
+                  <span className="text-ink-faint">{"': "}</span>
+                  <span className="text-ink-strong">{matchOf(search)}</span>
+                </>
+              ) : (
+                <>
+                  {!busy && <Prompt />}
+                  <span className="text-ink-strong">
+                    <Typed value={value} start={caret.start} end={caret.end} focused={focused} />
+                  </span>
+                </>
+              )}
+            </span>
+            <input
+              id="terminal-input"
+              ref={inputRef}
+              value={value}
+              onChange={onChange}
+              onKeyDown={onKeyDown}
+              onKeyUp={syncCaret}
+              onSelect={syncCaret}
+              onClick={() => moveCaret(value.length)}
+              onFocus={() => {
+                setFocused(true)
+                syncCaret()
+              }}
+              onBlur={() => setFocused(false)}
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="send"
+              className="absolute inset-0 h-full w-full cursor-text appearance-none border-0 bg-transparent p-0 text-[16px] opacity-0 outline-none"
+            />
+          </form>
+        )}
+      </section>
     </div>
   )
 }
