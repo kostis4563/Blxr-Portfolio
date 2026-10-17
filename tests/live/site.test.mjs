@@ -11,7 +11,9 @@ const BASE = (process.env.LIVE_URL || 'https://blxr.net').replace(/\/$/, '')
 const HOST = new URL(BASE).hostname
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
-const get = (p, init = {}) => fetch(p.startsWith('http') ? p : BASE + p, { redirect: 'manual', ...init, signal: AbortSignal.timeout(15_000) })
+const SCAN_HEADERS = process.env.BLXR_SCAN_TOKEN ? { 'x-blxr-scan': process.env.BLXR_SCAN_TOKEN } : {}
+
+const get = (p, init = {}) => fetch(p.startsWith('http') ? p : BASE + p, { redirect: 'manual', ...init, headers: { ...SCAN_HEADERS, ...init.headers }, signal: AbortSignal.timeout(15_000) })
 
 const SECURITY_HEADERS = ['strict-transport-security', 'content-security-policy', 'x-frame-options', 'x-content-type-options', 'referrer-policy', 'permissions-policy', 'cross-origin-opener-policy']
 

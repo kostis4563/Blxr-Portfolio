@@ -126,8 +126,8 @@ describe('blog: posts', () => {
 
 describe('blog: deploy status', () => {
   const sha = 'a'.repeat(40)
-  const state = async (runs) => {
-    await srv.scenario({ blogFiles: SEED, blogRuns: { [sha]: runs } })
+  const state = async (runs, blogJobs) => {
+    await srv.scenario({ blogFiles: SEED, blogRuns: { [sha]: runs }, blogJobs })
     return (await srv.request(`/api/blog/deploy?sha=${sha}`, { headers: OWNER() })).body
   }
 
@@ -138,6 +138,29 @@ describe('blog: deploy status', () => {
     assert.deepEqual(await state([{ event: 'push', status: 'in_progress', html_url: url }]), { state: 'building', url })
     assert.deepEqual(await state([{ event: 'push', status: 'completed', conclusion: 'success', html_url: url }]), { state: 'live', url })
     assert.deepEqual(await state([{ event: 'push', status: 'completed', conclusion: 'failure', html_url: url }]), { state: 'failed', url })
+    await srv.scenario({ blogFiles: SEED })
+  })
+
+  test('only follows the Deploy workflow, not the CI or security runs on the same commit', async () => {
+    const url = 'https://github.com/octo/site/actions/runs/7'
+    const others = [
+      { path: '.github/workflows/ci.yml', event: 'push', status: 'completed', conclusion: 'success', html_url: 'https://github.com/octo/site/actions/runs/5' },
+      { path: '.github/workflows/security.yml', event: 'push', status: 'completed', conclusion: 'failure', html_url: 'https://github.com/octo/site/actions/runs/6' },
+    ]
+    assert.deepEqual(await state([...others, { path: '.github/workflows/deploy.yml', event: 'push', status: 'in_progress', html_url: url }]), { state: 'building', url })
+    assert.deepEqual(await state(others), { state: 'queued', url: null })
+    await srv.scenario({ blogFiles: SEED })
+  })
+
+  test('is live once the deploy job succeeds, whatever the after-deploy checks say', async () => {
+    const url = 'https://github.com/octo/site/actions/runs/9'
+    const run = (status, conclusion) => [{ id: 9, path: '.github/workflows/deploy.yml', event: 'push', status, conclusion, html_url: url }]
+    const jobs = (deploy, liveScan) => ({ 9: [{ name: 'deploy', ...deploy }, { name: 'live-scan', ...liveScan }] })
+    assert.deepEqual(await state(run('in_progress'), jobs({ status: 'in_progress' }, { status: 'queued' })), { state: 'building', url })
+    assert.deepEqual(await state(run('in_progress'), jobs({ status: 'completed', conclusion: 'success' }, { status: 'in_progress' })), { state: 'live', url })
+    assert.deepEqual(await state(run('completed', 'failure'), jobs({ status: 'completed', conclusion: 'success' }, { status: 'completed', conclusion: 'failure' })), { state: 'live', url })
+    assert.deepEqual(await state(run('completed', 'failure'), jobs({ status: 'completed', conclusion: 'failure' }, { status: 'completed', conclusion: 'skipped' })), { state: 'failed', url })
+    assert.deepEqual(await state(run('completed', 'success')), { state: 'live', url })
     await srv.scenario({ blogFiles: SEED })
   })
 

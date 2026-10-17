@@ -200,10 +200,16 @@ function blogRepo(url, init, s) {
     repo.head = body.sha
     return reply(200, { object: { sha: repo.head } })
   }
-  if (rest === 'actions/runs') {
+  const workflowRuns = /^actions\/workflows\/([\w.-]+)\/runs$/.exec(rest)
+  if (workflowRuns) {
     const sha = url.searchParams.get('head_sha')
-    const runs = s.blogRuns?.[sha] || []
+    const runs = (s.blogRuns?.[sha] || []).filter((r) => (r.path || '.github/workflows/deploy.yml') === `.github/workflows/${workflowRuns[1]}`)
     return reply(200, { workflow_runs: runs })
+  }
+  const runJobs = /^actions\/runs\/(\d+)\/jobs$/.exec(rest)
+  if (runJobs) {
+    const jobs = s.blogJobs?.[runJobs[1]]
+    return jobs ? reply(200, { jobs }) : reply(404, { message: 'Not Found' })
   }
   return reply(404, { message: 'Not Found' })
 }

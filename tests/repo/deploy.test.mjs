@@ -123,6 +123,21 @@ describe('deploy.sh', () => {
     assert.ok(at('npm test') > at('npm ci'), 'tests run after install')
     assert.ok(at('deploy/deploy.sh') > at('npm test'), 'deploy only after tests pass')
   })
+
+  test('the blog dashboard follows a deploy workflow and job that exist', async () => {
+    const src = await read('server/src/server.mjs')
+    const workflow = /const BLOG_DEPLOY_WORKFLOW = '([^']+)'/.exec(src)[1]
+    const job = /const BLOG_DEPLOY_JOB = '([^']+)'/.exec(src)[1]
+    assert.match(await read(`.github/workflows/${workflow}`), new RegExp(`^  ${job}:$`, 'm'))
+  })
+
+  test('the live smoke test runs after the deploy and its failures are not hidden', async () => {
+    const wf = await read('.github/workflows/deploy.yml')
+    const liveScan = wf.slice(wf.indexOf('\n  live-scan:'))
+    assert.match(liveScan, /needs: deploy/)
+    assert.match(liveScan, /npm run test:live/)
+    assert.doesNotMatch(wf, /continue-on-error/)
+  })
 })
 
 describe('log levels match what actually went wrong', () => {

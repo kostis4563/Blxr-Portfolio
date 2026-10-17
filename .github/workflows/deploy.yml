@@ -56,10 +56,6 @@ jobs:
 
       - run: sudo bash "$GITHUB_WORKSPACE/deploy/deploy.sh"
 
-      - name: Smoke-test the live site
-        run: npm run test:live
-        continue-on-error: true
-
   live-scan:
     needs: deploy
     runs-on: ubuntu-latest
@@ -69,8 +65,22 @@ jobs:
     env:
       SCAN_TOKEN: ${{ secrets.BLXR_SCAN_TOKEN }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: lts/*
+          package-manager-cache: false
+
+      - name: Smoke-test the live site
+        env:
+          BLXR_SCAN_TOKEN: ${{ env.SCAN_TOKEN }}
+        run: npm run test:live
+
       - name: ZAP baseline scan of the live site
-        if: env.SCAN_TOKEN != ''
+        if: env.SCAN_TOKEN != '' && !cancelled()
         uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25
         env:
           ZAP_AUTH_HEADER: X-Blxr-Scan

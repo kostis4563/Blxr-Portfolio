@@ -2508,17 +2508,31 @@ function blogImages(list) {
   return { files }
 }
 
-async function blogDeployState(sha) {
-  const { status, data } = await blogGh(`actions/runs?head_sha=${sha}&per_page=5`).catch((err) => {
+const BLOG_DEPLOY_WORKFLOW = 'deploy.yml'
+const BLOG_DEPLOY_JOB = 'deploy'
+
+const blogGhSoft = (pathname) =>
+  blogGh(pathname).catch((err) => {
     if (err instanceof BlogError && err.code !== 'rate_limited') return { status: 0, data: null }
     throw err
   })
+
+async function blogDeployJob(run) {
+  if (run.status === 'queued' || !Number.isInteger(run.id)) return null
+  const { status, data } = await blogGhSoft(`actions/runs/${run.id}/jobs?per_page=20`)
+  if (status !== 200 || !Array.isArray(data?.jobs)) return null
+  return data.jobs.find((j) => j?.name === BLOG_DEPLOY_JOB) || null
+}
+
+async function blogDeployState(sha) {
+  const { status, data } = await blogGhSoft(`actions/workflows/${BLOG_DEPLOY_WORKFLOW}/runs?head_sha=${sha}&per_page=5`)
   if (status !== 200 || !Array.isArray(data?.workflow_runs)) return { state: 'unknown', url: null }
   const run = data.workflow_runs.find((r) => r?.event === 'push') || data.workflow_runs[0]
   if (!run) return { state: 'queued', url: null }
   const url = typeof run.html_url === 'string' ? run.html_url : null
-  if (run.status !== 'completed') return { state: run.status === 'in_progress' ? 'building' : 'queued', url }
-  return { state: run.conclusion === 'success' ? 'live' : 'failed', url }
+  const { status: progress, conclusion } = (await blogDeployJob(run)) || run
+  if (progress !== 'completed') return { state: progress === 'in_progress' ? 'building' : 'queued', url }
+  return { state: conclusion === 'success' ? 'live' : 'failed', url }
 }
 
 const EXPECTED_OFF = /^(?:[a-z]+_)?(?:disabled|paused)$|^warming$/
