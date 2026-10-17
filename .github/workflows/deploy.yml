@@ -5,10 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-concurrency:
-  group: blxr-deploy
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
@@ -16,10 +12,14 @@ jobs:
   deploy:
     runs-on: [self-hosted, blxr-deploy]
     timeout-minutes: 15
+    concurrency:
+      group: blxr-deploy
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - run: npm ci
 
@@ -42,18 +42,40 @@ jobs:
           ICLOUD_APP_PASSWORD_VALUE: ${{ secrets.BLXR_ICLOUD_APP_PASSWORD }}
           BOOKING_VIDEO_URL_VALUE: ${{ secrets.BLXR_BOOKING_VIDEO_URL }}
         run: |
-          printf 'GITHUB_TOKEN=%s\n' "$GITHUB_TOKEN_VALUE" > "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'DISCORD_BOT_TOKEN=%s\n' "$DISCORD_BOT_TOKEN_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'BLOG_GITHUB_TOKEN=%s\n' "$BLOG_GITHUB_TOKEN_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'SPOTIFY_CLIENT_ID=%s\n' "$SPOTIFY_CLIENT_ID_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'SPOTIFY_CLIENT_SECRET=%s\n' "$SPOTIFY_CLIENT_SECRET_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'SPOTIFY_REFRESH_TOKEN=%s\n' "$SPOTIFY_REFRESH_TOKEN_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'ICLOUD_EMAIL=%s\n' "$ICLOUD_EMAIL_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'ICLOUD_APP_PASSWORD=%s\n' "$ICLOUD_APP_PASSWORD_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
-          printf 'BOOKING_VIDEO_URL=%s\n' "$BOOKING_VIDEO_URL_VALUE" >> "$GITHUB_WORKSPACE/deploy/.env-overrides"
+          {
+            printf 'GITHUB_TOKEN=%s\n' "$GITHUB_TOKEN_VALUE"
+            printf 'DISCORD_BOT_TOKEN=%s\n' "$DISCORD_BOT_TOKEN_VALUE"
+            printf 'BLOG_GITHUB_TOKEN=%s\n' "$BLOG_GITHUB_TOKEN_VALUE"
+            printf 'SPOTIFY_CLIENT_ID=%s\n' "$SPOTIFY_CLIENT_ID_VALUE"
+            printf 'SPOTIFY_CLIENT_SECRET=%s\n' "$SPOTIFY_CLIENT_SECRET_VALUE"
+            printf 'SPOTIFY_REFRESH_TOKEN=%s\n' "$SPOTIFY_REFRESH_TOKEN_VALUE"
+            printf 'ICLOUD_EMAIL=%s\n' "$ICLOUD_EMAIL_VALUE"
+            printf 'ICLOUD_APP_PASSWORD=%s\n' "$ICLOUD_APP_PASSWORD_VALUE"
+            printf 'BOOKING_VIDEO_URL=%s\n' "$BOOKING_VIDEO_URL_VALUE"
+          } > "$GITHUB_WORKSPACE/deploy/.env-overrides"
 
       - run: sudo bash "$GITHUB_WORKSPACE/deploy/deploy.sh"
 
       - name: Smoke-test the live site
         run: npm run test:live
         continue-on-error: true
+
+  live-scan:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      SCAN_TOKEN: ${{ secrets.BLXR_SCAN_TOKEN }}
+    steps:
+      - name: ZAP baseline scan of the live site
+        if: env.SCAN_TOKEN != ''
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25
+        env:
+          ZAP_AUTH_HEADER: X-Blxr-Scan
+          ZAP_AUTH_HEADER_VALUE: ${{ env.SCAN_TOKEN }}
+          ZAP_AUTH_HEADER_SITE: blxr.net
+        with:
+          target: https://blxr.net
+          allow_issue_writing: false
