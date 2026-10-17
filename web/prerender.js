@@ -133,8 +133,8 @@ const git = (...args) =>
 async function gitDate(files) {
   try {
     if ((await git('rev-parse', '--is-shallow-repository')) === 'true') return null
-    const date = await git('log', '-1', '--format=%cs', '--', ...files)
-    return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null
+    const seconds = Number(await git('log', '-1', '--format=%ct', '--', ...files))
+    return seconds > 0 ? new Date(seconds * 1000).toISOString().slice(0, 10) : null
   } catch {
     return null
   }
