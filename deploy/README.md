@@ -115,9 +115,12 @@ page loads. Security -> WAF -> Custom rules -> Create rule, action **Managed
 Challenge**, expression (Edit expression):
 
 ```
-(http.request.uri.path.extension eq "" or http.request.uri.path.extension eq "html") and not starts_with(http.request.uri.path, "/api/") and not starts_with(http.request.uri.path, "/.well-known/") and not cf.client.bot
+ssl and (http.request.uri.path.extension eq "" or http.request.uri.path.extension eq "html") and not starts_with(http.request.uri.path, "/api/") and not starts_with(http.request.uri.path, "/.well-known/") and not cf.client.bot and not any(http.request.headers["x-blxr-scan"][*] eq "<BLXR_SCAN_TOKEN>")
 ```
 
+- `ssl` leaves plain HTTP alone, so `http://` gets the `Always Use HTTPS`
+  301 instead of a 403 challenge. Without it, hstspreload.org reports
+  "No redirect from HTTP".
 - Pages only (no extension, or `.html`). Assets, `robots.txt`, `sitemap.xml`,
   the manifest and the OG image stay open; once a visitor passes, the
   `cf_clearance` cookie covers the rest anyway.
@@ -127,9 +130,14 @@ Challenge**, expression (Edit expression):
   Discord, Slack, X) through, so search and embeds keep working.
 - The challenge is its own page, not something injected into ours (unlike
   Bot Fight Mode above), so the CSP is unaffected.
-- `npm run test:live` and the `curl` checks below get the challenge page
-  (`cf-mitigated: challenge`) instead of ours unless their IP is excluded:
-  append `and ip.src ne <box IP>` for the deploy runner.
+- The `x-blxr-scan` clause lets deploy.yml's `live-scan` job through
+  (`npm run test:live` and ZAP both send it). Its value is the
+  `BLXR_SCAN_TOKEN` repo secret. Write the header name in lowercase:
+  Cloudflare lowercases the keys of `http.request.headers`, so
+  `["X-Blxr-Scan"]` never matches. That job runs on GitHub-hosted runners,
+  so you can't exclude it by IP.
+- The `curl` checks below get the challenge page (`cf-mitigated: challenge`)
+  instead of ours unless they send `-H 'x-blxr-scan: <token>'`.
 
 ### Early Hints
 
