@@ -80,7 +80,13 @@ Setup:
 2. `A blxr.net -> <box IP>`, `A www -> <same>`, proxy **on**.
 3. SSL/TLS: **Full (strict)**.
 4. Speed: HTTP/3 (QUIC) on (default).
-5. `Always Use HTTPS` on. Origin already sends HSTS with `preload`.
+5. `Always Use HTTPS` on. SSL/TLS -> Edge Certificates -> HSTS on as well,
+   matching the origin header (12 months, includeSubDomains, preload).
+   The origin's header never reaches anyone who gets the challenge below;
+   Cloudflare's goes on the challenge page too, which is the page
+   hstspreload.org's checker gets for `/`. Check:
+   `curl -sI https://blxr.net/ | grep -i strict-transport` shows it even on
+   the 403.
 6. SSL/TLS -> Edge Certificates: **Minimum TLS Version 1.2**, TLS 1.3 on.
    The default is 1.0, and visitors only ever handshake with Cloudflare, so
    the origin's `options-ssl-nginx.conf` doesn't help here. Check:
@@ -99,7 +105,7 @@ Keep these **off** — they break this site:
 | Rocket Loader | Rewrites/injects inline `<script>`; CSP only allows inline scripts by sha256 hash. |
 | Auto Minify (HTML) | Changes the bytes of the inline theme script, breaking its CSP hash. |
 | Email Obfuscation | Same failure mode, different injected script. |
-| Bot Fight Mode / JavaScript Detections (Security -> Bots, Security -> Settings) | Injects an inline `window.__CF$cv$params` script carrying the request's ray ID, so no hash can ever match it; the console shows a CSP violation on every page load and the detection never runs anyway. |
+| Bot Fight Mode / JavaScript Detections (Security -> Bots, Security -> Settings) | Injects an inline `window.__CF$cv$params` script carrying the request's ray ID, so no hash can ever match it; the console shows a CSP violation on every page load and the detection never runs anyway. It also challenges GitHub-hosted runners on every path (assets and `/api/` included), and custom rules can't skip it, so `live-scan` gets nothing but 403s. Check: `curl -s https://blxr.net/nope.htm \| grep -c 'CF\$cv'` must print `0`. |
 
 Brotli, Early Hints, edge caching: fine, worth having.
 
