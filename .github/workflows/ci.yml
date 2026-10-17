@@ -33,6 +33,15 @@ jobs:
       - run: npm test
       - name: Build and check the output
         run: npm run test:dist
+      - name: Web coverage
+        run: |
+          npm run test:coverage --workspace web
+          node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: web-coverage
+          path: web/coverage/
+          retention-days: 14
 
   browser:
     name: Browser

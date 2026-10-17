@@ -16,7 +16,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:dist": "vitest run --config vitest.dist.config.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
@@ -30,6 +31,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "@vitest/coverage-v8": "4.1.11",
     "javascript-obfuscator": "^5.5.0",
     "marked": "^18.1.0",
     "shiki": "^4.5.0",

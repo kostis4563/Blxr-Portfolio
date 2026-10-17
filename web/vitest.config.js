@@ -9,5 +9,11 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.js'],
     environment: 'node',
     env: { TZ: 'Europe/Athens' },
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{js,jsx}'],
+      reporter: ['text', 'text-summary', 'json-summary', 'html'],
+      reportsDirectory: 'coverage',
+    },
   },
 })
