@@ -94,7 +94,7 @@ const hints = [
 
 await writeFile(
   resolve(here, 'early-hints.conf'),
-  `${hints.map((value) => `add_header Link "${value.replace(/"/g, '\\"')}" always;`).join('\n')}
+  `${hints.map((value) => `add_header Link "${value.replace(/[\\"]/g, '\\$&')}" always;`).join('\n')}
 `,
 )
 console.log(`prerender: ${hints.length} early-hint links -> early-hints.conf`)

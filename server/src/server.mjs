@@ -401,8 +401,8 @@ function saveVitals() {
 setInterval(saveVitals, HITS_SAVE_DEBOUNCE_MS).unref()
 
 function recordVital(metric, value) {
+  if (!Object.hasOwn(VITALS_THRESHOLDS, metric)) return
   const limits = VITALS_THRESHOLDS[metric]
-  if (!limits) return
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > VITALS_MAX[metric]) return
 
   const day = vitals[today()] ||= {}
@@ -606,7 +606,7 @@ setInterval(saveReviews, HITS_SAVE_DEBOUNCE_MS).unref()
 function newReviewId() {
   for (;;) {
     let id = ''
-    for (const b of crypto.randomBytes(8)) id += REVIEW_ID_ALPHABET[b % REVIEW_ID_ALPHABET.length]
+    for (let i = 0; i < 8; i++) id += REVIEW_ID_ALPHABET[crypto.randomInt(REVIEW_ID_ALPHABET.length)]
     if (!REMOVED_REVIEWS.has(id) && !reviews.some((r) => r.id === id)) return id
   }
 }
@@ -3199,7 +3199,7 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/api/music/top') {
       const country = ((url.searchParams.get('country') || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us').slice(0, 2)
-      const limit = Math.min(15, Math.max(1, Number(url.searchParams.get('limit')) || 10))
+      const limit = Math.min(15, Math.max(1, Math.trunc(Number(url.searchParams.get('limit'))) || 10))
       const hit = topCache.get(topKey(country, limit))
       if (hit && Date.now() - hit.at < TOP_CACHE_TTL_MS) return json(res, 200, hit.data, CHART_CACHE)
 

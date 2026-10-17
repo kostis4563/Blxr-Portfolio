@@ -125,6 +125,13 @@ describe('top chart', () => {
     assert.match(odd.url, /\/api\/v2\/x\/music\/most-played\/23\/songs\.json$/, 'only letters survive, limit capped at 15')
   })
 
+  test('a fractional limit is the same chart, not a fresh upstream fetch', async () => {
+    await srv.request('/api/music/top?country=de&limit=4')
+    await srv.clearCalls()
+    for (const limit of ['4.2', '4.7', '4.000001']) assert.equal((await srv.request(`/api/music/top?country=de&limit=${limit}`)).body.items.length, 4)
+    assert.equal((await srv.calls('rss.marketingtools.apple.com')).length, 0)
+  })
+
   test('chart and contributions tell browsers to reuse a stale copy while revalidating', async () => {
     assert.equal((await srv.request('/api/music/top')).headers.get('cache-control'), 'public, max-age=300, stale-while-revalidate=3600')
     assert.equal((await srv.request('/api/github/contributions?user=octo')).headers.get('cache-control'), 'public, max-age=600, stale-while-revalidate=86400')

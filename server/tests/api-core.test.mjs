@@ -175,6 +175,13 @@ describe('request bodies', () => {
     for (const m of ['INP', 'FOO', 'TTFB', 'FCP']) assert.equal(body.metrics[m], undefined, m)
   })
 
+  test('web vitals: inherited names like __proto__ are not metrics', async () => {
+    const hostile = ['__proto__', 'constructor', 'hasOwnProperty', 'toString'].map((m) => ({ m, v: 1 }))
+    assert.equal((await srv.request('/api/vitals', { method: 'POST', body: hostile, ip: '203.0.113.31' })).status, 204)
+    const { body } = await srv.request('/api/vitals?days=1', { headers: owner() })
+    assert.deepEqual(Object.keys(body.metrics).filter((m) => !['LCP', 'CLS', 'TTFB'].includes(m)), [])
+  })
+
   test('web vitals: at most 12 samples per beacon', async () => {
     await srv.request('/api/vitals', { method: 'POST', body: Array.from({ length: 20 }, () => ({ m: 'TTFB', v: 100 })), ip: '203.0.113.12' })
     const { body } = await srv.request('/api/vitals?days=1', { headers: owner() })
