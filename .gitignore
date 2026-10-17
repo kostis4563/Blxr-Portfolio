@@ -29,6 +29,8 @@ dist-ssr
 
 web/csp-script-hashes.txt
 web/early-hints.conf
+web/test-results/
+web/playwright-report/
 
 deploy/.env-overrides
 

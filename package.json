@@ -21,6 +21,7 @@
     "test": "npm run test:repo && npm test --workspaces --if-present",
     "test:repo": "node --test tests/repo/*.test.mjs",
     "test:dist": "npm run build && npm run test:dist --workspace web",
+    "test:e2e": "npm run test:e2e --workspace web",
     "test:live": "node --test tests/live/*.test.mjs",
     "deploy": "bash deploy/deploy.sh",
     "deploy:web": "bash deploy/deploy.sh web",
