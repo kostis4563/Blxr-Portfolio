@@ -1,0 +1,16 @@
+[files]
+extend-exclude = [
+  "package-lock.json",
+  "tests/",
+  "web/src/lib/image-manifest.js",
+]
+
+[default.extend-words]
+abd = "abd"
+ba = "ba"
+canva = "canva"
+formant = "formant"
+lod = "lod"
+nd = "nd"
+ot = "ot"
+wizzard = "wizzard"
