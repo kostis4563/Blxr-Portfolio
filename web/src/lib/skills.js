@@ -30,6 +30,7 @@ export const SKILL_CATEGORIES = [
     name: 'Backend',
     items: [
       { name: 'Node.js', icon: '/icons/nodejs.svg', level: 'comfortable', url: 'https://nodejs.org', desc: 'JavaScript runtime for servers & tooling' },
+      { name: 'Express', icon: '/icons/expressjs_dark.svg', level: 'comfortable', url: 'https://expressjs.com', desc: 'Minimal web framework for Node.js APIs' },
     ],
   },
   {
@@ -108,6 +109,7 @@ export const LIGHT_THEME_ICONS = {
   '/icons/apple_dark.svg': '/icons/apple.svg',
   '/icons/mysql-icon-dark.svg': '/icons/mysql-icon-light.svg',
   '/icons/github_dark.svg': '/icons/github.svg',
+  '/icons/expressjs_dark.svg': '/icons/expressjs.svg',
   '/icons/json_dark.svg': '/icons/json.svg',
   '/icons/komodo_dark.svg': '/icons/komodo.svg',
   '/icons/cursor_dark.svg': '/icons/cursor.svg',
