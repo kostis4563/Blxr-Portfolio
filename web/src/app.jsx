@@ -212,7 +212,7 @@ function App() {
 
   const stackSkills = skillCategories.filter((category) => !category.minor).flatMap((category) => category.items)
   const featuredSkills = stackSkills.filter((skill) => skill.featured)
-  const otherSkills = stackSkills.filter((skill) => !skill.featured)
+  const otherSkills = stackSkills.filter((skill) => !skill.featured && !skill.listOnly)
 
   const navItemClass = 'h-9 w-9 flex items-center justify-center hover:text-ink-strong focus-visible:text-ink-strong aria-expanded:text-ink-strong transition-colors duration-200'
   const navLinkClass = 'inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-md px-2.5 text-[13px] font-medium outline-none transition-colors duration-200 hover:text-ink-strong focus-visible:text-ink-strong focus-visible:ring-2 focus-visible:ring-ink-strong/30'

@@ -36,7 +36,7 @@ export const SKILL_CATEGORIES = [
   {
     name: 'Infrastructure',
     items: [
-      { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', url: 'https://www.cloudflare.com', desc: 'CDN, DNS & edge security' },
+      { name: 'Cloudflare', icon: '/icons/cloudflare.svg', level: 'basic', url: 'https://www.cloudflare.com', desc: 'CDN, DNS & edge security', listOnly: true },
     ],
   },
   {
