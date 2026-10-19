@@ -1205,10 +1205,9 @@ html[data-entry] :is(.animate-view-in, .animate-rise-in, .animate-fade-in-up, .a
 .loader-a,
 .loader-b {
   will-change: transform;
-  animation: 1.6s linear infinite;
 }
-.loader-a { animation-name: loader-a; }
-.loader-b { animation-name: loader-b; }
+.loader-a { animation: loader-a 1.6s linear infinite; }
+.loader-b { animation: loader-b 1.6s linear infinite; }
 @keyframes loader-a {
   0%, 100% { transform: translate(0, 0); }
   12.5%, 25% { transform: translate(12px, 0); }
