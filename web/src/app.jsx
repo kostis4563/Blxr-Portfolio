@@ -442,7 +442,7 @@ function App() {
     return (
       <>
         <Suspense fallback={<PageFallback />}>
-          <FocusPage />
+          <FocusPage theme={theme} onToggleTheme={toggleTheme} />
         </Suspense>
         {palette}
       </>

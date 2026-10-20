@@ -52,7 +52,7 @@ function spamming() {
   return true
 }
 
-function changeTheme(next, apply) {
+function changeTheme(next, apply, transition) {
   const change = ++themeChanges
   const applyIfLatest = () => {
     if (change === themeChanges) apply()
@@ -60,6 +60,7 @@ function changeTheme(next, apply) {
   const current = document.documentElement.dataset.theme
   const flipping = current === (next === 'light' ? 'dark' : 'light')
   if (!flipping) applyIfLatest()
+  else if (transition) transition(applyIfLatest)
   else if (!funEnabled()) crossfade(applyIfLatest)
   else if (spamming()) {
     applyIfLatest()
@@ -115,11 +116,11 @@ export function useTheme() {
     return () => media.removeEventListener('change', onChange)
   }, [show])
 
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = useCallback((transition) => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
     storeTheme(next)
     setPreferenceState(next)
-    changeTheme(next, () => show(next))
+    changeTheme(next, () => show(next), typeof transition === 'function' ? transition : null)
   }, [show])
 
   const setPreference = useCallback((pref) => {

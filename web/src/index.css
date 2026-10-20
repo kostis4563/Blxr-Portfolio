@@ -3769,6 +3769,11 @@ html[data-roll]::view-transition-old(root) {
 html[data-roll]::view-transition-new(root) {
   animation: none;
 }
+html[data-sweep]::view-transition-old(root),
+html[data-sweep]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
 @keyframes barrel-roll {
   50% {
     scale: 0.86;

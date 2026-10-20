@@ -1,4 +1,4 @@
-export { FOCUS_VERSION, FOCUS_MIN_MACOS, FOCUS_DOWNLOAD } from './focus-release'
+export { FOCUS_VERSION, FOCUS_MIN_MACOS, FOCUS_DOWNLOAD, FOCUS_SIZE } from './focus-release'
 
 export const ALLOWED_APPS = [
   { id: 'chrome', name: 'Google Chrome', short: 'Chrome', role: 'Browser', icon: '/focus/chrome.webp' },

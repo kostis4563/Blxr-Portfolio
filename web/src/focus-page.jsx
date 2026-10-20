@@ -2,12 +2,14 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import './focus.css'
 import { Icon } from './components/icon'
 import { imageProps } from './lib/images'
+import { reveal } from './lib/crossfade'
 import { link, HOME_PATH, PROJECTS_PATH, BLOG_PATH, CONTACT_PATH } from './lib/router'
 import { GITHUB_URL, DISCORD_URL, CONTACT_EMAIL } from './lib/profile'
 import {
   FOCUS_VERSION,
   FOCUS_MIN_MACOS,
   FOCUS_DOWNLOAD,
+  FOCUS_SIZE,
   ALLOWED_APPS,
   BLOCKED_SITES,
   APP_ICON,
@@ -142,8 +144,11 @@ const SECTIONS = [
   ['rules', 'Rules'],
   ['settings', 'Settings'],
   ['install', 'Install'],
+  ['specs', 'Specs'],
   ['faq', 'FAQ'],
 ]
+
+const NAV_SECTIONS = SECTIONS.filter(([id]) => id !== 'specs')
 
 function useFocusDemo() {
   const [text, setText] = useState('45')
@@ -336,7 +341,17 @@ const SKY = [
   [52, 54, 63],
   [126, 130, 142],
 ]
+const SKY_LIGHT = [
+  [250, 250, 251],
+  [234, 236, 241],
+  [212, 216, 225],
+  [172, 179, 194],
+  [118, 127, 147],
+]
 const CELL = 5
+
+const skyColors = (theme) =>
+  new Uint32Array((theme === 'light' ? SKY_LIGHT : SKY).map(([r, g, b]) => ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0))
 
 function makeNoise(seed) {
   const grid = new Float32Array(256 * 256)
@@ -367,8 +382,15 @@ function makeNoise(seed) {
   }
 }
 
-function DitherSky({ hostRef }) {
+function DitherSky({ hostRef, theme }) {
   const ref = useRef(null)
+  const palette = useRef(null)
+  const repaint = useRef(null)
+
+  useEffect(() => {
+    palette.current = skyColors(theme)
+    repaint.current?.()
+  }, [theme])
 
   useEffect(() => {
     const canvas = ref.current
@@ -377,7 +399,6 @@ function DitherSky({ hostRef }) {
     if (!canvas || !host || !ctx) return
 
     const noise = makeNoise(20261019)
-    const colors = new Uint32Array(SKY.map(([r, g, b]) => ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0))
     const pointer = { x: 0, y: 0, k: 0, target: 0 }
     let gw = 0
     let gh = 0
@@ -406,6 +427,7 @@ function DitherSky({ hostRef }) {
     }
 
     const draw = (t) => {
+      const colors = palette.current
       const fh = (gh >> 1) + 2
       for (let fy = 0; fy < fh; fy++) {
         const y = fy * 2
@@ -463,6 +485,7 @@ function DitherSky({ hostRef }) {
     resize()
     draw(0)
     canvas.dataset.ready = ''
+    repaint.current = () => draw((performance.now() - started) / 1000)
 
     const sizes = new ResizeObserver(() => {
       resize()
@@ -534,7 +557,7 @@ function DownloadBadge() {
 function DownloadMeta() {
   return (
     <p className="fl-download-meta">
-      Version {FOCUS_VERSION} · macOS {FOCUS_MIN_MACOS} or later · Apple silicon and Intel
+      Version {FOCUS_VERSION} · {FOCUS_SIZE} · macOS {FOCUS_MIN_MACOS} or later · Apple silicon and Intel
     </p>
   )
 }
@@ -612,6 +635,52 @@ function Notch({ side = 'top', curves = 'both', className = '', children }) {
   )
 }
 
+const RAY_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
+
+function ThemeButton({ theme, onToggle }) {
+  const mask = `fl-theme-${useId()}`
+  const [flipped, setFlipped] = useState(false)
+  const light = theme === 'light'
+  const label = light ? 'Switch to dark mode' : 'Switch to light mode'
+
+  const toggle = (event) => {
+    const box = event.currentTarget.getBoundingClientRect()
+    setFlipped(true)
+    onToggle?.((apply) => reveal(apply, box.left + box.width / 2, box.top + box.height / 2))
+  }
+
+  return (
+    <button
+      type="button"
+      className="fl-theme"
+      data-mode={light ? 'light' : 'dark'}
+      data-flipped={flipped || undefined}
+      onClick={toggle}
+      aria-label={label}
+      title={label}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <mask id={mask}>
+          <rect width="24" height="24" fill="#fff" />
+          <circle className="fl-theme-bite" cx="15" cy="9" r="7.5" fill="#000" />
+        </mask>
+        <g className="fl-theme-tilt">
+          <g mask={`url(#${mask})`}>
+            <circle className="fl-theme-core" cx="12" cy="12" r="8" fill="currentColor" />
+          </g>
+          <g className="fl-theme-rays" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            {RAY_ANGLES.map((angle, i) => (
+              <g key={angle} style={{ rotate: `${angle}deg` }}>
+                <path d="M12 4.5V2" style={{ '--i': i }} />
+              </g>
+            ))}
+          </g>
+        </g>
+      </svg>
+    </button>
+  )
+}
+
 const TRACE_LAP = 18000
 const TRACE_BEAMS = 2
 const TRACE_BASE = 0.07
@@ -676,8 +745,20 @@ function traceOutline(card) {
   return pts
 }
 
-function HeroTrace({ hostRef }) {
+const TRACE_INK = {
+  dark: { color: '#fff', blend: 'lighter' },
+  light: { color: '#18181b', blend: 'source-over' },
+}
+
+function HeroTrace({ hostRef, theme }) {
   const ref = useRef(null)
+  const ink = useRef(TRACE_INK.dark)
+  const repaint = useRef(null)
+
+  useEffect(() => {
+    ink.current = TRACE_INK[theme] ?? TRACE_INK.dark
+    repaint.current?.()
+  }, [theme])
 
   useEffect(() => {
     const canvas = ref.current
@@ -730,8 +811,8 @@ function HeroTrace({ hostRef }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
       if (!total) return
-      ctx.globalCompositeOperation = 'lighter'
-      ctx.strokeStyle = '#fff'
+      ctx.globalCompositeOperation = ink.current.blend
+      ctx.strokeStyle = ink.current.color
       ctx.lineWidth = 2
 
       ctx.globalAlpha = TRACE_BASE
@@ -770,6 +851,7 @@ function HeroTrace({ hostRef }) {
 
     measure()
     paint(performance.now())
+    repaint.current = () => paint(performance.now())
 
     const sizes = new ResizeObserver(() => {
       measure()
@@ -1703,13 +1785,13 @@ function FullScreenTimer({ demo }) {
   )
 }
 
-function Hero({ demo }) {
+function Hero({ demo, theme, onToggleTheme }) {
   const host = useRef(null)
   return (
     <section className="fl-hero" id="top" aria-labelledby="fl-title">
       <div className="fl-hero-card" ref={host}>
         <div className="fl-sky" aria-hidden="true">
-          <DitherSky hostRef={host} />
+          <DitherSky hostRef={host} theme={theme} />
           <div className="fl-sky-grid" />
           <div className="fl-sky-shade" />
         </div>
@@ -1745,7 +1827,7 @@ function Hero({ demo }) {
           </p>
         </div>
 
-        <HeroTrace hostRef={host} />
+        <HeroTrace hostRef={host} theme={theme} />
 
         <Notch className="fl-notch-logo">
           <a {...jump('top')} className="fl-notch-home" aria-label="Focus Lock, back to top">
@@ -1754,7 +1836,7 @@ function Hero({ demo }) {
         </Notch>
 
         <Notch className="fl-notch-nav">
-          {SECTIONS.map(([id, label]) => (
+          {NAV_SECTIONS.map(([id, label]) => (
             <a key={id} {...jump(id)} className="fl-nav-link fl-nav-section">
               {label}
             </a>
@@ -1763,6 +1845,7 @@ function Hero({ demo }) {
             <span className="fl-nav-wide">blxr.net</span>
             <Icon name="arrowUpRight" className="h-3.5 w-3.5" />
           </a>
+          <ThemeButton theme={theme} onToggle={onToggleTheme} />
         </Notch>
 
         <Notch side="bottom" className="fl-notch-apps">
@@ -1792,7 +1875,57 @@ function CountSection({ demo }) {
           </span>
         </h2>
       </div>
+      <SessionFlow demo={demo} />
     </section>
+  )
+}
+
+function SessionFlow({ demo }) {
+  const { grace, chime } = demo.settings
+  const minutes = demo.minutes ?? 45
+  const wait = grace === 60 ? 'a minute' : `${grace} seconds`
+  const steps = [
+    {
+      time: clock(0),
+      tone: 'live',
+      title: 'Start',
+      text: grace
+        ? `Anything open that your rules don’t allow gets ${wait} to save.`
+        : 'Anything open that your rules don’t allow closes straight away.',
+    },
+    {
+      time: clock(grace),
+      tone: 'critical',
+      title: 'Locked',
+      text: 'Those apps are forced closed, and blocked Chrome tabs go to the blocked page.',
+    },
+    {
+      time: 'Any time',
+      tone: 'high',
+      title: 'Holding',
+      text: 'Open something that isn’t allowed and it’s closed within a second. Each block is logged.',
+    },
+    {
+      time: clock(minutes * 60),
+      tone: 'info',
+      title: 'Time’s up',
+      text: `${chime ? 'A chime plays and the lock lifts.' : 'The lock lifts.'} Your apps and sites are yours again.`,
+    },
+  ]
+  return (
+    <div className="fl-flow" data-reveal>
+      <FrameLabel>How a session runs</FrameLabel>
+      <ol>
+        {steps.map((step) => (
+          <li key={step.title}>
+            <i className="fl-dot" data-tone={step.tone} />
+            <span className="fl-flow-time">{step.time}</span>
+            <h3 className="fl-flow-title">{step.title}</h3>
+            <p className="fl-flow-text">{step.text}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
   )
 }
 
@@ -1827,6 +1960,7 @@ const TRIES = [
 
 function TrySection({ demo }) {
   const done = TRIES.filter(([key]) => demo.tried.has(key)).length
+  const all = done === TRIES.length
   return (
     <section id="try" className="fl-section fl-wrap" aria-labelledby="fl-try-title">
       <div className="fl-try">
@@ -1841,10 +1975,11 @@ function TrySection({ demo }) {
           <div className="fl-tries" data-reveal>
             <p className="fl-tries-head">
               <span>Things to try</span>
-              <span className="fl-tries-count">
-                {done} of {TRIES.length}
+              <span className="fl-tries-count" data-done={all || undefined}>
+                {all ? 'All done, nice' : `${done} of ${TRIES.length}`}
               </span>
             </p>
+            <span className="fl-tries-meter" style={{ '--p': done / TRIES.length }} aria-hidden="true" />
             <ul>
               {TRIES.map(([key, label]) => {
                 const hit = demo.tried.has(key)
@@ -2182,7 +2317,7 @@ function InstallSection() {
               </span>
               <span>
                 <span className="fl-file-name">{file}</span>
-                <span className="fl-file-meta">Apple silicon and Intel</span>
+                <span className="fl-file-meta">{FOCUS_SIZE} · Apple silicon and Intel</span>
               </span>
             </a>
           }
@@ -2251,6 +2386,52 @@ function InstallSection() {
   )
 }
 
+const graceLabel = (seconds) => (seconds === 60 ? '1m' : `${seconds}s`)
+
+const SPECS = [
+  ['Version', FOCUS_VERSION, `${FOCUS_SIZE} download`],
+  ['Requires', `macOS ${FOCUS_MIN_MACOS} or later`, 'Apple silicon and Intel'],
+  ['Sessions', `${MIN_MINUTES} min to ${MAX_MINUTES / 60} hours`, `The dial goes to ${DIAL_MAX / 60} hours, type for more`],
+  ['Presets', PRESETS.join(' · '), 'Minutes, one tap each'],
+  ['Apps', 'Allow or block list', 'Finder always stays open'],
+  ['Sites', 'Google Chrome', 'Subdomains included'],
+  [
+    'Save time',
+    `${graceLabel(GRACE_CHOICES[0])} to ${graceLabel(GRACE_CHOICES[GRACE_CHOICES.length - 1])}`,
+    `${graceLabel(SAVE_GRACE)} out of the box`,
+  ],
+  ['Strict', 'Optional', 'Reopens at login until it ends'],
+  ['Permissions', 'Just one', 'Control of Google Chrome'],
+  ['Account', 'None', 'No sign-in, nothing to sync'],
+  ['Data', 'Stays on your Mac', 'Nothing is sent anywhere'],
+  ['Made in', 'Athens, Greece', 'By blxr'],
+]
+
+function SpecsSection() {
+  return (
+    <section id="specs" className="fl-section fl-wrap" aria-labelledby="fl-specs-title">
+      <SectionHead
+        id="fl-specs-title"
+        label="Specs"
+        title="The fine print"
+        rest="Nothing hidden"
+        lede="What it needs, what it touches and what it leaves alone."
+      />
+      <dl className="fl-grid fl-specs" data-reveal>
+        {SPECS.map(([term, value, note]) => (
+          <div key={term} className="fl-cell fl-spec">
+            <dt>{term}</dt>
+            <dd>
+              {value}
+              <span>{note}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
 const FAQ = [
   [
     'Can I pick which apps stay open?',
@@ -2259,6 +2440,10 @@ const FAQ = [
   [
     'Can I change the rules mid-session?',
     'No. Settings only opens between sessions, so a running lock can’t be loosened. Change what you need before you press Start.',
+  ],
+  [
+    'How long can a session be?',
+    `Anywhere from ${MIN_MINUTES} minute to ${MAX_MINUTES / 60} hours. The dial goes up to ${DIAL_MAX / 60} hours, and you can type a number for anything longer. The presets are ${listSentence(PRESETS.map(String))} minutes.`,
   ],
   [
     'What happens to apps I already have open?',
@@ -2273,6 +2458,10 @@ const FAQ = [
     'Without Strict, Give up ends it after a confirmation. With Strict there’s no button, and it reopens at login until the timer ends. It’s a commitment device rather than a cage: while Terminal is allowed you can still stop it from there, you just have to really mean it.',
   ],
   [
+    'What happens when the timer ends?',
+    'A chime plays, unless you’ve turned it off, and the lock lifts. Blocked sites load again and every app opens like normal. Settings unlocks for the next session.',
+  ],
+  [
     'Why does macOS say it can’t be opened?',
     'Focus Lock isn’t notarized by Apple yet. The first time, open System Settings, then Privacy & Security, and click Open Anyway. After that it opens like any other app.',
   ],
@@ -2283,6 +2472,10 @@ const FAQ = [
   [
     'Does it need an account?',
     'No. There’s no account and no sign-in, and it doesn’t send anything anywhere. Your sessions and settings stay on your Mac.',
+  ],
+  [
+    'Does it work offline?',
+    'Yes. It doesn’t talk to a server for anything, so it works the same with Wi-Fi off.',
   ],
   [
     'Which Macs does it run on?',
@@ -2318,13 +2511,15 @@ function FaqSection() {
   )
 }
 
-function FinalCta() {
+const PROMISES = ['No account', 'Nothing leaves your Mac', 'One permission']
+
+function FinalCta({ theme }) {
   const host = useRef(null)
   return (
     <section className="fl-cta" aria-labelledby="fl-cta-title">
       <div className="fl-cta-card" ref={host} data-reveal>
         <div className="fl-sky" aria-hidden="true">
-          <DitherSky hostRef={host} />
+          <DitherSky hostRef={host} theme={theme} />
           <div className="fl-sky-grid" />
           <div className="fl-cta-shade" />
         </div>
@@ -2344,8 +2539,16 @@ function FinalCta() {
             <DownloadBadge />
           </div>
           <DownloadMeta />
+          <ul className="fl-promises">
+            {PROMISES.map((item) => (
+              <li key={item}>
+                <Icon name="check" className="h-3 w-3" strokeWidth={2.6} />
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
-        <HeroTrace hostRef={host} />
+        <HeroTrace hostRef={host} theme={theme} />
         <Notch className="fl-notch-icon">
           <img {...imageProps(APP_ICON)} alt="" width="32" height="32" draggable={false} />
         </Notch>
@@ -2456,7 +2659,7 @@ function useReveal(rootRef) {
   }, [rootRef])
 }
 
-export default function FocusPage() {
+export default function FocusPage({ theme = 'dark', onToggleTheme }) {
   const root = useRef(null)
   const demo = useFocusDemo()
   useReveal(root)
@@ -2464,14 +2667,15 @@ export default function FocusPage() {
   return (
     <div className="fl" ref={root}>
       <main>
-        <Hero demo={demo} />
+        <Hero demo={demo} theme={theme} onToggleTheme={onToggleTheme} />
         <CountSection demo={demo} />
         <TrySection demo={demo} />
         <RulesSection />
         <SettingsSection demo={demo} />
         <InstallSection />
+        <SpecsSection />
         <FaqSection />
-        <FinalCta />
+        <FinalCta theme={theme} />
       </main>
       <Footer />
       {demo.overlay && <FullScreenTimer demo={demo} />}
