@@ -24,6 +24,7 @@ import {
   QUOTE_PATH,
   TERMINAL_PATH,
   STATUS_PATH,
+  FOCUS_PATH,
   HELLO_PATH,
 } from '../lib/router'
 import { GITHUB_URL, DISCORD_URL, CONTACT_EMAIL, SOCIAL_ICON_PATHS } from '../lib/profile'
@@ -40,6 +41,7 @@ const COLUMNS = [
       { label: 'IB grades', to: IB_PATH },
       { label: 'Listening', to: LISTENING_PATH },
       { label: 'Terminal', to: TERMINAL_PATH },
+      { label: 'Focus Lock', to: FOCUS_PATH },
       { label: 'Hello world', to: HELLO_PATH },
     ],
   },

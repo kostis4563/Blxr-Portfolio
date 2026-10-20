@@ -19,6 +19,7 @@ import GalleryPageImpl from '#ssr-page/gallery'
 import QuotePageImpl from '#ssr-page/quote'
 import TerminalPageImpl from '#ssr-page/terminal'
 import StatusPageImpl from '#ssr-page/status'
+import FocusPageImpl from '#ssr-page/focus'
 import HelloPageImpl from '#ssr-page/hello'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
@@ -67,6 +68,7 @@ const LinksPage = routePage(LinksPageImpl, () => import('#client-page/links'))
 const TerminalPage = routePage(TerminalPageImpl, () => import('#client-page/terminal'))
 const TravelPage = routePage(TravelPageImpl, () => import('#client-page/travel'))
 const StatusPage = routePage(StatusPageImpl, () => import('#client-page/status'))
+const FocusPage = routePage(FocusPageImpl, () => import('#client-page/focus'))
 const HelloPage = routePage(HelloPageImpl, () => import('#client-page/hello'))
 const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
 const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
@@ -430,6 +432,17 @@ function App() {
       <>
         <Suspense fallback={<PageFallback />}>
           <StatusPage theme={theme} onToggleTheme={toggleTheme} />
+        </Suspense>
+        {palette}
+      </>
+    )
+  }
+
+  if (currentView === 'focus') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <FocusPage />
         </Suspense>
         {palette}
       </>

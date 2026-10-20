@@ -56,11 +56,21 @@ function outputFileFor(path) {
 const pages = [...staticPaths(), NOT_FOUND_PATH, LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH]
 const written = []
 
+const assetNames = await readdir(resolve(dist, 'assets'))
+const pageStyles = (path) => {
+  const prefix = `${parseRoute(path).name}-page-`
+  return assetNames
+    .filter((name) => name.startsWith(prefix) && name.endsWith('.css'))
+    .map((name) => `<link rel="stylesheet" crossorigin href="/assets/${name}">`)
+    .join('')
+}
+
 for (const path of pages) {
   const { html, head } = await render(path)
   const out = template
     .replace(HTML_RE, () => '<html lang="en" dir="ltr" data-entry>')
     .replace(TITLE_RE, () => head)
+    .replace('</head>', () => `${pageStyles(path)}</head>`)
     .replace(ROOT_RE, () => `${EMAIL_OFF}<div id="root">${html}</div>${EMAIL_ON}`)
 
   const file = outputFileFor(path)
@@ -123,6 +133,7 @@ const ROUTE_SOURCES = {
   quote: ['src/quote-page.jsx', 'src/lib/quote.js', 'src/lib/quote-api.js'],
   terminal: ['src/terminal-page.jsx', 'src/lib/terminal.js'],
   status: ['src/status-page.jsx', 'src/lib/status.js'],
+  focus: ['src/focus-page.jsx', 'src/lib/focus.js', 'public/focus'],
   hello: ['src/hello-page.jsx', 'public/hello-bg.webp', 'public/fonts/hello-pixel-f4c3c487.woff2'],
 }
 

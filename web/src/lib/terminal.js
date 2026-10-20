@@ -20,6 +20,7 @@ import {
   QUOTE_PATH,
   TERMINAL_PATH,
   STATUS_PATH,
+  FOCUS_PATH,
   projectPath,
   libraryPath,
   blogPath,
@@ -85,6 +86,7 @@ export const PAGES = [
   { name: 'security', to: SECURITY_PATH, desc: 'report a vulnerability' },
   { name: 'quote', to: QUOTE_PATH, desc: 'words I live by' },
   { name: 'status', to: STATUS_PATH, desc: 'live uptime checks' },
+  { name: 'focus', to: FOCUS_PATH, desc: 'a Mac app that closes everything else' },
   { name: 'terminal', to: TERMINAL_PATH, desc: 'you are here' },
 ]
 

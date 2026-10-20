@@ -3,6 +3,7 @@ import { libraryList, findLibraryItem } from './library'
 import { USES_UPDATED } from './uses'
 import { CV_UPDATED } from './cv'
 import { SECURITY_UPDATED } from './security'
+import { FOCUS_VERSION, FOCUS_MIN_MACOS, FOCUS_DOWNLOAD } from './focus-release'
 import { postsList, findPost, BLOG_UPDATED } from './blog'
 import { blogPath, libraryPath, normalizePath, parseRoute, projectPath, BLOG_FEED_PATH } from './router'
 import { setDocumentTitle } from './title-animation'
@@ -77,6 +78,10 @@ const VOLUNTEER_DESCRIPTION =
 
 const TRAVEL_DESCRIPTION =
   'A world map of the countries Kostis has been to: Greece, Italy, Germany, France, Spain, Austria, Belgium and the UK.'
+
+const FOCUS_DESCRIPTION =
+  'Focus Lock, a Mac app by Kostis: pick a time and every app off your list is closed until it ends. ' +
+  'Choose the apps and the sites blocked in Chrome in Settings.'
 
 export function metaFor(pathname) {
   const path = normalizePath(pathname)
@@ -266,6 +271,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'focus') {
+    return {
+      ...base,
+      title: 'Focus Lock — A Mac App That Closes Everything Else',
+      description: FOCUS_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'hello') {
     return {
       ...base,
@@ -339,6 +352,7 @@ const SHORT_LABELS = {
   quote: 'Quotes',
   terminal: 'Terminal',
   status: 'Status',
+  focus: 'Focus Lock',
   hello: 'hello world',
   login: 'Sign in',
   dashboard: 'Dashboard',
@@ -750,6 +764,22 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'focus') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Focus Lock',
+      description: FOCUS_DESCRIPTION,
+      url: `${SITE_URL}/focus`,
+      image: `${SITE_URL}/focus/focus-lock.webp`,
+      applicationCategory: 'ProductivityApplication',
+      operatingSystem: `macOS ${FOCUS_MIN_MACOS} or later`,
+      softwareVersion: FOCUS_VERSION,
+      downloadUrl: `${SITE_URL}${FOCUS_DOWNLOAD}`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'library') {
     if (realEntries.length === 0) return null
     return {
@@ -822,6 +852,8 @@ function crumbsFor(route) {
     items.push({ name: 'Terminal', item: urlOf('/terminal') })
   } else if (route.name === 'status') {
     items.push({ name: 'Status', item: urlOf('/status') })
+  } else if (route.name === 'focus') {
+    items.push({ name: 'Focus Lock', item: urlOf('/focus') })
   } else if (route.name === 'library') {
     items.push({ name: 'FiveM Library', item: urlOf('/library') })
     if (route.itemId) {
