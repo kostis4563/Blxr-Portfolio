@@ -125,7 +125,7 @@ function obfuscatorPlugin() {
   }
 }
 
-const PROD_API = 'https://blxr.net'
+const PROD_API = 'https://kostis.wtf'
 const apiProxy = (mode) => {
   const set = process.env.VITE_API_PROXY ?? loadEnv(mode, process.cwd(), 'VITE_').VITE_API_PROXY
   return set === undefined ? PROD_API : set

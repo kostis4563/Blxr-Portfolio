@@ -101,7 +101,7 @@ export const INCOMPLETE_STATE = {
 
 export const DELETED_STATE = {
   title: 'Report deleted.',
-  message: 'It’s gone from blxr.net. Anyone who opens the link now sees that it no longer exists.',
+  message: 'It’s gone from kostis.wtf. Anyone who opens the link now sees that it no longer exists.',
 }
 
 const ERROR_TITLES ={ expired: 'Report not found.', key: 'Can’t decrypt this report.', network: 'Can’t reach blxr.' }

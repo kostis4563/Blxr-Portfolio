@@ -259,7 +259,7 @@ function Footer({ children }) {
           <LockIcon />
         </span>
         <p className="max-w-[68ch]">
-          <span className="font-medium text-ink-muted">E2E encrypted.</span> Decrypted in your browser. The key lives in this link and never reaches blxr.net.
+          <span className="font-medium text-ink-muted">E2E encrypted.</span> Decrypted in your browser. The key lives in this link and never reaches kostis.wtf.
           {children}
         </p>
       </div>
@@ -795,7 +795,7 @@ function OwnerPanel({ onDelete }) {
             Delete this report
           </h2>
           <p className="mt-1 max-w-[56ch] text-[12.5px] leading-relaxed text-ink-subtle">
-            Removes it from blxr.net for everyone who has the link. Your link can delete it, so share the one from Copy link instead.
+            Removes it from kostis.wtf for everyone who has the link. Your link can delete it, so share the one from Copy link instead.
           </p>
           {error && (
             <p role="alert" className="mt-2 text-[12.5px] text-(--sev-critical)">

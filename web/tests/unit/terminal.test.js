@@ -176,7 +176,7 @@ describe('commands', () => {
     expect(await output('weather', { athensTemp: async () => 21.6 })).toContain('22°C')
     expect(await output('weather', { athensTemp: async () => null })).toContain('did not answer')
     expect(await output('ping', { ping: async () => 12.34 })).toContain('4 received, 0% packet loss')
-    expect(await output('ping google.com', { ping: async () => 1 })).toContain('can only reach blxr.net')
+    expect(await output('ping google.com', { ping: async () => 1 })).toContain('can only reach kostis.wtf')
   })
 
   test('copy reports success and failure', async () => {

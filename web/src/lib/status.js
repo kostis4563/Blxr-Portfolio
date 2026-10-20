@@ -1,5 +1,5 @@
 export const STATUS_INTRO =
-  'Live checks of blxr.net and its API. The server tries both every few minutes and keeps 90 days of history.'
+  'Live checks of kostis.wtf and its API. The server tries both every few minutes and keeps 90 days of history.'
 
 export const POLL_MS = 60_000
 export const MOBILE_DAYS = 30

@@ -7,12 +7,12 @@ export const STATUS_TIMEOUT_MS = 10_000
 export const STATUS_INCIDENTS_SHOWN = 20
 const INCIDENTS_KEPT = 200
 const DAY_MS = 86_400_000
-const USER_AGENT = 'blxr-status/1.0 (+https://blxr.net/status)'
+const USER_AGENT = 'blxr-status/1.0 (+https://kostis.wtf/status)'
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 const STATES = new Set(['up', 'down'])
 
 export function statusTargets(siteUrl) {
-  const site = String(siteUrl || 'https://blxr.net').replace(/\/$/, '')
+  const site = String(siteUrl || 'https://kostis.wtf').replace(/\/$/, '')
   const host = new URL(site).host
   return [
     { id: 'website', name: 'Website', host, link: site, url: `${site}/site.webmanifest` },

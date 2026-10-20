@@ -336,8 +336,8 @@ export default function DashboardSidebar({
               <a
                 {...link(HOME_PATH)}
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-lg outline-none transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:ring-ink-strong/30"
-                aria-label="blxr.net"
-                title="blxr.net"
+                aria-label="kostis.wtf"
+                title="kostis.wtf"
               >
                 <img
                   {...imageProps('/blxr-logo.webp')}

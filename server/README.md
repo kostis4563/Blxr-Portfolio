@@ -1,6 +1,6 @@
 # @blxr/server — music search proxy
 
-Backend behind `/api/` on blxr.net. Fans search out across public mirrors,
+Backend behind `/api/` on kostis.wtf. Fans search out across public mirrors,
 caches results, gives the frontend one stable shape.
 
 Zero npm dependencies — `node:http`, `node:fs`, `node:path`, `node:crypto` only.
@@ -303,7 +303,7 @@ currently skipped.
 Same owner auth as the panel (`Authorization: Bearer`).
 
 - `POST` `{ "name", "role"?, "text"?, "rating"?, "days"? }` → `201 { "invite" }`
-  with a 32-hex `token`. The link is `https://blxr.net/reviews?invite=<token>`.
+  with a 32-hex `token`. The link is `https://kostis.wtf/reviews?invite=<token>`.
   `rating` (1–5, default 5) and `days` (1–30, default 4) shape the automatic
   review.
 - `GET` → every invite with `status`: `pending`, `used` (`reviewId` set),
@@ -381,7 +381,7 @@ before it counts as down. Going down opens an incident and logs a `warn`
   "days": 90,
   "services": [
     {
-      "id": "website", "name": "Website", "host": "blxr.net", "link": "https://blxr.net",
+      "id": "website", "name": "Website", "host": "kostis.wtf", "link": "https://kostis.wtf",
       "state": "up", "since": "2026-10-01T08:15:00.000Z", "ms": 142, "code": null,
       "uptime": 0.99965, "avgMs": 138,
       "days": [{ "day": "2026-10-16", "checks": 144, "up": 144, "ms": 140 }]
@@ -533,7 +533,7 @@ already are. Consumed by `web/src/lib/console-hello.js` for the DevTools banner.
 
 ### `POST /api/reports` · `GET` / `DELETE /api/reports/<id>`
 End-to-end encrypted scan reports shared from the WebScanner macOS app
-("Export → Open on blxr.net"), read by the `/report` page. The app deflates
+("Export → Open on kostis.wtf"), read by the `/report` page. The app deflates
 the report, seals it with a fresh AES-256-GCM key and uploads only the
 ciphertext; the key travels in the link's `#fragment`, which browsers never
 send, so this server can't read a report.
@@ -545,7 +545,7 @@ send, so this server can't read a report.
   query string is ignored. Answers `201`:
 
   ```json
-  { "id": "<22 chars>", "viewerUrl": "https://blxr.net/report", "expiresAt": "…", "deleteToken": "<43 chars>" }
+  { "id": "<22 chars>", "viewerUrl": "https://kostis.wtf/report", "expiresAt": "…", "deleteToken": "<43 chars>" }
   ```
 
   The app sends no `Origin`, so it passes the same-origin rule like curl;

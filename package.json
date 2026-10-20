@@ -2,7 +2,7 @@
   "name": "blxr",
   "private": true,
   "version": "0.0.0",
-  "description": "Source for blxr.net — a personal site, plus a small proxy for the music widget.",
+  "description": "Source for kostis.wtf — a personal site, plus a small proxy for the music widget.",
   "license": "UNLICENSED",
   "repository": "github:kostis4563/blxr",
   "type": "module",

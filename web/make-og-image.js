@@ -33,7 +33,7 @@ const background = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="$
   <text x="${W / 2}" y="${H - 74}" text-anchor="middle"
         font-family="Plus Jakarta Sans, DejaVu Sans, sans-serif"
         font-size="26" font-weight="600" letter-spacing="6"
-        fill="#737373">blxr.net</text>
+        fill="#737373">kostis.wtf</text>
 </svg>`)
 
 const mark = await sharp(await readFile(resolve(pub, 'favicon-wordmark.png')))

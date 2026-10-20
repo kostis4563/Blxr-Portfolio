@@ -2,7 +2,7 @@
   "name": "@blxr/server",
   "private": true,
   "version": "1.0.0",
-  "description": "Music search proxy behind /api on blxr.net — keyless YouTube search plus Apple top-chart. No API credentials required.",
+  "description": "Music search proxy behind /api on kostis.wtf — keyless YouTube search plus Apple top-chart. No API credentials required.",
   "type": "module",
   "main": "src/server.mjs",
   "scripts": {

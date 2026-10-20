@@ -69,7 +69,7 @@ function HandleInput({ id, value, onChange, status, invalid }) {
     <div
       className={`flex h-9 w-full items-stretch overflow-hidden rounded-lg border bg-surface-raised/60 transition-colors focus-within:border-line-strong focus-within:bg-surface hover:border-line-strong ${invalid ? 'border-red-500/60' : 'border-line'}`}
     >
-      <span className="flex select-none items-center border-r border-line px-2.5 font-mono text-[12px] text-ink-subtle">blxr.net/@</span>
+      <span className="flex select-none items-center border-r border-line px-2.5 font-mono text-[12px] text-ink-subtle">kostis.wtf/@</span>
       <input
         id={id}
         type="text"
@@ -1151,7 +1151,7 @@ function Editor({ user }) {
                   />
                 </Row>
                 <Row label="Your URL" description={live ? 'Live now.' : saved ? 'Goes live once the profile is not private.' : 'Appears once the profile is created.'}>
-                  <code className="truncate font-mono text-[12.5px] text-ink-muted">blxr.net/@{form.handle || '…'}</code>
+                  <code className="truncate font-mono text-[12.5px] text-ink-muted">kostis.wtf/@{form.handle || '…'}</code>
                   {saved && <CopyButton text={profileUrl(saved.handle)} label="Copy" />}
                   {saved && (
                     <a href={profilePath(saved.handle)} target="_blank" rel="noreferrer" className={`${BTN_GHOST} h-7 px-2 text-[12px]`}>
@@ -1210,7 +1210,7 @@ function Editor({ user }) {
             <ProfileCard profile={form} compact className={form.layout === 'card' ? 'shadow-sm' : ''} />
           </div>
           <p className="text-[11.5px] leading-relaxed text-ink-faint">
-            This is what visitors see at <span className="font-mono">blxr.net/@{form.handle || '…'}</span>.
+            This is what visitors see at <span className="font-mono">kostis.wtf/@{form.handle || '…'}</span>.
           </p>
         </div>
       </aside>

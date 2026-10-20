@@ -8,7 +8,7 @@ import { postsList, findPost, BLOG_UPDATED } from './blog'
 import { blogPath, libraryPath, normalizePath, parseRoute, projectPath, BLOG_FEED_PATH } from './router'
 import { setDocumentTitle } from './title-animation'
 
-export const SITE_URL = 'https://blxr.net'
+export const SITE_URL = 'https://kostis.wtf'
 export const SITE_NAME = 'blxr'
 
 const OG_IMAGE = `${SITE_URL}/og.png`
@@ -31,14 +31,14 @@ const REVIEWS_DESCRIPTION =
   'What clients and collaborators say about working with Kostis. Worked with me? Leave a review.'
 
 const USES_DESCRIPTION =
-  'The desk, the machine and the software behind blxr.net: a MacBook Air, a 240 Hz display, ' +
+  'The desk, the machine and the software behind kostis.wtf: a MacBook Air, a 240 Hz display, ' +
   'the editor, terminal, fonts, hosting and music.'
 
 const CV_DESCRIPTION =
   'CV of Kostis, a full stack developer in Athens: experience, education, skills and languages. Printable.'
 
 const SECURITY_DESCRIPTION =
-  'Report a security issue in blxr.net or a project by Kostis: private email, keys, disclosure timeline, ' +
+  'Report a security issue in kostis.wtf or a project by Kostis: private email, keys, disclosure timeline, ' +
   'scope and safe harbour.'
 
 const IB_DESCRIPTION =
@@ -48,7 +48,7 @@ const IB_DESCRIPTION =
 const LISTENING_DESCRIPTION = 'What Kostis is playing on Spotify right now, the last 50 songs, and the top tracks and artists lately.'
 
 const CONTACT_DESCRIPTION =
-  'How to reach Kostis: email for anything, a private thread on blxr.net, or GitHub and Discord. ' +
+  'How to reach Kostis: email for anything, a private thread on kostis.wtf, or GitHub and Discord. ' +
   'Based in Athens, Greece (EET / EEST).'
 
 const BOOK_DESCRIPTION =
@@ -59,7 +59,7 @@ const PAYMENT_DESCRIPTION =
   'Payment methods Kostis accepts: PayPal, Paysafecard, Revolut, Wise, SEPA bank transfer and crypto (BTC, ETH, USDT, LTC).'
 
 const LINKS_DESCRIPTION =
-  'All of Kostis’s links on one page: GitHub, Discord, email, Amitista Studio and the best of blxr.net.'
+  'All of Kostis’s links on one page: GitHub, Discord, email, Amitista Studio and the best of kostis.wtf.'
 
 const GALLERY_DESCRIPTION =
   'Gallery by Kostis: photos I took and UI designs I made, from city light to dashboards and product screens.'
@@ -68,10 +68,10 @@ const QUOTE_DESCRIPTION =
   'Words Kostis lives by: one main quote up top and more added over time, each one dated, some with a note on what it means.'
 
 const TERMINAL_DESCRIPTION =
-  'blxr.net as a shell: type help, about, projects or contact, cd between pages, and find the commands that are not in help.'
+  'kostis.wtf as a shell: type help, about, projects or contact, cd between pages, and find the commands that are not in help.'
 
 const STATUS_DESCRIPTION =
-  'Live uptime for blxr.net and its API: checked every few minutes, with 90 days of history and recent incidents.'
+  'Live uptime for kostis.wtf and its API: checked every few minutes, with 90 days of history and recent incidents.'
 
 const VOLUNTEER_DESCRIPTION =
   'Volunteering by Kostis: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
@@ -154,7 +154,7 @@ export function metaFor(pathname) {
   if (route.name === 'uses') {
     return {
       ...base,
-      title: 'Uses — The Setup Behind blxr.net',
+      title: 'Uses — The Setup Behind kostis.wtf',
       description: USES_DESCRIPTION,
     }
   }
@@ -258,7 +258,7 @@ export function metaFor(pathname) {
   if (route.name === 'terminal') {
     return {
       ...base,
-      title: 'Terminal — blxr.net from the Command Line',
+      title: 'Terminal — kostis.wtf from the Command Line',
       description: TERMINAL_DESCRIPTION,
     }
   }
@@ -266,7 +266,7 @@ export function metaFor(pathname) {
   if (route.name === 'status') {
     return {
       ...base,
-      title: 'Status — Live Uptime for blxr.net',
+      title: 'Status — Live Uptime for kostis.wtf',
       description: STATUS_DESCRIPTION,
     }
   }
@@ -292,7 +292,7 @@ export function metaFor(pathname) {
     return {
       ...base,
       title: `Sign in — ${SITE_NAME}`,
-      description: 'Sign in to blxr.net or create an account.',
+      description: 'Sign in to kostis.wtf or create an account.',
       noindex: true,
     }
   }
@@ -310,7 +310,7 @@ export function metaFor(pathname) {
     return {
       ...base,
       title: `Dashboard — ${SITE_NAME}`,
-      description: 'Owner dashboard for blxr.net.',
+      description: 'Owner dashboard for kostis.wtf.',
       noindex: true,
     }
   }
@@ -319,7 +319,7 @@ export function metaFor(pathname) {
     return {
       ...base,
       title: `Profile — ${SITE_NAME}`,
-      description: 'A member profile on blxr.net.',
+      description: 'A member profile on kostis.wtf.',
       noindex: true,
     }
   }
@@ -327,7 +327,7 @@ export function metaFor(pathname) {
   return {
     ...base,
     title: `Not found — ${SITE_NAME}`,
-    description: 'That page does not exist on blxr.net.',
+    description: 'That page does not exist on kostis.wtf.',
     noindex: true,
   }
 }

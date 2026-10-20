@@ -48,9 +48,9 @@ DRY_RUN=1 npm run deploy  # show the plan, touch nothing
   served under `/de/…`, `/el/…` and 30 other prefixes; those URLs may still be
   indexed, so `blxr.conf` folds them back. Check after any config edit:
   ```bash
-  curl -sI https://blxr.net/de/ | head -1
-  curl -sI https://blxr.net/en/projects | head -1
-  curl -sI https://blxr.net/ar | head -1
+  curl -sI https://kostis.wtf/de/ | head -1
+  curl -sI https://kostis.wtf/en/projects | head -1
+  curl -sI https://kostis.wtf/ar | head -1
   ```
 - **`/api/` is rate-limited at the edge.** `blxr.conf` declares
   `limit_req_zone`/`limit_conn_zone` at the top of the file, which only
@@ -66,18 +66,55 @@ DRY_RUN=1 npm run deploy  # show the plan, touch nothing
 - **Compression is per-vhost.** Global `nginx.conf` only compresses
   `text/html`; the `gzip_types` list for JS/CSS lives in `blxr.conf`.
   ```bash
-  curl -sI -H 'Accept-Encoding: gzip' https://blxr.net/assets/<app>.js | grep -i content-encoding
+  curl -sI -H 'Accept-Encoding: gzip' https://kostis.wtf/assets/<app>.js | grep -i content-encoding
   ```
+
+## Domains
+
+`kostis.wtf` is the site. Every other name answers a 301 to it from
+`blxr.conf`, path and query kept:
+
+| Name | Certificate on the box |
+| --- | --- |
+| `kostis.wtf` (serves the site) | `/etc/letsencrypt/live/kostis.wtf/` |
+| `www.kostis.wtf`, `1v2.wtf`, `www.1v2.wtf` | same |
+| `blxr.net`, `www.blxr.net` (until the domain expires) | `/etc/letsencrypt/live/blxr.net/` |
+
+`SITE_URL` in `server.env`, `SITE_URL` in `web/src/lib/seo.js` and
+`web/prerender.js` all say `https://kostis.wtf`; the server only accepts
+`POST`s from that origin (and `www.`).
+
+`deploy.sh` gets the `kostis.wtf` certificate itself (`ensure_cert`), before
+anything else is deployed, whenever it is missing or doesn't cover every name
+in `CERT_DOMAINS`. nginx won't load `blxr.conf` without it, so the first run
+serves `/.well-known/acme-challenge/` for those names from a temporary
+`sites-enabled/blxr-acme-bootstrap`, runs certbot (webroot, with a deploy hook
+that reloads nginx), then removes it. That first run needs, in each new zone:
+
+- `A @` and `A www` -> the box, proxied.
+- **Always Use HTTPS off.** Let's Encrypt asks over plain HTTP, and with it on
+  Cloudflare sends it to HTTPS, where the box has no certificate for the name
+  yet. Turn it on (and set Full (strict)) once the deploy is green.
+
+Adding a name: put it in `CERT_DOMAINS` and in `blxr.conf` (port 80 and one
+of the 443 `server_name`s); the next deploy expands the certificate.
+
+When `blxr.net` is gone, drop its 443 block and its names from the port 80
+block.
 
 ## Cloudflare
 
-Live since 2026-08-14 (`curl -sI https://blxr.net/ | grep -i '^server'` ->
+Live since 2026-08-14 (`curl -sI https://kostis.wtf/ | grep -i '^server'` ->
 `cloudflare`). Needed because nginx 1.24 on Ubuntu has no QUIC module.
 
 Setup:
 
-1. Add `blxr.net` to Cloudflare, point the registrar at its nameservers.
-2. `A blxr.net -> <box IP>`, `A www -> <same>`, proxy **on**.
+Every zone (`kostis.wtf`, `1v2.wtf`, `blxr.net`) gets steps 1–6; the
+challenge rule below only matters on `kostis.wtf`, since the rest only
+redirect.
+
+1. Add the domain to Cloudflare, point the registrar at its nameservers.
+2. `A @ -> <box IP>`, `A www -> <same>`, proxy **on**.
 3. SSL/TLS: **Full (strict)**.
 4. Speed: HTTP/3 (QUIC) on (default).
 5. `Always Use HTTPS` on. SSL/TLS -> Edge Certificates -> HSTS on as well,
@@ -85,12 +122,12 @@ Setup:
    The origin's header never reaches anyone who gets the challenge below;
    Cloudflare's goes on the challenge page too, which is the page
    hstspreload.org's checker gets for `/`. Check:
-   `curl -sI https://blxr.net/ | grep -i strict-transport` shows it even on
+   `curl -sI https://kostis.wtf/ | grep -i strict-transport` shows it even on
    the 403.
 6. SSL/TLS -> Edge Certificates: **Minimum TLS Version 1.2**, TLS 1.3 on.
    The default is 1.0, and visitors only ever handshake with Cloudflare, so
    the origin's `options-ssl-nginx.conf` doesn't help here. Check:
-   `openssl s_client -connect blxr.net:443 -tls1 -cipher 'DEFAULT:@SECLEVEL=0'`
+   `openssl s_client -connect kostis.wtf:443 -tls1 -cipher 'DEFAULT:@SECLEVEL=0'`
    must fail.
 
 External scanners hit the challenge below, so the CSP, missing HSTS, missing
@@ -105,7 +142,7 @@ Keep these **off** — they break this site:
 | Rocket Loader | Rewrites/injects inline `<script>`; CSP only allows inline scripts by sha256 hash. |
 | Auto Minify (HTML) | Changes the bytes of the inline theme script, breaking its CSP hash. |
 | Email Obfuscation | Same failure mode, different injected script. |
-| Bot Fight Mode / JavaScript Detections (Security -> Bots, Security -> Settings) | Injects an inline `window.__CF$cv$params` script carrying the request's ray ID, so no hash can ever match it; the console shows a CSP violation on every page load and the detection never runs anyway. It also challenges GitHub-hosted runners on every path (assets and `/api/` included), and custom rules can't skip it, so `live-scan` gets nothing but 403s. Check: `curl -s https://blxr.net/nope.htm \| grep -c 'CF\$cv'` must print `0`. |
+| Bot Fight Mode / JavaScript Detections (Security -> Bots, Security -> Settings) | Injects an inline `window.__CF$cv$params` script carrying the request's ray ID, so no hash can ever match it; the console shows a CSP violation on every page load and the detection never runs anyway. It also challenges GitHub-hosted runners on every path (assets and `/api/` included), and custom rules can't skip it, so `live-scan` gets nothing but 403s. Check: `curl -s https://kostis.wtf/nope.htm \| grep -c 'CF\$cv'` must print `0`. |
 
 Brotli, Early Hints, edge caching: fine, worth having.
 
@@ -153,8 +190,8 @@ remotely). Origin side ships with every build: `prerender.js` writes
 installs it, `blxr.conf` includes it from the `\.html$` location.
 
 ```bash
-curl -sI https://blxr.net/ | grep -i '^link:'
-curl -sI --http2 https://blxr.net/ | head -1   # 103 before the 200
+curl -sI https://kostis.wtf/ | grep -i '^link:'
+curl -sI --http2 https://kostis.wtf/ | head -1   # 103 before the 200
 ```
 
 If `deploy.sh web` warns the installed snippet names a different build: run
@@ -170,10 +207,10 @@ downloads the file again.
 Verify after any Cloudflare change:
 
 ```bash
-curl -sI https://blxr.net/ | grep -i alt-svc
-curl -sI https://blxr.net/ | grep -i content-security
-curl -s https://blxr.net/ | grep -c rocket-loader   # must be 0
-curl -sI https://blxr.net/assets/<hashed>.js | grep -i cf-cache-status
+curl -sI https://kostis.wtf/ | grep -i alt-svc
+curl -sI https://kostis.wtf/ | grep -i content-security
+curl -s https://kostis.wtf/ | grep -c rocket-loader   # must be 0
+curl -sI https://kostis.wtf/assets/<hashed>.js | grep -i cf-cache-status
 ```
 
 Real visitor IPs: `deploy/nginx/cloudflare-realip.conf` ->
@@ -237,6 +274,8 @@ here.
 
 ## Certificates
 
-Certbot renews `blxr.net` automatically via `/.well-known/acme-challenge/`,
-served over plain HTTP. `deploy.sh` excludes `.well-known` from the
+Certbot renews `kostis.wtf` (all four names) and `blxr.net` automatically via
+`/.well-known/acme-challenge/`, served over plain HTTP. The redirecting names
+send the challenge on to `https://kostis.wtf/.well-known/…`, which Let's
+Encrypt follows. `deploy.sh` excludes `.well-known` from the
 `--delete` rsync.

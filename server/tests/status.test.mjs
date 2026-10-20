@@ -90,7 +90,7 @@ describe('statusTargets', () => {
       assert.equal(website.host, 'blxr.test')
       assert.equal(api.url, 'https://blxr.test/api/music/health')
     }
-    assert.equal(statusTargets(undefined)[0].host, 'blxr.net')
+    assert.equal(statusTargets(undefined)[0].host, 'kostis.wtf')
   })
 
   test('ids are unique', () => {

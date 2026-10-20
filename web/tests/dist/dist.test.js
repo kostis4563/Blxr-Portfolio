@@ -22,7 +22,7 @@ function walk(dir, base = '') {
 const PAGES = { ...Object.fromEntries(staticPaths().map((p) => [p, p === '/' ? 'index.html' : `${p.slice(1)}.html`])), '/404': '404.html', '/login': 'login.html', '/dashboard': 'dashboard.html', '/@': PROFILE_SHELL_FILE }
 const SHELLS = new Set(['/dashboard', '/@'])
 const MINIMAL = new Set(['/hello'])
-const SITE = 'https://blxr.net'
+const SITE = 'https://kostis.wtf'
 
 function served(url) {
   const clean = decodeURI(url.split('#')[0].split('?')[0])
@@ -79,7 +79,7 @@ describe('pages', () => {
       const urls = [
         ...[...h.matchAll(/\s(?:src|href|poster)="(\/[^"]*)"/g)].map((m) => m[1]),
         ...[...h.matchAll(/\s(?:srcset|imagesrcset)="([^"]+)"/g)].flatMap((m) => m[1].split(',').map((s) => s.trim().split(/\s+/)[0])).filter((u) => u.startsWith('/')),
-        ...[...h.matchAll(/content="https:\/\/blxr\.net(\/[^"]+\.(?:png|webp|jpg))"/g)].map((m) => m[1]),
+        ...[...h.matchAll(/content="https:\/\/kostis\.wtf(\/[^"]+\.(?:png|webp|jpg))"/g)].map((m) => m[1]),
       ]
       expect(urls.filter((u) => !served(u))).toEqual([])
     })
@@ -274,7 +274,7 @@ describe('crawlers', () => {
 
   test('robots.txt allows the site, blocks the API and points at the sitemap', () => {
     const robots = read('robots.txt')
-    expect(robots).toMatch(/^Sitemap: https:\/\/blxr\.net\/sitemap\.xml$/m)
+    expect(robots).toMatch(/^Sitemap: https:\/\/kostis\.wtf\/sitemap\.xml$/m)
     expect(robots).toMatch(/^Disallow: \/api\/$/m)
     expect(robots).not.toMatch(/^Disallow: \/\s*$/m)
   })

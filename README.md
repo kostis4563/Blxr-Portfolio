@@ -1,13 +1,13 @@
 <div align="center">
 
-<a href="https://blxr.net"><img src="web/public/og.png" alt="blxr" width="560"></a>
+<a href="https://kostis.wtf"><img src="web/public/og.png" alt="blxr" width="560"></a>
 
 ### blxr
 
-Source for [blxr.net](https://blxr.net) — a personal site and a tiny keyless music proxy.
+Source for [kostis.wtf](https://kostis.wtf) — a personal site and a tiny keyless music proxy.
 
 <p>
-  <a href="https://blxr.net"><img alt="Live" src="https://img.shields.io/badge/blxr.net-live-8b5cf6?style=flat-square&labelColor=0d0d0d"></a>
+  <a href="https://kostis.wtf"><img alt="Live" src="https://img.shields.io/badge/kostis.wtf-live-8b5cf6?style=flat-square&labelColor=0d0d0d"></a>
   <a href="https://github.com/kostis4563/Blxr-Portfolio/actions/workflows/deploy.yml"><img alt="Deploy" src="https://img.shields.io/github/actions/workflow/status/kostis4563/Blxr-Portfolio/deploy.yml?branch=main&style=flat-square&labelColor=0d0d0d&label=deploy&logo=githubactions&logoColor=f5f5f5"></a>
   <a href="https://github.com/kostis4563/Blxr-Portfolio/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/kostis4563/Blxr-Portfolio?style=flat-square&labelColor=0d0d0d&color=6366f1&label=updated"></a>
   <img alt="Backend deps" src="https://img.shields.io/badge/backend_deps-0-f5f5f5?style=flat-square&labelColor=0d0d0d">
@@ -214,7 +214,7 @@ Route contract → [`server/README.md`](server/README.md)
 `/login` and `/dashboard` use [Supabase Auth](https://supabase.com/docs/guides/auth) straight from the browser — the Node server is not involved.
 
 1. Copy `web/.env.example` → `web/.env.local` and set `VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY` (legacy `VITE_SUPABASE_ANON_KEY` also works). Baked in at build time, so the file must exist on the box before `npm run build`.
-2. **URL Configuration** — Site URL `https://blxr.net`; Redirect URLs `https://blxr.net/login` and `http://localhost:5173/login`. Every email link and OAuth round-trip lands on `/login`, which forwards to `?next=`.
+2. **URL Configuration** — Site URL `https://kostis.wtf`; Redirect URLs `https://kostis.wtf/login` and `http://localhost:5173/login`. Every email link and OAuth round-trip lands on `/login`, which forwards to `?next=`.
 3. **Providers** — Email (confirmation on or off) plus any of Google / Discord / GitHub, each with `https://<project-ref>.supabase.co/auth/v1/callback` as callback. See [`deploy/supabase/README.md`](deploy/supabase/README.md) §5–7.
 4. Resets and "Keep me signed in" live in [`auth.js`](web/src/lib/auth.js) / [`supabase.js`](web/src/lib/supabase.js). Reset links must open in the browser that requested them (PKCE).
 5. **Email Templates** — paste from [`deploy/supabase/email-templates/`](deploy/supabase/email-templates/).

@@ -13,7 +13,7 @@ export const CV_SUMMARY =
 
 export const CV_CONTACT = [
   { label: 'Email', value: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}`, sensitive: true },
-  { label: 'Web', value: 'blxr.net', href: 'https://blxr.net' },
+  { label: 'Web', value: 'kostis.wtf', href: 'https://kostis.wtf' },
   { label: 'GitHub', value: `github.com/${GITHUB_USERNAME}`, href: GITHUB_URL },
 ]
 

@@ -94,7 +94,7 @@ function weather(s) {
   return reply(200, { current: { temperature_2m: 21.345, weather_code: 3 } })
 }
 
-const STATUS_HOSTS = new Set(['blxr.test', 'blxr.net'])
+const STATUS_HOSTS = new Set(['blxr.test', 'kostis.wtf'])
 
 function statusTarget(url, s) {
   const mode = s.status?.[url.pathname] ?? 200

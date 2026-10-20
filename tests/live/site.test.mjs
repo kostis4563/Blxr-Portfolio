@@ -7,7 +7,7 @@ import tls from 'node:tls'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const BASE = (process.env.LIVE_URL || 'https://blxr.net').replace(/\/$/, '')
+const BASE = (process.env.LIVE_URL || 'https://kostis.wtf').replace(/\/$/, '')
 const HOST = new URL(BASE).hostname
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -71,13 +71,13 @@ describe('pages', () => {
     sitemapUrls = [...(await sitemap.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
     assert.ok(sitemapUrls.length >= 10)
     const robots = await (await get('/robots.txt')).text()
-    assert.match(robots, /Sitemap: https:\/\/blxr\.net\/sitemap\.xml/)
+    assert.match(robots, /Sitemap: https:\/\/kostis\.wtf\/sitemap\.xml/)
   })
 
   test('every sitemap URL is a 200 HTML page whose canonical is itself', async () => {
     const problems = []
     for (const url of sitemapUrls) {
-      const res = await get(url.replace('https://blxr.net', BASE))
+      const res = await get(url.replace('https://kostis.wtf', BASE))
       const html = await res.text()
       if (res.status !== 200) problems.push(`${url}: ${res.status}`)
       else if (!/^text\/html/.test(res.headers.get('content-type'))) problems.push(`${url}: ${res.headers.get('content-type')}`)

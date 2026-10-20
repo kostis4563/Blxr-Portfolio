@@ -4,7 +4,7 @@ const COMMAND_STYLE = 'background:#6366f1;color:#fff;font-family:monospace;font-
 
 function print() {
   if (import.meta.env.PROD) console.clear()
-  console.log('%cblxr.net', TITLE_STYLE)
+  console.log('%ckostis.wtf', TITLE_STYLE)
   console.log('%cThanks for stopping by. Poking around is welcome.', TEXT_STYLE)
   console.log(
     '%cType %cenable%c to turn on extras, or %csecrets%c to see what else is hidden.',

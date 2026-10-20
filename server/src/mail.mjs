@@ -1,6 +1,6 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
 const MAIL_FROM = process.env.MAIL_FROM || 'blxr <no-reply@blxr.net>'
-const SITE_URL = (process.env.SITE_URL || 'https://blxr.net').replace(/\/$/, '')
+const SITE_URL = (process.env.SITE_URL || 'https://kostis.wtf').replace(/\/$/, '')
 
 export const mailConfigured = () => Boolean(RESEND_API_KEY)
 
@@ -23,7 +23,7 @@ function layout({ preheader, eyebrow, title, intro, footer }) {
         <tr><td style="padding-bottom:36px;font-family:${F};font-size:13.5px;line-height:1.65;color:#a3a3a3;">${intro}</td></tr>
         <tr><td style="border-top:1px dashed #2d2d2d;font-size:0;line-height:0;">&nbsp;</td></tr>
         <tr><td style="padding-top:20px;font-family:${F};font-size:12px;line-height:1.7;color:#737373;">${footer}</td></tr>
-        <tr><td style="padding-top:40px;font-family:${MONO};font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#525252;"><a href="${SITE_URL}" style="color:#525252;text-decoration:none;">blxr.net</a></td></tr>
+        <tr><td style="padding-top:40px;font-family:${MONO};font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#525252;"><a href="${SITE_URL}" style="color:#525252;text-decoration:none;">${new URL(SITE_URL).host}</a></td></tr>
       </table>
     </td>
   </tr>

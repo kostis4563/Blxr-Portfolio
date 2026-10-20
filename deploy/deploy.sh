@@ -23,6 +23,9 @@ NGINX_CF_SNIPPET=/etc/nginx/snippets/blxr-cloudflare-realip.conf
 SERVER_ENV=/etc/blxr-search.env
 ENV_OVERRIDES="$ROOT/deploy/.env-overrides"
 ENV_PUBLIC="$ROOT/deploy/server.env"
+CERT_NAME=kostis.wtf
+CERT_DOMAINS=(kostis.wtf www.kostis.wtf 1v2.wtf www.1v2.wtf)
+ACME_BOOTSTRAP=/etc/nginx/sites-enabled/blxr-acme-bootstrap
 
 run() {
   if [[ "$DRY_RUN" == "1" ]]; then printf '  [dry-run] %s\n' "$*"; else "$@"; fi
@@ -151,8 +154,52 @@ service_diagnostics() {
   journalctl -u blxr-search -n 60 --no-pager -o short-iso || true
 }
 
+cert_covers_domains() {
+  local pem="/etc/letsencrypt/live/$CERT_NAME/fullchain.pem" sans d
+  [[ -f "$pem" ]] || return 1
+  sans="$(openssl x509 -in "$pem" -noout -ext subjectAltName 2>/dev/null | tr ', ' '\n\n')"
+  for d in "${CERT_DOMAINS[@]}"; do
+    grep -qxF "DNS:$d" <<< "$sans" || return 1
+  done
+}
+
+ensure_cert() {
+  need_root
+  cert_covers_domains && return 0
+
+  step "Requesting certificate for ${CERT_DOMAINS[*]}"
+  if [[ "$DRY_RUN" == "1" ]]; then
+    printf '  [dry-run] serve /.well-known/acme-challenge/ for %s on :80\n' "${CERT_DOMAINS[*]}"
+  else
+    printf 'server {\n    listen 80;\n    listen [::]:80;\n    server_name %s;\n\n    location /.well-known/acme-challenge/ {\n        root %s;\n    }\n}\n' \
+      "${CERT_DOMAINS[*]}" "$WEB_ROOT" > "$ACME_BOOTSTRAP"
+  fi
+  if ! run nginx -t; then
+    run rm -f "$ACME_BOOTSTRAP"
+    exit 1
+  fi
+  run systemctl reload nginx
+
+  local args=() d status=0
+  for d in "${CERT_DOMAINS[@]}"; do args+=(-d "$d"); done
+  run certbot certonly --webroot -w "$WEB_ROOT" --cert-name "$CERT_NAME" "${args[@]}" \
+    --expand --non-interactive --agree-tos --deploy-hook 'systemctl reload nginx' || status=$?
+
+  run rm -f "$ACME_BOOTSTRAP"
+  run systemctl reload nginx
+
+  if [[ "$status" != "0" ]]; then
+    printf '\n\033[1;31m!! certbot could not get a certificate for %s.\033[0m\n' "${CERT_DOMAINS[*]}" >&2
+    printf '   Nothing else was deployed. In Cloudflare, for each of those zones:\n' >&2
+    printf '     - the @ and www A records point at this box, proxied\n' >&2
+    printf '     - SSL/TLS -> Edge Certificates -> Always Use HTTPS is off until this succeeds\n\n' >&2
+    exit 1
+  fi
+}
+
 deploy_nginx() {
   need_root
+  ensure_cert
   step "Installing nginx config"
   run install -m 0644 "$ROOT/deploy/nginx/blxr.conf" "$NGINX_SITE"
   run install -m 0644 "$ROOT/deploy/nginx/cloudflare-realip.conf" "$NGINX_CF_SNIPPET"
@@ -196,7 +243,7 @@ case "$TARGET" in
   web)    deploy_web ;;
   server) deploy_server ;;
   nginx)  deploy_nginx ;;
-  all)    deploy_web; deploy_server; deploy_nginx ;;
+  all)    ensure_cert; deploy_web; deploy_server; deploy_nginx ;;
   *) echo "usage: $0 [all|web|server|nginx]" >&2; exit 2 ;;
 esac
 

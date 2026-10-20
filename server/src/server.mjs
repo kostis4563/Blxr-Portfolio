@@ -508,7 +508,7 @@ function readBlobBody(req, limit) {
 const REPORTS_MAX_MB = Number(process.env.REPORTS_MAX_MB) > 0 ? Number(process.env.REPORTS_MAX_MB) : 512
 const REPORTS_MAX_COUNT = 5000
 const REPORTS_SWEEP_MS = 10 * 60_000
-const REPORT_VIEWER_URL = `${(process.env.SITE_URL || 'https://blxr.net').replace(/\/$/, '')}/report`
+const REPORT_VIEWER_URL = `${(process.env.SITE_URL || 'https://kostis.wtf').replace(/\/$/, '')}/report`
 const reportStore = openReports(path.join(STATE_DIR, 'reports'), { maxBytes: REPORTS_MAX_MB * 1024 * 1024, maxCount: REPORTS_MAX_COUNT })
 
 const REVIEWS_FILE = path.join(STATE_DIR, 'reviews.json')
@@ -857,7 +857,7 @@ async function ghFromGraphql(user, year, now) {
       headers: {
         authorization: `Bearer ${GH_TOKEN}`,
         'content-type': 'application/json',
-        'user-agent': 'blxr.net',
+        'user-agent': 'kostis.wtf',
       },
       body,
       signal,
@@ -884,7 +884,7 @@ async function ghFromGraphql(user, year, now) {
 async function ghFromMirror(user, year) {
   const url = `https://github-contributions-api.jogruber.de/v4/${encodeURIComponent(user)}?y=${encodeURIComponent(year)}`
   const json = await withTimeout(async (signal) => {
-    const res = await fetch(url, { headers: { 'user-agent': 'blxr.net' }, signal })
+    const res = await fetch(url, { headers: { 'user-agent': 'kostis.wtf' }, signal })
     if (!res.ok) throw new Error(`mirror ${res.status}`)
     return res.json()
   })
@@ -933,7 +933,7 @@ let weatherCache = null
 
 async function fetchWeather() {
   const data = await withTimeout(async (signal) => {
-    const res = await fetch(WEATHER_URL, { headers: { accept: 'application/json', 'user-agent': 'blxr.net' }, signal })
+    const res = await fetch(WEATHER_URL, { headers: { accept: 'application/json', 'user-agent': 'kostis.wtf' }, signal })
     if (!res.ok) throw new Error(`open-meteo ${res.status}`)
     return res.json()
   })
@@ -1195,7 +1195,7 @@ const ICLOUD_EMAIL = (process.env.ICLOUD_EMAIL || '').trim()
 const ICLOUD_APP_PASSWORD = (process.env.ICLOUD_APP_PASSWORD || '').replace(/\s+/g, '')
 const ICLOUD_CALDAV_URL = (process.env.ICLOUD_CALDAV_URL || '').trim() || 'https://caldav.icloud.com'
 const BOOKING_ON = Boolean(ICLOUD_EMAIL && ICLOUD_APP_PASSWORD)
-const BOOKING_SITE = (process.env.SITE_URL || 'https://blxr.net').replace(/\/$/, '')
+const BOOKING_SITE = (process.env.SITE_URL || 'https://kostis.wtf').replace(/\/$/, '')
 const BOOKING_DEFAULT_HOURS = 'mon-fri 10:00-18:00'
 const BOOKING_CALENDAR = (process.env.BOOKING_CALENDAR || '').trim()
 const BOOKING_BUSY_CALENDARS = String(process.env.BOOKING_BUSY_CALENDARS || '').split(',').map((name) => name.trim().toLowerCase()).filter(Boolean)
@@ -1674,7 +1674,7 @@ async function ghGraphql(query, variables) {
   try {
     res = await fetch(`${GH_API}/graphql`, {
       method: 'POST',
-      headers: { authorization: `Bearer ${GH_TOKEN}`, 'content-type': 'application/json', 'user-agent': 'blxr.net' },
+      headers: { authorization: `Bearer ${GH_TOKEN}`, 'content-type': 'application/json', 'user-agent': 'kostis.wtf' },
       body: JSON.stringify({ query, variables }),
       signal: ctrl.signal,
     })
@@ -2062,7 +2062,7 @@ async function githubOwner() {
   if (json.data.viewer.email) emails.add(json.data.viewer.email.toLowerCase())
   try {
     const res = await withTimeout((signal) =>
-      fetch(`${GH_API}/user/emails`, { signal, headers: { authorization: `Bearer ${GH_TOKEN}`, 'user-agent': 'blxr.net', accept: 'application/vnd.github+json' } }),
+      fetch(`${GH_API}/user/emails`, { signal, headers: { authorization: `Bearer ${GH_TOKEN}`, 'user-agent': 'kostis.wtf', accept: 'application/vnd.github+json' } }),
     )
     if (res.ok) for (const e of await res.json()) if (e?.verified && typeof e.email === 'string') emails.add(e.email.toLowerCase())
   } catch {
@@ -2279,7 +2279,7 @@ async function discordFromApi(id) {
   return withTimeout(async (signal) => {
     const res = await fetch(`${DISCORD_API}/users/${id}`, {
       signal,
-      headers: { authorization: `Bot ${DISCORD_BOT_TOKEN}`, accept: 'application/json', 'user-agent': 'blxr.net (https://blxr.net, 1.0)' },
+      headers: { authorization: `Bot ${DISCORD_BOT_TOKEN}`, accept: 'application/json', 'user-agent': 'kostis.wtf (https://kostis.wtf, 1.0)' },
     })
     discordStatus(res, 'discord')
     const body = await res.json().catch(() => null)
@@ -2290,7 +2290,7 @@ async function discordFromApi(id) {
 
 async function discordFromMirror(id) {
   return withTimeout(async (signal) => {
-    const res = await fetch(`${DISCORD_LOOKUP}/${id}`, { signal, headers: { accept: 'application/json', 'user-agent': 'blxr.net' } })
+    const res = await fetch(`${DISCORD_LOOKUP}/${id}`, { signal, headers: { accept: 'application/json', 'user-agent': 'kostis.wtf' } })
     const json = res.ok || res.status === 400 ? await res.json().catch(() => null) : null
     if (json?.data?.code === 10013 || json?.code === 10013) throw new DiscordError('not_found', 404)
     discordStatus(res, 'discord mirror')
@@ -2376,7 +2376,7 @@ async function blogGh(pathname, { method = 'GET', body } = {}) {
         authorization: `Bearer ${BLOG_TOKEN}`,
         accept: 'application/vnd.github+json',
         'x-github-api-version': '2022-11-28',
-        'user-agent': 'blxr.net',
+        'user-agent': 'kostis.wtf',
         ...(body ? { 'content-type': 'application/json' } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,

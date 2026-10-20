@@ -13,7 +13,7 @@ https://mjgymhtgqxzrcnkthntp.supabase.co/auth/v1/callback
 ## 0. Site URL and redirect allow-list (do this first)
 
 A new project ships with **Site URL = `http://localhost:3000`**, and Supabase
-only honours the app's `redirectTo` (`https://blxr.net/login?next=…`) when it
+only honours the app's `redirectTo` (`https://kostis.wtf/login?next=…`) when it
 matches the allow-list. Until both are set, every Google/Discord sign-in and
 every mail link lands on `http://localhost:3000/?code=…`.
 
@@ -21,8 +21,8 @@ Supabase dashboard → **Authentication → URL Configuration**:
 
 | Field | Value |
 | :-- | :-- |
-| Site URL | `https://blxr.net` |
-| Redirect URLs | `https://blxr.net/**` and `http://localhost:5173/**` (local `npm run dev`) |
+| Site URL | `https://kostis.wtf` |
+| Redirect URLs | `https://kostis.wtf/**` and `http://localhost:5173/**` (local `npm run dev`) |
 
 The wildcard covers `/login?next=…`, `/dashboard` and the settings pages the
 app hands to `redirectTo`. `{{ .SiteURL }}` in [`email-templates/`](email-templates/)
@@ -93,7 +93,7 @@ Supabase has no template for this one, so the Node server sends it
 
 ```ini
 RESEND_API_KEY=re_...                       # the same key as the SMTP form
-SITE_URL=https://blxr.net
+SITE_URL=https://kostis.wtf
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
@@ -106,7 +106,7 @@ Google only needs an OAuth client. Free, takes ten minutes.
    project (`blxr`) or pick one.
 2. **APIs & Services → OAuth consent screen** (now "Google Auth Platform →
    Branding"): app name `blxr`, support email your Gmail, app domain
-   `blxr.net`, add `blxr.net` under **Authorised domains**, developer contact
+   `kostis.wtf`, add `kostis.wtf` under **Authorised domains**, developer contact
    your Gmail. Audience **External**. Then **Publish** it — while it stays in
    *Testing* only the test users you list can sign in and everyone else gets
    "access blocked".
@@ -115,7 +115,7 @@ Google only needs an OAuth client. Free, takes ten minutes.
    | Field | Value |
    | :-- | :-- |
    | Name | `blxr web` |
-   | Authorised JavaScript origins | `https://blxr.net`, `http://localhost:5173` |
+   | Authorised JavaScript origins | `https://kostis.wtf`, `http://localhost:5173` |
    | Authorised redirect URIs | `https://mjgymhtgqxzrcnkthntp.supabase.co/auth/v1/callback` |
 
    The redirect URI is Supabase's, not the site's — the browser goes
@@ -153,7 +153,7 @@ Google only needs an OAuth client. Free, takes ten minutes.
    | Field | Value |
    | :-- | :-- |
    | Application name | `blxr` |
-   | Homepage URL | `https://blxr.net` |
+   | Homepage URL | `https://kostis.wtf` |
    | Authorization callback URL | `https://mjgymhtgqxzrcnkthntp.supabase.co/auth/v1/callback` |
 
    Leave *Enable Device Flow* off.
@@ -193,7 +193,7 @@ regional and notification preferences are stored in `user_metadata`
 ## 9. Member profiles
 
 `/dashboard#profile` lets every account build a public page at
-`blxr.net/@<handle>`. Unlike settings it needs a table, because other people
+`kostis.wtf/@<handle>`. Unlike settings it needs a table, because other people
 have to be able to read it:
 
 1. Supabase → **SQL editor** → paste [`profiles.sql`](profiles.sql) → **Run**.
@@ -417,7 +417,7 @@ app already expects these; none of them changes a line of code.
 
 | Setting | Value | Why |
 | :-- | :-- | :-- |
-| Enable Captcha | **on**, provider *Turnstile* | Cloudflare → Turnstile → Add widget (`blxr.net`, *Managed*). Secret key here; site key in `web/.env.production` as `VITE_TURNSTILE_SITE_KEY`, then rebuild. Sign-in, sign-up, reset mail and the current-password check send a token; without the site key in the build the forms send none and Supabase refuses them — set both or neither. |
+| Enable Captcha | **on**, provider *Turnstile* | Cloudflare → Turnstile → Add widget (`kostis.wtf`, *Managed*). Secret key here; site key in `web/.env.production` as `VITE_TURNSTILE_SITE_KEY`, then rebuild. Sign-in, sign-up, reset mail and the current-password check send a token; without the site key in the build the forms send none and Supabase refuses them — set both or neither. |
 
 **Authentication → Rate Limits**
 
@@ -456,7 +456,7 @@ app already expects these; none of them changes a line of code.
   only in `/etc/blxr-search.env` on the box (via the `BLXR_SUPABASE_SECRET_KEY`
   repository secret if you add one to `deploy.yml`).
 - **Authentication → URL Configuration → Redirect URLs**: only
-  `https://blxr.net/**` in production. Remove the `localhost` entry when you
+  `https://kostis.wtf/**` in production. Remove the `localhost` entry when you
   are not developing; it is the one place an open redirect could come from.
 
 ## 14. Guests

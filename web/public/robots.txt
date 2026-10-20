@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /guide
 
-Sitemap: https://blxr.net/sitemap.xml
+Sitemap: https://kostis.wtf/sitemap.xml

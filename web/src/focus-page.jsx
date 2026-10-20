@@ -1842,7 +1842,7 @@ function Hero({ demo, theme, onToggleTheme }) {
             </a>
           ))}
           <a {...link(HOME_PATH)} className="fl-nav-link">
-            <span className="fl-nav-wide">blxr.net</span>
+            <span className="fl-nav-wide">kostis.wtf</span>
             <Icon name="arrowUpRight" className="h-3.5 w-3.5" />
           </a>
           <ThemeButton theme={theme} onToggle={onToggleTheme} />
@@ -2563,7 +2563,7 @@ const FOOT_COLUMNS = [
     links: [...SECTIONS.map(([id, label]) => ({ label, jump: id })), { label: 'Download', href: FOCUS_DOWNLOAD, download: true }],
   },
   {
-    title: 'blxr.net',
+    title: 'kostis.wtf',
     links: [
       { label: 'Home', to: HOME_PATH },
       { label: 'Projects', to: PROJECTS_PATH },

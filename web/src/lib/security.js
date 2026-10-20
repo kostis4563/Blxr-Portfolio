@@ -7,7 +7,7 @@ export const SECURITY_EXPIRES = '2027-10-06'
 export const SECURITY_TXT_PATH = '/.well-known/security.txt'
 
 export const SECURITY_INTRO =
-  'Found a hole in blxr.net or something I built? Tell me privately first. I read every report myself and answer each one.'
+  'Found a hole in kostis.wtf or something I built? Tell me privately first. I read every report myself and answer each one.'
 
 export const SECURITY_SUBJECT = 'Security: '
 
@@ -39,8 +39,8 @@ export const SECURITY_STEPS = [
 
 export const SECURITY_SCOPE = {
   in: [
-    'blxr.net and every page on it',
-    'The API under blxr.net/api',
+    'kostis.wtf and every page on it',
+    'The API under kostis.wtf/api',
     'Accounts, sign-in and the dashboard',
     'Private messages and their encryption',
     'Public repos on my GitHub',

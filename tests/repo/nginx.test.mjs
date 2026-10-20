@@ -50,19 +50,24 @@ const hostAllowed = (directive, url) => {
 describe('server blocks', () => {
   const servers = blocks(conf, 'server')
 
+  const namesOf = (s) => /server_name ([^;]+);/.exec(s.body)[1].trim().split(/\s+/)
+  const secure = servers.filter((s) => /listen 443 ssl/.test(s.body))
+
   test('port 80 only redirects to the HTTPS apex (plus ACME)', () => {
     const plain = servers.find((s) => /listen 80;/.test(s.body))
-    assert.match(plain.body, /return 301 https:\/\/blxr\.net\$request_uri;/)
+    assert.match(plain.body, /return 301 https:\/\/kostis\.wtf\$request_uri;/)
     assert.match(plain.body, /location \/\.well-known\/acme-challenge\//)
   })
 
-  test('www redirects to the apex over HTTPS', () => {
-    const www = servers.find((s) => /server_name www\.blxr\.net;/.test(s.body))
-    assert.match(www.body, /return 301 https:\/\/blxr\.net\$request_uri;/)
+  test('every other name redirects to the apex over HTTPS', () => {
+    const plain = servers.find((s) => /listen 80;/.test(s.body))
+    const aliases = secure.filter((s) => !namesOf(s).includes('kostis.wtf'))
+    assert.deepEqual(namesOf(plain).filter((n) => n !== 'kostis.wtf').sort(), aliases.flatMap(namesOf).sort())
+    for (const alias of aliases) assert.match(alias.body, /return 301 https:\/\/kostis\.wtf\$request_uri;/, namesOf(alias).join(' '))
   })
 
   test('the main site hides its version, uses HTTP/2 and pulls in the security headers', () => {
-    const main = servers.find((s) => /server_name blxr\.net;/.test(s.body))
+    const main = servers.find((s) => /server_name kostis\.wtf;/.test(s.body))
     assert.match(main.body, /server_tokens off;/)
     assert.match(main.body, /listen 443 ssl http2;/)
     assert.match(main.body, /include \/etc\/nginx\/snippets\/blxr-security-headers\.conf;/)

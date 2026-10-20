@@ -188,7 +188,7 @@ const ENV = (ctx) => ({
   HOME: HOME_DIR,
   SHELL: `/bin/${SHELL}`,
   PWD: HOME_DIR,
-  HOSTNAME: 'blxr.net',
+  HOSTNAME: 'kostis.wtf',
   LANG: 'en_GB.UTF-8',
   THEME: ctx.theme ?? 'dark',
   TERM: 'xterm-256color',
@@ -999,12 +999,12 @@ export const COMMANDS = {
   },
   ping: {
     group: 'Live',
-    summary: 'measure the round trip to blxr.net',
-    usage: 'ping [blxr.net]',
+    summary: 'measure the round trip to kostis.wtf',
+    usage: 'ping [kostis.wtf]',
     async run(args, ctx) {
-      const host = (args.find((arg) => !arg.startsWith('-')) ?? 'blxr.net').toLowerCase()
-      if (!['blxr.net', 'www.blxr.net', 'localhost', '127.0.0.1'].includes(host)) {
-        return fail(`ping: ${host}: this shell can only reach blxr.net`)
+      const host = (args.find((arg) => !arg.startsWith('-')) ?? 'kostis.wtf').toLowerCase()
+      if (!['kostis.wtf', 'www.kostis.wtf', 'localhost', '127.0.0.1'].includes(host)) {
+        return fail(`ping: ${host}: this shell can only reach kostis.wtf`)
       }
       if (!ctx.ping) return fail('ping: no network in here')
       const times = []
@@ -1035,7 +1035,7 @@ export const COMMANDS = {
       const info = [
         [strong(title)],
         [dim('-'.repeat(title.length))],
-        [strong('OS'), dim(': '), 'blxr.net'],
+        [strong('OS'), dim(': '), 'kostis.wtf'],
         [strong('Host'), dim(': '), 'one Linux box behind Cloudflare'],
         [strong('Kernel'), dim(': '), `React ${REACT_VERSION} · Vite`],
         [strong('Uptime'), dim(': '), formatUptime(now.getTime() - (ctx.startedAt ?? now.getTime()))],
@@ -1332,8 +1332,8 @@ export const COMMANDS = {
         ? [[`added 1 developer in 0.4s`], [ok('found 0 vulnerabilities')], [dim('next: '), run('hire')]]
         : [[dim('usage: npm install')]],
   },
-  ssh: { hidden: true, run: () => fail(`${USER}@blxr.net: Permission denied (publickey). nice try`) },
-  curl: { hidden: true, run: () => [[dim('you are already on blxr.net')]] },
+  ssh: { hidden: true, run: () => fail(`${USER}@kostis.wtf: Permission denied (publickey). nice try`) },
+  curl: { hidden: true, run: () => [[dim('you are already on kostis.wtf')]] },
   sl: {
     hidden: true,
     summary: 'you meant ls',
@@ -1347,10 +1347,10 @@ export const COMMANDS = {
     ],
   },
   xyzzy: { hidden: true, run: () => [['Nothing happens.']] },
-  hostname: { hidden: true, run: () => [['blxr.net']] },
+  hostname: { hidden: true, run: () => [['kostis.wtf']] },
   uname: {
     hidden: true,
-    run: (args) => [[args.includes('-a') ? `blxrOS blxr.net ${SHELL_VERSION} react-${REACT_VERSION} browser` : 'blxrOS']],
+    run: (args) => [[args.includes('-a') ? `blxrOS kostis.wtf ${SHELL_VERSION} react-${REACT_VERSION} browser` : 'blxrOS']],
   },
   which: {
     hidden: true,
@@ -1463,7 +1463,7 @@ function helpFor(name) {
 
 function readmeLines() {
   return [
-    [strong('# blxr.net terminal')],
+    [strong('# kostis.wtf terminal')],
     BLANK,
     ['A small shell for the site. Everything in here is also one click away'],
     ['on the normal pages, so nothing depends on it.'],
@@ -1551,7 +1551,7 @@ export function welcomeLines(lastLogin) {
   return [
     ...BANNER.map((row) => art(strong(row))),
     BLANK,
-    [`Welcome to ${SHELL} ${SHELL_VERSION}, the terminal for blxr.net.`],
+    [`Welcome to ${SHELL} ${SHELL_VERSION}, the terminal for kostis.wtf.`],
     [dim('type '), run('help'), dim(' for the commands, or try '), ...joinParts([run('about'), run('projects'), run('contact'), run('neofetch')])],
     [run('exit'), dim(' takes you back to the site')],
     lastLogin ? [dim(`Last login: ${lastLogin} on ttys000`)] : [dim('first time in here. welcome')],

@@ -109,7 +109,7 @@ await writeFile(
 )
 console.log(`prerender: ${hints.length} early-hint links -> early-hints.conf`)
 
-const SITE_URL = 'https://blxr.net'
+const SITE_URL = 'https://kostis.wtf'
 const buildDate = new Date().toISOString().slice(0, 10)
 const indexable = staticPaths().filter((path) => !metaFor(path).noindex)
 

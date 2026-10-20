@@ -85,7 +85,7 @@ jobs:
         env:
           ZAP_AUTH_HEADER: X-Blxr-Scan
           ZAP_AUTH_HEADER_VALUE: ${{ env.SCAN_TOKEN }}
-          ZAP_AUTH_HEADER_SITE: blxr.net
+          ZAP_AUTH_HEADER_SITE: kostis.wtf
         with:
-          target: https://blxr.net
+          target: https://kostis.wtf
           allow_issue_writing: false

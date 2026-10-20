@@ -82,7 +82,7 @@ export const NAV_FOOTER = [
 ]
 
 export const BLURBS = {
-  profile: 'Build the page people see at blxr.net/@you.',
+  profile: 'Build the page people see at kostis.wtf/@you.',
   boards: 'Columns, cards and due dates for whatever you are building.',
   messages: 'A private line between your account and the owner.',
   settings: 'Manage your account, security and preferences.',

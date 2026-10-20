@@ -363,7 +363,7 @@ export default function StatusPage({ theme, onToggleTheme }) {
 
         <footer className="w-full max-w-[640px] border-t border-dashed border-line pt-7">
           <p className="text-[13px] leading-relaxed text-ink-muted">
-            How this works: the blxr.net server requests the site and the API every {minutes} minutes and counts any answer under HTTP 400 as up. A failed check is tried once more before it counts as down. Days are in UTC. If the server itself goes down, this page goes with it, so a grey bar means nothing was checking that day.
+            How this works: the kostis.wtf server requests the site and the API every {minutes} minutes and counts any answer under HTTP 400 as up. A failed check is tried once more before it counts as down. Days are in UTC. If the server itself goes down, this page goes with it, so a grey bar means nothing was checking that day.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] font-medium text-ink-muted">
             <a {...link(USES_PATH)} className={FOOT_LINK}>
