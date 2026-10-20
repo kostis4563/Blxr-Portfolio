@@ -19,6 +19,7 @@ import {
   issueMarkdown,
   reportMarkdown,
   reportCsv,
+  fixPrompt,
   exportName,
   SEVERITIES,
   SEVERITY_LABEL,
@@ -985,6 +986,9 @@ export function ReportView({ summary, expiresAt, report, link, focus, onDeleted 
 
         <div className="mt-7 flex flex-wrap items-center gap-2 print:hidden">
           <ExportMenu onPick={exportAs} hasJson={Boolean(report)} />
+          <CopyButton value={() => fixPrompt(summary, statuses)} label="Copy AI prompt to fix everything in this report" className={BTN}>
+            Copy AI prompt
+          </CopyButton>
           <button
             type="button"
             aria-expanded={compare.status !== 'closed'}
