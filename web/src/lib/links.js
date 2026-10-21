@@ -7,7 +7,7 @@ export const LINKS = [
   { label: 'GitHub', detail: GITHUB_USERNAME, href: GITHUB_URL },
   { label: 'Discord', detail: 'blxr__', href: DISCORD_URL },
   { label: 'Amitista Studio', detail: 'amitista.com', href: 'https://amitista.com' },
-  { label: 'Email', detail: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
+  { label: 'Contact', detail: CONTACT_EMAIL + "  (Contact Page)", href: CONTACT_PATH },
 ]
 
 export const SITE_LINKS = [

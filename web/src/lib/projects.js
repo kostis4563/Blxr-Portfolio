@@ -6,7 +6,7 @@ export const projectsList = [
     date: '2026',
     category: 'Security Tooling',
     url: 'https://7x0.site',
-    urlLabel: 'Visit site',
+    urlLabel: '"Closed"',
     github: null,
     image: '/7x0-site.webp',
     imageAlt: '7x0.site logo',
