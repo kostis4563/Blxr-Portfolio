@@ -20,11 +20,14 @@ export const NAV = [
   {
     label: 'Owner',
     owner: true,
-    items: [{ id: 'admin', label: 'Admin', icon: 'sliders', narrow: true }],
+    items: [
+      { id: 'day', label: 'My day', icon: 'listTodo', deep: true, narrow: true },
+      { id: 'admin', label: 'Admin', icon: 'sliders', narrow: true },
+    ],
   },
 ]
 
-export const ADMIN_SECTION = NAV.at(-1).items[0]
+export const ADMIN_SECTION = NAV.at(-1).items.find((item) => item.id === 'admin')
 
 export const ADMIN = [
   {
@@ -92,6 +95,7 @@ export const BLURBS = {
   'settings/appearance': 'Theme, density and motion for this browser.',
   'settings/notifications': 'What we email you and what shows up in the app.',
   'settings/privacy': 'Your data, analytics choices and account deletion.',
+  day: 'What to study and get done each day. Only you can see it.',
   admin: 'Everything behind the public site, in one place.',
   reviewpanel: 'Moderate reviews, hand out invite links and tune the form — signed in as you.',
   calls: 'Booked calls, weekly hours and blocked time for /book.',

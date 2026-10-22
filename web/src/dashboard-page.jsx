@@ -23,6 +23,7 @@ const SECTIONS = {
   gallery: () => import('./dashboard-gallery'),
   quotes: () => import('./dashboard-quotes'),
   calls: () => import('./dashboard-calls'),
+  day: () => import('./dashboard-day'),
 }
 
 const MEMBER_SECTIONS = ['boards', 'messages', 'profile', 'settings']
@@ -39,6 +40,7 @@ const DashboardGallery = lazy(SECTIONS.gallery)
 const DashboardQuotes = lazy(SECTIONS.quotes)
 const DashboardCalls = lazy(SECTIONS.calls)
 const DashboardAdmin = lazy(SECTIONS.admin)
+const DashboardDay = lazy(SECTIONS.day)
 
 const preload = (id) => SECTIONS[id]?.().catch(() => {})
 
@@ -217,6 +219,8 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
           <Suspense fallback={<Loading label={`Opening ${title.toLowerCase()}`} />}>
             {locked ? (
               <MembersOnly path={item.path} onClaim={openClaim} />
+            ) : top.id === 'day' ? (
+              <DashboardDay hash={hash} user={session.user} />
             ) : top.id === 'admin' ? (
               <Suspense fallback={<Loading label="Opening admin" />}>
                 <DashboardAdmin />
