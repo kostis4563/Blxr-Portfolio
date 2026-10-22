@@ -1,5 +1,6 @@
 import { supabase, loadSupabase } from './supabase'
 import { fromRow, toRow } from './day'
+import { homeworkFromRow, homeworkToRow } from './homework'
 
 await loadSupabase()
 
@@ -75,4 +76,29 @@ export async function markBlock(id, marks) {
 
 export async function deleteBlock(id) {
   await run((sb) => sb.from('day_blocks').delete().eq('id', id))
+}
+
+export async function listHomework({ since }) {
+  const [open, finished] = await Promise.all([
+    run((sb) => sb.from('day_homework').select('*').is('done_on', null)),
+    run((sb) => sb.from('day_homework').select('*').gte('done_on', since)),
+  ])
+  return [...(open || []), ...(finished || [])].map(homeworkFromRow)
+}
+
+export async function saveHomework(item, { isNew }) {
+  const row = homeworkToRow(item)
+  const query = (sb) =>
+    isNew
+      ? sb.from('day_homework').insert(row).select('*').single()
+      : sb.from('day_homework').update(row).eq('id', item.id).select('*').single()
+  return homeworkFromRow(await run(query))
+}
+
+export async function markHomework(id, doneOn) {
+  await run((sb) => sb.from('day_homework').update({ done_on: doneOn }).eq('id', id))
+}
+
+export async function deleteHomework(id) {
+  await run((sb) => sb.from('day_homework').delete().eq('id', id))
 }

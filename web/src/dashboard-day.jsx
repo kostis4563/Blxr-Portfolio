@@ -3,6 +3,7 @@ import { Icon } from './components/dashboard-sidebar'
 import { Field, INPUT, TEXTAREA, BTN_PRIMARY, BTN_SECONDARY, BTN_GHOST, Modal, Segmented } from './components/settings-ui'
 import { Note, CARD, Chip, UndoBar } from './components/boards/ui'
 import { Bone } from './components/skeleton'
+import Homework from './components/day-homework'
 import { navigate, dashboardPath } from './lib/router'
 import { prefersTwelveHour } from './lib/booking'
 import { mergeAccountPrefs } from './lib/prefs'
@@ -103,8 +104,9 @@ export default function DashboardDay({ hash, user }) {
   const [undo, setUndo] = useState(null)
   const [undoBusy, setUndoBusy] = useState(false)
   const field = useRef(null)
+  const homeworkField = useRef(null)
 
-  const go = useCallback((iso) => navigate(dashboardPath(iso === today ? 'day' : `day/${iso}`), { replace: true }), [today])
+  const go =useCallback((iso) => navigate(dashboardPath(iso === today ? 'day' : `day/${iso}`), { replace: true }), [today])
 
   const put = useCallback((next) => setBlocks((held) => (held || []).map((b) => (b.id === next.id ? next : b))), [setBlocks])
   const add = useCallback((next) => setBlocks((held) => [...(held || []).filter((b) => b.id !== next.id), next]), [setBlocks])
@@ -194,6 +196,7 @@ export default function DashboardDay({ hash, user }) {
       else if (e.key === 'ArrowRight') go(shiftDay(day, 1))
       else if (e.key === 't') go(today)
       else if (e.key === 'n') field.current?.focus()
+      else if (e.key === 'h') homeworkField.current?.focus()
       else return
       e.preventDefault()
     }
@@ -215,37 +218,41 @@ export default function DashboardDay({ hash, user }) {
   }
 
   return (
-    <div className="flex flex-col gap-5 animate-rise-in">
-      <div className="flex flex-col gap-3">
-        <DayBar day={day} today={today} onGo={go} />
-        <WeekStrip week={week} day={day} today={today} blocks={ready ? blocks : null} onGo={go} />
-      </div>
+    <div className="flex flex-col gap-8 animate-rise-in">
+      <Homework today={today} inputRef={homeworkField} onUndoable={setUndo} />
 
-      {error && <Note tone="error" onDismiss={() => setError(null)}>{errorText(error)}</Note>}
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
+          <DayBar day={day} today={today} onGo={go} />
+          <WeekStrip week={week} day={day} today={today} blocks={ready ? blocks : null} onGo={go} />
+        </div>
 
-      <div className="flex flex-col gap-2">
-        <section aria-label={`Plan for ${formatLongDay(day)}`} className={`${CARD} overflow-hidden`}>
-          {!ready ? (
-            <ListSkeleton />
-          ) : items.length === 0 ? (
-            <p className="px-5 pb-2 pt-8 text-center text-[13px] leading-relaxed text-ink-muted">
-              Nothing for {formatWeekday(day)} yet.
-              <span className="block text-[12.5px] text-ink-faint">Start with a time if it needs one, like 17:00 Math.</span>
+        {error && <Note tone="error" onDismiss={() => setError(null)}>{errorText(error)}</Note>}
+
+        <div className="flex flex-col gap-2">
+          <section aria-label={`Plan for ${formatLongDay(day)}`} className={`${CARD} overflow-hidden`}>
+            {!ready ? (
+              <ListSkeleton />
+            ) : items.length === 0 ? (
+              <p className="px-5 pb-2 pt-8 text-center text-[13px] leading-relaxed text-ink-muted">
+                Nothing for {formatWeekday(day)} yet.
+                <span className="block text-[12.5px] text-ink-faint">Start with a time if it needs one, like 17:00 Math.</span>
+              </p>
+            ) : (
+              <ul aria-label="Plan" className="divide-y divide-line">
+                {items.map((block) => (
+                  <Item key={block.id} block={block} day={day} twelve={twelve} onToggle={toggle} onOpen={setEditing} />
+                ))}
+              </ul>
+            )}
+            <QuickAdd inputRef={field} day={day} twelve={twelve} onAdd={quickAdd} disabled={!ready} divided={ready && items.length > 0} />
+          </section>
+          {ready && items.length > 0 && (
+            <p className="px-1 text-right text-[12px] tabular-nums text-ink-faint">
+              {done === items.length ? 'All done' : `${done} of ${items.length} done`}
             </p>
-          ) : (
-            <ul aria-label="Plan" className="divide-y divide-line">
-              {items.map((block) => (
-                <Item key={block.id} block={block} day={day} twelve={twelve} onToggle={toggle} onOpen={setEditing} />
-              ))}
-            </ul>
           )}
-          <QuickAdd inputRef={field} day={day} twelve={twelve} onAdd={quickAdd} disabled={!ready} divided={ready && items.length > 0} />
-        </section>
-        {ready && items.length > 0 && (
-          <p className="px-1 text-right text-[12px] tabular-nums text-ink-faint">
-            {done === items.length ? 'All done' : `${done} of ${items.length} done`}
-          </p>
-        )}
+        </div>
       </div>
 
       {editing && (

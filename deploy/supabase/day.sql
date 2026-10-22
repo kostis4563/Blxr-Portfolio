@@ -91,3 +91,46 @@ create policy "day: owner updates" on public.day_blocks
 drop policy if exists "day: owner deletes" on public.day_blocks;
 create policy "day: owner deletes" on public.day_blocks
   for delete to authenticated using ((select public.is_site_owner()));
+
+
+create table if not exists public.day_homework (
+  id          uuid primary key default gen_random_uuid(),
+  subject     text not null default '',
+  title       text not null,
+  due         date,
+  done_on     date,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+
+  constraint day_homework_title_len   check (char_length(title) between 1 and 160),
+  constraint day_homework_subject_len check (char_length(subject) <= 40)
+);
+
+create index if not exists day_homework_open on public.day_homework (due) where done_on is null;
+
+drop trigger if exists day_homework_touch on public.day_homework;
+create trigger day_homework_touch before update on public.day_homework
+  for each row execute function public.day_blocks_touch();
+
+alter table public.day_homework enable row level security;
+
+revoke all on public.day_homework from anon;
+grant select, insert, update, delete on public.day_homework to authenticated;
+
+drop policy if exists "homework: owner reads" on public.day_homework;
+create policy "homework: owner reads" on public.day_homework
+  for select to authenticated using ((select public.is_site_owner()));
+
+drop policy if exists "homework: owner inserts" on public.day_homework;
+create policy "homework: owner inserts" on public.day_homework
+  for insert to authenticated with check ((select public.is_site_owner()));
+
+drop policy if exists "homework: owner updates" on public.day_homework;
+create policy "homework: owner updates" on public.day_homework
+  for update to authenticated
+  using ((select public.is_site_owner()))
+  with check ((select public.is_site_owner()));
+
+drop policy if exists "homework: owner deletes" on public.day_homework;
+create policy "homework: owner deletes" on public.day_homework
+  for delete to authenticated using ((select public.is_site_owner()));

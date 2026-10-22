@@ -34,5 +34,6 @@ web/playwright-report/
 web/coverage/
 
 deploy/.env-overrides
+deploy/supabase/*.local.sql
 
 server/.state/
