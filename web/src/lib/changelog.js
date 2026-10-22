@@ -92,7 +92,7 @@ const CONVENTIONAL_KIND = { feat: 'added', fix: 'fixed', revert: 'removed', secu
 
 const SECURITY_RE = /\b(security|vulnerab\w*|cve-\d{4}-\d+|xss|csrf|prototype pollution|codeql)\b/i
 const KIND_RULES = [
-  ['fixed', /^(fix|fixe[sd]|fixing|hotfix|repair(ed|s)?|resolve[sd]?|correct(ed|s)?)\b/i],
+  ['fixed', /^(fix(es|ed|ing)?|hotfix|repair(ed|s)?|resolve[sd]?|correct(ed|s)?)\b/i],
   ['removed', /^(remove[sd]?|delete[sd]?|drop(ped|s)?|deprecate[sd]?|revert(ed|s)?)\b/i],
   ['added', /^(add(ed|s)?|create[sd]?|introduce[sd]?|implement(ed|s)?|install(ed|s)?|initial|launch(ed|es)?|new)\b/i],
 ]
