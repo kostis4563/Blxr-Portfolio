@@ -799,6 +799,38 @@
   background: var(--color-surface-raised);
 }
 
+.book-week-day {
+  background-image: repeating-linear-gradient(to bottom, var(--color-line) 0 1px, transparent 1px var(--hour));
+}
+
+.book-week-day[data-empty] {
+  background-image:
+    repeating-linear-gradient(to bottom, var(--color-line) 0 1px, transparent 1px var(--hour)),
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-line) 80%, transparent) 0 1px, transparent 1px 8px);
+}
+
+.book-week-now {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 1;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--color-ink-strong);
+  pointer-events: none;
+}
+
+.book-week-now::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  translate: 0 -50%;
+  background: inherit;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .book-seg-thumb,
   .book-place-check {

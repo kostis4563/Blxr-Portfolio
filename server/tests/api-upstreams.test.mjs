@@ -488,6 +488,104 @@ describe('github developer stats', () => {
   })
 })
 
+describe('github changelog', () => {
+  test('public repos of the token owner, newest commit first, without merges or bots', async () => {
+    const { status, body, headers } = await srv.request('/api/github/changelog')
+    assert.equal(status, 200)
+    assert.equal(headers.get('cache-control'), 'public, max-age=300, stale-while-revalidate=3600')
+    assert.deepEqual(body.commits.map((c) => [c.repo, c.sha[0], c.message]), [
+      ['site', 'a', 'Add the changelog page'],
+      ['site', 'd', '.'],
+      ['site', 'e', 'Fix the footer'],
+      ['site', '9', 'Older work, page 2'],
+      ['tool', 'f', 'Initial commit'],
+    ])
+    assert.deepEqual(Object.keys(body.commits[0]).sort(), ['additions', 'date', 'deletions', 'message', 'repo', 'sha'])
+    assert.deepEqual([body.commits[0].additions, body.commits[0].deletions], [120, 4])
+    assert.deepEqual(body.repos, [
+      { name: 'site', url: 'https://github.com/octo/site', description: 'site description', language: { name: 'JavaScript', color: '#f1e05a' }, commits: 4 },
+      { name: 'tool', url: 'https://github.com/octo/tool', description: 'tool description', language: null, commits: 1 },
+    ])
+    assert.ok(Date.parse(body.since) < Date.parse(body.commits.at(-1).date))
+  })
+
+  test('leaves out private repos, the profile README repo and repos idle past the window', async () => {
+    const { body } = await srv.request('/api/github/changelog')
+    const text = JSON.stringify(body)
+    for (const name of ['hidden', 'old-tool', '"octo"']) assert.ok(!text.includes(name), name)
+  })
+
+  test('asks GitHub for public repos only, and caches the result', async () => {
+    const fresh = await startServer()
+    try {
+      await fresh.request('/api/github/changelog')
+      const [repos] = await fresh.calls((c) => c.url.includes('/graphql') && c.body.includes('privacy: PUBLIC'))
+      assert.match(JSON.parse(repos.body).query, /repositories\(first: \d+, privacy: PUBLIC, ownerAffiliations: \[OWNER\], isFork: false/)
+      await fresh.clearCalls()
+      assert.equal((await fresh.request('/api/github/changelog')).status, 200)
+      assert.equal((await fresh.calls('api.github.com/graphql')).length, 0)
+    } finally {
+      await fresh.cleanup()
+    }
+  })
+
+  test('pages further back through a busy repo with the cursor GitHub hands out', async () => {
+    const fresh = await startServer()
+    try {
+      await fresh.request('/api/github/changelog')
+      const pages = await fresh.calls((c) => c.url.includes('/graphql') && c.body.includes('$after'))
+      assert.deepEqual(pages.map((c) => JSON.parse(c.body).variables.after), ['site-1'])
+      assert.equal(JSON.parse(pages[0].body).variables.owner, 'octo')
+    } finally {
+      await fresh.cleanup()
+    }
+  })
+
+  test('a repo still cut off after the last page moves the start of the whole log up to its oldest commit', async () => {
+    const cut = await startServer({ scenario: { changelogTruncated: true } })
+    try {
+      const { body } = await cut.request('/api/github/changelog')
+      assert.deepEqual(body.commits.map((c) => c.sha[0]), ['a', 'd', 'e', '9', '8', '7'], 'four pages, then it stops')
+      assert.equal(body.since, body.commits.at(-1).date)
+      assert.deepEqual(body.repos.map((r) => r.name), ['site'], 'a repo with nothing after the cut drops out')
+    } finally {
+      await cut.cleanup()
+    }
+  })
+
+  test('a restart serves the saved changelog even while GitHub is failing', async () => {
+    const first = await startServer()
+    const built = (await first.request('/api/github/changelog')).body
+    await first.cleanup({ keepState: true })
+
+    const second = await startServer({ stateDir: first.stateDir, scenario: { github: 'unauthorized' } })
+    try {
+      const { status, body } = await second.request('/api/github/changelog')
+      assert.equal(status, 200)
+      assert.equal(body.fetchedAt, built.fetchedAt)
+    } finally {
+      await second.cleanup()
+    }
+  })
+
+  test('no token, a rejected token or a GitHub rate limit map to 503 / 503 / 429', async () => {
+    const tokenless = await startServer({ env: { ...FULL_ENV, GITHUB_TOKEN: '' } })
+    const broken = await startServer({ scenario: { github: 'unauthorized' } })
+    const limited = await startServer({ scenario: { github: 'rate_limited' } })
+    try {
+      assert.deepEqual(await tokenless.request('/api/github/changelog').then((r) => [r.status, r.body]), [503, { error: 'changelog_disabled' }])
+      assert.deepEqual(await broken.request('/api/github/changelog').then((r) => [r.status, r.body]), [503, { error: 'changelog_disabled' }])
+      assert.deepEqual(await limited.request('/api/github/changelog').then((r) => [r.status, r.body]), [429, { error: 'rate_limited' }])
+    } finally {
+      await Promise.all([tokenless.cleanup(), broken.cleanup(), limited.cleanup()])
+    }
+  })
+
+  test('writes are refused', async () => {
+    assert.equal((await srv.request('/api/github/changelog', { method: 'POST', body: {} })).status, 405)
+  })
+})
+
 describe('discord lookups', () => {
   const ID = '175928847299117063'
   const lookup = (id, headers = as('member')) => srv.request(`/api/discord/user?id=${id}`, { headers })

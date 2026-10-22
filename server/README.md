@@ -117,7 +117,8 @@ Everything in `guard.mjs`, applied before any route runs:
 
 Consumed by `web/src/lib/api.js` (music/hit/reviews/mail routes),
 `web/src/lib/github.js` (contributions route, which also owns the
-third-party fallback) and `web/src/lib/github-stats.js` (stats route). Change a param or response shape here and update
+third-party fallback), `web/src/lib/github-stats.js` (stats route) and
+`web/src/lib/changelog.js` (changelog route). Change a param or response shape here and update
 those files.
 
 ### `POST /api/mail/password-changed`
@@ -641,6 +642,39 @@ Three rounds of GraphQL:
 `c`/`a`/`d`/`f` = commits, lines added, lines removed, files changed.
 Only commits on default branches are seen. A token with no scopes gives
 public repositories only. `GITHUB_API` overrides the API base for tests.
+
+### `GET /api/github/changelog`
+`/changelog`: recent commits to the **public** repositories owned by the
+account behind `GITHUB_TOKEN` (same `viewer` lookup as stats; no
+parameters). Needs `GITHUB_TOKEN`, else `503 changelog_disabled` (also
+when GitHub rejects it); `429 rate_limited`, `502 github_failed`.
+
+```json
+{ "since": "2026-04-25T19:00:59.448Z",
+  "repos": [ { "name": "Blxr-Portfolio", "url": "https://github.com/kostis4563/Blxr-Portfolio", "description": "…",
+               "language": { "name": "JavaScript", "color": "#f1e05a" }, "commits": 174 } ],
+  "commits": [ { "repo": "Blxr-Portfolio", "sha": "<40 hex>", "message": "Add site status monitoring page",
+                 "date": "2026-10-20T15:01:00.000Z", "additions": 6081, "deletions": 2 } ],
+  "fetchedAt": "…" }
+```
+
+- **Which repos.** The 12 most recently pushed, asked for with
+  `privacy: PUBLIC` and checked again with `isPrivate`, so a private name
+  never leaves the server even if the token can read it. Forks, the profile
+  README repo (named after the login) and repos untouched for 180 days are
+  skipped.
+- **Which commits.** The default branch over the last 180 days, 4 repos ×
+  100 commits per query, then paged by cursor to 400 per repo. Merge commits
+  and bot authors (`[bot]`, Dependabot, GitHub Actions, Renovate) are
+  dropped. `message` is the first line, trimmed to 200 characters; the commit
+  URL is `<repo url>/commit/<sha>`. Newest first, at most 600.
+- **`since`** is where the log is complete from. If a repo still had older
+  commits after 400 (or the 600 cap bit), it moves up to the oldest commit
+  kept, so no repo looks quiet before it.
+
+Rebuilt every 10 minutes (and on start), saved to `github-changelog.json` in
+the state directory and served from there while a rebuild runs or GitHub is
+down. `Cache-Control: public, max-age=300, stale-while-revalidate=3600`.
 
 ## Reviews
 

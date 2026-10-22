@@ -64,6 +64,16 @@ export function groupByDay(slots, timeZone) {
   return days
 }
 
+export function dayMinutes(ms, timeZone) {
+  const parts = {}
+  for (const { type, value } of formatter('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(ms))) {
+    parts[type] = value
+  }
+  return Number(parts.hour) * 60 + Number(parts.minute)
+}
+
+export const shiftDay = (key, by) => new Date(Date.parse(`${key}T12:00:00Z`) + by * 86_400_000).toISOString().slice(0, 10)
+
 export const monthOf = (key) => key.slice(0, 7)
 
 export function shiftMonth(month, by) {
@@ -91,6 +101,14 @@ export const formatMonth = (month) => formatter('en-GB', { timeZone: 'UTC', mont
 export const formatDay = (key) => formatter('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }).format(noon(key))
 
 export const formatWeekday = (key) => formatter('en-GB', { timeZone: 'UTC', weekday: 'short' }).format(noon(key))
+
+export function formatRange(from, to) {
+  const month = (key) => formatter('en-GB', { timeZone: 'UTC', month: 'short' }).format(noon(key))
+  const day = (key) => Number(key.slice(8))
+  const span = month(from) === month(to) ? `${day(from)} – ${day(to)} ${month(to)}` : `${day(from)} ${month(from)} – ${day(to)} ${month(to)}`
+  const year = from.slice(0, 4) === to.slice(0, 4) ? from.slice(0, 4) : `${from.slice(0, 4)} – ${to.slice(0, 4)}`
+  return { span, year }
+}
 
 export const formatTime = (ms, timeZone, twelveHour = false) =>
   formatter('en-GB', { timeZone, hour: twelveHour ? 'numeric' : '2-digit', minute: '2-digit', hourCycle: twelveHour ? 'h12' : 'h23' }).format(new Date(ms))

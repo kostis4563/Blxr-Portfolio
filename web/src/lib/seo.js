@@ -73,6 +73,9 @@ const TERMINAL_DESCRIPTION =
 const STATUS_DESCRIPTION =
   'Live uptime for kostis.wtf and its API: checked every few minutes, with 90 days of history and recent incidents.'
 
+const CHANGELOG_DESCRIPTION =
+  'Every change to my public projects, read live from GitHub and grouped by day: what was added, fixed, changed and removed, newest first.'
+
 const VOLUNTEER_DESCRIPTION =
   'Volunteering by Kostis: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
 
@@ -271,6 +274,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'changelog') {
+    return {
+      ...base,
+      title: 'Changelog — What Changed, Straight from GitHub',
+      description: CHANGELOG_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'focus') {
     return {
       ...base,
@@ -352,6 +363,7 @@ const SHORT_LABELS = {
   quote: 'Quotes',
   terminal: 'Terminal',
   status: 'Status',
+  changelog: 'Changelog',
   focus: 'Focus Lock',
   hello: 'hello world',
   login: 'Sign in',
@@ -764,6 +776,18 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'changelog') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Changelog',
+      description: CHANGELOG_DESCRIPTION,
+      url: `${SITE_URL}/changelog`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@id': `${SITE_URL}/#blxr` },
+    }
+  }
+
   if (route.name === 'focus') {
     return {
       '@context': 'https://schema.org',
@@ -852,6 +876,8 @@ function crumbsFor(route) {
     items.push({ name: 'Terminal', item: urlOf('/terminal') })
   } else if (route.name === 'status') {
     items.push({ name: 'Status', item: urlOf('/status') })
+  } else if (route.name === 'changelog') {
+    items.push({ name: 'Changelog', item: urlOf('/changelog') })
   } else if (route.name === 'focus') {
     items.push({ name: 'Focus Lock', item: urlOf('/focus') })
   } else if (route.name === 'library') {
@@ -947,6 +973,8 @@ export function headTags(pathname) {
       : '',
 
     ogRoute.name === 'status' ? '<link rel="preload" href="/api/status" as="fetch" crossorigin="anonymous" />' : '',
+
+    ogRoute.name === 'changelog' ? '<link rel="preload" href="/api/github/changelog" as="fetch" crossorigin="anonymous" />' : '',
 
     ogRoute.name === 'hello'
       ? '<link rel="preload" href="/fonts/hello-pixel-f4c3c487.woff2" as="font" type="font/woff2" crossorigin="anonymous" />'

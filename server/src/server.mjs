@@ -2153,7 +2153,160 @@ async function githubStats(refresh) {
   return job
 }
 
-const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '')
+const GH_CHANGELOG_TTL_MS = 10 * 60_000
+const GH_CHANGELOG_DAYS = 180
+const GH_CHANGELOG_REPOS = 12
+const GH_CHANGELOG_PAGE = 100
+const GH_CHANGELOG_PAGES = 4
+const GH_CHANGELOG_BATCH = 4
+const GH_CHANGELOG_MAX = 600
+const GH_CHANGELOG_FILE = path.join(STATE_DIR, 'github-changelog.json')
+const GH_REPO_NAME_RE = /^[\w.-]{1,100}$/
+const GH_SHA_RE = /^[0-9a-f]{40}$/
+const GH_BOT_RE = /\[bot\]$|^(dependabot|github-actions|renovate)\b/i
+let ghChangelog = null
+let ghChangelogJob = null
+
+{
+  const saved = readState(GH_CHANGELOG_FILE)
+  if (Number.isFinite(saved?.at) && Array.isArray(saved.data?.commits)) ghChangelog = { at: saved.at, data: saved.data }
+}
+
+const GH_CHANGELOG_REPOS_QUERY = `query($login: String!) {
+  user(login: $login) {
+    repositories(first: ${GH_CHANGELOG_REPOS}, privacy: PUBLIC, ownerAffiliations: [OWNER], isFork: false, orderBy: { field: PUSHED_AT, direction: DESC }) {
+      nodes { name url description isPrivate pushedAt primaryLanguage { name color } defaultBranchRef { name } }
+    }
+  }
+}`
+
+const ghChangelogHistory = (after) => `defaultBranchRef { target { ... on Commit { history(first: ${GH_CHANGELOG_PAGE}, since: $since${after ? ', after: $after' : ''}) {
+      pageInfo { hasNextPage endCursor }
+      nodes { oid messageHeadline committedDate additions deletions parents { totalCount } author { name user { login } } }
+    } } } }`
+
+const ghChangelogBatchQuery = (login, repos) => `query($since: GitTimestamp!) {
+${repos.map((r, i) => `  c${i}: repository(owner: ${JSON.stringify(login)}, name: ${JSON.stringify(r.name)}) {
+    ${ghChangelogHistory(false)}
+  }`).join('\n')}
+}`
+
+const GH_CHANGELOG_PAGE_QUERY = `query($owner: String!, $name: String!, $since: GitTimestamp!, $after: String!) {
+  repository(owner: $owner, name: $name) {
+    ${ghChangelogHistory(true)}
+  }
+}`
+
+async function changelogOlderPages(login, entry, since) {
+  for (let page = 1; page < GH_CHANGELOG_PAGES && entry.history?.pageInfo?.hasNextPage; page++) {
+    const res = await ghGraphql(GH_CHANGELOG_PAGE_QUERY, { owner: login, name: entry.repo.name, since, after: entry.history.pageInfo.endCursor })
+    const next = res?.data?.repository?.defaultBranchRef?.target?.history
+    if (!next) break
+    entry.history = { pageInfo: next.pageInfo, nodes: [...(entry.history.nodes || []), ...(next.nodes || [])] }
+  }
+}
+
+const isBotCommit = (c) => GH_BOT_RE.test(c?.author?.user?.login || '') || GH_BOT_RE.test(c?.author?.name || '')
+
+async function buildChangelog(login) {
+  const since = Date.now() - GH_CHANGELOG_DAYS * 86_400_000
+  const json = await ghGraphql(GH_CHANGELOG_REPOS_QUERY, { login })
+  const user = json?.data?.user
+  if (!user) throw new GhError('github_failed', 502)
+
+  const repos = (user.repositories?.nodes || []).filter(
+    (r) =>
+      r?.isPrivate === false &&
+      GH_REPO_NAME_RE.test(r.name || '') &&
+      r.name.toLowerCase() !== login.toLowerCase() &&
+      r.defaultBranchRef &&
+      Date.parse(r.pushedAt) >= since,
+  )
+  const sinceIso = new Date(since).toISOString()
+  const batches = []
+  for (let i = 0; i < repos.length; i += GH_CHANGELOG_BATCH) batches.push(repos.slice(i, i + GH_CHANGELOG_BATCH))
+  const histories = (
+    await Promise.all(
+      batches.map(async (batch) => {
+        const res = await ghGraphql(ghChangelogBatchQuery(login, batch), { since: sinceIso })
+        return batch.map((repo, i) => ({ repo, history: res?.data?.[`c${i}`]?.defaultBranchRef?.target?.history }))
+      }),
+    )
+  ).flat()
+  await Promise.all(histories.map((entry) => changelogOlderPages(login, entry, sinceIso)))
+
+  let horizon = since
+  for (const { history } of histories) {
+    const oldest = history?.pageInfo?.hasNextPage ? Date.parse(history.nodes?.at(-1)?.committedDate) : NaN
+    if (Number.isFinite(oldest)) horizon = Math.max(horizon, oldest)
+  }
+
+  let commits = []
+  for (const { repo, history } of histories) {
+    for (const c of history?.nodes || []) {
+      const at = Date.parse(c?.committedDate)
+      if (!GH_SHA_RE.test(c?.oid || '') || !(at >= horizon) || (c.parents?.totalCount ?? 0) > 1 || isBotCommit(c)) continue
+      commits.push({
+        repo: repo.name,
+        sha: c.oid,
+        message: String(c.messageHeadline || '').trim().slice(0, 200),
+        date: new Date(at).toISOString(),
+        additions: Number(c.additions) || 0,
+        deletions: Number(c.deletions) || 0,
+      })
+    }
+  }
+  commits.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+  if (commits.length > GH_CHANGELOG_MAX) {
+    commits = commits.slice(0, GH_CHANGELOG_MAX)
+    horizon = Date.parse(commits.at(-1).date)
+  }
+  const counts = new Map()
+  for (const c of commits) counts.set(c.repo, (counts.get(c.repo) || 0) + 1)
+
+  return {
+    since: new Date(horizon).toISOString(),
+    repos: repos
+      .filter((r) => counts.has(r.name))
+      .map((r) => ({
+        name: r.name,
+        url: r.url,
+        description: String(r.description || '').slice(0, 200),
+        language: r.primaryLanguage?.name ? { name: r.primaryLanguage.name, color: r.primaryLanguage.color || null } : null,
+        commits: counts.get(r.name),
+      })),
+    commits,
+    fetchedAt: new Date().toISOString(),
+  }
+}
+
+function rebuildChangelog() {
+  if (!ghChangelogJob) {
+    ghChangelogJob = githubOwner()
+      .then(({ login }) => buildChangelog(login))
+      .then((data) => {
+        ghChangelog = { at: Date.now(), data }
+        writeState(GH_CHANGELOG_FILE, ghChangelog)
+        return data
+      })
+      .finally(() => {
+        ghChangelogJob = null
+      })
+  }
+  return ghChangelogJob
+}
+
+function warmChangelog() {
+  return rebuildChangelog().catch((err) => log.warn('github', 'changelog refresh failed', { detail: err?.message }))
+}
+
+async function githubChangelog() {
+  if (!ghChangelog) return rebuildChangelog()
+  if (Date.now() - ghChangelog.at >= GH_CHANGELOG_TTL_MS) warmChangelog()
+  return ghChangelog.data
+}
+
+const SUPABASE_URL =(process.env.SUPABASE_URL || '').replace(/\/$/, '')
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || ''
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || ''
 const PASSWORD_MAIL_INTERVAL_MS = 10 * 60_000
@@ -2574,6 +2727,7 @@ const SPOTIFY_NOW_CACHE = { 'cache-control': 'public, max-age=10' }
 const SPOTIFY_RECENT_CACHE = { 'cache-control': 'public, max-age=60, stale-while-revalidate=300' }
 const SPOTIFY_TOP_CACHE = { 'cache-control': 'public, max-age=3600, stale-while-revalidate=86400' }
 const STATUS_CACHE = { 'cache-control': 'public, max-age=30' }
+const CHANGELOG_CACHE = { 'cache-control': 'public, max-age=300, stale-while-revalidate=3600' }
 
 const CLIENT_LOG_WINDOW_MS = 10 * 60_000
 const CLIENT_LOG_MAX = 40
@@ -3249,6 +3403,17 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (url.pathname === '/api/github/changelog') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
+      if (!GH_TOKEN) return json(res, 503, { error: 'changelog_disabled' }, NO_STORE)
+      try {
+        return json(res, 200, await githubChangelog(), CHANGELOG_CACHE)
+      } catch (err) {
+        if (err instanceof GhError) return json(res, err.status, { error: err.code === 'stats_disabled' ? 'changelog_disabled' : err.code }, NO_STORE)
+        return json(res, 502, { error: 'github_failed' }, NO_STORE)
+      }
+    }
+
     if (url.pathname === '/api/discord/user') {
       if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, NO_STORE)
       if (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && !(await supabaseUser(req))) return json(res, 401, { error: 'unauthorized' }, NO_STORE)
@@ -3371,6 +3536,8 @@ if (GH_TOKEN) {
     .catch(() => {})
   warmGithubStats()
   setInterval(warmGithubStats, GH_STATS_WARM_MS).unref()
+  warmChangelog()
+  setInterval(warmChangelog, GH_CHANGELOG_TTL_MS).unref()
 }
 
 statusMonitor.start()

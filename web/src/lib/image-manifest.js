@@ -48,6 +48,7 @@ export const IMAGES = {
   '/icons/discord.svg': { v: '6634cc2f', ext: '.svg', widths: [] },
   '/icons/discordjs.svg': { v: '5ad816d8', ext: '.svg', widths: [] },
   '/icons/docker.svg': { v: '29e91bf0', ext: '.svg', widths: [] },
+  '/icons/ejs.svg': { v: '3566a471', ext: '.svg', widths: [] },
   '/icons/figma.svg': { v: '5bcdea34', ext: '.svg', widths: [] },
   '/icons/firebase.svg': { v: 'd7237dee', ext: '.svg', widths: [] },
   '/icons/git.svg': { v: 'cc43d5b0', ext: '.svg', widths: [] },

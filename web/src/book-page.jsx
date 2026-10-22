@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import ThemeToggle from './components/theme-toggle'
 import { Icon } from './components/icon'
 import { Bone, Spinner } from './components/skeleton'
@@ -16,6 +17,8 @@ import {
   timeZoneList,
   prefersTwelveHour,
   dateKey,
+  dayMinutes,
+  shiftDay,
   groupByDay,
   monthOf,
   shiftMonth,
@@ -23,6 +26,7 @@ import {
   formatMonth,
   formatDay,
   formatWeekday,
+  formatRange,
   formatTime,
   formatZone,
   bookingProblems,
@@ -42,8 +46,10 @@ import {
 const FOCUS = 'outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
 const SHADOW = 'shadow-[0_1px_2px_var(--shadow-cast-soft),0_16px_48px_-16px_var(--shadow-cast)]'
 const CARD = `grid w-full overflow-hidden rounded-2xl border border-line bg-surface ${SHADOW} md:grid-cols-[minmax(0,1fr)_240px] lg:grid-cols-[280px_minmax(0,1fr)_248px]`
+const WIDE_CARD = `grid h-[calc(100dvh-8.5rem)] min-h-[600px] w-full grid-cols-[320px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-line bg-surface animate-view-in xl:grid-cols-[360px_minmax(0,1fr)] ${SHADOW}`
 const DONE_CARD = `w-full overflow-hidden rounded-2xl border border-line bg-surface ${SHADOW}`
 const PANEL = 'min-w-0 p-5 sm:p-6'
+const CHIP = 'inline-flex items-center gap-1.5 rounded-md bg-surface-hover-strong/70 px-2 py-1 text-[12.5px] font-medium tabular-nums text-ink-secondary'
 const BASE =
   'inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg text-[14px] font-medium outline-none transition-[background-color,border-color,color,opacity,transform] duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ink-strong/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:pointer-events-none disabled:opacity-50'
 const INVERT = 'bg-ink-strong text-ink-inverse hover:opacity-90'
@@ -55,6 +61,15 @@ const ICON_BUTTON = `flex h-8 w-8 cursor-pointer items-center justify-center rou
 const SLOT =
   'flex h-11 w-full cursor-pointer items-center justify-center rounded-lg border border-line-strong bg-surface text-[14px] font-medium tabular-nums text-ink-strong outline-none transition-[border-color,transform] duration-150 hover:border-ink-strong focus-visible:border-ink-strong focus-visible:ring-1 focus-visible:ring-ink-strong active:scale-[0.98]'
 const TEXT_LINK = `rounded-sm font-medium text-ink-strong underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink-strong ${FOCUS}`
+const WEEK_SLOT = `absolute inset-x-1 flex cursor-pointer items-center justify-center overflow-hidden rounded-md bg-surface-hover-strong px-1 text-[12px] font-medium leading-none tabular-nums text-ink-strong transition-[box-shadow,transform] duration-150 hover:shadow-[inset_0_0_0_1.5px_var(--color-ink-strong)] active:scale-[0.97] ${FOCUS}`
+
+const LAYOUTS = [
+  { id: 'month', icon: 'calendar', label: 'Month view' },
+  { id: 'week', icon: 'grid3', label: 'Week view' },
+  { id: 'column', icon: 'columns3', label: 'Column view' },
+]
+const LAYOUT_KEY = 'book-layout'
+const HOUR_PX = 64
 
 const inputClass = (invalid) =>
   `w-full rounded-lg border bg-surface px-3 text-[14px] text-ink-strong placeholder:text-ink-faint outline-none transition-[border-color,box-shadow] duration-150 focus:ring-[3px] ${
@@ -114,6 +129,39 @@ const MOD_KEY = typeof navigator !== 'undefined' && !/Mac|iPhone|iPad/.test(navi
 const DEFAULT_APP = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent) ? 'google' : 'apple'
 
 const minutesLabel = (minutes) => (minutes % 60 === 0 ? `${minutes / 60} h` : `${minutes} min`)
+
+const hourLabel = (hour, twelve) => (twelve ? `${hour % 12 || 12} ${hour < 12 ? 'am' : 'pm'}` : `${String(hour).padStart(2, '0')}:00`)
+
+function useMedia(query) {
+  const [match, setMatch] = useState(false)
+  useEffect(() => {
+    const list = window.matchMedia(query)
+    const sync = () => setMatch(list.matches)
+    sync()
+    list.addEventListener('change', sync)
+    return () => list.removeEventListener('change', sync)
+  }, [query])
+  return match
+}
+
+function useLayout() {
+  const [layout, setLayout] = useState('month')
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LAYOUT_KEY)
+      if (LAYOUTS.some((l) => l.id === saved)) setLayout(saved)
+    } catch {
+    }
+  }, [])
+  const choose = useCallback((id) => {
+    setLayout(id)
+    try {
+      localStorage.setItem(LAYOUT_KEY, id)
+    } catch {
+    }
+  }, [])
+  return [layout, choose]
+}
 
 function MailLink({ children = 'Email me' }) {
   return (
@@ -178,12 +226,17 @@ function Meta({ icon, glyph, children }) {
   )
 }
 
-function Host({ load, zone, onZone, slot, twelve, plan }) {
+function Host({ load, zone, onZone, slot, twelve, plan, wide = false, children }) {
   const ready = load.state === 'ready' && zone
   const differentClock = Boolean(slot && ready && formatTime(slot, zone) !== formatTime(slot, load.timeZone))
 
   return (
-    <aside aria-label="Call details" className={`${PANEL} flex flex-col gap-5 border-b border-line md:col-span-2 lg:col-span-1 lg:border-b-0 lg:border-e`}>
+    <aside
+      aria-label="Call details"
+      className={`${PANEL} flex flex-col gap-5 ${
+        wide ? 'min-h-0 overflow-y-auto scrollbar-thin' : 'border-b border-line md:col-span-2 lg:col-span-1 lg:border-b-0 lg:border-e'
+      }`}
+    >
       <img
         {...imageProps('/pfp.webp', SIZES.avatar)}
         alt=""
@@ -243,16 +296,18 @@ function Host({ load, zone, onZone, slot, twelve, plan }) {
           That’s {formatTime(slot, load.timeZone, twelve)} for me in {formatZone(load.timeZone, slot).split(' (')[0]}.
         </p>
       )}
+
+      {children}
     </aside>
   )
 }
 
-function Calendar({ month, onMonth, firstMonth, lastMonth, days, selected, today, onSelect }) {
+function Calendar({ month, onMonth, firstMonth, lastMonth, days, selected, today, onSelect, compact = false }) {
   const label = formatMonth(month)
   const cut = label.lastIndexOf(' ')
 
   return (
-    <div className={`${PANEL} animate-view-in`}>
+    <div className={compact ? 'mt-auto pt-2' : `${PANEL} animate-view-in`}>
       <div className="mb-4 flex h-8 items-center justify-between gap-3">
         <h2 aria-live="polite" className="text-[15px] font-semibold text-ink-strong">
           {label.slice(0, cut)} <span className="font-normal text-ink-subtle">{label.slice(cut + 1)}</span>
@@ -266,7 +321,7 @@ function Calendar({ month, onMonth, firstMonth, lastMonth, days, selected, today
           </button>
         </div>
       </div>
-      <div role="group" aria-label={label} className="grid grid-cols-7 gap-1.5">
+      <div role="group" aria-label={label} className={`grid grid-cols-7 ${compact ? 'gap-1' : 'gap-1.5'}`}>
         {WEEKDAYS.map((name) => (
           <span key={name} aria-hidden="true" className="pb-1.5 text-center text-[11px] font-medium uppercase tracking-[0.06em] text-ink-subtle">
             {name}
@@ -284,7 +339,7 @@ function Calendar({ month, onMonth, firstMonth, lastMonth, days, selected, today
               aria-pressed={active}
               aria-label={`${formatDay(key)}${count ? `, ${count} ${count === 1 ? 'time' : 'times'} free` : ', nothing free'}`}
               onClick={() => onSelect(key)}
-              className={`relative flex h-11 items-center justify-center rounded-lg text-[14px] font-medium tabular-nums transition-[background-color,color,box-shadow,transform] duration-150 sm:h-12 ${FOCUS} ${
+              className={`relative flex items-center justify-center rounded-lg text-[14px] font-medium tabular-nums transition-[background-color,color,box-shadow,transform] duration-150 ${compact ? 'h-9' : 'h-11 sm:h-12'} ${FOCUS} ${
                 active
                   ? 'bg-ink-strong text-ink-inverse'
                   : count
@@ -293,7 +348,7 @@ function Calendar({ month, onMonth, firstMonth, lastMonth, days, selected, today
               }`}
             >
               {Number(key.slice(8))}
-              {key === today && <span aria-hidden="true" className={`absolute bottom-1.5 h-1 w-1 rounded-full ${active ? 'bg-ink-inverse' : 'bg-ink-strong'}`} />}
+              {key === today && <span aria-hidden="true" className={`absolute h-1 w-1 rounded-full ${compact ? 'bottom-1' : 'bottom-1.5'} ${active ? 'bg-ink-inverse' : 'bg-ink-strong'}`} />}
             </button>
           )
         })}
@@ -398,6 +453,207 @@ function PickerSkeleton() {
         ))}
       </div>
     </>
+  )
+}
+
+function LayoutToggle({ value, onChange }) {
+  return (
+    <div role="group" aria-label="Layout" className="inline-flex shrink-0 rounded-lg border border-line bg-surface-raised p-0.5">
+      {LAYOUTS.map((l) => (
+        <button
+          key={l.id}
+          type="button"
+          aria-pressed={value === l.id}
+          aria-label={l.label}
+          title={l.label}
+          onClick={() => onChange(l.id)}
+          className={`flex h-7 w-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-150 ${FOCUS} ${
+            value === l.id ? 'bg-surface-hover-strong text-ink-strong' : 'text-ink-subtle hover:text-ink-strong'
+          }`}
+        >
+          <Icon name={l.icon} className="h-4 w-4" />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function RangeHeader({ from, to, canBack, canForward, onShift, onToday, twelve, onTwelve }) {
+  const { span, year } = formatRange(from, to)
+  return (
+    <div className="flex h-15 shrink-0 items-center gap-4 border-b border-line px-5">
+      <h2 aria-live="polite" className="min-w-36 text-[15px] font-semibold tabular-nums text-ink-strong">
+        {span} <span className="font-normal text-ink-subtle">{year}</span>
+      </h2>
+      <div className="flex items-center gap-0.5">
+        <button type="button" aria-label="Earlier days" disabled={!canBack} onClick={() => onShift(-1)} className={ICON_BUTTON}>
+          <Icon name="chevronLeft" className="h-4 w-4" />
+        </button>
+        <button type="button" aria-label="Later days" disabled={!canForward} onClick={() => onShift(1)} className={ICON_BUTTON}>
+          <Icon name="chevronRight" className="h-4 w-4" />
+        </button>
+      </div>
+      {onToday && (
+        <button type="button" onClick={onToday} className={`${BASE} h-8 border border-line-strong bg-surface px-3 text-ink-strong hover:bg-surface-hover`}>
+          Today
+        </button>
+      )}
+      <div className="ms-auto">
+        <HourToggle twelve={twelve} onChange={onTwelve} />
+      </div>
+    </div>
+  )
+}
+
+function DayHead({ day, today }) {
+  return (
+    <p className="flex items-center justify-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-subtle">
+      <span aria-hidden="true">{formatWeekday(day)}</span>
+      <span
+        aria-hidden="true"
+        className={`flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[12px] tabular-nums tracking-normal ${
+          day === today ? 'bg-ink-strong text-ink-inverse' : 'text-ink-strong'
+        }`}
+      >
+        {Number(day.slice(8))}
+      </span>
+      <span className="sr-only">{formatDay(day)}</span>
+    </p>
+  )
+}
+
+function ColumnView({ visible, days, today, zone, twelve, onPick }) {
+  return (
+    <div className="grid min-h-full gap-3 px-4 pb-4" style={{ gridTemplateColumns: `repeat(${visible.length}, minmax(0, 1fr))` }}>
+      {visible.map((key) => {
+        const times = days.get(key) || []
+        return (
+          <div key={key} role="group" aria-label={formatDay(key)} className="flex min-w-0 flex-col">
+            <div className="sticky top-0 z-10 bg-surface py-3">
+              <DayHead day={key} today={today} />
+            </div>
+            {times.length ? (
+              <ul className="flex flex-col gap-2">
+                {times.map((ms) => (
+                  <li key={ms}>
+                    <button type="button" onClick={() => onPick(ms)} className={SLOT}>
+                      {formatTime(ms, zone, twelve)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex min-h-40 flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line px-2 text-center text-[12.5px] text-ink-faint">
+                <Icon name="calendar" className="h-4 w-4" />
+                {key < today ? 'Gone by' : 'Nothing free'}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function WeekGrid({ visible, days, today, zone, twelve, minutes, hours, onPick }) {
+  const [first, last] = hours
+  const rows = Array.from({ length: last - first }, (_, i) => first + i)
+  const height = rows.length * HOUR_PX
+  const at = (ms) => ((dayMinutes(ms, zone) - first * 60) / 60) * HOUR_PX
+  const now = Date.now()
+  const nowAt = at(now)
+  const cols = { gridTemplateColumns: `56px repeat(${visible.length}, minmax(0, 1fr))` }
+
+  return (
+    <div className="min-w-160" style={{ '--hour': `${HOUR_PX}px` }}>
+      <div className="sticky top-0 z-10 grid border-b border-line bg-surface py-3" style={cols}>
+        <span />
+        {visible.map((key) => (
+          <DayHead key={key} day={key} today={today} />
+        ))}
+      </div>
+      <div className="grid pb-4" style={cols}>
+        <div aria-hidden="true" className="relative" style={{ height }}>
+          {rows.map((hour, i) => (
+            <span key={hour} className="absolute inset-e-2.5 text-[11px] tabular-nums text-ink-subtle" style={{ top: i * HOUR_PX + 4 }}>
+              {hourLabel(hour, twelve)}
+            </span>
+          ))}
+        </div>
+        {visible.map((key) => {
+          const times = days.get(key) || []
+          return (
+            <div key={key} role="group" aria-label={formatDay(key)} data-empty={times.length ? undefined : ''} className="book-week-day relative border-s border-line" style={{ height }}>
+              {times.map((ms) => (
+                <button key={ms} type="button" onClick={() => onPick(ms)} className={WEEK_SLOT} style={{ top: at(ms) + 1, height: (minutes / 60) * HOUR_PX - 2 }}>
+                  {formatTime(ms, zone, twelve)}
+                </button>
+              ))}
+              {key === today && nowAt > 0 && nowAt < height && <span aria-hidden="true" className="book-week-now" style={{ top: nowAt }} />}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function WideSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Loading free times" className="flex flex-1 flex-col">
+      <div className="flex h-15 items-center gap-4 border-b border-line px-5">
+        <Bone className="h-4 w-32" />
+        <Bone className="h-6 w-16" />
+        <Bone className="ms-auto h-7 w-19 rounded-lg" />
+      </div>
+      <div className="grid grid-cols-5 gap-3 p-4">
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className="flex flex-col gap-2">
+            <Bone className="mx-auto mb-2 h-4 w-14" />
+            {Array.from({ length: 3 + (i % 3) }, (_, j) => (
+              <Bone key={j} className="h-11 rounded-lg" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BookModal({ busy, returnTo, onClose, children }) {
+  useEffect(() => {
+    const back = returnTo.current
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = overflow
+      if (back?.isConnected) back.focus({ preventScroll: true })
+    }
+  }, [returnTo])
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || busy) return
+      e.preventDefault()
+      onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [busy, onClose])
+
+  return createPortal(
+    <div className="book-ui fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-6 text-ink antialiased backdrop-blur-sm animate-overlay-in" onClick={() => !busy && onClose()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="book-modal-title"
+        onClick={(e) => e.stopPropagation()}
+        className={`max-h-full w-full max-w-150 overflow-y-auto overscroll-contain rounded-2xl border border-line bg-surface scrollbar-thin animate-panel-in ${SHADOW}`}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -515,7 +771,7 @@ function PlaceReach({ place, hostPlace, value, onChange, onBlur, error, inputRef
   )
 }
 
-function DetailsForm({ slot, zone, hostPlace, draft, setDraft, onBooked, onTaken, onBack, onSending, headingRef }) {
+function DetailsForm({ slot, zone, twelve, minutes, hostPlace, draft, setDraft, onBooked, onTaken, onBack, onSending, headingRef, modal = false }) {
   const [touched, setTouched] = useState({})
   const [showAll, setShowAll] = useState(false)
   const [serverFields, setServerFields] = useState([])
@@ -609,14 +865,37 @@ function DetailsForm({ slot, zone, hostPlace, draft, setDraft, onBooked, onTaken
         e.currentTarget.requestSubmit()
       }}
       noValidate
-      className={`${PANEL} relative flex animate-view-in flex-col md:col-span-2`}
+      className={modal ? 'relative flex flex-col px-5 pt-5 sm:px-6 sm:pt-6' : `${PANEL} relative flex animate-view-in flex-col md:col-span-2`}
     >
-      <div className="book-section-head">
-        <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-24 text-[15px] font-semibold text-ink-strong outline-none">
-          Your details
-        </h2>
-        <span>Optional bits help me prepare</span>
-      </div>
+      {modal ? (
+        <div className="flex items-start gap-4">
+          <div className="min-w-0">
+            <h2 id="book-modal-title" ref={headingRef} tabIndex={-1} className="text-[17px] font-semibold tracking-[-0.01em] text-ink-strong outline-none">
+              Confirm your details
+            </h2>
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              <span className={CHIP}>
+                <Icon name="calendar" className="h-3.5 w-3.5" />
+                {fullShortDay(slot, zone)}, {formatTime(slot, zone, twelve)}
+              </span>
+              <span className={CHIP}>
+                <Icon name="clock" className="h-3.5 w-3.5" />
+                {minutesLabel(minutes)}
+              </span>
+            </div>
+          </div>
+          <button type="button" aria-label="Close" onClick={onBack} disabled={sending} className={`-me-1.5 ms-auto ${ICON_BUTTON}`}>
+            <Icon name="x" className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="book-section-head">
+          <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-24 text-[15px] font-semibold text-ink-strong outline-none">
+            Your details
+          </h2>
+          <span>Optional bits help me prepare</span>
+        </div>
+      )}
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field id="book-name" label="Name" error={fieldError('name')}>
@@ -784,7 +1063,11 @@ function DetailsForm({ slot, zone, hostPlace, draft, setDraft, onBooked, onTaken
         </p>
       )}
 
-      <div className="mt-auto flex items-center justify-end gap-2 pt-8">
+      <div
+        className={`flex items-center justify-end gap-2 ${
+          modal ? 'sticky bottom-0 z-10 -mx-5 mt-8 border-t border-line bg-surface px-5 py-4 sm:-mx-6 sm:px-6' : 'mt-auto pt-8'
+        }`}
+      >
         <button type="button" onClick={onBack} disabled={sending} className={GHOST}>
           Back
         </button>
@@ -931,6 +1214,9 @@ export default function BookPage({ theme, onToggleTheme }) {
   const [notice, setNotice] = useState(null)
   const [booking, setBooking] = useState(null)
   const [draft, setDraft] = useState(EMPTY_DRAFT)
+  const [chosenLayout, chooseLayout] = useLayout()
+  const wide = useMedia('(min-width: 1024px)')
+  const roomy = useMedia('(min-width: 1280px)')
   const [sending, setSending] = useState(false)
   const [flash, setFlash] = useState(false)
   const headingRef = useRef(null)
@@ -942,6 +1228,7 @@ export default function BookPage({ theme, onToggleTheme }) {
   const [event, setEvent] = useState(null)
   const addedTimer = useRef(0)
   const opener = useRef(null)
+  const pickedFrom = useRef(null)
 
   useEffect(
     () => () => {
@@ -988,15 +1275,45 @@ export default function BookPage({ theme, onToggleTheme }) {
 
   const days = useMemo(() => (load.state === 'ready' && zone ? groupByDay(load.slots, zone) : new Map()), [load, zone])
   const keys = useMemo(() => [...days.keys()].sort(), [days])
-  const activeDay = days.has(day) ? day : keys[0] || null
+  const today = zone ? dateKey(Date.now(), zone) : null
+  const layout = wide ? chosenLayout : 'month'
+  const board = layout !== 'month'
+  const activeDay = days.has(day) ? day : (day && keys.find((k) => k > day)) || keys[0] || null
+  const from = board && day && today && day >= today ? day : activeDay
+  const span = layout === 'column' && !roomy ? 5 : 7
+  const visible = from ? Array.from({ length: span }, (_, i) => shiftDay(from, i)) : []
   const firstMonth = keys.length ? monthOf(keys[0]) : null
   const lastMonth = keys.length ? monthOf(keys[keys.length - 1]) : null
-  const activeMonth = month && month >= firstMonth && month <= lastMonth ? month : activeDay ? monthOf(activeDay) : null
-  const today = zone ? dateKey(Date.now(), zone) : null
+  const focusMonth = (board ? from : activeDay) ? monthOf(board ? from : activeDay) : null
+  const activeMonth =
+    month && month >= firstMonth && month <= lastMonth ? month : focusMonth && (focusMonth < firstMonth ? firstMonth : focusMonth > lastMonth ? lastMonth : focusMonth)
   const ready = load.state === 'ready' && zone
   const choosing = step === 'details' && slot
   const done = step === 'done' && booking
   const closed = load.code === 'booking_disabled' || load.code === 'booking_paused'
+
+  const hours = useMemo(() => {
+    if (!ready || !load.slots.length) return [9, 18]
+    let low = 24 * 60
+    let high = 0
+    for (const iso of load.slots) {
+      const start = dayMinutes(Date.parse(iso), zone)
+      low = Math.min(low, start)
+      high = Math.max(high, start + load.minutes)
+    }
+    return [Math.max(0, Math.floor(low / 60) - 1), Math.min(24, Math.ceil(high / 60) + 1)]
+  }, [ready, load, zone])
+
+  const shiftRange = (dir) => {
+    const next = shiftDay(from, dir * span)
+    setDay(next < today ? today : next)
+    setMonth(null)
+  }
+
+  const pickDay = (key) => {
+    setDay(key)
+    setMonth(null)
+  }
 
   const changeMonth = (next) => {
     setMonth(next)
@@ -1005,6 +1322,7 @@ export default function BookPage({ theme, onToggleTheme }) {
   }
 
   const pick = (ms) => {
+    pickedFrom.current = document.activeElement
     setSlot(ms)
     setNotice(null)
     setStep('details')
@@ -1112,9 +1430,9 @@ export default function BookPage({ theme, onToggleTheme }) {
     })
   }
 
-  let panels
+  let message = null
   if (load.state === 'error') {
-    panels =
+    message =
       closed ? (
         <Message icon="calendar" title="Booking isn’t open right now">
           <MailLink /> and we’ll find a time that works.
@@ -1140,29 +1458,62 @@ export default function BookPage({ theme, onToggleTheme }) {
           Something went wrong on the way to my calendar. Try again, or <MailLink>email me</MailLink>.
         </Message>
       )
-  } else if (!ready) {
-    panels = <PickerSkeleton />
-  } else if (!keys.length) {
-    panels = (
+  } else if (ready && !keys.length) {
+    message = (
       <Message icon="calendar" title={`Nothing free in the next ${load.days || 'few'} days`}>
         My calendar is full for now. <MailLink /> and we’ll find a time.
       </Message>
     )
-  } else if (choosing) {
+  }
+
+  const back = () => setStep('pick')
+  const details = choosing && (
+    <DetailsForm
+      slot={slot}
+      zone={zone}
+      twelve={twelve}
+      minutes={load.minutes}
+      hostPlace={load.place}
+      draft={draft}
+      setDraft={setDraft}
+      onBooked={booked}
+      onTaken={taken}
+      onBack={back}
+      onSending={setSending}
+      headingRef={headingRef}
+      modal={board}
+    />
+  )
+
+  let panels
+  if (message) {
+    panels = message
+  } else if (!ready) {
+    panels = board ? <WideSkeleton /> : <PickerSkeleton />
+  } else if (board) {
     panels = (
-      <DetailsForm
-        slot={slot}
-        zone={zone}
-        hostPlace={load.place}
-        draft={draft}
-        setDraft={setDraft}
-        onBooked={booked}
-        onTaken={taken}
-        onBack={() => setStep('pick')}
-        onSending={setSending}
-        headingRef={headingRef}
-      />
+      <>
+        <RangeHeader
+          from={from}
+          to={visible[visible.length - 1]}
+          canBack={from > today}
+          canForward={shiftDay(from, span) <= keys[keys.length - 1]}
+          onShift={shiftRange}
+          onToday={from > shiftDay(today, 3) ? () => pickDay(today) : null}
+          twelve={twelve}
+          onTwelve={setTwelve}
+        />
+        <div key={layout} className="min-h-0 flex-1 overflow-auto scrollbar-thin animate-view-in">
+          {layout === 'week' ? (
+            <WeekGrid visible={visible} days={days} today={today} zone={zone} twelve={twelve} minutes={load.minutes} hours={hours} onPick={pick} />
+          ) : (
+            <ColumnView visible={visible} days={days} today={today} zone={zone} twelve={twelve} onPick={pick} />
+          )}
+        </div>
+      </>
     )
+  } else if (choosing) {
+    panels = details
   } else {
     panels = (
       <>
@@ -1181,9 +1532,12 @@ export default function BookPage({ theme, onToggleTheme }) {
     )
   }
 
+  const wideOpen = board && !done
+  const modalOpen = Boolean(wideOpen && choosing)
+
   return (
-    <div className="book-ui flex min-h-dvh flex-col bg-bg text-ink antialiased selection:bg-selection selection:text-ink-strong animate-view-in">
-      <header className="relative mx-auto flex h-16 w-full max-w-[1048px] items-center justify-between px-4 sm:px-6">
+    <div inert={modalOpen} className="book-ui flex min-h-dvh flex-col bg-bg text-ink antialiased selection:bg-selection selection:text-ink-strong animate-view-in">
+      <header className={`relative mx-auto flex h-16 w-full items-center justify-between px-4 sm:px-6 ${wideOpen ? 'max-w-372' : 'max-w-[1048px]'}`}>
         <a
           {...link(HOME_PATH)}
           className={`group -ms-2 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13.5px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink-strong ${FOCUS}`}
@@ -1207,13 +1561,16 @@ export default function BookPage({ theme, onToggleTheme }) {
           onClose={closeSheet}
           onConfirm={addToCalendar}
         />
-        <ThemeToggle theme={theme} onToggle={onToggleTheme} className={`-me-2 ${ICON_BUTTON}`} />
+        <div className="-me-2 flex items-center gap-2">
+          {wide && !done && <LayoutToggle value={layout} onChange={chooseLayout} />}
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} className={ICON_BUTTON} />
+        </div>
       </header>
 
       <NoteStack notes={notes} onDismiss={dismiss} />
 
-      <main className="flex flex-1 justify-center px-4 pb-12 pt-2 sm:items-center sm:px-6 sm:pb-16">
-        <div className={`w-full animate-rise-in ${done ? 'max-w-[520px]' : 'max-w-[1000px]'}`}>
+      <main className={`flex flex-1 justify-center px-4 pb-12 pt-2 sm:items-center sm:px-6 sm:pb-16 ${wideOpen ? 'lg:pb-6' : ''}`}>
+        <div className={`w-full animate-rise-in ${done ? 'max-w-[520px]' : wideOpen ? 'max-w-360' : 'max-w-[1000px]'}`}>
           {notice && (
             <p role="status" className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/6 px-3.5 py-3 text-[13px] text-amber-500">
               <Icon name="info" className="h-4 w-4" />
@@ -1224,6 +1581,25 @@ export default function BookPage({ theme, onToggleTheme }) {
           {done ? (
             <div className={DONE_CARD}>
               <Booked booking={booking} zone={zone} twelve={twelve} onAdd={openSheet} headingRef={headingRef} />
+            </div>
+          ) : board ? (
+            <div className={WIDE_CARD}>
+              <Host load={load} zone={zone} onZone={setZone} slot={choosing ? slot : null} twelve={twelve} plan={choosing ? planOf(draft, load.place) : null} wide>
+                {ready && keys.length > 0 && (
+                  <Calendar
+                    compact
+                    month={activeMonth}
+                    onMonth={changeMonth}
+                    firstMonth={firstMonth}
+                    lastMonth={lastMonth}
+                    days={days}
+                    selected={from}
+                    today={today}
+                    onSelect={pickDay}
+                  />
+                )}
+              </Host>
+              <div className="flex min-h-0 min-w-0 flex-col border-s border-line">{panels}</div>
             </div>
           ) : (
             <div className={CARD}>
@@ -1239,6 +1615,12 @@ export default function BookPage({ theme, onToggleTheme }) {
           )}
         </div>
       </main>
+
+      {modalOpen && (
+        <BookModal busy={sending} returnTo={pickedFrom} onClose={back}>
+          {details}
+        </BookModal>
+      )}
     </div>
   )
 }

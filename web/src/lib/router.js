@@ -32,6 +32,7 @@ export function parseRoute(path) {
   if (p === '/quote') return { name: 'quote' }
   if (p === '/terminal') return { name: 'terminal' }
   if (p === '/status') return { name: 'status' }
+  if (p === '/changelog') return { name: 'changelog' }
   if (p === '/focus') return { name: 'focus' }
   if (p === '/hello') return { name: 'hello' }
   if (p === '/login') return { name: 'login' }
@@ -135,6 +136,7 @@ export const GALLERY_PATH = '/gallery'
 export const QUOTE_PATH = '/quote'
 export const TERMINAL_PATH = '/terminal'
 export const STATUS_PATH = '/status'
+export const CHANGELOG_PATH = '/changelog'
 export const FOCUS_PATH = '/focus'
 export const HELLO_PATH = '/hello'
 export const LOGIN_PATH = '/login'
@@ -171,6 +173,7 @@ export const staticPaths = () => [
   QUOTE_PATH,
   TERMINAL_PATH,
   STATUS_PATH,
+  CHANGELOG_PATH,
   FOCUS_PATH,
   HELLO_PATH,
 ]

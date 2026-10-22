@@ -31,6 +31,7 @@ export const SKILL_CATEGORIES = [
     items: [
       { name: 'Node.js', icon: '/icons/nodejs.svg', level: 'comfortable', url: 'https://nodejs.org', desc: 'JavaScript runtime for servers & tooling' },
       { name: 'Express', icon: '/icons/expressjs_dark.svg', level: 'comfortable', url: 'https://expressjs.com', desc: 'Minimal web framework for Node.js APIs' },
+      { name: 'EJS', icon: '/icons/ejs.svg', level: 'comfortable', url: 'https://ejs.co', desc: 'Embedded JavaScript templates for server-rendered HTML' },
     ],
   },
   {

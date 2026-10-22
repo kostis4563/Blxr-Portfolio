@@ -58,6 +58,7 @@ web/src/
 ├── now-page.jsx       /now — what I'm doing at the moment, content in lib/now.js
 ├── cv-page.jsx        /cv — printable CV, content in lib/cv.js
 ├── travel-page.jsx    /travel — world map, countries I've been to in white (lib/travel.js)
+├── changelog-page.jsx /changelog — commits to my public repos, by day, from /api/github/changelog
 ├── book-page.jsx      /book — pick a free time on my iCloud calendar and book a video call
 ├── login-page.jsx     /login — sign in / register / reset, backed by Supabase Auth
 ├── dashboard-page.jsx /dashboard — signed-in dashboard (components/dashboard-sidebar.jsx + dashboard-topbar.jsx)
@@ -103,6 +104,7 @@ web/src/
     ├── auth.js          sign in / up / out, reset, OAuth — on top of supabase.js
     ├── github.js        contributions mirror
     ├── github-stats.js  Dashboard → Stats (/api/github/stats)
+    ├── changelog.js     /changelog: fetch + clean, Added/Fixed/Changed labels, grouping by day
     ├── youtube-engine.js
     ├── lyrics.js        LRCLIB
     ├── weather.js       Athens' temperature for the hero's Studio line (/api/weather)
@@ -124,6 +126,7 @@ web/src/
 | `/travel` | `travel.html` — world map, countries I've been to in white; list in `lib/travel.js`, shapes in `lib/travel-map.js` |
 | `/listening` | `listening.html` — Spotify now playing, last 50 plays and top tracks/artists via `/api/spotify/*` |
 | `/status` | `status.html` — live uptime for the site and the API, 90 days of history and incidents via `/api/status`; targets in `server/src/status.mjs` |
+| `/changelog` | `changelog.html` — every commit to my public GitHub repos over the last six months via `/api/github/changelog` (needs `GITHUB_TOKEN` on the server), by month and day, each commit labelled added / fixed / changed / removed / security |
 | `/book` | `book.html` — free times from my iCloud calendar via `/api/book`; a booking lands in iCloud (so on every Apple device) and the guest gets an emailed `.ics` invite |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
 | `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |

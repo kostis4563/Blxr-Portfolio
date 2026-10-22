@@ -43,6 +43,7 @@ describe('parseRoute', () => {
     ['/quote', 'quote'],
     ['/terminal', 'terminal'],
     ['/status', 'status'],
+    ['/changelog', 'changelog'],
     ['/focus', 'focus'],
     ['/hello', 'hello'],
     ['/login', 'login'],

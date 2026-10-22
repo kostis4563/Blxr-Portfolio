@@ -226,6 +226,54 @@ async function github(url, init, s) {
 
   if (query.includes('viewer')) return reply(200, { data: { viewer: { login, email: 'owner@example.com' } } })
 
+  if (query.includes('privacy: PUBLIC')) {
+    const ago = (days) => new Date(Date.now() - days * 86_400_000).toISOString()
+    const repo = (name, extra = {}) => ({
+      name, url: `https://github.com/${login}/${name}`, description: `${name} description`, isPrivate: false, pushedAt: ago(1),
+      primaryLanguage: { name: 'JavaScript', color: '#f1e05a' }, defaultBranchRef: { name: 'main' }, ...extra,
+    })
+    return reply(200, {
+      data: {
+        user: {
+          repositories: {
+            nodes: [repo('site'), repo(login), repo('hidden', { isPrivate: true }), repo('tool', { primaryLanguage: null }), repo('old-tool', { pushedAt: ago(400) })],
+          },
+        },
+      },
+    })
+  }
+
+  if (query.includes('messageHeadline')) {
+    const ago = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString()
+    const commit = (char, messageHeadline, hours, extra = {}) => ({
+      oid: char.repeat(40), messageHeadline, committedDate: ago(hours), additions: 10, deletions: 2,
+      parents: { totalCount: 1 }, author: { name: 'Octo Cat', user: { login } }, ...extra,
+    })
+    const history = (nodes, more, cursor) => ({ defaultBranchRef: { target: { history: { pageInfo: { hasNextPage: more, endCursor: cursor }, nodes } } } })
+    const { variables } = JSON.parse(init.body)
+    if (variables.after) {
+      const page = Number(variables.after.split('-')[1])
+      const older = commit(String(10 - page), `Older work, page ${page + 1}`, 24 * (40 + 5 * page))
+      return reply(200, { data: { repository: history([older], Boolean(s.changelogTruncated), `site-${page + 1}`) } })
+    }
+    const histories = {
+      site: [
+        commit('a', 'Add the changelog page', 2, { additions: 120, deletions: 4 }),
+        commit('b', 'Merge pull request #3 from octo/x', 3, { parents: { totalCount: 2 } }),
+        commit('c', 'Bump vite from 8.0.0 to 8.0.1', 4, { author: { name: 'dependabot[bot]', user: null } }),
+        commit('d', '  .', 5),
+        commit('e', 'Fix the footer', 24 * 30),
+      ],
+      tool: [commit('f', 'Initial commit', 24 * 60)],
+    }
+    const data = {}
+    for (const m of query.matchAll(/(c\d+): repository\(owner: "([^"]+)", name: "([^"]+)"\)/g)) {
+      const [, alias, , name] = m
+      data[alias] = history(histories[name] || [], name === 'site', name === 'site' ? 'site-1' : null)
+    }
+    return reply(200, { data })
+  }
+
   if (query.includes('contributionYears')) {
     const days = gh.calendar || [
       { date: '2026-09-20', contributionCount: 0 },

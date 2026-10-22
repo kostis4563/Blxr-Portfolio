@@ -24,6 +24,7 @@ import {
   QUOTE_PATH,
   TERMINAL_PATH,
   STATUS_PATH,
+  CHANGELOG_PATH,
   FOCUS_PATH,
   HELLO_PATH,
 } from '../lib/router'
@@ -56,6 +57,7 @@ const COLUMNS = [
       { label: 'Quotes', to: QUOTE_PATH },
       { label: 'Security', to: SECURITY_PATH },
       { label: 'Status', to: STATUS_PATH },
+      { label: 'Changelog', to: CHANGELOG_PATH },
     ],
   },
   {
