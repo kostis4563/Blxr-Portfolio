@@ -133,6 +133,7 @@ const ROUTE_SOURCES = {
   quote: ['src/quote-page.jsx', 'src/lib/quote.js', 'src/lib/quote-api.js'],
   terminal: ['src/terminal-page.jsx', 'src/lib/terminal.js'],
   status: ['src/status-page.jsx', 'src/lib/status.js'],
+  roadmap: ['src/roadmap-page.jsx', 'src/lib/roadmap.js'],
   focus: ['src/focus-page.jsx', 'src/lib/focus.js', 'public/focus'],
   hello: ['src/hello-page.jsx', 'public/hello-bg.webp', 'public/fonts/hello-pixel-f4c3c487.woff2'],
 }

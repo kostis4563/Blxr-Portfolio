@@ -25,6 +25,7 @@ import {
   TERMINAL_PATH,
   STATUS_PATH,
   CHANGELOG_PATH,
+  ROADMAP_PATH,
   FOCUS_PATH,
   HELLO_PATH,
 } from '../lib/router'
@@ -58,6 +59,7 @@ const COLUMNS = [
       { label: 'Security', to: SECURITY_PATH },
       { label: 'Status', to: STATUS_PATH },
       { label: 'Changelog', to: CHANGELOG_PATH },
+      { label: 'Roadmap', to: ROADMAP_PATH },
     ],
   },
   {

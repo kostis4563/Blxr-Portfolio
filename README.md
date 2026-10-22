@@ -59,6 +59,7 @@ web/src/
 ├── cv-page.jsx        /cv — printable CV, content in lib/cv.js
 ├── travel-page.jsx    /travel — world map, countries I've been to in white (lib/travel.js)
 ├── changelog-page.jsx /changelog — commits to my public repos, by day, from /api/github/changelog
+├── roadmap-page.jsx   /roadmap — goals and the month each should be done by, content in lib/roadmap.js
 ├── book-page.jsx      /book — pick a free time on my iCloud calendar and book a video call
 ├── login-page.jsx     /login — sign in / register / reset, backed by Supabase Auth
 ├── dashboard-page.jsx /dashboard — signed-in dashboard (components/dashboard-sidebar.jsx + dashboard-topbar.jsx)
@@ -105,6 +106,7 @@ web/src/
     ├── github.js        contributions mirror
     ├── github-stats.js  Dashboard → Stats (/api/github/stats)
     ├── changelog.js     /changelog: fetch + clean, Added/Fixed/Changed labels, grouping by day
+    ├── roadmap.js       /roadmap: the goals (title, area, from / by month, status) + due / late labels
     ├── youtube-engine.js
     ├── lyrics.js        LRCLIB
     ├── weather.js       Athens' temperature for the hero's Studio line (/api/weather)
@@ -127,6 +129,7 @@ web/src/
 | `/listening` | `listening.html` — Spotify now playing, last 50 plays and top tracks/artists via `/api/spotify/*` |
 | `/status` | `status.html` — live uptime for the site and the API, 90 days of history and incidents via `/api/status`; targets in `server/src/status.mjs` |
 | `/changelog` | `changelog.html` — every commit to my public GitHub repos over the last six months via `/api/github/changelog` (needs `GITHUB_TOKEN` on the server), by month and day, each commit labelled added / fixed / changed / removed / security |
+| `/roadmap` | `roadmap.html` — what I want to achieve and by when: goals by year, each with a month or a from–to range, a today marker, and done / on time / late labels; content in `lib/roadmap.js` |
 | `/book` | `book.html` — free times from my iCloud calendar via `/api/book`; a booking lands in iCloud (so on every Apple device) and the guest gets an emailed `.ics` invite |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
 | `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |
