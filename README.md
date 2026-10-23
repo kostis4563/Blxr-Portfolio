@@ -59,11 +59,13 @@ web/src/
 ├── cv-page.jsx        /cv — printable CV, content in lib/cv.js
 ├── travel-page.jsx    /travel — world map, countries I've been to in white (lib/travel.js)
 ├── changelog-page.jsx /changelog — commits to my public repos, by day, from /api/github/changelog
-├── roadmap-page.jsx   /roadmap — goals and the month each should be done by, content in lib/roadmap.js
 ├── book-page.jsx      /book — pick a free time on my iCloud calendar and book a video call
 ├── login-page.jsx     /login — sign in / register / reset, backed by Supabase Auth
 ├── dashboard-page.jsx /dashboard — signed-in dashboard (components/dashboard-sidebar.jsx + dashboard-topbar.jsx)
 ├── dashboard-boards.jsx  /dashboard#boards — kanban boards (components/boards/)
+├── dashboard-presentations.jsx  /dashboard#presentations — slide decks: editor, presenter, share links (components/presentations/)
+├── present-page.jsx   /present — a deck someone shared by link (#<token>), read through shared_presentation()
+├── presentations.css  slide, presenter and print styles, loaded only with the presentations chunk
 ├── dashboard-messages.jsx  /dashboard#messages — direct messages with the owner (components/messages/)
 ├── dashboard-reviewpanel.jsx  /dashboard#reviewpanel — owner only: the review tools behind the dashboard session
 ├── dashboard-logs.jsx  /dashboard#logs — owner only: the server's event log with filters, saved tabs and a system report
@@ -95,6 +97,8 @@ web/src/
     ├── boards-api.js    every board read/write (Supabase Postgres + Storage)
     ├── boards-when.js   due-date wording, calendar maths, "friday 6pm" parser
     ├── boards-files.js  browser-side resize, crop and thumbnailing
+    ├── presentations.js  deck model: themes, layouts, limits, share tokens, presenter keys
+    ├── presentations-api.js  every deck read/write, slide images (Supabase Postgres + Storage)
     ├── messages.js      message model: grouping into runs, day labels, receipts, reactions
     ├── messages-api.js  every message read/write + the realtime channels
     ├── messages-unread.js  the unread count behind the sidebar badge
@@ -106,7 +110,6 @@ web/src/
     ├── github.js        contributions mirror
     ├── github-stats.js  Dashboard → Stats (/api/github/stats)
     ├── changelog.js     /changelog: fetch + clean, Added/Fixed/Changed labels, grouping by day
-    ├── roadmap.js       /roadmap: the goals (title, area, from / by month, status) + due / late labels
     ├── youtube-engine.js
     ├── lyrics.js        LRCLIB
     ├── weather.js       Athens' temperature for the hero's Studio line (/api/weather)
@@ -129,10 +132,10 @@ web/src/
 | `/listening` | `listening.html` — Spotify now playing, last 50 plays and top tracks/artists via `/api/spotify/*` |
 | `/status` | `status.html` — live uptime for the site and the API, 90 days of history and incidents via `/api/status`; targets in `server/src/status.mjs` |
 | `/changelog` | `changelog.html` — every commit to my public GitHub repos over the last six months via `/api/github/changelog` (needs `GITHUB_TOKEN` on the server), by month and day, each commit labelled added / fixed / changed / removed / security |
-| `/roadmap` | `roadmap.html` — what I want to achieve and by when: goals by year, each with a month or a from–to range, a today marker, and done / on time / late labels; content in `lib/roadmap.js` |
 | `/book` | `book.html` — free times from my iCloud calendar via `/api/book`; a booking lands in iCloud (so on every Apple device) and the guest gets an emailed `.ics` invite |
 | `/login` | `login.html` — `#register` / `#reset` / `#update`, noindex |
 | `/dashboard` | `dashboard.html` — hash sections, noindex, bounces to `/login?next=…` without a session |
+| `/present` | `present.html` — a presentation shared by link (`#<token>`, optional `/<slide>`), noindex, works signed out |
 | `/report` | `report.html` — WebScanner shared reports (`#id=…&key=…`), decrypted in the browser; own build (`vite.report.config.js`), own CSP (`blxr-report-headers.conf`), noindex, not in the sitemap |
 | *anything else* | `404.html`, HTTP 404 |
 
@@ -241,11 +244,12 @@ Read and written straight from the browser with the publishable key — row-leve
 | :-- | :-- | :-- |
 | `#profile` | [`profiles.sql`](deploy/supabase/profiles.sql) | `profiles` + public `avatars` bucket |
 | `#boards` | [`boards.sql`](deploy/supabase/boards.sql) | `boards`, `board_cards`, `board_index` view + private `boards` bucket |
+| `#presentations` | [`presentations.sql`](deploy/supabase/presentations.sql) | `presentations`, `shared_presentation(token)` for share links + private `presentations` bucket |
 | `#messages` | [`messages.sql`](deploy/supabase/messages.sql) | `threads`, `messages`, realtime publication + private `messages` bucket |
 | `#volunteer` | [`volunteer.sql`](deploy/supabase/volunteer.sql) | `volunteer_events` (public read when published, owner writes) + public `volunteer` photo bucket |
 | `#gallery` | [`gallery.sql`](deploy/supabase/gallery.sql) | `gallery_items` — photos and UI shots for `/gallery` (public read when published, owner writes) + public `gallery` image bucket |
 
-Paste each into Supabase → SQL editor → Run (safe to re-run). Boards are private per account; the owner in `is_board_admin()` sees all. Messages give every account one private thread with the owner in `is_site_owner()`, who sees them as an inbox. Full details in [`deploy/supabase/README.md`](deploy/supabase/README.md) §9, §11, §12.
+Paste each into Supabase → SQL editor → Run (safe to re-run). Boards are private per account; the owner in `is_board_admin()` sees all. Messages give every account one private thread with the owner in `is_site_owner()`, who sees them as an inbox. Presentations are private per account too; a share link opens one deck, without its speaker notes, to anyone holding the token. Full details in [`deploy/supabase/README.md`](deploy/supabase/README.md) §9, §11, §12, §15.
 
 </details>
 

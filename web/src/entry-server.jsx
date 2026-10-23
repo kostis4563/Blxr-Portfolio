@@ -23,4 +23,4 @@ export { securityTxt } from './lib/security'
 
 export const NOT_FOUND_PATH = '/404'
 
-export { LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH, PROFILE_SHELL_FILE } from './lib/router'
+export { LOGIN_PATH, DASHBOARD_PATH, PRESENT_PATH, PROFILE_BASE_PATH, PROFILE_SHELL_FILE } from './lib/router'

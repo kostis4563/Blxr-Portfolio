@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, TRAVEL_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, STATUS_PATH, CHANGELOG_PATH, ROADMAP_PATH, FOCUS_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, TRAVEL_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, STATUS_PATH, CHANGELOG_PATH, FOCUS_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -351,16 +351,6 @@ export function buildCommands({
       keywords: 'changelog changes commits github git updates releases new log history what changed shipped',
     },
     {
-      id: 'page-roadmap',
-      group: jump,
-      label: 'Roadmap',
-      hint: 'What I want to achieve, and by when',
-      icon: 'flag',
-      href: ROADMAP_PATH,
-      run: () => navigate(ROADMAP_PATH),
-      keywords: 'roadmap goals plans plan future targets deadlines milestones next todo ambitions timeline',
-    },
-    {
       id: 'page-focus',
       group: jump,
       label: 'Focus Lock',
@@ -485,6 +475,15 @@ export function buildCommands({
           run: () => navigate(loginUrlFor(DASHBOARD_PATH)),
           keywords: 'login sign in account register',
         },
+    signedIn && {
+      id: 'page-presentations',
+      group: jump,
+      label: 'Presentations',
+      icon: 'presentation',
+      href: dashboardPath('presentations'),
+      run: () => navigate(dashboardPath('presentations')),
+      keywords: 'slides deck powerpoint keynote present talk',
+    },
     {
       id: 'action-send-message',
       group: actions,

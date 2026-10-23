@@ -8,6 +8,7 @@ export const NAV = [
     label: 'Workspace',
     items: [
       { id: 'boards', label: 'Boards', icon: 'kanban', deep: true, wide: true },
+      { id: 'presentations', label: 'Presentations', icon: 'presentation', deep: true, wide: true },
       { id: 'messages', label: 'Messages', icon: 'message', deep: true, bare: true },
     ],
   },
@@ -87,6 +88,7 @@ export const NAV_FOOTER = [
 export const BLURBS = {
   profile: 'Build the page people see at kostis.wtf/@you.',
   boards: 'Columns, cards and due dates for whatever you are building.',
+  presentations: 'Slides you present full screen. Private to you until you share a link.',
   messages: 'A private line between your account and the owner.',
   settings: 'Manage your account, security and preferences.',
   'settings/profile': 'Your account name and photo.',

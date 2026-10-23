@@ -9,7 +9,6 @@ import { imageProps, imageUrl, avifSource, SIZES } from '../../src/lib/images.js
 import * as cv from '../../src/lib/cv.js'
 import * as skills from '../../src/lib/skills.js'
 import * as uses from '../../src/lib/uses.js'
-import * as roadmap from '../../src/lib/roadmap.js'
 
 const PUBLIC = fileURLToPath(new URL('../../public', import.meta.url))
 const onDisk = (url) => existsSync(PUBLIC + url.split('?')[0])
@@ -21,7 +20,7 @@ function* strings(value, at = '') {
 }
 const ASSET_RE = /^\/[\w./-]+\.(webp|png|jpe?g|svg|gif|mp3|pdf|avif)$/
 
-const sources = { projects: projectsList, library: libraryList, cv, skills, uses, roadmap }
+const sources = { projects: projectsList, library: libraryList, cv, skills, uses }
 
 describe('referenced local assets exist', () => {
   for (const [name, data] of Object.entries(sources)) {

@@ -76,9 +76,6 @@ const STATUS_DESCRIPTION =
 const CHANGELOG_DESCRIPTION =
   'Every change to my public projects, read live from GitHub and grouped by day: what was added, fixed, changed and removed, newest first.'
 
-const ROADMAP_DESCRIPTION =
-  'What Kostis wants to get done and by when: IB exams, JavaScript, Node and Express, certificates and the road to TU Delft, each with a target month.'
-
 const VOLUNTEER_DESCRIPTION =
   'Volunteering by Kostis: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
 
@@ -285,14 +282,6 @@ export function metaFor(pathname) {
     }
   }
 
-  if (route.name === 'roadmap') {
-    return {
-      ...base,
-      title: 'Roadmap — What I Want to Achieve, and by When',
-      description: ROADMAP_DESCRIPTION,
-    }
-  }
-
   if (route.name === 'focus') {
     return {
       ...base,
@@ -337,6 +326,15 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'present') {
+    return {
+      ...base,
+      title: `Presentation — ${SITE_NAME}`,
+      description: 'A presentation shared from kostis.wtf.',
+      noindex: true,
+    }
+  }
+
   if (route.name === 'profile') {
     return {
       ...base,
@@ -375,11 +373,11 @@ const SHORT_LABELS = {
   terminal: 'Terminal',
   status: 'Status',
   changelog: 'Changelog',
-  roadmap: 'Roadmap',
   focus: 'Focus Lock',
   hello: 'hello world',
   login: 'Sign in',
   dashboard: 'Dashboard',
+  present: 'Presentation',
   profile: 'Profile',
   notFound: '404',
 }
@@ -800,18 +798,6 @@ function jsonLdFor(path) {
     }
   }
 
-  if (route.name === 'roadmap') {
-    return {
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      name: 'Roadmap',
-      description: ROADMAP_DESCRIPTION,
-      url: `${SITE_URL}/roadmap`,
-      author: { '@id': `${SITE_URL}/#blxr` },
-      about: { '@id': `${SITE_URL}/#blxr` },
-    }
-  }
-
   if (route.name === 'focus') {
     return {
       '@context': 'https://schema.org',
@@ -902,8 +888,6 @@ function crumbsFor(route) {
     items.push({ name: 'Status', item: urlOf('/status') })
   } else if (route.name === 'changelog') {
     items.push({ name: 'Changelog', item: urlOf('/changelog') })
-  } else if (route.name === 'roadmap') {
-    items.push({ name: 'Roadmap', item: urlOf('/roadmap') })
   } else if (route.name === 'focus') {
     items.push({ name: 'Focus Lock', item: urlOf('/focus') })
   } else if (route.name === 'library') {

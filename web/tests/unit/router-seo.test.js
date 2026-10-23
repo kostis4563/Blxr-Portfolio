@@ -44,11 +44,11 @@ describe('parseRoute', () => {
     ['/terminal', 'terminal'],
     ['/status', 'status'],
     ['/changelog', 'changelog'],
-    ['/roadmap', 'roadmap'],
     ['/focus', 'focus'],
     ['/hello', 'hello'],
     ['/login', 'login'],
     ['/dashboard', 'dashboard'],
+    ['/present', 'present'],
     ['/nope', 'notFound'],
     ['/library/not-a-real-item', 'notFound'],
     ['/projects/not-a-real-project', 'notFound'],
@@ -157,7 +157,7 @@ describe('labelFor: the short string the animated tab title types out', () => {
   })
 
   test('every label is a short single-line string with no dashes or newlines', () => {
-    for (const path of [...staticPaths(), '/login', '/dashboard', '/@kostis', '/nope']) {
+    for (const path of [...staticPaths(), '/login', '/dashboard', '/present', '/@kostis', '/nope']) {
       const label = labelFor(path)
       expect(label, path).toMatch(/^[^\n—–-]{1,18}$/)
     }

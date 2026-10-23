@@ -19,8 +19,8 @@ function walk(dir, base = '') {
   })
 }
 
-const PAGES = { ...Object.fromEntries(staticPaths().map((p) => [p, p === '/' ? 'index.html' : `${p.slice(1)}.html`])), '/404': '404.html', '/login': 'login.html', '/dashboard': 'dashboard.html', '/@': PROFILE_SHELL_FILE }
-const SHELLS = new Set(['/dashboard', '/@'])
+const PAGES = { ...Object.fromEntries(staticPaths().map((p) => [p, p === '/' ? 'index.html' : `${p.slice(1)}.html`])), '/404': '404.html', '/login': 'login.html', '/dashboard': 'dashboard.html', '/present': 'present.html', '/@': PROFILE_SHELL_FILE }
+const SHELLS = new Set(['/dashboard', '/present', '/@'])
 const MINIMAL = new Set(['/hello'])
 const SITE = 'https://kostis.wtf'
 

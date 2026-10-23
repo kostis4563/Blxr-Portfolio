@@ -5,6 +5,7 @@ export const CLAIM_PATH = dashboardPath('claim')
 
 const LOCKED = new Set([
   'messages',
+  'presentations',
   'profile',
   'settings/profile',
   'settings/account',
@@ -20,6 +21,11 @@ const LOCKED_COPY = {
     title: 'A private line to the owner',
     why: 'A conversation needs a name on the other end, so messages stay members-only. It keeps the line quiet and real.',
     points: ['One thread, just you and the owner', 'Replies, reactions and attachments', 'Delivered live, with read receipts'],
+  },
+  presentations: {
+    title: 'Slides you can present anywhere',
+    why: 'A presentation can be shared with a public link, so it needs an account behind it. Claim yours and they open up.',
+    points: ['Eight layouts, seven themes and speaker notes', 'Full screen presenting with a speaker view and timer', 'Private by default, shareable with a link you can turn off'],
   },
   profile: {
     title: 'Your page at kostis.wtf/@you',

@@ -28,6 +28,7 @@ const {
   NOT_FOUND_PATH,
   LOGIN_PATH,
   DASHBOARD_PATH,
+  PRESENT_PATH,
   PROFILE_BASE_PATH,
   PROFILE_SHELL_FILE,
   blogFeed,
@@ -53,7 +54,7 @@ function outputFileFor(path) {
   return resolve(dist, `${path.replace(/^\//, '')}.html`)
 }
 
-const pages = [...staticPaths(), NOT_FOUND_PATH, LOGIN_PATH, DASHBOARD_PATH, PROFILE_BASE_PATH]
+const pages = [...staticPaths(), NOT_FOUND_PATH, LOGIN_PATH, DASHBOARD_PATH, PRESENT_PATH, PROFILE_BASE_PATH]
 const written = []
 
 const assetNames = await readdir(resolve(dist, 'assets'))
@@ -133,7 +134,6 @@ const ROUTE_SOURCES = {
   quote: ['src/quote-page.jsx', 'src/lib/quote.js', 'src/lib/quote-api.js'],
   terminal: ['src/terminal-page.jsx', 'src/lib/terminal.js'],
   status: ['src/status-page.jsx', 'src/lib/status.js'],
-  roadmap: ['src/roadmap-page.jsx', 'src/lib/roadmap.js'],
   focus: ['src/focus-page.jsx', 'src/lib/focus.js', 'public/focus'],
   hello: ['src/hello-page.jsx', 'public/hello-bg.webp', 'public/fonts/hello-pixel-f4c3c487.woff2'],
 }

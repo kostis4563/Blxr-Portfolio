@@ -24,6 +24,15 @@ export const ART_KINDS = {
     frame: 'aspect-[3/1] w-full',
     ratio: 3,
   },
+  slide: {
+    label: 'Slide image',
+    width: 2560,
+    height: 1600,
+    cap: 1536 * 1024,
+    hint: 'Shown on a presentation slide, up to full screen.',
+    frame: 'aspect-video w-full',
+    ratio: 16 / 9,
+  },
 }
 
 const ATTEMPTS = [

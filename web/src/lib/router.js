@@ -33,12 +33,12 @@ export function parseRoute(path) {
   if (p === '/terminal') return { name: 'terminal' }
   if (p === '/status') return { name: 'status' }
   if (p === '/changelog') return { name: 'changelog' }
-  if (p === '/roadmap') return { name: 'roadmap' }
   if (p === '/focus') return { name: 'focus' }
   if (p === '/hello') return { name: 'hello' }
   if (p === '/login') return { name: 'login' }
   if (p === '/loading') return { name: 'loading' }
   if (p === '/dashboard') return { name: 'dashboard' }
+  if (p === '/present') return { name: 'present' }
   if (p === PROFILE_BASE_PATH) return { name: 'profile', handle: null }
 
   const profileMatch = /^\/@([^/]+)$/.exec(p)
@@ -138,7 +138,6 @@ export const QUOTE_PATH = '/quote'
 export const TERMINAL_PATH = '/terminal'
 export const STATUS_PATH = '/status'
 export const CHANGELOG_PATH = '/changelog'
-export const ROADMAP_PATH = '/roadmap'
 export const FOCUS_PATH = '/focus'
 export const HELLO_PATH = '/hello'
 export const LOGIN_PATH = '/login'
@@ -148,6 +147,7 @@ export const UPDATE_PASSWORD_PATH = `${LOGIN_PATH}#update`
 export const VERIFY_PATH = `${LOGIN_PATH}#verify`
 export const DASHBOARD_PATH = '/dashboard'
 export const dashboardPath = (id) => (id ? `${DASHBOARD_PATH}#${id}` : DASHBOARD_PATH)
+export const PRESENT_PATH = '/present'
 export const PROFILE_BASE_PATH = '/@'
 export const profilePath = (handle) => `${PROFILE_BASE_PATH}${encodeURIComponent(handle)}`
 export const PROFILE_SHELL_FILE = 'profile.html'
@@ -176,7 +176,6 @@ export const staticPaths = () => [
   TERMINAL_PATH,
   STATUS_PATH,
   CHANGELOG_PATH,
-  ROADMAP_PATH,
   FOCUS_PATH,
   HELLO_PATH,
 ]

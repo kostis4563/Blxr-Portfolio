@@ -14,6 +14,7 @@ const SECTIONS = {
   settings: () => import('./dashboard-settings'),
   profile: () => import('./dashboard-profile'),
   boards: () => import('./dashboard-boards'),
+  presentations: () => import('./dashboard-presentations'),
   messages: () => import('./dashboard-messages'),
   reviewpanel: () => import('./dashboard-reviewpanel'),
   logs: () => import('./dashboard-logs'),
@@ -31,6 +32,7 @@ const MEMBER_SECTIONS = ['boards', 'messages', 'profile', 'settings']
 const DashboardSettings = lazy(SECTIONS.settings)
 const DashboardProfile = lazy(SECTIONS.profile)
 const DashboardBoards = lazy(SECTIONS.boards)
+const DashboardPresentations = lazy(SECTIONS.presentations)
 const DashboardMessages = lazy(SECTIONS.messages)
 const DashboardReviewPanel = lazy(SECTIONS.reviewpanel)
 const DashboardLogs = lazy(SECTIONS.logs)
@@ -239,6 +241,8 @@ export default function DashboardPage({ theme, themePreference, onToggleTheme, o
               <DashboardProfile user={session.user} />
             ) : top.id === 'boards' ? (
               <DashboardBoards hash={hash} guest={guest} onClaim={openClaim} />
+            ) : top.id === 'presentations' ? (
+              <DashboardPresentations hash={hash} />
             ) : top.id === 'messages' ? (
               <DashboardMessages hash={hash} user={session.user} />
             ) : top.id === 'reviewpanel' ? (

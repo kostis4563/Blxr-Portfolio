@@ -20,11 +20,11 @@ import QuotePageImpl from '#ssr-page/quote'
 import TerminalPageImpl from '#ssr-page/terminal'
 import StatusPageImpl from '#ssr-page/status'
 import ChangelogPageImpl from '#ssr-page/changelog'
-import RoadmapPageImpl from '#ssr-page/roadmap'
 import FocusPageImpl from '#ssr-page/focus'
 import HelloPageImpl from '#ssr-page/hello'
 import LoginPageImpl from '#ssr-page/login'
 import DashboardPageImpl from '#ssr-page/dashboard'
+import PresentPageImpl from '#ssr-page/present'
 import PublicProfilePageImpl from '#ssr-page/public-profile'
 import NotFoundPageImpl from '#ssr-page/not-found'
 import ThemeToggle from './components/theme-toggle'
@@ -71,12 +71,12 @@ const TerminalPage = routePage(TerminalPageImpl, () => import('#client-page/term
 const TravelPage = routePage(TravelPageImpl, () => import('#client-page/travel'))
 const StatusPage = routePage(StatusPageImpl, () => import('#client-page/status'))
 const ChangelogPage = routePage(ChangelogPageImpl, () => import('#client-page/changelog'))
-const RoadmapPage = routePage(RoadmapPageImpl, () => import('#client-page/roadmap'))
 const FocusPage = routePage(FocusPageImpl, () => import('#client-page/focus'))
 const HelloPage = routePage(HelloPageImpl, () => import('#client-page/hello'))
 const withSupabase = (loader) => () => Promise.all([loader(), loadSupabase()]).then(([page]) => page)
 const LoginPage = routePage(LoginPageImpl, withSupabase(() => import('#client-page/login')))
 const DashboardPage = routePage(DashboardPageImpl, withSupabase(() => import('#client-page/dashboard')))
+const PresentPage = routePage(PresentPageImpl, withSupabase(() => import('#client-page/present')))
 const VolunteerPage = routePage(VolunteerPageImpl, withSupabase(() => import('#client-page/volunteer')))
 const GalleryPage = routePage(GalleryPageImpl, withSupabase(() => import('#client-page/gallery')))
 const QuotePage = routePage(QuotePageImpl, withSupabase(() => import('#client-page/quote')))
@@ -453,17 +453,6 @@ function App() {
     )
   }
 
-  if (currentView === 'roadmap') {
-    return (
-      <>
-        <Suspense fallback={<PageFallback />}>
-          <RoadmapPage theme={theme} onToggleTheme={toggleTheme} />
-        </Suspense>
-        {palette}
-      </>
-    )
-  }
-
   if (currentView === 'focus') {
     return (
       <>
@@ -512,6 +501,14 @@ function App() {
     return (
       <Suspense fallback={<PageFallback />}>
         <LoginPage theme={theme} onToggleTheme={toggleTheme} />
+      </Suspense>
+    )
+  }
+
+  if (currentView === 'present') {
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <PresentPage />
       </Suspense>
     )
   }

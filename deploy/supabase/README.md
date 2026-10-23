@@ -501,6 +501,47 @@ delete from auth.users
 Their boards cascade with them. A claimed account is no longer anonymous
 and is never touched by this.
 
+## 15. Presentations
+
+`/dashboard#presentations` makes slide decks: eight layouts, seven themes,
+speaker notes, and a full screen presenter with a speaker view. Decks are
+private to the account that made them; the owner can turn on a link that
+lets anyone watch at `/present#<token>`, no account needed.
+
+1. Supabase → **SQL editor** → paste [`presentations.sql`](presentations.sql)
+   → **Run**. Re-running it is safe. It reads `public.profiles` for the
+   author line, so run [`profiles.sql`](profiles.sql) first.
+
+That creates:
+
+- `public.presentations` — one row per deck. The slides live inline as a
+  `jsonb` array, because a deck is always read and saved whole. A check
+  constraint (`presentation_slides_ok`) holds every slide to a known layout,
+  4,000 characters of notes, and image paths inside the deck's own folder.
+- `public.shared_presentation(token)` — the only way to read a deck without
+  owning it. It takes the token from the link, returns the slides with
+  every `notes` field stripped, and the author's display name only when
+  their profile is public or unlisted. Nothing else about the table is
+  granted to `anon`, so decks cannot be listed or guessed.
+- A **private** `presentations` storage bucket for slide images at
+  `<user id>/<deck id>/…`. The owner reads their own folder; anyone else can
+  sign a URL for a file only while `presentation_file_shared()` says that
+  deck has a live link.
+
+**Sharing.** The token is 18 random bytes from the browser, stored in
+`share_token` (unique, null while private). It travels in the URL fragment,
+so it never reaches nginx logs or a `Referer`. Turning the link off sets it
+to null and the next viewer load fails; *Reset link* swaps in a new token so
+the old link dies and a new one can go out. Signed image URLs already handed
+out stay valid for up to an hour.
+
+**Limits** match `web/src/lib/presentations.js`: 200 decks an account
+(`presentation_limit`), 100 slides a deck, about 400 KB of slide JSON, 5 MB
+an image upload (images are shrunk to 2560 px in the browser first). Guests
+cannot create decks or upload. Deleting a deck from the dashboard clears its
+folder in storage; deleting the whole account cascades the rows and orphans
+the files, as with boards.
+
 ## Notes
 
 - Until a provider is enabled in Supabase its button says "That sign-in

@@ -106,4 +106,8 @@ export const ICONS = {
   play: ['m6 4 14 8-14 8z'],
   music: ['M9 18V5l12-2v13', 'M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0', 'M15 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0'],
   maximize: ['M15 3h6v6', 'M9 21H3v-6', 'M21 3l-7 7', 'M3 21l7-7'],
+  presentation: ['M2 3h20', 'M4 3v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3', 'm7 21 5-5 5 5'],
+  layout: ['M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M3 9h18', 'M9 21V9'],
+  alignLeft: ['M15 12H3', 'M17 18H3', 'M21 6H3'],
+  alignCenter: ['M17 12H7', 'M19 18H5', 'M21 6H3'],
 }
