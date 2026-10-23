@@ -156,7 +156,7 @@ describe('sharing', () => {
   })
 
   test('tokenFromHash reads the token and ignores a slide number', () => {
-    const token = 'abcDEF123_-abcDEF123_-xy'
+    const token = `${'a'.repeat(11)}_-${'B'.repeat(11)}`
     expect(tokenFromHash(`#${token}`)).toBe(token)
     expect(tokenFromHash(`#${token}/4`)).toBe(token)
     expect(tokenFromHash('#short')).toBe(null)
