@@ -134,7 +134,8 @@ const ROUTE_SOURCES = {
   quote: ['src/quote-page.jsx', 'src/lib/quote.js', 'src/lib/quote-api.js'],
   terminal: ['src/terminal-page.jsx', 'src/lib/terminal.js'],
   status: ['src/status-page.jsx', 'src/lib/status.js'],
-  focus: ['src/focus-page.jsx', 'src/lib/focus.js', 'public/focus'],
+  darkweb: ['src/darkweb-page.jsx', 'src/darkweb.css', 'src/lib/darkweb.js', 'src/lib/onion.js', 'src/components/focus-kit.jsx', 'src/focus-kit.css'],
+  focus: ['src/focus-page.jsx', 'src/lib/focus.js', 'public/focus', 'src/components/focus-kit.jsx', 'src/focus-kit.css'],
   hello: ['src/hello-page.jsx', 'public/hello-bg.webp', 'public/fonts/hello-pixel-f4c3c487.woff2'],
 }
 

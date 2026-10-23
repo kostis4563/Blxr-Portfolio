@@ -13,11 +13,24 @@ export const LIMITS = {
   stat: 16,
   notes: 4000,
   alt: 200,
+  items: 6,
 }
 
 export const DEFAULT_TITLE = 'Untitled presentation'
 
 export const THEMES = [
+  {
+    id: 'blxr',
+    label: 'blxr',
+    font: 'blxr',
+    frame: true,
+    paint: '#090909',
+    base: '#090909',
+    ink: '#f5f5f5',
+    accent: '#0d99ff',
+    alt: { base: '#0d99ff', ink: '#ffffff', accent: '#090909' },
+    inv: { base: '#f2f1ee', ink: '#17150f', accent: '#0a84e0' },
+  },
   {
     id: 'midnight',
     label: 'Midnight',
@@ -129,6 +142,13 @@ export const LAYOUTS = [
   { id: 'image', label: 'Full image', hint: 'One picture, edge to edge', image: true },
   { id: 'quote', label: 'Quote', hint: 'A line worth repeating', aligns: true },
   { id: 'stat', label: 'Big number', hint: 'One figure that matters', aligns: true },
+  { id: 'cards', label: 'Cards', hint: 'Up to six short ideas in a grid' },
+  { id: 'flow', label: 'Flow', hint: 'Steps joined by arrows' },
+  { id: 'timeline', label: 'Timeline', hint: 'Dates along a line' },
+  { id: 'layers', label: 'Layers', hint: 'Levels stacked from top to bottom' },
+  { id: 'stats', label: 'Numbers', hint: 'Two to four figures side by side' },
+  { id: 'checks', label: 'Do and don\'t', hint: 'Ticks on one side, crosses on the other' },
+  { id: 'code', label: 'Terminal', hint: 'Lines of code or text in a window' },
 ]
 
 export const LAYOUT_IDS = LAYOUTS.map((layout) => layout.id)
@@ -142,6 +162,14 @@ export function shortId() {
 const text = (value, max) => (typeof value === 'string' ? value.slice(0, max) : '')
 const list = (value, max) =>
   Array.isArray(value) ? value.filter((item) => typeof item === 'string').slice(0, LIMITS.points).map((item) => item.slice(0, max)) : []
+
+const itemList = (value) =>
+  Array.isArray(value)
+    ? value
+        .filter((item) => item && typeof item === 'object')
+        .slice(0, LIMITS.items)
+        .map((item) => ({ label: text(item.label, LIMITS.head), body: text(item.body, LIMITS.point) }))
+    : []
 
 function imageFrom(value) {
   if (!value || typeof value !== 'object' || typeof value.path !== 'string' || !value.path) return null
@@ -160,6 +188,7 @@ export function slideFrom(raw = {}) {
     head2: text(raw.head2, LIMITS.head),
     points: list(raw.points, LIMITS.point),
     points2: list(raw.points2, LIMITS.point),
+    items: itemList(raw.items),
     quote: text(raw.quote, LIMITS.quote),
     stat: text(raw.stat, LIMITS.stat),
     image: imageFrom(raw.image),
@@ -179,6 +208,9 @@ export function slideToJson(slide) {
     while (kept.length && !kept.at(-1)) kept.pop()
     if (kept.length) out[key] = kept
   }
+  const items = slide.items.map((item) => ({ label: item.label.trimEnd(), body: item.body.trimEnd() }))
+  while (items.length && !items.at(-1).label && !items.at(-1).body) items.pop()
+  if (items.length) out.items = items.map((item) => Object.fromEntries(Object.entries(item).filter(([, value]) => value)))
   if (slide.image) out.image = slide.image
   return out
 }
@@ -203,8 +235,13 @@ export function sectionNumber(slides, index) {
   return String(Math.max(1, count)).padStart(2, '0')
 }
 
+export function sectionTitle(slides, index) {
+  for (let at = Math.min(index, slides.length - 1); at >= 0; at -= 1) if (slides[at].layout === 'section') return slides[at].title
+  return ''
+}
+
 export function slideLabel(slide) {
-  const words = slide.title || slide.quote || slide.stat || slide.subtitle || slide.points.find(Boolean) || ''
+  const words = slide.title || slide.quote || slide.stat || slide.subtitle || slide.points.find(Boolean) || slide.items.find((item) => item.label)?.label || ''
   return words.trim() || layoutOf(slide.layout).label
 }
 
@@ -212,10 +249,25 @@ export const imagesOf = (slides) => slides.map((slide) => slide.image?.path).fil
 
 export const TEMPLATES = [
   { id: 'blank', label: 'Blank', hint: 'One title slide to start from' },
-  { id: 'outline', label: 'Talk outline', hint: 'Eight slides with every layout, ready to rewrite' },
+  { id: 'outline', label: 'Talk outline', hint: 'Eight slides with the basic layouts, ready to rewrite' },
+  { id: 'visual', label: 'Visual outline', hint: 'Cards, flows, timelines and numbers, ready to rewrite' },
 ]
 
 export function templateSlides(id) {
+  if (id === 'visual') {
+    return [
+      newSlide('title', { title: 'The big idea', subtitle: 'One line on why it matters, and who is telling it' }),
+      newSlide('cards', { title: 'Three questions', items: [{ label: 'What is it?', body: 'The short answer' }, { label: 'How does it work?', body: 'The part people get wrong' }, { label: 'Does it matter?', body: 'Your judgement' }] }),
+      newSlide('section', { title: 'How it works', subtitle: 'The mechanism, step by step' }),
+      newSlide('flow', { title: 'From start to finish', items: [{ label: 'Input', body: 'Where it starts' }, { label: 'Process', body: 'What happens' }, { label: 'Output', body: 'What comes out' }] }),
+      newSlide('layers', { title: 'Three levels', items: [{ label: 'Top', body: 'What everyone sees' }, { label: 'Middle', body: 'What most people use' }, { label: 'Bottom', body: 'What few people reach' }] }),
+      newSlide('timeline', { title: 'How we got here', items: [{ label: '1990s', body: 'It begins' }, { label: '2000s', body: 'It spreads' }, { label: 'Today', body: 'Where it is now' }] }),
+      newSlide('stats', { title: 'The numbers', items: [{ label: '57%', body: 'One figure, and its source' }, { label: '3×', body: 'Another figure to compare it with' }] }),
+      newSlide('checks', { title: 'Do and don\'t', head: 'Do', head2: 'Don\'t', points: ['The safe habit', 'The good habit'], points2: ['The common mistake', 'The risky shortcut'] }),
+      newSlide('code', { title: 'What it looks like', subtitle: 'Terminal', points: ['# A comment explains the next line', '$ the command or address'] }),
+      newSlide('title', { title: 'Thank you', subtitle: 'Questions?', tone: 'accent', align: 'center' }),
+    ]
+  }
   if (id !== 'outline') return [newSlide('title')]
   return [
     newSlide('title', { title: 'The big idea', subtitle: 'One line on why it matters, and who is telling it' }),
@@ -238,6 +290,13 @@ export const SAMPLES = {
   image: { title: 'Edge to edge', subtitle: 'A caption' },
   quote: { quote: 'Make it simple, but significant.', subtitle: 'Someone wise' },
   stat: { stat: '42%', title: 'the one number', subtitle: 'and what it means' },
+  cards: { title: 'In a grid', items: [{ label: 'First', body: 'A short line' }, { label: 'Second', body: 'A short line' }, { label: 'Third', body: 'A short line' }] },
+  flow: { title: 'Step by step', items: [{ label: 'Start', body: 'First' }, { label: 'Then', body: 'Next' }, { label: 'End', body: 'Last' }] },
+  timeline: { title: 'Over time', items: [{ label: '2002', body: 'It began' }, { label: '2013', body: 'It grew' }, { label: 'Today', body: 'Where it is' }] },
+  layers: { title: 'Top to bottom', items: [{ label: 'Surface', body: 'What everyone sees' }, { label: 'Deep', body: 'Behind a login' }, { label: 'Dark', body: 'Hidden on purpose' }] },
+  stats: { title: 'By the numbers', items: [{ label: '57%', body: 'of one thing' }, { label: '6.7%', body: 'of another' }] },
+  checks: { title: 'Do and don\'t', head: 'Do', head2: 'Don\'t', points: ['Keep it updated', 'Stay careful'], points2: ['Share your login', 'Click strange links'] },
+  code: { title: 'In a window', subtitle: 'Terminal', points: ['# A comment', '$ a command', 'what it prints'] },
 }
 
 export const sampleSlide = (layout) => slideFrom({ id: `sample-${layout}`, layout, ...SAMPLES[layout] })

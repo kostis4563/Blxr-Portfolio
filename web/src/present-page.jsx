@@ -4,7 +4,7 @@ import { Spinner } from './components/skeleton'
 import Slide from './components/presentations/slide'
 import Presenter, { Stage, enterFullscreen, useDeckNav } from './components/presentations/presenter'
 import { link, useRouteHash, HOME_PATH } from './lib/router'
-import { tokenFromHash, imagesOf, sectionNumber, keyAction, revealIn } from './lib/presentations'
+import { tokenFromHash, imagesOf, sectionNumber, sectionTitle, keyAction, revealIn } from './lib/presentations'
 import { fetchShared, preloadImages, errorText } from './lib/presentations-api'
 
 const SITE_TITLE = 'kostis.wtf'
@@ -143,7 +143,7 @@ function Viewer({ deck, token, start }) {
                   className="block w-full cursor-pointer outline-none"
                 >
                   <span className="deck-thumb pointer-events-none" inert>
-                    <Slide slide={slide} theme={deck.theme} index={i} part={sectionNumber(deck.slides, i)} numbers={deck.numbers} />
+                    <Slide slide={slide} theme={deck.theme} index={i} part={sectionNumber(deck.slides, i)} section={sectionTitle(deck.slides, i)} numbers={deck.numbers} />
                   </span>
                 </button>
               </li>

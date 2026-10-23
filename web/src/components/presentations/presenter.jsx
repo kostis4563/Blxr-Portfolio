@@ -63,7 +63,7 @@ export function Stage({ deck, view, onSettled, className = '', style, still = fa
       {slides[view.index] ? (
         <div
           key={`at-${view.key}`}
-          className={`absolute inset-0 ${moving ? animIn : ''}`}
+          className={`deck-live absolute inset-0 ${moving ? animIn : ''}`}
           onAnimationEnd={(event) => {
             if (event.target === event.currentTarget) onSettled?.()
           }}

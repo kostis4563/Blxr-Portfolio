@@ -16,8 +16,9 @@ language sql immutable as $$
        select 1 from jsonb_array_elements(slides) s
        where jsonb_typeof(s) <> 'object'
           or jsonb_typeof(s -> 'id') <> 'string' or char_length(s ->> 'id') not between 1 and 32
-          or coalesce(s ->> 'layout', '') not in ('title', 'section', 'bullets', 'columns', 'split', 'image', 'quote', 'stat')
+          or coalesce(s ->> 'layout', '') not in ('title', 'section', 'bullets', 'columns', 'split', 'image', 'quote', 'stat', 'cards', 'flow', 'timeline', 'layers', 'stats', 'checks', 'code')
           or (jsonb_typeof(s -> 'notes') = 'string' and char_length(s ->> 'notes') > 4000)
+          or (case when jsonb_typeof(s -> 'items') = 'array' then jsonb_array_length(s -> 'items') > 6 else s ? 'items' end)
           or (jsonb_typeof(s -> 'image') = 'object'
               and coalesce(s -> 'image' ->> 'path', '') !~ ('^' || author::text || '/' || deck::text || '/[A-Za-z0-9._-]{1,80}$'))
      )
@@ -28,7 +29,7 @@ create table if not exists public.presentations (
   id          uuid primary key default gen_random_uuid(),
   owner       uuid not null default auth.uid() references auth.users (id) on delete cascade,
   title       text not null default 'Untitled presentation',
-  theme       text not null default 'midnight',
+  theme       text not null default 'blxr',
   transition  text not null default 'fade',
   numbers     boolean not null default true,
   slides      jsonb not null default '[{"id": "s1", "layout": "title"}]'::jsonb,
@@ -38,13 +39,18 @@ create table if not exists public.presentations (
   updated_at  timestamptz not null default now(),
 
   constraint presentations_title_len   check (char_length(title) between 1 and 120),
-  constraint presentations_theme       check (theme in ('midnight', 'paper', 'mono', 'aurora', 'forest', 'ocean', 'sunset')),
+  constraint presentations_theme       check (theme in ('blxr', 'midnight', 'paper', 'mono', 'aurora', 'forest', 'ocean', 'sunset')),
   constraint presentations_transition  check (transition in ('none', 'fade', 'slide')),
   constraint presentations_slides_size check (octet_length(slides::text) <= 400000),
   constraint presentations_slides_ok   check (public.presentation_slides_ok(slides, id, owner)),
   constraint presentations_token       check (share_token is null or share_token ~ '^[A-Za-z0-9_-]{22,64}$'),
   constraint presentations_token_unique unique (share_token)
 );
+
+alter table public.presentations alter column theme set default 'blxr';
+alter table public.presentations drop constraint if exists presentations_theme;
+alter table public.presentations add constraint presentations_theme
+  check (theme in ('blxr', 'midnight', 'paper', 'mono', 'aurora', 'forest', 'ocean', 'sunset'));
 
 create index if not exists presentations_owner_idx on public.presentations (owner, updated_at desc);
 

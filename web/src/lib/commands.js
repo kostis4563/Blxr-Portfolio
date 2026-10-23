@@ -1,4 +1,4 @@
-import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, TRAVEL_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, STATUS_PATH, CHANGELOG_PATH, FOCUS_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
+import { navigate, projectPath, libraryPath, blogPath, HOME_PATH, PROJECTS_PATH, LIBRARY_PATH, BLOG_PATH, REVIEWS_PATH, WRITE_REVIEW_PATH, USES_PATH, CV_PATH, SECURITY_PATH, IB_PATH, LISTENING_PATH, CONTACT_PATH, BOOK_PATH, PAYMENT_PATH, LINKS_PATH, VOLUNTEER_PATH, TRAVEL_PATH, GALLERY_PATH, QUOTE_PATH, TERMINAL_PATH, STATUS_PATH, CHANGELOG_PATH, DARKWEB_PATH, FOCUS_PATH, DASHBOARD_PATH, LOGIN_PATH, dashboardPath } from './router'
 import { authSignOut, loginUrlFor } from './auth'
 import { projectsList } from './projects'
 import { libraryList } from './library'
@@ -349,6 +349,16 @@ export function buildCommands({
       href: CHANGELOG_PATH,
       run: () => navigate(CHANGELOG_PATH),
       keywords: 'changelog changes commits github git updates releases new log history what changed shipped',
+    },
+    {
+      id: 'page-darkweb',
+      group: jump,
+      label: 'Dark web',
+      hint: 'What it is, and how Tor works',
+      icon: 'eye',
+      href: DARKWEB_PATH,
+      run: () => navigate(DARKWEB_PATH),
+      keywords: 'dark web darkweb deep web tor onion .onion hidden anonymous privacy i2p darknet explainer',
     },
     {
       id: 'page-focus',

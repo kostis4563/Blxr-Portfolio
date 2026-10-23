@@ -76,6 +76,9 @@ const STATUS_DESCRIPTION =
 const CHANGELOG_DESCRIPTION =
   'Every change to my public projects, read live from GitHub and grouped by day: what was added, fixed, changed and removed, newest first.'
 
+const DARKWEB_DESCRIPTION =
+  'The dark web, explained: surface vs deep vs dark, how Tor hides you behind three relays, what a .onion address really is, and the myths people believe.'
+
 const VOLUNTEER_DESCRIPTION =
   'Volunteering by Kostis: the events, drives and causes I gave my time to, with dates, hours, roles and photos.'
 
@@ -282,6 +285,14 @@ export function metaFor(pathname) {
     }
   }
 
+  if (route.name === 'darkweb') {
+    return {
+      ...base,
+      title: 'What Is the Dark Web? Tor and .onion Sites, Explained',
+      description: DARKWEB_DESCRIPTION,
+    }
+  }
+
   if (route.name === 'focus') {
     return {
       ...base,
@@ -373,6 +384,7 @@ const SHORT_LABELS = {
   terminal: 'Terminal',
   status: 'Status',
   changelog: 'Changelog',
+  darkweb: 'Dark web',
   focus: 'Focus Lock',
   hello: 'hello world',
   login: 'Sign in',
@@ -798,6 +810,18 @@ function jsonLdFor(path) {
     }
   }
 
+  if (route.name === 'darkweb') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'What is the dark web?',
+      description: DARKWEB_DESCRIPTION,
+      url: `${SITE_URL}/darkweb`,
+      author: { '@id': `${SITE_URL}/#blxr` },
+      about: { '@type': 'Thing', name: 'Dark web', sameAs: 'https://en.wikipedia.org/wiki/Dark_web' },
+    }
+  }
+
   if (route.name === 'focus') {
     return {
       '@context': 'https://schema.org',
@@ -888,6 +912,8 @@ function crumbsFor(route) {
     items.push({ name: 'Status', item: urlOf('/status') })
   } else if (route.name === 'changelog') {
     items.push({ name: 'Changelog', item: urlOf('/changelog') })
+  } else if (route.name === 'darkweb') {
+    items.push({ name: 'Dark web', item: urlOf('/darkweb') })
   } else if (route.name === 'focus') {
     items.push({ name: 'Focus Lock', item: urlOf('/focus') })
   } else if (route.name === 'library') {

@@ -13,6 +13,7 @@ import {
   duplicateSlide,
   moveSlide,
   sectionNumber,
+  sectionTitle,
   slideLabel,
   templateSlides,
   blankDeck,
@@ -79,10 +80,33 @@ describe('slides', () => {
     expect(sectionNumber(slides, 0)).toBe('01')
   })
 
+  test('items keep a label and a body, cap at the limit and drop junk', () => {
+    const slide = slideFrom({ layout: 'cards', items: [{ label: 'A', body: 'x'.repeat(500) }, 'junk', null, ...Array.from({ length: 10 }, () => ({ label: 'B' }))] })
+    expect(slide.items).toHaveLength(LIMITS.items)
+    expect(slide.items[0]).toEqual({ label: 'A', body: 'x'.repeat(LIMITS.point) })
+    expect(slide.items[1]).toEqual({ label: 'B', body: '' })
+  })
+
+  test('slideToJson trims trailing empty items and leaves out empty fields', () => {
+    const json = slideToJson(slideFrom({ id: 'a', layout: 'flow', items: [{ label: 'You' }, { label: '', body: 'then' }, { label: ' ', body: '' }, {}] }))
+    expect(json.items).toEqual([{ label: 'You' }, { body: 'then' }])
+    const slide = newSlide('timeline', { items: [{ label: '2002', body: 'Public release' }] })
+    expect(slideFrom(slideToJson(slide))).toEqual(slide)
+  })
+
+  test('sectionTitle finds the section a slide sits in', () => {
+    const slides = [newSlide('title'), newSlide('section', { title: 'How it works' }), newSlide('flow'), newSlide('section', { title: 'Who uses it' }), newSlide('cards')]
+    expect(sectionTitle(slides, 0)).toBe('')
+    expect(sectionTitle(slides, 2)).toBe('How it works')
+    expect(sectionTitle(slides, 3)).toBe('Who uses it')
+    expect(sectionTitle(slides, 99)).toBe('Who uses it')
+  })
+
   test('labels fall back from the title to whatever text there is, then the layout', () => {
     expect(slideLabel(newSlide('quote', { quote: 'Be brief.' }))).toBe('Be brief.')
     expect(slideLabel(newSlide('bullets', { points: ['', 'Second'] }))).toBe('Second')
     expect(slideLabel(newSlide('stat'))).toBe('Big number')
+    expect(slideLabel(newSlide('stats', { items: [{ label: '57%' }] }))).toBe('57%')
   })
 
   test('imagesOf lists the image paths in order', () => {
@@ -92,16 +116,18 @@ describe('slides', () => {
 })
 
 describe('decks', () => {
-  test('templates start with a title slide and the outline uses every layout', () => {
+  test('templates start with a title slide and between them use every layout', () => {
     expect(templateSlides('blank').map((slide) => slide.layout)).toEqual(['title'])
     const outline = templateSlides('outline')
+    const visual = templateSlides('visual')
     expect(outline[0].layout).toBe('title')
-    for (const layout of LAYOUT_IDS.filter((id) => id !== 'image')) expect(outline.some((slide) => slide.layout === layout), layout).toBe(true)
+    expect(visual[0].layout).toBe('title')
+    for (const layout of LAYOUT_IDS.filter((id) => id !== 'image')) expect([...outline, ...visual].some((slide) => slide.layout === layout), layout).toBe(true)
   })
 
   test('deckFrom never hands back an empty deck or an unknown theme', () => {
     const deck = deckFrom({ id: 'x', title: '', theme: 'neon', transition: 'spin', slides: [], numbers: null })
-    expect(deck).toMatchObject({ title: DEFAULT_TITLE, theme: 'midnight', transition: 'fade', numbers: true })
+    expect(deck).toMatchObject({ title: DEFAULT_TITLE, theme: 'blxr', transition: 'fade', numbers: true })
     expect(deck.slides).toHaveLength(1)
   })
 
@@ -133,6 +159,8 @@ describe('decks', () => {
     expect(SQL).toContain(`between 1 and ${LIMITS.slides}`)
     expect(SQL).toContain(`> ${LIMITS.notes}`)
     expect(SQL).toContain(`>= ${LIMITS.decks}`)
+    expect(SQL).toContain(`jsonb_array_length(s -> 'items') > ${LIMITS.items}`)
+    expect(SQL).toContain(`default '${THEME_IDS[0]}'`)
   })
 
   test('the share function never returns speaker notes', () => {

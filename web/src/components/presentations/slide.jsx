@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Icon } from '../icon'
-import { paletteOf, sectionNumber, LIMITS } from '../../lib/presentations'
+import { paletteOf, themeOf, sectionNumber, sectionTitle, LIMITS } from '../../lib/presentations'
 import { slideImageUrl, cachedImageUrl } from '../../lib/presentations-api'
 import '../../presentations.css'
 
@@ -91,7 +91,19 @@ function Text({ edit, value, onChange, placeholder, max, className = '', label, 
   return <Tag className={`sl-text ${className}`}>{value}</Tag>
 }
 
-function Points({ edit, points, onChange, className = '', placeholder = 'Add a point' }) {
+function Marker({ kind }) {
+  if (kind === 'none') return null
+  if (kind === 'check' || kind === 'cross') {
+    return (
+      <span aria-hidden="true" className="sl-mark-icon" data-kind={kind}>
+        <Icon name={kind === 'check' ? 'check' : 'x'} strokeWidth={2.4} className="" />
+      </span>
+    )
+  }
+  return <span aria-hidden="true" className="sl-dot" />
+}
+
+function Points({ edit, points, onChange, className = '', placeholder = 'Add a point', marker = 'dot', kindOf }) {
   const nodes = useRef([])
   const focusNext = useRef(null)
   const items = points.length ? points : ['']
@@ -108,10 +120,10 @@ function Points({ edit, points, onChange, className = '', placeholder = 'Add a p
     const shown = points.filter((point) => point.trim())
     if (!shown.length) return null
     return (
-      <ul className={`sl-points ${className}`}>
+      <ul className={`sl-points ${className}`} data-count={shown.length}>
         {shown.map((point, i) => (
-          <li key={i} className="sl-point">
-            <span aria-hidden="true" className="sl-dot" />
+          <li key={i} className="sl-point" data-kind={kindOf?.(point)}>
+            <Marker kind={marker} />
             <span className="sl-point-text">{point}</span>
           </li>
         ))}
@@ -154,10 +166,10 @@ function Points({ edit, points, onChange, className = '', placeholder = 'Add a p
   }
 
   return (
-    <ul className={`sl-points ${className}`}>
+    <ul className={`sl-points ${className}`} data-count={items.length}>
       {items.map((point, i) => (
-        <li key={i} className="sl-point">
-          <span aria-hidden="true" className="sl-dot" />
+        <li key={i} className="sl-point" data-kind={kindOf?.(point)}>
+          <Marker kind={marker} />
           <Editable
             nodeRef={(el) => { nodes.current[i] = el }}
             value={point}
@@ -171,6 +183,77 @@ function Points({ edit, points, onChange, className = '', placeholder = 'Add a p
         </li>
       ))}
     </ul>
+  )
+}
+
+const BLANK_ITEM = { label: '', body: '' }
+const pad = (n) => String(n).padStart(2, '0')
+
+function Items({ edit, items, onChange, className = '', noun, children }) {
+  const shown = edit ? (items.length ? items : [BLANK_ITEM]) : items.filter((item) => item.label.trim() || item.body.trim())
+  if (!shown.length) return null
+  const field = (index, key, max, placeholder, className, as) => (
+    <Text
+      edit={edit}
+      value={shown[index][key]}
+      onChange={(value) => onChange(shown.map((held, at) => (at === index ? { ...held, [key]: value } : held)))}
+      max={max}
+      placeholder={placeholder}
+      label={`${noun} ${index + 1} ${key === 'label' ? 'title' : 'text'}`}
+      className={className}
+      as={as}
+    />
+  )
+
+  return (
+    <>
+      <div className={`sl-items ${className}`} data-count={shown.length}>
+        {shown.map((item, i) => (
+          <div key={i} className="sl-item" style={{ '--i': i }}>
+            {children(i, field)}
+            {edit && shown.length > 1 && (
+              <button type="button" aria-label={`Remove ${noun} ${i + 1}`} onClick={() => onChange(shown.filter((_, at) => at !== i))} className="sl-item-x">
+                <Icon name="x" className="" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {edit && shown.length < LIMITS.items && (
+        <button type="button" onClick={() => onChange([...shown, BLANK_ITEM])} className="sl-tool sl-item-add">
+          <Icon name="plus" className="h-3.5 w-3.5" /> Add {noun}
+        </button>
+      )}
+    </>
+  )
+}
+
+const lineKind = (line) => (line.startsWith('#') ? 'note' : line.startsWith('$') ? 'cmd' : undefined)
+
+function Frame({ section }) {
+  return (
+    <div aria-hidden="true" className="sl-frame">
+      <span className="sl-frame-mark">blxr</span>
+      <span className="sl-frame-label">
+        <svg viewBox="0 0 12 12">
+          <path d="M4 1v10M8 1v10M1 4h10M1 8h10" />
+        </svg>
+        {section || 'Intro'}
+      </span>
+      {['tl', 'tr', 'bl', 'br'].map((pos) => (
+        <span key={pos} data-pos={pos} className="sl-cross" />
+      ))}
+    </div>
+  )
+}
+
+function Band() {
+  return (
+    <span aria-hidden="true" className="sl-band">
+      {['tl', 'tr'].map((pos) => (
+        <span key={pos} data-pos={pos} className="sl-cross" />
+      ))}
+    </span>
   )
 }
 
@@ -268,20 +351,38 @@ function ImageSlot({ image, edit, media }) {
   )
 }
 
-export default function Slide({ slide, theme, slides = [], index = 0, part, numbers = false, edit = false, onChange, media, className = '' }) {
+export default function Slide({ slide, theme, slides = [], index = 0, part, section, numbers = false, edit = false, onChange, media, className = '' }) {
   const palette = paletteOf(theme, slide.tone)
+  const framed = Boolean(themeOf(theme).frame) && slide.layout !== 'image'
   const set = (key) => (value) => onChange?.({ [key]: value })
   const props = (key, max, placeholder, label) => ({ edit, value: slide[key], onChange: set(key), max, placeholder, label })
-  const points = (key, className) => <Points edit={edit} points={slide[key]} onChange={set(key)} className={className} />
+  const points = (key, className, extra) => <Points edit={edit} points={slide[key]} onChange={set(key)} className={className} {...extra} />
+  const items = (className, noun, render) => (
+    <Items edit={edit} items={slide.items} onChange={set('items')} className={className} noun={noun}>
+      {render}
+    </Items>
+  )
+  const heading = <Text {...props('title', LIMITS.heading, 'Slide heading', 'Heading')} as="h2" className="sl-display sl-heading" />
   const showNumber = numbers && index > 0 && slide.layout !== 'image'
 
   let body = null
   if (slide.layout === 'title') {
+    const title = <Text {...props('title', LIMITS.heading, 'Presentation title', 'Title')} as="h2" className="sl-display sl-cover-title" />
     body = (
       <div className="sl-cover">
         <span aria-hidden="true" className="sl-bar" />
-        <Text {...props('title', LIMITS.heading, 'Presentation title', 'Title')} as="h2" className="sl-display sl-cover-title" />
+        {framed && (edit || slide.title) ? (
+          <div className="sl-select">
+            {title}
+            {['tl', 'tr', 'bl', 'br'].map((pos) => (
+              <span key={pos} aria-hidden="true" data-pos={pos} className="sl-handle" />
+            ))}
+          </div>
+        ) : (
+          title
+        )}
         <Text {...props('subtitle', LIMITS.subtitle, 'A subtitle, a date, your name', 'Subtitle')} className="sl-muted sl-cover-sub" />
+        {framed && <Band />}
       </div>
     )
   } else if (slide.layout === 'section') {
@@ -292,6 +393,99 @@ export default function Slide({ slide, theme, slides = [], index = 0, part, numb
         <span className="sl-kicker">PART {number}</span>
         <Text {...props('title', LIMITS.heading, 'Section title', 'Title')} as="h2" className="sl-display sl-section-title" />
         <Text {...props('subtitle', LIMITS.subtitle, 'What this part covers', 'Subtitle')} className="sl-muted sl-section-sub" />
+        {framed && <Band />}
+      </div>
+    )
+  } else if (slide.layout === 'cards') {
+    body = (
+      <div className="sl-stack">
+        {heading}
+        {items('sl-cards', 'card', (i, field) => (
+          <>
+            <span aria-hidden="true" className="sl-item-num">{pad(i + 1)}</span>
+            {field(i, 'label', LIMITS.head, 'Card title', 'sl-display sl-card-label', 'h3')}
+            {field(i, 'body', LIMITS.point, 'A line or two about it', 'sl-muted sl-card-body')}
+          </>
+        ))}
+      </div>
+    )
+  } else if (slide.layout === 'flow') {
+    body = (
+      <div className="sl-stack">
+        {heading}
+        {items('sl-flow', 'step', (i, field) => (
+          <>
+            <div className="sl-node">{field(i, 'label', LIMITS.head, 'Step', 'sl-display sl-node-label', 'h3')}</div>
+            {field(i, 'body', LIMITS.point, 'What happens here', 'sl-muted sl-node-body')}
+          </>
+        ))}
+      </div>
+    )
+  } else if (slide.layout === 'timeline') {
+    body = (
+      <div className="sl-stack">
+        {heading}
+        {items('sl-timeline', 'date', (i, field) => (
+          <>
+            {field(i, 'label', LIMITS.head, 'When', 'sl-display sl-when', 'h3')}
+            <span aria-hidden="true" className="sl-tick" />
+            {field(i, 'body', LIMITS.point, 'What happened', 'sl-muted sl-what')}
+          </>
+        ))}
+      </div>
+    )
+  } else if (slide.layout === 'layers') {
+    body = (
+      <div className="sl-stack">
+        {heading}
+        {items('sl-layers', 'layer', (i, field) => (
+          <>
+            <span aria-hidden="true" className="sl-item-num">{pad(i + 1)}</span>
+            {field(i, 'label', LIMITS.head, 'Layer', 'sl-display sl-layer-label', 'h3')}
+            {field(i, 'body', LIMITS.point, 'What is in it', 'sl-muted sl-layer-body')}
+          </>
+        ))}
+      </div>
+    )
+  } else if (slide.layout === 'stats') {
+    body = (
+      <div className="sl-stack">
+        {heading}
+        {items('sl-stats', 'number', (i, field) => (
+          <>
+            {field(i, 'label', LIMITS.stat, '42%', 'sl-display sl-figure')}
+            {field(i, 'body', LIMITS.point, 'What it measures, and the source', 'sl-muted sl-figure-sub')}
+          </>
+        ))}
+      </div>
+    )
+  } else if (slide.layout === 'checks') {
+    const column = (headKey, pointsKey, label, marker) => (
+      <div className="sl-col">
+        <Text {...props(headKey, LIMITS.head, 'Column heading', label)} className="sl-col-head" />
+        {points(pointsKey, 'sl-col-points', { marker })}
+      </div>
+    )
+    body = (
+      <div className="sl-stack">
+        {heading}
+        <div className="sl-cols sl-checks">
+          {column('head', 'points', 'Left heading', 'check')}
+          {column('head2', 'points2', 'Right heading', 'cross')}
+        </div>
+      </div>
+    )
+  } else if (slide.layout === 'code') {
+    body = (
+      <div className="sl-stack">
+        {heading}
+        <div className="sl-window">
+          <div className="sl-window-bar">
+            <span aria-hidden="true" className="sl-lights"><i /><i /><i /></span>
+            <Text {...props('subtitle', LIMITS.subtitle, 'Window title', 'Window title')} className="sl-window-title" />
+          </div>
+          {points('points', 'sl-code', { marker: 'none', kindOf: lineKind, placeholder: '# Start a line with # for a comment, $ for a command' })}
+        </div>
       </div>
     )
   } else if (slide.layout === 'bullets') {
@@ -355,7 +549,7 @@ export default function Slide({ slide, theme, slides = [], index = 0, part, numb
     )
   } else if (slide.layout === 'stat') {
     body = (
-      <div className="sl-stat">
+      <div className="sl-stat" style={{ '--chars': Math.max(4, slide.stat.length) }}>
         <Text {...props('stat', LIMITS.stat, '42%', 'Number')} className="sl-display sl-big" />
         <Text {...props('title', LIMITS.heading, 'What the number is', 'What it is')} as="h2" className="sl-display sl-stat-title" />
         <Text {...props('subtitle', LIMITS.subtitle, 'Where it comes from', 'Source')} className="sl-muted sl-stat-sub" />
@@ -368,8 +562,11 @@ export default function Slide({ slide, theme, slides = [], index = 0, part, numb
       className={`sl ${className}`}
       data-font={palette.font}
       data-align={slide.align}
+      data-layout={slide.layout}
+      data-frame={framed ? '' : undefined}
       style={{ '--s-base': palette.base, '--s-ink': palette.ink, '--s-accent': palette.accent, background: palette.paint, color: palette.ink }}
     >
+      {framed && <Frame section={section ?? sectionTitle(slides.length ? slides : [slide], slides.length ? index : 0)} />}
       <div className="sl-body">{body}</div>
       {showNumber && <span aria-hidden="true" className="sl-num">{String(index + 1).padStart(2, '0')}</span>}
     </div>

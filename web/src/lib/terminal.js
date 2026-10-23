@@ -21,6 +21,7 @@ import {
   TERMINAL_PATH,
   STATUS_PATH,
   CHANGELOG_PATH,
+  DARKWEB_PATH,
   FOCUS_PATH,
   projectPath,
   libraryPath,
@@ -88,6 +89,7 @@ export const PAGES = [
   { name: 'quote', to: QUOTE_PATH, desc: 'words I live by' },
   { name: 'status', to: STATUS_PATH, desc: 'live uptime checks' },
   { name: 'changelog', to: CHANGELOG_PATH, desc: 'what changed, from GitHub' },
+  { name: 'darkweb', to: DARKWEB_PATH, desc: 'how the hidden web works' },
   { name: 'focus', to: FOCUS_PATH, desc: 'a Mac app that closes everything else' },
   { name: 'terminal', to: TERMINAL_PATH, desc: 'you are here' },
 ]

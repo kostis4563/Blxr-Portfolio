@@ -22,6 +22,7 @@ import {
   duplicateSlide,
   moveSlide,
   sectionNumber,
+  sectionTitle,
   slideLabel,
   sampleSlide,
   templateSlides,
@@ -52,10 +53,10 @@ function isTyping(target) {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(target?.isContentEditable)
 }
 
-const Thumb = memo(function Thumb({ slide, theme, index, part, numbers, className = '' }) {
+const Thumb = memo(function Thumb({ slide, theme, index, part, section, numbers, className = '' }) {
   return (
     <span className={`pointer-events-none block ${className}`} inert>
-      <Slide slide={slide} theme={theme} index={index} part={part} numbers={numbers} />
+      <Slide slide={slide} theme={theme} index={index} part={part} section={section} numbers={numbers} />
     </span>
   )
 })
@@ -267,7 +268,7 @@ function DeckCard({ deck, busy, onPresent, onShare, onCopy, onDelete }) {
     <li className="group relative min-w-0">
       <a {...link(dashboardPath(`${SECTION}/${deck.id}`))} className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ink-strong/40 focus-visible:ring-offset-4 focus-visible:ring-offset-bg">
         <span className="relative block overflow-hidden rounded-xl ring-1 ring-line transition-shadow duration-300 group-hover:ring-ink-strong">
-          <Thumb slide={first} theme={deck.theme} index={0} part={sectionNumber(deck.slides, 0)} numbers={deck.numbers} />
+          <Thumb slide={first} theme={deck.theme} index={0} part={sectionNumber(deck.slides, 0)} section={sectionTitle(deck.slides, 0)} numbers={deck.numbers} />
           {deck.shareToken && (
             <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10.5px] font-medium text-white backdrop-blur-sm">
               <Icon name="link" className="h-3 w-3" /> Shared
@@ -369,9 +370,9 @@ function NewDeckDialog({ onClose, onCreated }) {
 
         <div>
           <p className={CAPS}>Start from</p>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+          <div className="mt-2 grid gap-3 sm:grid-cols-3">
             {TEMPLATES.map((option) => {
-              const slides = option.id === 'outline' ? templateSlides('outline').slice(0, 3) : templateSlides('blank')
+              const slides = templateSlides(option.id).slice(0, 3)
               const active = template === option.id
               return (
                 <button
@@ -924,7 +925,7 @@ function DeckEditor({ deck: initial, onSaved, onCopied, onDeleted }) {
                   aria-label={`Slide ${i + 1}: ${slideLabel(item)}`}
                   className={`relative block min-w-0 flex-1 cursor-pointer overflow-hidden rounded-md outline-none ring-2 transition-shadow focus-visible:ring-ink-strong/60 ${i === index ? 'ring-ink-strong' : 'ring-line hover:ring-line-strong'}`}
                 >
-                  <Thumb slide={item} theme={deck.theme} index={i} part={sectionNumber(slides, i)} numbers={deck.numbers} />
+                  <Thumb slide={item} theme={deck.theme} index={i} part={sectionNumber(slides, i)} section={sectionTitle(slides, i)} numbers={deck.numbers} />
                   {item.notes && (
                     <span className="absolute bottom-1 right-1 grid h-4 w-4 place-items-center rounded bg-black/60 text-white" title="Has speaker notes">
                       <Icon name="message" className="h-2.5 w-2.5" />

@@ -25,6 +25,7 @@ import {
   TERMINAL_PATH,
   STATUS_PATH,
   CHANGELOG_PATH,
+  DARKWEB_PATH,
   FOCUS_PATH,
   HELLO_PATH,
 } from '../lib/router'
@@ -42,6 +43,7 @@ const COLUMNS = [
       { label: 'IB grades', to: IB_PATH },
       { label: 'Listening', to: LISTENING_PATH },
       { label: 'Terminal', to: TERMINAL_PATH },
+      { label: 'Dark web', to: DARKWEB_PATH },
       { label: 'Focus Lock', to: FOCUS_PATH },
       { label: 'Hello world', to: HELLO_PATH },
     ],
